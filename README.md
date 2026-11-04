@@ -29,6 +29,23 @@ export RODENT_IV_HOME="/caminho/para/Rodent-IV"
 python3 -m chesssim --help
 ```
 
+## Testes e validação de motores
+
+A suíte padrão não exige Rodent IV nem Stockfish e pode ser executada em uma máquina limpa:
+
+```bash
+python -m pytest -q -ra
+python -m compileall -q src tests
+```
+
+O teste de integração UCI real é separado e identificado pelo marcador `requires_engine`. Para executá-lo, instale um motor UCI e informe seu executável:
+
+```bash
+CHESSSIM_UCI_ENGINE=/usr/games/stockfish python -m pytest -m requires_engine -q
+```
+
+O mesmo teste pode verificar outro motor compatível com UCI, desde que esteja instalado e acessível no ambiente. A integração não instala nem redistribui motores automaticamente. O CI executa a suíte sem motor externo; nesse cenário, o smoke test UCI é reportado como ignorado com justificativa explícita.
+
 ## Fluxo de uso
 
 1. Prepare um corpus PGN local e verifique seus metadados, proveniência e partições.
