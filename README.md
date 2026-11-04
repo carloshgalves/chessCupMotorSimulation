@@ -29,6 +29,10 @@ export RODENT_IV_HOME="/caminho/para/Rodent-IV"
 python3 -m chesssim --help
 ```
 
+## Manual de execução
+
+O [manual de uso](docs/USAGE.md) reúne os comandos da CLI e exemplos reproduzíveis para configurar o Rodent IV, obter e preparar corpora PGN, construir repertórios, gerar duelos, usar o perfil provisório e abrir replays offline. Os exemplos usam caminhos genéricos; executáveis e corpora externos precisam ser instalados/obtidos separadamente.
+
 ## Testes e validação de motores
 
 A suíte padrão não exige Rodent IV nem Stockfish e pode ser executada em uma máquina limpa:
