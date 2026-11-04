@@ -30,6 +30,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
+
+      - name: Validate Linux/WSL bootstrap script
+        run: |
+          bash -n scripts/setup_linux_wsl.sh
+          bash scripts/setup_linux_wsl.sh --help > /dev/null
+          python scripts/verify_linux_wsl.py --help > /dev/null
       - name: Check installed dependencies
         run: python -m pip check
       - name: Compile source and tests
