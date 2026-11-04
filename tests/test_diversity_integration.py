@@ -13,7 +13,7 @@ from chesssim.game_diversity import mainline_identity
 
 def _game(*uci: str):
     chess = pytest.importorskip("chess")
-    import chess.pgn
+    pytest.importorskip("chess.pgn")
 
     game = chess.pgn.Game()
     board = game.board()
@@ -115,8 +115,7 @@ def test_play_styles_series_detects_cross_pair_repetition(tmp_path, monkeypatch)
 def test_style_audit_skips_duplicate_games_but_counts_raw_games(tmp_path):
     from chesssim.style_postgame import fingerprint
 
-    chess = pytest.importorskip("chess")
-    import chess.pgn
+    pytest.importorskip("chess.pgn")
 
     game = _game("e2e4", "e7e5", "g1f3", "b8c6")
     game.headers["White"] = "Historical A"
