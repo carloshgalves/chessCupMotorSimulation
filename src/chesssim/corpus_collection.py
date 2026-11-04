@@ -26,7 +26,7 @@ SOURCE = "https://www.pgnmentor.com/players/"
 NAMES = {
     "mequinho":"Mecking", "ding-liren":"Ding", "vachier-lagrave":"VachierLagrave",
     "wesley-so":"So", "judit-polgar":"PolgarJ", "hou-yifan":"Hou",
-    "ivanchuk":"Ivanchuk", "korchnoi":"Korchnoi", "judit-polgar":"PolgarJ",
+    "ivanchuk":"Ivanchuk", "korchnoi":"Korchnoi",
     "philidor":"Philidor", "steinitz":"Steinitz", "caruana":"Caruana",
     "kamsky":"Kamsky", "gligoric":"Gligoric", "nepomniachtchi":"Nepomniachtchi",
     "aronian":"Aronian", "gelfand":"Gelfand", "chiburdanidze":"Chiburdanidze",

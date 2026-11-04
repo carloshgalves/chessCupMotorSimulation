@@ -11,8 +11,6 @@ from hashlib import sha256
 import json
 from pathlib import Path
 import random
-import shutil
-import tempfile
 import uuid
 
 from .calibration import (PARAM_RANGES, _diagnostics, _fitness, _remove_inherited_opening_books,

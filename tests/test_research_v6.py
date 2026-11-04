@@ -1,6 +1,5 @@
 """v0.6 methodological tests, with engine fakes and real PGN optional."""
 import json
-from hashlib import sha256
 from pathlib import Path
 import tempfile
 import unittest
@@ -223,7 +222,6 @@ class V6Seals(unittest.TestCase):
         self.assertEqual(len(report['cv_folds']),6)
 
     def test_fresh_player_requires_ack_and_cohort_immutable(self):
-        import copy
         data=default_peak_registry()
         data['players']['menchik'].update(status='APPROVED',from_year=1929,to_year=1937,
                                          justification='example independently verified',references=['reference for test'])

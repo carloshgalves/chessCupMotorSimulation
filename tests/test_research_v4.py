@@ -12,8 +12,7 @@ import unittest
 from unittest.mock import patch
 
 from chesssim.historical import split_three_ways
-from chesssim.research_search import (_objective, _folds_by_game, _check_v3_seal,
-                                  calibrate_v4)
+from chesssim.research_search import (_objective, _folds_by_game, calibrate_v4)
 
 
 def fixtures(games=60):

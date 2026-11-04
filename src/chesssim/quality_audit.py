@@ -5,7 +5,7 @@ Elo, nor reproducible chess strength without more control over positions.
 """
 from __future__ import annotations
 
-from collections import Counter, defaultdict
+from collections import defaultdict
 from hashlib import sha256
 import json
 from pathlib import Path

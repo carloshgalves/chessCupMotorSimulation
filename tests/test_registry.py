@@ -145,7 +145,6 @@ if __name__ == "__main__": unittest.main()
 class InstallationTest(unittest.TestCase):
     def test_mocked_install_adds_21_once_and_preserves_existing(self):
         from unittest.mock import patch
-        from chesssim.catalog import load_roster
         with tempfile.TemporaryDirectory() as t:
             root = Path(t)
             (root / 'personalities').mkdir()

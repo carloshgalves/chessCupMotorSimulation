@@ -13,12 +13,12 @@ import json
 from pathlib import Path
 from statistics import mean, pstdev
 
-from .calibration import _diagnostics, _remove_inherited_opening_books, file_hash, tune_text
-from .historical import extract_decisions, split_three_ways, position_key
+from .calibration import _remove_inherited_opening_books, file_hash, tune_text
+from .historical import extract_decisions, split_three_ways
 from .corpus_collection import extract_decisions_v5
 from .research_sealed import _by_game, _safe_filename, evaluate_text
 from .research_search import (BASELINES, DEFAULT_PROBES, _directed_search, _folds_by_game,
-                          _load_bases, _objective)
+                              _load_bases)
 
 PROTOCOL_V5 = {
     "version": "rodent-style-calibration-v5",

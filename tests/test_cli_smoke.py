@@ -13,3 +13,4 @@ def test_roster_command_lists_all_64_players(capsys) -> None:
     ]
     assert len(player_lines) == 64
     assert "64 selecionados" in output
+

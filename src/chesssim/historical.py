@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from collections import defaultdict
 from hashlib import sha256
-from io import StringIO
 import json
 from pathlib import Path
 import random

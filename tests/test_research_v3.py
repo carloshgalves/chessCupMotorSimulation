@@ -1,7 +1,6 @@
 """Pure and mocked v0.3 tests; real Rodent/Stockfish gates run on user's WSL."""
 from __future__ import annotations
 from hashlib import sha256
-import json
 from pathlib import Path
 import tempfile
 import unittest

@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from statistics import median
 
 import pytest
 

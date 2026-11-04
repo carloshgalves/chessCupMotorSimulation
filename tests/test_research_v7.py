@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 from chesssim.corpus_annex import plan_annex,_allocation
-from chesssim.time_control_evidence import match_tournament_evidence, SOURCES
+from chesssim.time_control_evidence import match_tournament_evidence
 from chesssim.temporal_paired import temporal_compare
 from chesssim.peak_windows import default_peak_registry
 

@@ -20,10 +20,7 @@ def test_configured_uci_engine_handshake_and_legal_move() -> None:
     if executable is None:
         candidate = Path(configured).expanduser()
         if not candidate.is_file():
-            pytest.fail(
-                "CHESSSIM_UCI_ENGINE does not resolve to a file or executable: "
-                f"{configured}"
-            )
+            pytest.fail(f"CHESSSIM_UCI_ENGINE does not resolve to a file or executable: {configured}")
         executable = str(candidate.resolve())
 
     engine = chess.engine.SimpleEngine.popen_uci(executable, timeout=10.0)
