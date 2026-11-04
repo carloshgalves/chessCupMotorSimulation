@@ -36,6 +36,7 @@ A suíte padrão não exige Rodent IV nem Stockfish e pode ser executada em uma 
 ```bash
 python -m pytest -q -ra
 python -m compileall -q src tests
+python -m ruff check src tests
 ```
 
 O teste de integração UCI real é separado e identificado pelo marcador `requires_engine`. Para executá-lo, instale um motor UCI e informe seu executável:
