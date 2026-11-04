@@ -197,7 +197,7 @@ python -m chesssim corpus-fetch all --out datasets/pgnmentor --dry-run
 python -m chesssim corpus-fetch all --out datasets/pgnmentor
 ~~~
 
-O comando usa o índice consultado no momento da execução, respeita o intervalo padrão de dois segundos entre downloads, não sobrescreve PGNs existentes, informa jogadores não listados e grava um arquivo .source.json ao lado de cada PGN baixado, com proveniência e hashes.
+O comando usa o índice consultado no momento da execução, respeita o intervalo padrão de dois segundos entre downloads (ajustável por --delay), não sobrescreve PGNs existentes, informa jogadores não listados e grava um arquivo .source.json ao lado de cada PGN baixado, com proveniência e hashes.
 
 O arquivo obtido representa somente as partidas contidas no pacote disponibilizado pela fonte. Não o descreva como corpus completo.
 
