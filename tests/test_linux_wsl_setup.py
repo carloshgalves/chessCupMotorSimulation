@@ -23,6 +23,7 @@ import chess
 import sys
 
 board = chess.Board()
+book_enabled = True
 for raw in sys.stdin:
     command = raw.strip()
     if command == "uci":
@@ -30,7 +31,7 @@ for raw in sys.stdin:
         print("option name Personality type combo default Fischer var Fischer var Tal")
         print("option name Threads type spin default 1 min 1 max 8")
         print("option name Hash type spin default 16 min 1 max 128")
-        print("option name UseBook type check default false")
+        print("option name UseBook type check default true")
         print("uciok", flush=True)
     elif command == "isready":
         print("readyok", flush=True)
@@ -41,8 +42,10 @@ for raw in sys.stdin:
             if "moves" in tokens:
                 for move in tokens[tokens.index("moves") + 1:]:
                     board.push_uci(move)
+    elif command.startswith("setoption name UseBook value "):
+        book_enabled = command.endswith("true")
     elif command.startswith("go "):
-        move = next(iter(board.legal_moves), None)
+        move = next(iter(board.legal_moves), None) if not book_enabled else None
         print("bestmove " + (move.uci() if move else "(none)"), flush=True)
     elif command == "quit":
         break
@@ -167,3 +170,11 @@ def test_cli_does_not_mutate_profiles_by_default(rodent: Path, monkeypatch):
     assert main(["--rodent", str(rodent)]) == 0
     assert (rodent / "personalities" / "basic.ini").read_bytes() == before
     assert not (rodent / "personalities" / "_backups").exists()
+
+
+def test_official_preset_must_not_disable_books(capsys):
+    from chesssim.cli import main as chesssim_main
+
+    assert chesssim_main(["play", "fischer", "tal", "--preset", "official",
+                          "--reverse", "--no-books"]) == 2
+    assert "--no-books" in capsys.readouterr().err

@@ -131,6 +131,7 @@ Os identificadores podem ser os slugs apresentados por roster ou o nome completo
 Opções relevantes:
 
 - --depth N: profundidade de busca por lance. O padrão é 6.
+- --no-books: desliga o livro UCI em duelo de desenvolvimento/smoke; não permitido com --preset official (protocolo oficial exige livros).
 - --movetime SEGUNDOS: tempo de busca por lance, alternativa a --depth. Os dois argumentos são mutuamente exclusivos.
 - --reverse: executa uma segunda partida com as cores trocadas. Sem essa opção, é gerada apenas uma partida.
 - --max-plies N: limite de meios-lances (plies), não de lances completos. O padrão é 400.

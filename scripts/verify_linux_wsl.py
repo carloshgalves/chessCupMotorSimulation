@@ -91,6 +91,8 @@ def probe_uci(executable: Path, *, cwd: Path | None = None,
                 "The configured Rodent engine did not advertise UCI 'Personality'. "
                 "Check that the binary is Rodent IV and that basic.ini is intact."
             )
+        if "UseBook" in engine.options:
+            engine.configure({"UseBook": False})
         board = chess.Board()
         result = engine.play(board, chess.engine.Limit(depth=1))
         if result.move not in board.legal_moves:
@@ -200,7 +202,7 @@ def run_smoke(python: Path, rodent: Path, out: Path, *,
     out.parent.mkdir(parents=True, exist_ok=True)
     completed = subprocess.run(
         [str(python), "-m", "chesssim", "play", white, black, "--rodent",
-         str(rodent), "--depth", str(depth), "--max-plies", str(max_plies),
+         str(rodent), "--no-books", "--depth", str(depth), "--max-plies", str(max_plies),
          "--out", str(out)],
         cwd=ROOT, check=False
     )

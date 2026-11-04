@@ -78,7 +78,7 @@ bash scripts/setup_linux_wsl.sh --skip-install --skip-tests \
   --smoke --out "runs/meu-smoke-novo"
 ~~~
 
-A opção --out deve apontar para uma pasta inexistente. O verificador executa a CLI real com motor externo e confere:
+A opção --out deve apontar para uma pasta inexistente. O verificador executa a CLI real com motor externo e desliga os livros UCI via --no-books, para que o teste de comunicação não dependa de arquivos Polyglot não instalados. O preset official permanece inalterado e não aceita --no-books. O verificador confere:
 
 - presença de jogo_1.pgn, duelo.pgn e summary.json;
 - uma única partida por arquivo, sem erros na leitura PGN;
