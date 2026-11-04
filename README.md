@@ -75,4 +75,6 @@ As frentes de trabalho, critérios de aceite e dependências são acompanhados n
 
 ## Direitos e distribuição
 
-O código deste repositório não incorpora executáveis de motores externos nem bases PGN de terceiros. Antes de redistribuir qualquer recurso adicional, verifique sua licença e proveniência. A escolha de uma licença para este código está pendente de decisão de manutenção.
+O código próprio ainda não tem licença publicada: o repositório não contém arquivo `LICENSE` nem declaração `project.license` no `pyproject.toml`. A publicação do código no GitHub não deve ser interpretada como autorização de reutilização ou redistribuição. A decisão de licença permanece pendente do mantenedor.
+
+O projeto não incorpora executáveis de engines nem corpora PGN de terceiros. Rodent IV, Stockfish, perfis, livros e bases históricas devem ser obtidos separadamente e utilizados de acordo com as respectivas licenças e condições. A auditoria das dependências, fontes e regras de distribuição está em [docs/THIRD_PARTY.md](docs/THIRD_PARTY.md).

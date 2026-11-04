@@ -18,10 +18,21 @@ auditorias/
 benchmarks/
 reports/
 runs/
+
+# External engines, books, corpora and downloaded archives
 *.pgn
+*.pgn.gz
+*.pgn.zst
 *.pdf
+*.zip
+*.7z
+*.rar
 *.exe
+*.dll
+*.so
+*.dylib
 *.bin
+*.nnue
 *.log
 *.sqlite*
 .env

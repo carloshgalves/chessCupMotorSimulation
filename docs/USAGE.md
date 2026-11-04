@@ -2,7 +2,7 @@
 
 Este guia descreve o fluxo operacional disponível na CLI atual. Os exemplos usam Bash em Linux/WSL e caminhos genéricos relativos ao repositório. Nenhum caminho local, executável de motor ou corpus PGN é presumido.
 
-> **Limite importante:** instalar o pacote Python não instala Rodent IV, Stockfish nem bases históricas. Esses recursos são externos e precisam ser obtidos e configurados separadamente.
+> **Limite importante:** instalar o pacote Python não instala Rodent IV, Stockfish nem bases históricas. Esses recursos são externos e precisam ser obtidos e configurados separadamente. Consulte também a [auditoria de dependências, fontes e distribuição](THIRD_PARTY.md).
 
 ## 1. Requisitos e instalação
 
@@ -403,4 +403,4 @@ Para reproduzir uma execução, preserve pelo menos:
 - a versão do código e o protocolo utilizado;
 - os registros de coorte e de embargo exigidos pela pesquisa.
 
-Consulte também [Arquitetura](ARCHITECTURE.md) e [Protocolo de pesquisa](RESEARCH_PROTOCOL.md). Para origem, direitos e condições de redistribuição dos motores e datasets, consulte a [issue #25](https://github.com/carloshgalves/chessCupMotorSimulation/issues/25).
+Consulte também [Arquitetura](ARCHITECTURE.md), [Protocolo de pesquisa](RESEARCH_PROTOCOL.md) e a [auditoria de dependências, fontes e distribuição](THIRD_PARTY.md).
