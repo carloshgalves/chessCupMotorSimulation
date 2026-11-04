@@ -135,7 +135,7 @@ class FrozenProtocolTests(unittest.TestCase):
         self.assertTrue(Path(report['best_training_profile']).exists())
 
     def test_final_eval_once_hash_guard_and_independent_partition(self):
-        report=self._calibrate()
+        self._calibrate()
         def evaluation(root,text,positions,depth):
             self.assertEqual(len(positions),9)
             return fake_eval(root,text,positions,depth)
