@@ -282,3 +282,50 @@ def test_series_failure_retains_atomic_checkpoint(tmp_path, monkeypatch):
     assert doc["pairs_completed"] == 0
     assert "synthetic engine failure" in doc["error"]
     assert doc["planned_pairs"] == 2
+
+
+def test_replay_renderer_failure_does_not_lose_completed_pair_checkpoint(
+    tmp_path, monkeypatch,
+):
+    """Existing PGNs stay discoverable after a downstream HTML export failure."""
+    from chesssim import duel_styles, matches, replay_html
+
+    game = _game("e2e4")
+    digest, plies = mainline_identity(game)
+    calls = []
+
+    def fake_duel(_root, output, *_args, **_kwargs):
+        folder = output / "pair-test"
+        folder.mkdir()
+        (folder / "duelo.pgn").write_text(str(game), encoding="utf-8")
+        (folder / "summary.json").write_text(json.dumps({
+            "status": "INCOMPLETE",
+            "games": [{
+                "round": 1, "mainline_sha256": digest, "plies": plies,
+                "opening_seed": None, "opening_mode": "disabled",
+                "color_order": "fischer|tal", "status": "INCOMPLETE", "result": "*",
+            }],
+        }), encoding="utf-8")
+        calls.append(folder)
+        return folder
+
+    monkeypatch.setattr(matches, "play_duel", fake_duel)
+
+    def fail_replay(*_args, **_kwargs):
+        raise RuntimeError("HTML renderer unavailable")
+
+    monkeypatch.setattr(replay_html, "export_replay_html", fail_replay)
+    with pytest.raises(RuntimeError, match="HTML renderer unavailable"):
+        duel_styles.play_styles(
+            tmp_path, tmp_path, white_name="fischer", black_name="tal",
+            rounds=1, replay=True,
+        )
+    assert len(calls) == 1
+    series = json.loads(
+        next(tmp_path.glob("style-duels-*/series-report.json")).read_text(encoding="utf-8")
+    )
+    assert series["status"] == "FAILED"
+    assert series["pairs_completed"] == 1
+    assert series["diversity"]["games_distinct"] == 1
+    assert series["pairs"][0]["replay"] is None
+    assert Path(series["pairs"][0]["pgn"]).is_file()

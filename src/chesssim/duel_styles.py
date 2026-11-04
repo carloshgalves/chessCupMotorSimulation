@@ -113,8 +113,9 @@ def play_styles(root: Path, output: Path, *, white_name: str, black_name: str,
             from .matches import _atomic_text
             _atomic_text(summary_path, json.dumps(summary, ensure_ascii=False, indent=2) + '\n')
             replay_path = folder / 'replay.html'
-            if replay:
-                export_replay_html(folder / 'duelo.pgn', replay_path)
+            # Store the raw-PGN checkpoint BEFORE the optional replay export:
+            # a failed HTML renderer must not make an already played pair
+            # disappear from the recovered series manifest.
             observations.extend({
                 "source": f"pair_{index + 1}/game_{game['round']}",
                 "mainline_sha256": game["mainline_sha256"],
@@ -129,14 +130,18 @@ def play_styles(root: Path, output: Path, *, white_name: str, black_name: str,
             results.append({
                 'round_pair': index + 1, 'folder': str(folder),
                 'summary': str(summary_path), 'pgn': str(folder / 'duelo.pgn'),
-                'replay': str(replay_path) if replay else None,
+                'replay': None,
                 'scheduled_opening_seed': pair_seed,
                 'opening_seed_effective': bool(books),
                 'results': [game['result'] for game in summary['games']],
-                'game_evidence': annotated[-len(summary['games']):],
+                'game_evidence': annotated[-len(summary['games']):] if summary['games'] else [],
                 'pair_status': summary['status'],
             })
             checkpoint()
+            if replay:
+                export_replay_html(folder / 'duelo.pgn', replay_path)
+                results[-1]['replay'] = str(replay_path)
+                checkpoint()
         status = ("COMPLETED" if all(pair["pair_status"] == "COMPLETED" for pair in results)
                   else "INCOMPLETE")
     except BaseException as exc:
