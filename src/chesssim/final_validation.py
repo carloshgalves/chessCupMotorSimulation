@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from statistics import mean, median
 
-from .calibration import _diagnostics, evaluate_candidate, file_hash
+from .calibration import _diagnostics, file_hash
 from .historical import extract_decisions, split_three_ways
 from .research_sealed import _by_game, evaluate_text, paired_game_bootstrap
 

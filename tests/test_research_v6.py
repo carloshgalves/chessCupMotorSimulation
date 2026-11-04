@@ -1,6 +1,6 @@
 """v0.6 methodological tests, with engine fakes and real PGN optional."""
 import json
-from hashlib import sha256
+from importlib.util import find_spec
 from pathlib import Path
 import tempfile
 import unittest
@@ -223,7 +223,6 @@ class V6Seals(unittest.TestCase):
         self.assertEqual(len(report['cv_folds']),6)
 
     def test_fresh_player_requires_ack_and_cohort_immutable(self):
-        import copy
         data=default_peak_registry()
         data['players']['menchik'].update(status='APPROVED',from_year=1929,to_year=1937,
                                          justification='example independently verified',references=['reference for test'])
@@ -244,8 +243,8 @@ class V6Seals(unittest.TestCase):
                     fresh_cohort_ack=True,cohort_ledger=self.home/'fresh.json',partition_seed=33)
 
     def test_real_pgn_peak_audit_if_installed(self):
-        try: import chess.pgn
-        except ImportError: self.skipTest('python-chess installed in user WSL')
+        if find_spec('chess') is None:
+            self.skipTest('python-chess is not installed')
         corpus=Path('/mnt/data/mequinho-all-available.pgn')
         if not corpus.exists(): self.skipTest('uploaded corpus missing')
         audit=peak_audit(corpus,self.peak,slug='mequinho',match_name='Mecking',allow_provisional=True)

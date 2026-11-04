@@ -453,4 +453,3 @@ def build_provisional_profile_v8(root: Path, pgn: Path, peak_registry: Path, out
 
 # Local import placed at end to avoid circular import during module loading.
 from .corpus_collection import extract_decisions_v5  # noqa: E402
-from .peak_windows import load_annotations  # noqa: E402

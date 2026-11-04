@@ -10,7 +10,6 @@ import json
 from pathlib import Path
 import random
 import re
-import tempfile
 from datetime import datetime, timezone
 
 from .historical import extract_decisions, split_positions

@@ -6,7 +6,7 @@ provide another lens besides exact move agreement.
 """
 from __future__ import annotations
 
-from collections import Counter, defaultdict
+from collections import Counter
 from hashlib import sha256
 import json
 from pathlib import Path

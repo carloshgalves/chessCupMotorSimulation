@@ -1,6 +1,4 @@
 import io
-import json
-import os
 from pathlib import Path
 import tempfile
 import textwrap
@@ -10,8 +8,8 @@ from zipfile import ZipFile
 
 from chesssim.protocol import OFFICIAL, CALIBRATION
 from chesssim.historical import import_mecking, player_side, split_positions
-from chesssim.calibration import tune_text, extract_values, PARAM_RANGES, validate_performance
-from chesssim.uci_raw import RodentUci, UciFailure
+from chesssim.calibration import tune_text, extract_values, validate_performance
+from chesssim.uci_raw import RodentUci
 
 
 class ProtocolAndFitting(unittest.TestCase):

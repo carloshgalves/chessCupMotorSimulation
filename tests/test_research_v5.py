@@ -2,6 +2,7 @@
 from __future__ import annotations
 import io
 import json
+from importlib.util import find_spec
 from hashlib import sha256
 from pathlib import Path
 import tempfile
@@ -64,8 +65,8 @@ class CorpusV5Tests(unittest.TestCase):
             self.assertEqual(len(calls),1)
 
     def test_merge_genuine_pgn_if_python_chess_installed(self):
-        try: import chess.pgn
-        except ImportError: self.skipTest('python-chess only available in user WSL')
+        if find_spec('chess') is None:
+            self.skipTest('python-chess is not installed')
         pgntxt = '[Event "Example"]\n[Site "X"]\n[Date "1975.01.01"]\n[Round "1"]\n[White "Mecking"]\n[Black "Botvinnik"]\n[Result "*"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 *\n'
         with tempfile.TemporaryDirectory() as t:
             src=Path(t)

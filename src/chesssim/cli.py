@@ -10,7 +10,7 @@ import sys
 from .bracket import generate_draw
 from .catalog import GROUP_LABELS, find_player, load_roster
 from .rodent import profile_status, setup_official
-from .protocol import OFFICIAL, CALIBRATION
+from .protocol import OFFICIAL
 
 
 def rodent_root(ns: argparse.Namespace) -> Path:
@@ -53,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
     play.add_argument("--out", type=Path, default=Path("partidas_chesssim"))
 
 
-    rules = sub.add_parser("protocol", help="Exibe o protocolo congelado da Copa e da calibração")
+    sub.add_parser("protocol", help="Exibe o protocolo congelado da Copa e da calibração")
     audit = sub.add_parser("audit", help="Testa todos os 21 perfis, ambos os lados; --full completa jogos")
     audit.add_argument("--rodent", type=Path)
     audit.add_argument("--full", action="store_true", help="Exige partida terminada por regra")

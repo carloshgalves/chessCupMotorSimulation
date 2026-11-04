@@ -7,7 +7,6 @@ TRAIN groups. This is not a final-selection or tournament-strength procedure.
 from __future__ import annotations
 
 from collections import defaultdict
-from hashlib import sha256
 import json
 from pathlib import Path
 import random
@@ -17,7 +16,6 @@ from .corpus_collection import extract_decisions_v5
 from .historical import _balanced_sample, position_key, split_three_ways
 from .peak_windows import (MODES, annotate_decisions, load_annotations, load_peak_window,
                       modality_inventory, modality_plan)
-from .research_sealed import _safe_filename
 from .research_search import DEFAULT_PROBES, _directed_search, _folds_by_game, _load_bases
 from .research_crossvalidation import _agg_cv, _choose_base, _legacy_embargo, _sticky_registry
 from .research_sealed import evaluate_text
