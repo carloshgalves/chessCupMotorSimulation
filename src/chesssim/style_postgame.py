@@ -10,7 +10,7 @@ from hashlib import sha256
 import json
 from pathlib import Path
 
-from .game_diversity import audit_mainlines, mainline_identity
+from .game_diversity import audit_mainlines, mainline_identity, opening_seed_from_headers
 
 FEATURES = ('capture', 'check', 'pawn_move', 'queen_move', 'king_move',
             'knight_move', 'bishop_move', 'rook_move', 'castle', 'promotion')
@@ -39,6 +39,7 @@ def fingerprint(pgn: Path, output: Path, *, opening_plies: int = 16) -> dict:
             signature, plies = mainline_identity(g)
             observations.append({
                 'source': games_count, 'mainline_sha256': signature, 'plies': plies,
+                'opening_seed': opening_seed_from_headers(g.headers),
                 'opening_mode': g.headers.get('BookMode'),
                 'color_order': (g.headers.get('White', '?') + '|' +
                                 g.headers.get('Black', '?')),

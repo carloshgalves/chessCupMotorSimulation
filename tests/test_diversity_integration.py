@@ -120,6 +120,7 @@ def test_style_audit_skips_duplicate_games_but_counts_raw_games(tmp_path):
     game = _game("e2e4", "e7e5", "g1f3", "b8c6")
     game.headers["White"] = "Historical A"
     game.headers["Black"] = "Historical B"
+    game.headers["OpeningSeed"] = "2029"
     altered = _game("e2e4", "e7e5", "g1f3", "b8c6")
     altered.headers["White"] = "Other alias"
     altered.headers["Black"] = "Other opponent"
@@ -132,6 +133,7 @@ def test_style_audit_skips_duplicate_games_but_counts_raw_games(tmp_path):
     assert report["players"]["Historical A"]["games"] == 1
     assert "Other alias" not in report["players"]
     assert report["most_common_first_eight"][0]["games"] == 1
+    assert report["diversity"]["variation_sources"]["historical_opening_seeds"] == [2029]
 
 
 def test_quality_audit_does_not_merge_distinct_starting_positions(tmp_path):
@@ -242,15 +244,23 @@ def test_quality_diagnostic_keeps_rows_but_excludes_duplicate_from_summary(
 
     report = quality_audit.analyze_games_v91(
         sample, engine_path, tmp_path / "diagnostic.json",
-        depth=3, max_positions=4, min_fullmove=1,
-        dedupe_games=False, sample_mode="spread",
+        depth=3, max_positions=5, min_fullmove=1,
+        dedupe_games=False, sample_mode="balanced",
     )
     assert report["diversity"]["games_total"] == 2
     assert report["diversity"]["games_distinct"] == 1
-    assert report["inputs"]["sampled_positions"] == 4
-    assert report["independent_decisions_sampled"] == 2
-    assert report["duplicate_decisions_excluded_from_summary"] == 2
-    assert sum(row["decisions_analyzed"] for row in report["summary"].values()) == 2
+    assert report["inputs"]["sampled_positions"] == 5
+    assert report["independent_decisions_sampled"] == 4
+    assert report["duplicate_decisions_excluded_from_summary"] == 1
+    assert sum(row["decisions_analyzed"] for row in report["summary"].values()) == 4
+    without_duplicates = quality_audit.analyze_games_v91(
+        sample, engine_path, tmp_path / "primary.json",
+        depth=3, max_positions=5, min_fullmove=1,
+        dedupe_games=True, sample_mode="balanced",
+    )
+    assert report["summary"] == without_duplicates["summary"]
+    assert report["sampling"]["independent_positions_selected"] == 4
+    assert report["sampling"]["diagnostic_duplicate_positions_selected"] == 1
 
 
 def test_series_failure_retains_atomic_checkpoint(tmp_path, monkeypatch):

@@ -103,3 +103,13 @@ def test_report_is_stable_and_json_serializable():
     entries = [_row(FakeGame(["e2e4", "e7e5"]), source="a")]
     assert audit_mainlines(entries) == audit_mainlines(entries)
     json.dumps(audit_mainlines(entries))
+
+
+def test_opening_seed_provenance_parsing_is_strict():
+    from chesssim.game_diversity import opening_seed_from_headers
+
+    assert opening_seed_from_headers({"OpeningSeed": "2029"}) == 2029
+    assert opening_seed_from_headers({"OpeningSeed": "-2"}) == -2
+    assert opening_seed_from_headers({}) is None
+    with pytest.raises(ValueError, match="OpeningSeed"):
+        opening_seed_from_headers({"OpeningSeed": "unknown"})

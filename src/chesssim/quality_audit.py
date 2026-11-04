@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from statistics import mean, median
 
-from .game_diversity import audit_mainlines, mainline_identity
+from .game_diversity import audit_mainlines, mainline_identity, opening_seed_from_headers
 
 PROTOCOL = "independent-stockfish-postgame-v9.1"
 
@@ -154,6 +154,7 @@ def _load_positions(pgn: Path, *, min_fullmove: int, dedupe_games: bool) -> tupl
                 'mainline_sha256': signature,
                 'plies': plies,
                 'source': original_game_index + 1,
+                'opening_seed': opening_seed_from_headers(game.headers),
                 'opening_mode': game.headers.get('BookMode'),
                 'color_order': (game.headers.get('White', '?') + '|' +
                                 game.headers.get('Black', '?')),
@@ -200,7 +201,28 @@ def analyze_games_v91(pgn: Path, engine: Path, out: Path, *, depth: int = 18,
         raise ValueError('refine_depth must be above depth and <= 35')
     records, games = _load_positions(pgn, min_fullmove=min_fullmove, dedupe_games=dedupe_games)
     _, diversity = audit_mainlines(games)
-    chosen, sampling = select_decisions(records, limit=max_positions, mode=sample_mode)
+    duplicate_indices = {g['game_index'] for g in games if g['duplicate_mainline']}
+    # Audit-critical: independent estimates must be invariant to the
+    # --keep-duplicate-games option. Reserve the same unique-game sampling
+    # budget first; duplicate diagnostics may use ONLY spare capacity.
+    unique_records = [r for r in records if r['game_index'] not in duplicate_indices]
+    chosen, sampling = select_decisions(unique_records, limit=max_positions, mode=sample_mode)
+    independent_sample_size = len(chosen)
+    diagnostic_count = 0
+    if not dedupe_games and independent_sample_size < max_positions:
+        repeated = [r for r in records if r['game_index'] in duplicate_indices]
+        diagnostic_indices = spread_indices(len(repeated), max_positions - independent_sample_size)
+        chosen.extend(repeated[index] for index in diagnostic_indices)
+        diagnostic_count = len(diagnostic_indices)
+        chosen.sort(key=lambda row: row['global_index'])
+    sampling['independent_positions_selected'] = independent_sample_size
+    sampling['diagnostic_duplicate_positions_selected'] = diagnostic_count
+    sampling['actual_positions'] = len(chosen)
+    if not dedupe_games:
+        sampling['warning'] += (
+            ' Duplicates may be inspected within spare max_positions budget, '
+            'but never replace independent decisions in aggregate estimates.'
+        )
     output = []
     with chess.engine.SimpleEngine.popen_uci(str(engine), timeout=120) as judge:
         settings = {}
@@ -239,10 +261,10 @@ def analyze_games_v91(pgn: Path, engine: Path, out: Path, *, depth: int = 18,
             continue
         rows = by_game.get(game['game_index'], [])
         game_report.append({**game, 'positions_analyzed': len(rows),
+                            'diagnostic_only': game['duplicate_mainline'],
                             'by_player': summarize_decisions(rows)})
     # Diagnostic analysis may inspect duplicates without counting them in
     # aggregate independent-evidence estimates.
-    duplicate_indices = {g['game_index'] for g in games if g['duplicate_mainline']}
     independent_decisions = [r for r in output if r['game_index'] not in duplicate_indices]
     result = {
         'protocol': PROTOCOL,

@@ -29,6 +29,17 @@ def mainline_identity(game) -> tuple[str, int]:
     return sha256(encoded).hexdigest(), len(moves)
 
 
+def opening_seed_from_headers(headers) -> int | None:
+    """Return an explicitly recorded seed, rejecting malformed PGN provenance."""
+    raw = headers.get("OpeningSeed")
+    if raw is None:
+        return None
+    try:
+        return int(raw)
+    except (ValueError, TypeError) as exc:
+        raise ValueError(f"Invalid PGN OpeningSeed header: {raw!r}") from exc
+
+
 def audit_mainlines(entries: list[dict]) -> tuple[list[dict], dict]:
     """Annotate input-order game records, excluding repetitions from evidence.
 

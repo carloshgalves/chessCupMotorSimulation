@@ -206,7 +206,7 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                     "move": actual_move.uci(),
                     "seed": opening_seed,
                     "round": round_number,
-                    "book_source_sha256": historical_openings[opening_source]["source"].get("pgn_sha256"),
+                    "book_source_sha256": historical_openings[opening_source].get("source", {}).get("pgn_sha256"),
                 })
             board.push(actual_move)
 

@@ -9,7 +9,7 @@ from hashlib import sha256
 import json
 from pathlib import Path
 
-from .game_diversity import audit_mainlines, mainline_identity
+from .game_diversity import audit_mainlines, mainline_identity, opening_seed_from_headers
 
 
 def _sample_indices(total: int, limit: int) -> set[int]:
@@ -49,6 +49,7 @@ def analyze_games(pgn: Path, engine: Path, out: Path, *, depth: int = 12,
             digest, plies = mainline_identity(g)
             observations.append({
                 "source": len(observations) + 1, "mainline_sha256": digest, "plies": plies,
+                "opening_seed": opening_seed_from_headers(g.headers),
                 "opening_mode": g.headers.get("BookMode"),
                 "color_order": g.headers.get("White", "?") + "|" + g.headers.get("Black", "?"),
             })
