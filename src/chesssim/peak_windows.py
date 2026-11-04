@@ -1,4 +1,4 @@
-"""v0.6: explicitly justified peak windows and evidence-based time controls.
+""" explicitly justified peak windows and evidence-based time controls.
 
 UNKNOWN must never silently become CLASSICAL. Event labels are *hints* and
 not verified time controls. This module never evaluates a chess engine.

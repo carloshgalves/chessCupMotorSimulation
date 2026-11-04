@@ -12,7 +12,7 @@ import unittest
 from unittest.mock import patch
 
 from chesssim.historical import split_three_ways
-from chesssim.research_v4 import (_objective, _folds_by_game, _check_v3_seal,
+from chesssim.research_search import (_objective, _folds_by_game, _check_v3_seal,
                                   calibrate_v4)
 
 
@@ -90,9 +90,9 @@ class V4Tests(unittest.TestCase):
                              "a sealed test position entered an engine evaluation")
             calls.append((text, tuple(d["game"] for d in positions)))
             return fake_eval(root, text, positions, depth)
-        with patch('chesssim.research_v4.extract_decisions',return_value=(self.rows,self.source)), \
-             patch('chesssim.research_v4.evaluate_text',side_effect=spy), \
-             patch.dict('chesssim.research_v4.PARAM_RANGES',{"OwnAttack":(75,230)},clear=True):
+        with patch('chesssim.research_search.extract_decisions',return_value=(self.rows,self.source)), \
+             patch('chesssim.research_search.evaluate_text',side_effect=spy), \
+             patch.dict('chesssim.research_search.PARAM_RANGES',{"OwnAttack":(75,230)},clear=True):
             report = calibrate_v4(self.root, self.pgn, self.path / out,
                 target="Henrique Mecking",target_slug="mecking",match_name="Mecking",
                 train_positions=60,val_positions=30,test_positions=30,
@@ -139,9 +139,9 @@ class V4Tests(unittest.TestCase):
             if len(positions) == 30:
                 text = text.replace("OwnAttack value 90", "OwnAttack value 110")
             return fake_eval(root, text, positions, depth)
-        with patch('chesssim.research_v4.extract_decisions',return_value=(self.rows,self.source)), \
-             patch('chesssim.research_v4.evaluate_text',side_effect=plateau), \
-             patch.dict('chesssim.research_v4.PARAM_RANGES',{"OwnAttack":(75,230)},clear=True):
+        with patch('chesssim.research_search.extract_decisions',return_value=(self.rows,self.source)), \
+             patch('chesssim.research_search.evaluate_text',side_effect=plateau), \
+             patch.dict('chesssim.research_search.PARAM_RANGES',{"OwnAttack":(75,230)},clear=True):
             report = calibrate_v4(self.root,self.pgn,self.path/'tied',
                 target='Henrique Mecking', target_slug='mecking', match_name='Mecking',
                 train_positions=60,val_positions=30,test_positions=30,
@@ -155,10 +155,10 @@ class V4Tests(unittest.TestCase):
     def test_ledger_forbids_drift_and_sealed_reference_must_match(self):
         report,_ = self.run_v4()
         with self.assertRaisesRegex(ValueError,'SEALED COHORT CONFLICT'):
-            from chesssim.research_v4 import _assert_ledger
+            from chesssim.research_search import _assert_ledger
             _assert_ledger(self.ledger, {'different':'manifest'})
         self.assertEqual(json.loads(self.ledger.read_text()),report['cohort_registry'])
-        with patch('chesssim.research_v4.extract_decisions',return_value=(self.rows,self.source)):
+        with patch('chesssim.research_search.extract_decisions',return_value=(self.rows,self.source)):
             with self.assertRaisesRegex(ValueError,'V3 TEST SEAL MISMATCH'):
                 calibrate_v4(self.root,self.pgn,self.path/'bad',
                      target='Henrique Mecking',target_slug='mecking',match_name='Mecking',
@@ -167,7 +167,7 @@ class V4Tests(unittest.TestCase):
 
     def test_v3_test_already_open_blocks_v4(self):
         (self.reference/'final_test.json').write_text('{}')
-        with patch('chesssim.research_v4.extract_decisions',return_value=(self.rows,self.source)):
+        with patch('chesssim.research_search.extract_decisions',return_value=(self.rows,self.source)):
             with self.assertRaisesRegex(ValueError,'already been opened'):
                 calibrate_v4(self.root,self.pgn,self.path/'bad',
                      target='Henrique Mecking',target_slug='mecking',match_name='Mecking',

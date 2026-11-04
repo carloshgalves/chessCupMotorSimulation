@@ -9,9 +9,9 @@ import unittest
 from unittest.mock import patch
 from zipfile import ZipFile, ZIP_DEFLATED
 
-from chesssim.corpus_v5 import _Links, roster_sources, fetch_profiles, make_corpus
+from chesssim.corpus_collection import _Links, roster_sources, fetch_profiles, make_corpus
 from chesssim.historical import split_three_ways
-from chesssim.research_v5 import calibrate_v5, _legacy_embargo
+from chesssim.research_crossvalidation import calibrate_v5, _legacy_embargo
 
 
 def rows(n=90):
@@ -107,10 +107,10 @@ class ResearchV5Tests(unittest.TestCase):
             self.assertFalse(test_fens & {d['fen'] for d in positions}, 'sealed test leaked to UCI')
             seen.append(tuple(d['game'] for d in positions))
             return fake_eval(root,text,positions,depth)
-        with patch('chesssim.research_v5._legacy_embargo',return_value=(set(),{'status':'NONE'})), \
-             patch('chesssim.research_v5.extract_decisions_v5',return_value=(self.rows,self.stats)), \
-             patch('chesssim.research_v5.evaluate_text',side_effect=spy), \
-             patch('chesssim.research_v4.evaluate_text',side_effect=spy):
+        with patch('chesssim.research_crossvalidation._legacy_embargo',return_value=(set(),{'status':'NONE'})), \
+             patch('chesssim.research_crossvalidation.extract_decisions_v5',return_value=(self.rows,self.stats)), \
+             patch('chesssim.research_crossvalidation.evaluate_text',side_effect=spy), \
+             patch('chesssim.research_search.evaluate_text',side_effect=spy):
             report=calibrate_v5(self.root,self.pgn,self.home/out,target='Other',
                 target_slug='other',match_name='Other',train_positions=90,val_positions=30,
                 test_positions=20,depth=3,folds=3,repeats=2,
@@ -122,13 +122,13 @@ class ResearchV5Tests(unittest.TestCase):
     def test_cv_only_never_reads_sealed_validation_or_test(self):
         train,val,test,_=split_three_ways(self.rows,seed=2028,train_limit=90,val_limit=30,test_limit=20)
         validation_fens={d['fen'] for d in val}
-        with patch('chesssim.research_v5._legacy_embargo',return_value=(set(),{'status':'NONE'})), \
-             patch('chesssim.research_v5.extract_decisions_v5',return_value=(self.rows,self.stats)):
+        with patch('chesssim.research_crossvalidation._legacy_embargo',return_value=(set(),{'status':'NONE'})), \
+             patch('chesssim.research_crossvalidation.extract_decisions_v5',return_value=(self.rows,self.stats)):
             def protected(root,contents,positions,depth):
                 self.assertFalse(validation_fens & {d['fen'] for d in positions})
                 return fake_eval(root,contents,positions,depth)
-            with patch('chesssim.research_v5.evaluate_text',side_effect=protected), \
-                 patch('chesssim.research_v4.evaluate_text',side_effect=protected):
+            with patch('chesssim.research_crossvalidation.evaluate_text',side_effect=protected), \
+                 patch('chesssim.research_search.evaluate_text',side_effect=protected):
                 report=calibrate_v5(self.root,self.pgn,self.home/'research',
                     target='Other',target_slug='other',match_name='Other',
                     train_positions=90,val_positions=30,test_positions=20,
@@ -156,10 +156,10 @@ class ResearchV5Tests(unittest.TestCase):
             return {"_predicted_moves":answers,"correct":correct,
                     "decisions":len(positions),"top1":correct/len(positions),
                     "white":0,"black":0}
-        with patch('chesssim.research_v5._legacy_embargo',return_value=(set(),{'status':'NONE'})), \
-             patch('chesssim.research_v5.extract_decisions_v5',return_value=(self.rows,self.stats)), \
-             patch('chesssim.research_v5.evaluate_text',side_effect=constant), \
-             patch('chesssim.research_v4.evaluate_text',side_effect=constant):
+        with patch('chesssim.research_crossvalidation._legacy_embargo',return_value=(set(),{'status':'NONE'})), \
+             patch('chesssim.research_crossvalidation.extract_decisions_v5',return_value=(self.rows,self.stats)), \
+             patch('chesssim.research_crossvalidation.evaluate_text',side_effect=constant), \
+             patch('chesssim.research_search.evaluate_text',side_effect=constant):
             with self.assertRaisesRegex(ValueError,'CV PRESELECTION GATE'):
                 calibrate_v5(self.root,self.pgn,self.home/'no-selection',
                     target='Other',target_slug='other',match_name='Other',
@@ -192,7 +192,7 @@ class ResearchV5Tests(unittest.TestCase):
             'match_name':'Mecking',
             'final_test':{'status':'SEALED_NOT_EVALUATED',
                           'manifest_sha256':part['test_sealed']['manifest_sha256']}}))
-        with patch('chesssim.research_v5.extract_decisions',return_value=(old_rows,{})):
+        with patch('chesssim.research_crossvalidation.extract_decisions',return_value=(old_rows,{})):
             reserved, info=_legacy_embargo(reference,pgn,target_slug='mequinho')
         self.assertEqual(info['status'],'OLD_VALIDATION_AND_TEST_EMBARGOED')
         self.assertTrue({d['game'] for d in validation}.issubset(reserved))
@@ -203,8 +203,8 @@ class ResearchV5Tests(unittest.TestCase):
         report,_=self.run_cal('first')
         self.pgn.write_text('changed',encoding='utf-8')
         stats={**self.stats,'pgn_sha256':sha256(b'changed').hexdigest()}
-        with patch('chesssim.research_v5._legacy_embargo',return_value=(set(),{'status':'NONE'})), \
-             patch('chesssim.research_v5.extract_decisions_v5',return_value=(self.rows,stats)):
+        with patch('chesssim.research_crossvalidation._legacy_embargo',return_value=(set(),{'status':'NONE'})), \
+             patch('chesssim.research_crossvalidation.extract_decisions_v5',return_value=(self.rows,stats)):
             with self.assertRaisesRegex(ValueError,'COHORT REGISTRY CONFLICT'):
                 calibrate_v5(self.root,self.pgn,self.home/'changed',
                     target='Other',target_slug='other',match_name='Other',

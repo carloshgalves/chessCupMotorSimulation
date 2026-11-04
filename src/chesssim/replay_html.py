@@ -76,7 +76,7 @@ button:hover{background:#32687a}select{max-width:100%;width:100%}
 <button id="play">▶ Reproduzir</button><button id="next">Próximo ▶</button><button id="end">Fim ⏭</button></div>
 <label for="speed" class="muted">Velocidade</label><select id="speed">
 <option value="2000">2 segundos por lance</option><option value="1000" selected>1 segundo por lance</option><option value="500">0,5 segundo por lance</option></select>
-</div></article><footer>ChessSimulation64 • v0.8.1 • arquivo HTML independente • perfis experimentais não homologados</footer>
+</div></article><footer>ChessCup Motor Simulation • arquivo HTML independente • perfis experimentais não homologados</footer>
 </main>
 <script>
 "use strict";

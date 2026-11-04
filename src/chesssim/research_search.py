@@ -14,7 +14,7 @@ import random
 from .calibration import (PARAM_RANGES, _diagnostics, _remove_inherited_opening_books,
                           extract_values, file_hash, tune_text)
 from .historical import extract_decisions, split_three_ways
-from .research_v3 import (_by_game, _safe_filename, evaluate_text,
+from .research_sealed import (_by_game, _safe_filename, evaluate_text,
                           paired_game_bootstrap)
 
 BASELINES = ("karpov.txt", "petrosian.txt", "fischer.txt", "botvinnik.txt")

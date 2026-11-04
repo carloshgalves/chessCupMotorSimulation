@@ -35,7 +35,7 @@ python3 -m chesssim --help
 2. Construa o repertório de aberturas por posição com `opening-build`.
 3. Prepare o perfil experimental com `build-provisional` e registre-o com `provisional-install` quando apropriado.
 4. Execute confrontos por `play-styles` ou `play-provisional`; os PGNs e relatórios permanecem locais.
-5. Analise partidas com `analyze-games-v091` (Stockfish), compare relatórios com `compare-quality` e gere estatísticas descritivas com `style-audit`.
+5. Analise partidas com `analyze-quality` (Stockfish), compare relatórios com `compare-quality` e gere estatísticas descritivas com `style-audit`.
 
 Consulte `python3 -m chesssim <comando> --help` para argumentos específicos.
 

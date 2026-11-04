@@ -1,4 +1,4 @@
-"""v0.6: peak-window and modality-separated exploratory Rodent calibration.
+""" peak-window and modality-separated exploratory Rodent calibration.
 
 V6 NEVER evaluates existing v3/v5 reserved game labels. For Mequinho it
 reconstructs and verifies the prior v5 cohort, then trains ONLY on its old
@@ -13,14 +13,14 @@ from pathlib import Path
 import random
 
 from .calibration import _remove_inherited_opening_books, file_hash, tune_text
-from .corpus_v5 import extract_decisions_v5
+from .corpus_collection import extract_decisions_v5
 from .historical import _balanced_sample, position_key, split_three_ways
-from .peak_v6 import (MODES, annotate_decisions, load_annotations, load_peak_window,
+from .peak_windows import (MODES, annotate_decisions, load_annotations, load_peak_window,
                       modality_inventory, modality_plan)
-from .research_v3 import _safe_filename
-from .research_v4 import DEFAULT_PROBES, _directed_search, _folds_by_game, _load_bases
-from .research_v5 import _agg_cv, _choose_base, _legacy_embargo, _sticky_registry
-from .research_v3 import evaluate_text
+from .research_sealed import _safe_filename
+from .research_search import DEFAULT_PROBES, _directed_search, _folds_by_game, _load_bases
+from .research_crossvalidation import _agg_cv, _choose_base, _legacy_embargo, _sticky_registry
+from .research_sealed import evaluate_text
 
 PROTOCOL_V6 = {
     "version":"rodent-style-calibration-v6",
@@ -297,7 +297,7 @@ def calibrate_v6(root:Path,pgn:Path,output:Path,registry:Path,*,slug:str,
 
 def write_annotation_template(pgn:Path,registry:Path,output:Path,*,slug:str,
                               match_name:str,allow_provisional:bool=False):
-    from .peak_v6 import annotation_template
+    from .peak_windows import annotation_template
     peak=load_peak_window(registry,slug,allow_provisional=allow_provisional)
     if output.exists(): raise FileExistsError(output)
     rows,_=extract_decisions_v5(pgn,player_name=match_name,

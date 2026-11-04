@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 from .calibration import file_hash
-from .research_v3 import staged_profile
+from .research_sealed import staged_profile
 from .uci_raw import RodentUci
 
 OPENINGS = (
@@ -52,7 +52,7 @@ def run_benchmark(root: Path, profile: Path, output: Path, *,
                         opponent_engine.wait_for("readyok")
                         board = chess.Board()
                         game = chess.pgn.Game()
-                        game.headers.update({"Event": "ChessSim v0.3 strength proxy (not Elo)",
+                        game.headers.update({"Event": "ChessCup strength proxy (not Elo)",
                                              "White": "Candidate" if candidate_white else opponent,
                                              "Black": opponent if candidate_white else "Candidate",
                                              "Opening": opening_name,

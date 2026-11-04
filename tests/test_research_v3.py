@@ -8,8 +8,8 @@ import unittest
 from unittest.mock import patch
 
 from chesssim.historical import split_three_ways, position_key
-from chesssim.research_v3 import calibrate_v3, sensitivity_v3, paired_game_bootstrap
-from chesssim.validation_v3 import final_evaluate
+from chesssim.research_sealed import calibrate_v3, sensitivity_v3, paired_game_bootstrap
+from chesssim.final_validation import final_evaluate
 
 
 def sample_data(n=40):
@@ -93,9 +93,9 @@ class FrozenProtocolTests(unittest.TestCase):
         self.source={"pgn_sha256":sha256(self.pgn.read_bytes()).hexdigest(),"games_accepted":40,"decisions":200}
 
     def _calibrate(self, out=None, func=fake_eval):
-        with patch('chesssim.research_v3.extract_decisions',return_value=(self.data,self.source)), \
-             patch('chesssim.research_v3.evaluate_text',side_effect=func), \
-             patch.dict('chesssim.research_v3.PARAM_RANGES', {'OwnAttack':(75,230)},clear=True):
+        with patch('chesssim.research_sealed.extract_decisions',return_value=(self.data,self.source)), \
+             patch('chesssim.research_sealed.evaluate_text',side_effect=func), \
+             patch.dict('chesssim.research_sealed.PARAM_RANGES', {'OwnAttack':(75,230)},clear=True):
             return calibrate_v3(self.root,self.pgn,out or self.home/'run',target='Mecking',
                   target_slug='mequinho',match_name='Mecking',depth=4,
                   trials=2,shortlist=2,train_positions=16,val_positions=10,test_positions=9)
@@ -140,8 +140,8 @@ class FrozenProtocolTests(unittest.TestCase):
         def evaluation(root,text,positions,depth):
             self.assertEqual(len(positions),9)
             return fake_eval(root,text,positions,depth)
-        with patch('chesssim.validation_v3.extract_decisions',return_value=(self.data,self.source)), \
-             patch('chesssim.validation_v3.evaluate_text',side_effect=evaluation):
+        with patch('chesssim.final_validation.extract_decisions',return_value=(self.data,self.source)), \
+             patch('chesssim.final_validation.evaluate_text',side_effect=evaluation):
             final=final_evaluate(self.root,self.home/'run')
             self.assertEqual(final['positions'],9)
             self.assertEqual(final['status'],'FINAL_TEST_EVALUATED_ONCE_NOT_VALIDATED')
@@ -150,7 +150,7 @@ class FrozenProtocolTests(unittest.TestCase):
 
     def test_missing_stockfish_preflight_does_not_open_final_test(self):
         self._calibrate()
-        with patch('chesssim.validation_v3.evaluate_text',side_effect=AssertionError('test must stay closed')):
+        with patch('chesssim.final_validation.evaluate_text',side_effect=AssertionError('test must stay closed')):
             with self.assertRaises(FileNotFoundError):
                 final_evaluate(self.root,self.home/'run',stockfish=self.home/'stockfish-not-installed')
         self.assertFalse((self.home/'run'/'final_test.json').exists())
@@ -158,7 +158,7 @@ class FrozenProtocolTests(unittest.TestCase):
     def test_final_eval_refuses_edited_candidate(self):
         report=self._calibrate()
         Path(report['selected_profile']).write_text('tampered')
-        with patch('chesssim.validation_v3.extract_decisions',return_value=(self.data,self.source)):
+        with patch('chesssim.final_validation.extract_decisions',return_value=(self.data,self.source)):
             with self.assertRaisesRegex(ValueError,'Candidato modificado'):
                 final_evaluate(self.root,self.home/'run')
 
@@ -167,9 +167,9 @@ class FrozenProtocolTests(unittest.TestCase):
         def spy(root,text,positions,depth):
             result.append(len(positions))
             return fake_eval(root,text,positions,depth)
-        with patch('chesssim.research_v3.extract_decisions',return_value=(self.data,self.source)), \
-             patch('chesssim.research_v3.evaluate_text',side_effect=spy), \
-             patch.dict('chesssim.research_v3.PARAM_RANGES',{'OwnAttack':(75,230)},clear=True):
+        with patch('chesssim.research_sealed.extract_decisions',return_value=(self.data,self.source)), \
+             patch('chesssim.research_sealed.evaluate_text',side_effect=spy), \
+             patch.dict('chesssim.research_sealed.PARAM_RANGES',{'OwnAttack':(75,230)},clear=True):
             report=sensitivity_v3(self.root,self.pgn,self.home/'sensitivity.json',
                  match_name='Mecking',positions=8,depth=3)
         self.assertTrue(result and all(k==8 for k in result))

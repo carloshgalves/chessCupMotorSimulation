@@ -113,7 +113,7 @@ def play_provisional(root: Path, out: Path, *, opponent: str, reverse: bool = Tr
                      preset: str | None = None, max_plies: int = 400) -> Path:
     """Run actual Rodent games with provisional Mequinho and an existing official profile."""
     from .matches import play_duel
-    from .peak_v6 import CLOCK_PRESETS
+    from .peak_windows import CLOCK_PRESETS
     if sum(value is not None for value in (depth, movetime, preset)) != 1:
         raise ValueError("Use apenas --depth, --movetime ou --preset")
     if preset not in (None, "official", *CLOCK_PRESETS):

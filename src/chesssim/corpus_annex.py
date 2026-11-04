@@ -1,4 +1,4 @@
-"""v0.7: fail-closed, frozen STAGING PLAN for newly discovered historical PGNs.
+""" fail-closed, frozen STAGING PLAN for newly discovered historical PGNs.
 
 A plan never grants access to old test groups and does not promote new PGNs to
 training automatically. Old cohort is reconstructed BEFORE expansion. Distinct
@@ -12,9 +12,9 @@ import json
 from pathlib import Path
 
 from .calibration import file_hash
-from .corpus_v5 import extract_decisions_v5
+from .corpus_collection import extract_decisions_v5
 from .historical import position_key
-from .research_v6 import _cohort_v5_training
+from .research_peak import _cohort_v5_training
 
 
 def _allocation(seed:int,game_id:str) ->str:

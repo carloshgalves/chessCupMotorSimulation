@@ -6,10 +6,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from chesssim.annex_v7 import plan_annex,_allocation
-from chesssim.evidence_v7 import match_tournament_evidence, SOURCES
-from chesssim.temporal_v7 import temporal_compare
-from chesssim.peak_v6 import default_peak_registry
+from chesssim.corpus_annex import plan_annex,_allocation
+from chesssim.time_control_evidence import match_tournament_evidence, SOURCES
+from chesssim.temporal_paired import temporal_compare
+from chesssim.peak_windows import default_peak_registry
 
 
 def _rows(n=80,early=40):
@@ -40,13 +40,13 @@ class PairedTemporal(unittest.TestCase):
                 evaluated.append({row['game'] for row in positions})
                 return {'_predicted_moves':['e2e4']*len(positions),
                         'correct':len(positions),'top1':1.,'decisions':len(positions)}
-            with patch('chesssim.temporal_v7.extract_decisions_v5',return_value=(all_rows,{'games_accepted':80})),\
-                 patch('chesssim.temporal_v7._cohort_v5_training',return_value=(all_rows[:280],{
+            with patch('chesssim.temporal_paired.extract_decisions_v5',return_value=(all_rows,{'games_accepted':80})),\
+                 patch('chesssim.temporal_paired._cohort_v5_training',return_value=(all_rows[:280],{
                      'v5_report_sha256':'old_report','v5_test_manifest_sha256':'sealed',
                      'v5_partition_sha256':'old_partition'})),\
-                 patch('chesssim.temporal_v7._load_bases',return_value={'karpov.txt':('fake personality',profile)}),\
-                 patch('chesssim.temporal_v7._choose_base',side_effect=choose_base),\
-                 patch('chesssim.temporal_v7.evaluate_text',side_effect=evaluator):
+                 patch('chesssim.temporal_paired._load_bases',return_value={'karpov.txt':('fake personality',profile)}),\
+                 patch('chesssim.temporal_paired._choose_base',side_effect=choose_base),\
+                 patch('chesssim.temporal_paired.evaluate_text',side_effect=evaluator):
                 result=temporal_compare(root,corpus,registry,p/'result.json',slug='mequinho',
                     match_name='Mecking',v5_report=p/'nonexistent',legacy_v3=p/'n',legacy_pgn=p/'n',
                     allow_provisional=True,include_unknown=True,
@@ -88,8 +88,8 @@ class Evidence(unittest.TestCase):
                        event='Nice olm prel',time_control='?',speed_tag='',
                        fen='p1 w - - 0 12',move='e2e4',fullmove=12,color='white')]
             source={(legacy,1974):[{'event':'Nice Olympiad','site':'Nice'}]}
-            with patch('chesssim.evidence_v7._fingerprints',return_value=(source,1)),\
-                 patch('chesssim.evidence_v7.extract_decisions_v5',return_value=(rows,{})):
+            with patch('chesssim.time_control_evidence._fingerprints',return_value=(source,1)),\
+                 patch('chesssim.time_control_evidence.extract_decisions_v5',return_value=(rows,{})):
                 result=match_tournament_evidence(corpus,ext,p/'out.json',
                     source_id='nice-olympiad-1974',match_name='Mecking')
             self.assertEqual(result['matched_games'],1)
@@ -97,8 +97,8 @@ class Evidence(unittest.TestCase):
             self.assertEqual(ann['games'][g]['mode'],'classical')
             self.assertEqual(ann['games'][g]['evidence'],'DOCUMENTED_EXTERNAL')
             self.assertEqual(ann['v7_evidence']['original_corpus_sha256'],sha256(b'base').hexdigest())
-            with patch('chesssim.evidence_v7._fingerprints',return_value=({(legacy,1974):[{'event':'?','site':'?'}]},1)),\
-                 patch('chesssim.evidence_v7.extract_decisions_v5',return_value=(rows,{})):
+            with patch('chesssim.time_control_evidence._fingerprints',return_value=({(legacy,1974):[{'event':'?','site':'?'}]},1)),\
+                 patch('chesssim.time_control_evidence.extract_decisions_v5',return_value=(rows,{})):
                 result=match_tournament_evidence(corpus,ext,p/'none.json',source_id='nice-olympiad-1974',match_name='Mecking')
             self.assertEqual(result['matched_games'],0)
 
@@ -119,8 +119,8 @@ class Annex(unittest.TestCase):
             for d in collide:d.update(game='new_bad',legacy_key='new_bad_move',fen='position_1_0 w - - 0 20')
             def extractor(file,**kwargs):
                 return (old if file==base else new+safe+collide),{'games_accepted':2}
-            with patch('chesssim.annex_v7.extract_decisions_v5',side_effect=extractor),\
-                 patch('chesssim.annex_v7._cohort_v5_training',return_value=(old[:4],{
+            with patch('chesssim.corpus_annex.extract_decisions_v5',side_effect=extractor),\
+                 patch('chesssim.corpus_annex._cohort_v5_training',return_value=(old[:4],{
                      'v5_report_sha256':'r','v5_test_manifest_sha256':'t',
                      'v5_partition_sha256':'p'})):
                 doc=plan_annex(base,[ext],p/'annex.json',match_name='Mecking',

@@ -6,11 +6,11 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from chesssim.peak_v6 import (
+from chesssim.peak_windows import (
     annotation_template,
     default_peak_registry,load_peak_window,classify_mode,_time_control_seconds,
     annotate_decisions,modality_plan,modality_inventory,load_annotations, CLOCK_PRESETS)
-from chesssim.research_v6 import (prepare_peak_training,_cohort_v5_training,
+from chesssim.research_peak import (prepare_peak_training,_cohort_v5_training,
                                   calibrate_v6,_distinct_positions,peak_audit)
 from chesssim.historical import split_three_ways
 from chesssim.calibration import file_hash
@@ -163,7 +163,7 @@ class V6Seals(unittest.TestCase):
         return set(),{'reserved_game_ids_sha256':'dummy-v3'}
 
     def test_v5_embargo_all_reserved_games_and_exact_manifest(self):
-        with patch('chesssim.research_v6._legacy_embargo',side_effect=self._legacy):
+        with patch('chesssim.research_peak._legacy_embargo',side_effect=self._legacy):
             train,policy=_cohort_v5_training(self.raw,report_path=self.v5,
                 legacy_v3=self.v3,legacy_pgn=self.oldpgn,slug='mequinho',pgn=self.pgn)
         self.assertTrue(train)
@@ -172,7 +172,7 @@ class V6Seals(unittest.TestCase):
         self.assertTrue(policy['v5_reserved_positions_not_evaluated'])
 
     def test_reject_changed_test_seal_and_changed_source(self):
-        with patch('chesssim.research_v6._legacy_embargo',side_effect=self._legacy):
+        with patch('chesssim.research_peak._legacy_embargo',side_effect=self._legacy):
             self.report['cohort_registry']['test_manifest_sha256']='0'*64
             (self.v5/'calibration.json').write_text(json.dumps(self.report))
             with self.assertRaisesRegex(ValueError,'registry|seal'):
@@ -184,8 +184,8 @@ class V6Seals(unittest.TestCase):
                     legacy_v3=self.v3,legacy_pgn=self.oldpgn,slug='mequinho',pgn=self.pgn)
 
     def test_v6_peak_and_mode_do_not_pick_old_heldouts(self):
-        with patch('chesssim.research_v6._legacy_embargo',side_effect=self._legacy),\
-             patch('chesssim.research_v6.extract_decisions_v5',return_value=(self.raw,{'games_accepted':90})):
+        with patch('chesssim.research_peak._legacy_embargo',side_effect=self._legacy),\
+             patch('chesssim.research_peak.extract_decisions_v5',return_value=(self.raw,{'games_accepted':90})):
             with self.assertRaisesRegex(ValueError,'Provisional'):
                 prepare_peak_training(self.pgn,self.peak,slug='mequinho',match_name='Mecking',
                    allow_provisional=False,annotations=None,mode='classical',v5_report=self.v5,
@@ -206,11 +206,11 @@ class V6Seals(unittest.TestCase):
         def spy(root,text,positions,depth):
             self.assertFalse(self.protected & {d['game'] for d in positions})
             return fake_eval(root,text,positions,depth)
-        with patch('chesssim.research_v6._legacy_embargo',side_effect=self._legacy),\
-             patch('chesssim.research_v6.extract_decisions_v5',return_value=(self.raw,{'games_accepted':90})),\
-             patch('chesssim.research_v6.evaluate_text',side_effect=spy),\
-             patch('chesssim.research_v5.evaluate_text',side_effect=spy),\
-             patch('chesssim.research_v4.evaluate_text',side_effect=spy):
+        with patch('chesssim.research_peak._legacy_embargo',side_effect=self._legacy),\
+             patch('chesssim.research_peak.extract_decisions_v5',return_value=(self.raw,{'games_accepted':90})),\
+             patch('chesssim.research_peak.evaluate_text',side_effect=spy),\
+             patch('chesssim.research_crossvalidation.evaluate_text',side_effect=spy),\
+             patch('chesssim.research_search.evaluate_text',side_effect=spy):
             report=calibrate_v6(self.root,self.pgn,self.home/'run',self.peak,
                 slug='mequinho',match_name='Mecking',mode='classical',
                 allow_provisional=True,include_unknown=True,v5_report=self.v5,
@@ -228,7 +228,7 @@ class V6Seals(unittest.TestCase):
         data['players']['menchik'].update(status='APPROVED',from_year=1929,to_year=1937,
                                          justification='example independently verified',references=['reference for test'])
         self.peak.write_text(json.dumps(data))
-        with patch('chesssim.research_v6.extract_decisions_v5',return_value=(self.raw,{})):
+        with patch('chesssim.research_peak.extract_decisions_v5',return_value=(self.raw,{})):
             with self.assertRaisesRegex(ValueError,'fresh-cohort-ack'):
                 prepare_peak_training(self.pgn,self.peak,slug='menchik',match_name='Menchik',
                      allow_provisional=False,annotations=None,mode='classical')

@@ -8,10 +8,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from chesssim.openings_v9 import (
+from chesssim.opening_books import (
     SCHEMA, _game_id, build_opening_book, load_opening_book, select_book_move,
 )
-from chesssim.quality_v9 import _sample_indices
+from chesssim.quality_baseline import _sample_indices
 
 
 def test_mequinho_requires_original_embargo_even_if_ack_unpartitioned(tmp_path):
@@ -100,7 +100,7 @@ def test_cli_commands_parse_without_chess_module(capsys):
 def test_mequinho_opening_book_uses_only_frozen_train_ids(tmp_path, monkeypatch):
     """Reserved historical games cannot appear in the book, even when in the PGN."""
     import types
-    from chesssim import openings_v9
+    from chesssim import opening_books
 
     class Move:
         def __init__(self, value): self.value = value
@@ -132,8 +132,8 @@ def test_mequinho_opening_book_uses_only_frozen_train_ids(tmp_path, monkeypatch)
     fake_chess.pgn = fake_pgn
     monkeypatch.setitem(sys.modules, 'chess', fake_chess)
     monkeypatch.setitem(sys.modules, 'chess.pgn', fake_pgn)
-    monkeypatch.setattr(openings_v9, 'extract_decisions_v5', lambda *a, **kw: ([{'game': 'fake'}], {}))
-    monkeypatch.setattr(openings_v9, '_cohort_v5_training',
+    monkeypatch.setattr(opening_books, 'extract_decisions_v5', lambda *a, **kw: ([{'game': 'fake'}], {}))
+    monkeypatch.setattr(opening_books, '_cohort_v5_training',
                         lambda *a, **kw: ([{'game': _game_id(train)}], {'embargo_protected': True}))
 
     pgn = tmp_path / 'corpus.pgn'; pgn.write_text('mock corpus', encoding='utf-8')

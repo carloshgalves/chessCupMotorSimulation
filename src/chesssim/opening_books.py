@@ -13,8 +13,8 @@ import random
 
 from .calibration import file_hash
 from .historical import player_side
-from .research_v6 import _cohort_v5_training
-from .corpus_v5 import extract_decisions_v5
+from .research_peak import _cohort_v5_training
+from .corpus_collection import extract_decisions_v5
 
 SCHEMA = 'chesssim-opening-v9'
 

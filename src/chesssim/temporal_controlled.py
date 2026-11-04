@@ -1,4 +1,4 @@
-"""v0.8: controlled temporal sampling and provisional profile materialization.
+""" controlled temporal sampling and provisional profile materialization.
 
 This module adds two exploratory capabilities:
 1. compare peak/mixed/career training mixes while controlling the number of
@@ -18,11 +18,11 @@ import random
 
 from .calibration import file_hash, tune_text
 from .historical import position_key
-from .peak_v6 import annotate_decisions, load_annotations, load_peak_window
-from .research_v3 import evaluate_text
-from .research_v4 import _directed_search, _folds_by_game, _load_bases, DEFAULT_PROBES
-from .research_v5 import _choose_base
-from .research_v6 import _cohort_v5_training, _distinct_positions
+from .peak_windows import annotate_decisions, load_annotations, load_peak_window
+from .research_sealed import evaluate_text
+from .research_search import _directed_search, _folds_by_game, _load_bases, DEFAULT_PROBES
+from .research_crossvalidation import _choose_base
+from .research_peak import _cohort_v5_training, _distinct_positions
 
 PROTOCOL = {
     "version": "temporal-controlled-v8",
@@ -452,5 +452,5 @@ def build_provisional_profile_v8(root: Path, pgn: Path, peak_registry: Path, out
 
 
 # Local import placed at end to avoid circular import during module loading.
-from .corpus_v5 import extract_decisions_v5  # noqa: E402
-from .peak_v6 import load_annotations  # noqa: E402
+from .corpus_collection import extract_decisions_v5  # noqa: E402
+from .peak_windows import load_annotations  # noqa: E402

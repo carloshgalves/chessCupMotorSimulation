@@ -157,7 +157,7 @@ def split_positions(decisions: list[dict], *, seed: int = 2026, val_fraction: fl
                   "val_sampled_games": len({d["game"] for d in v})}
 
 
-# v0.3: frozen three-way partition. The final test MUST NOT be used to
+# frozen three-way partition. The final test MUST NOT be used to
 # optimize parameters or select the model. All three partitions are disjoint
 # at both the grouping and normalized-board-state levels.
 def position_key(d: dict) -> str:

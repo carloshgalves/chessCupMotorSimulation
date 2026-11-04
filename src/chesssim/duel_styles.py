@@ -5,8 +5,8 @@ from pathlib import Path
 import json
 
 from .catalog import Player, find_player
-from .openings_v9 import load_opening_book
-from .provisional_v8 import PROVISIONAL_MECKING_ALIAS, PROVISIONAL_MECKING_FILENAME
+from .opening_books import load_opening_book
+from .provisional_profiles import PROVISIONAL_MECKING_ALIAS, PROVISIONAL_MECKING_FILENAME
 
 
 def _participant(name: str) -> Player:
@@ -26,7 +26,7 @@ def play_styles(root: Path, output: Path, *, white_name: str, black_name: str,
                 rounds: int = 2, seed: int = 2029, opening_min_count: int = 1,
                 max_plies: int = 400, replay: bool = True) -> dict:
     from .matches import play_duel, file_hash
-    from .replay_v8 import export_replay_html
+    from .replay_html import export_replay_html
 
     white, black = _participant(white_name), _participant(black_name)
     if white.slug == black.slug:

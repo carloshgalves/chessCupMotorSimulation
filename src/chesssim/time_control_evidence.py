@@ -1,4 +1,4 @@
-"""v0.7: verifiable tournament-time-control evidence matched by full game moves.
+""" verifiable tournament-time-control evidence matched by full game moves.
 
 No annotation can be inferred from an event title, a date, or general period.
 Requires a separately obtained tournament-specific PGN AND a documentary
@@ -13,8 +13,8 @@ from pathlib import Path
 import re
 
 from .calibration import file_hash
-from .corpus_v5 import extract_decisions_v5
-from .peak_v6 import annotation_template, load_annotations, classify_mode
+from .corpus_collection import extract_decisions_v5
+from .peak_windows import annotation_template, load_annotations, classify_mode
 
 SOURCES = {
  'nice-olympiad-1974': {

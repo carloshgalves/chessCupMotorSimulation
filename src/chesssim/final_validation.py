@@ -12,7 +12,7 @@ from statistics import mean, median
 
 from .calibration import _diagnostics, evaluate_candidate, file_hash
 from .historical import extract_decisions, split_three_ways
-from .research_v3 import _by_game, evaluate_text, paired_game_bootstrap
+from .research_sealed import _by_game, evaluate_text, paired_game_bootstrap
 
 
 def _trace_diff(left: dict, right: dict) -> int | None:

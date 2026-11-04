@@ -1,4 +1,4 @@
-"""v0.5: acquire and merge publicly available career PGNs with evidence trails.
+""" acquire and merge publicly available career PGNs with evidence trails.
 
 PGN Mentor is a source, NOT a claim of completeness. Network is used only
 when the user explicitly invokes `corpus-fetch`; calibration is offline.

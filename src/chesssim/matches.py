@@ -112,7 +112,7 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
         game = chess.pgn.Game()
         game.headers.update({
             "Event": ("Copa dos Imortais - Oficial" if clock == (600, 2) else
-                      "Copa dos Imortais - Ritmo Experimental v0.6" if clock else
+                      "Copa dos Imortais - Ritmo Experimental" if clock else
                       "Copa dos Imortais - Duelo de Desenvolvimento"),
             "Site": "Local WSL",
             "Date": datetime.now(timezone.utc).strftime("%Y.%m.%d"),
@@ -149,7 +149,7 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             opening_move = None
             opening_source = None
             if historical_openings:
-                from .openings_v9 import select_book_move
+                from .opening_books import select_book_move
                 owner = white.slug if board.turn == chess.WHITE else black.slug
                 selected = historical_openings.get(owner)
                 if selected is not None:

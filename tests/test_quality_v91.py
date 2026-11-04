@@ -4,7 +4,7 @@ from statistics import median
 
 import pytest
 
-from chesssim.quality_v91 import (spread_indices, select_decisions,
+from chesssim.quality_audit import (spread_indices, select_decisions,
                                   summarize_decisions, compare_quality_reports)
 
 
@@ -90,7 +90,7 @@ def test_full_engine_path_requires_python_chess():
 
 def test_deduplicates_identical_mainlines_if_chess_available(tmp_path: Path):
     pytest.importorskip('chess')
-    from chesssim.quality_v91 import _load_positions
+    from chesssim.quality_audit import _load_positions
     pgn = tmp_path/'two.pgn'
     single = '''[Event "Sample"]\n[White "A"]\n[Black "B"]\n[Result "*"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 O-O 8. c3 d6 9. h3 Nb8 10. d4 Nbd7 *\n\n'''
     pgn.write_text(single * 2)

@@ -3,9 +3,9 @@ import json
 
 import pytest
 
-from chesssim.provisional_v8 import provisional_install, PROVISIONAL_MECKING_ALIAS
+from chesssim.provisional_profiles import provisional_install, PROVISIONAL_MECKING_ALIAS
 from chesssim.registry import registered_aliases
-from chesssim.temporal_v8 import _mix_sample
+from chesssim.temporal_controlled import _mix_sample
 
 
 def _fixtures(tmp_path: Path):

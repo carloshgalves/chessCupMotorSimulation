@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from chesssim.signature_v8 import _cohort_signature
-from chesssim.temporal_v8 import _mix_sample, _round_robin_sample
+from chesssim.style_signature import _cohort_signature
+from chesssim.temporal_controlled import _mix_sample, _round_robin_sample
 
 
 def test_round_robin_sample_limits_games_and_positions():

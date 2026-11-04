@@ -1,4 +1,4 @@
-"""v0.7: paired peak-era vs full-career study, evaluated on identical peak folds.
+""" paired peak-era vs full-career study, evaluated on identical peak folds.
 
 Only the FROZEN v5 TRAIN groups are ever presented to a chess engine.  Each
 fold's peak held-out game is excluded from BOTH learning arms and all matching
@@ -12,13 +12,13 @@ import json
 from statistics import mean, pstdev
 
 from .calibration import file_hash, tune_text
-from .corpus_v5 import extract_decisions_v5
+from .corpus_collection import extract_decisions_v5
 from .historical import _balanced_sample, position_key
-from .peak_v6 import annotate_decisions, load_annotations, load_peak_window
-from .research_v3 import evaluate_text
-from .research_v4 import _directed_search, _folds_by_game, _load_bases, DEFAULT_PROBES
-from .research_v5 import _choose_base
-from .research_v6 import _cohort_v5_training, _distinct_positions
+from .peak_windows import annotate_decisions, load_annotations, load_peak_window
+from .research_sealed import evaluate_text
+from .research_search import _directed_search, _folds_by_game, _load_bases, DEFAULT_PROBES
+from .research_crossvalidation import _choose_base
+from .research_peak import _cohort_v5_training, _distinct_positions
 
 PROTOCOL = {
     'version': 'paired-temporal-comparison-v7',

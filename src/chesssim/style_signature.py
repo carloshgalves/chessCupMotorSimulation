@@ -1,4 +1,4 @@
-"""v0.8: descriptive historical style signatures from PGN corpora.
+""" descriptive historical style signatures from PGN corpora.
 
 These summaries are *descriptive only*. They do not validate a Rodent profile,
 do not estimate Elo and do not prove historical identity. They are intended to
@@ -13,7 +13,7 @@ from pathlib import Path
 import re
 
 from .historical import player_side
-from .peak_v6 import load_peak_window
+from .peak_windows import load_peak_window
 
 PROTOCOL = {
     "version": "style-signature-v8",

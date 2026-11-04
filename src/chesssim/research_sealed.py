@@ -1,4 +1,4 @@
-"""v0.3: partition-sealed historical calibration and reproducible diagnostics.
+""" partition-sealed historical calibration and reproducible diagnostics.
 
 Train tunes parameters; validation chooses from a frozen shortlist; test is
 never evaluated here. final-eval is a separate explicitly invoked step.
