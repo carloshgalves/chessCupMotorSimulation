@@ -12,6 +12,22 @@ ROOT = Path(__file__).resolve().parents[1]
 POLICY = ROOT / "docs" / "THIRD_PARTY.md"
 
 
+def _tracked_paths() -> list[Path]:
+    result = subprocess.run(
+        ["git", "ls-files", "-z"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        pytest.skip("This distribution-boundary check requires a Git checkout.")
+    return [
+        Path(item.decode("utf-8"))
+        for item in result.stdout.split(b"\0")
+        if item
+    ]
+
+
 def test_readme_and_usage_link_to_the_third_party_policy() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     usage = (ROOT / "docs" / "USAGE.md").read_text(encoding="utf-8")
@@ -48,10 +64,22 @@ def test_gitignore_excludes_external_payload_extensions() -> None:
         "*.zip",
         "*.7z",
         "*.rar",
+        "*.tar",
+        "*.tar.gz",
+        "*.tgz",
+        "*.bz2",
+        "*.xz",
+        "*.zst",
         "*.exe",
         "*.dll",
         "*.so",
         "*.dylib",
+        "*.pyd",
+        "*.a",
+        "*.lib",
+        "*.o",
+        "*.obj",
+        "*.wasm",
         "*.bin",
         "*.nnue",
     )
@@ -60,29 +88,36 @@ def test_gitignore_excludes_external_payload_extensions() -> None:
 
 
 def test_no_external_engine_or_corpus_payload_is_tracked() -> None:
-    result = subprocess.run(
-        ["git", "ls-files", "-z"],
-        cwd=ROOT,
-        check=False,
-        capture_output=True,
-    )
-    if result.returncode != 0:
-        pytest.skip("This distribution-boundary check requires a Git checkout.")
-
-    paths = [Path(item.decode("utf-8")) for item in result.stdout.split(b"\0") if item]
+    paths = _tracked_paths()
     forbidden_suffixes = {
         ".pgn",
         ".pdf",
         ".zip",
         ".7z",
         ".rar",
+        ".tar",
+        ".tgz",
+        ".bz2",
+        ".xz",
+        ".zst",
         ".exe",
         ".dll",
         ".so",
         ".dylib",
+        ".pyd",
+        ".a",
+        ".lib",
+        ".o",
+        ".obj",
+        ".wasm",
         ".bin",
         ".nnue",
     }
+    forbidden_endings = (
+        ".pgn.gz",
+        ".pgn.zst",
+        ".pgn.tar.gz",
+    )
     forbidden_directories = {
         "datasets",
         "calibracoes",
@@ -97,47 +132,47 @@ def test_no_external_engine_or_corpus_payload_is_tracked() -> None:
     violations = []
 
     for path in paths:
+        relative = path.as_posix().casefold()
         if path.suffix.casefold() in forbidden_suffixes:
-            violations.append(path.as_posix())
-        if path.parts and path.parts[0].casefold() in forbidden_directories:
-            violations.append(path.as_posix())
-        if path.parts and path.parts[0].casefold().startswith("partidas_chesssim"):
-            violations.append(path.as_posix())
+            violations.append(relative)
+        if relative.endswith(forbidden_endings):
+            violations.append(relative)
+        if any(
+            part.casefold() in forbidden_directories
+            or part.casefold().startswith("partidas_chesssim")
+            for part in path.parts[:-1]
+        ):
+            violations.append(relative)
 
     assert not violations, "External or local artifacts are tracked: " + ", ".join(violations)
 
 
 def test_no_known_binary_payload_signature_is_tracked() -> None:
-    result = subprocess.run(
-        ["git", "ls-files", "-z"],
-        cwd=ROOT,
-        check=False,
-        capture_output=True,
-    )
-    if result.returncode != 0:
-        pytest.skip("This distribution-boundary check requires a Git checkout.")
-
     signatures = (
         b"\x7fELF",
         b"MZ",
         b"PK\x03\x04",
         b"\x1f\x8b",
+        b"7z\xbc\xaf\x27\x1c",
+        b"Rar!\x1a\x07",
+        b"\xfd7zXZ",
+        b"\x28\xb5\x2f\xfd",
+        b"!<arch>\n",
         b"\xfe\xed\xfa\xce",
         b"\xce\xfa\xed\xfe",
         b"\xfe\xed\xfa\xcf",
         b"\xcf\xfa\xed\xfe",
         b"\xca\xfe\xba\xbe",
     )
-    paths = [item.decode("utf-8") for item in result.stdout.split(b"\0") if item]
     binary_paths = []
-    for relative in paths:
+    for relative in _tracked_paths():
         path = ROOT / relative
         try:
             with path.open("rb") as stream:
-                prefix = stream.read(4)
+                prefix = stream.read(8)
         except OSError:
             continue
         if any(prefix.startswith(signature) for signature in signatures):
-            binary_paths.append(relative)
+            binary_paths.append(relative.as_posix())
 
     assert not binary_paths, "Binary payloads are tracked: " + ", ".join(binary_paths)

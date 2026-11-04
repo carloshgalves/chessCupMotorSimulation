@@ -393,7 +393,7 @@ Principais famílias:
 
 ## 10. Arquivos locais e reprodutibilidade
 
-Os exemplos usam datasets/, calibracoes/, runs/ e reports/ como diretórios locais. Eles são ignorados pelo Git. Mantenha PGNs, executáveis, perfis experimentais, relatórios e registros de coorte fora dos commits, salvo quando houver decisão explícita e documentada de publicação.
+Os exemplos usam datasets/, calibracoes/, runs/ e reports/ como diretórios locais. Eles são ignorados pelo Git. Mantenha PGNs, executáveis, perfis experimentais, relatórios e registros de coorte fora dos commits. Só publique um recurso externo após verificar e documentar a autorização de redistribuição, a proveniência e as condições aplicáveis.
 
 Para reproduzir uma execução, preserve pelo menos:
 

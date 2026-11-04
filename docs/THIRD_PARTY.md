@@ -30,7 +30,7 @@ Esta issue não escolhe uma licença em nome do mantenedor. A decisão precisa s
 
 ## 2. Dependências Python declaradas
 
-O inventário abaixo cobre as dependências diretas declaradas em `pyproject.toml`. As versões são faixas mínimas, não versões fixadas.
+O inventário abaixo cobre as dependências diretas declaradas em `pyproject.toml`. As restrições são intervalos declarados, não versões exatas fixadas.
 
 | Camada | Distribuição | Restrição declarada | Finalidade | Licença upstream identificada |
 |---|---|---:|---|---|
