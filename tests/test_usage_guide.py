@@ -38,3 +38,7 @@ def test_usage_guide_documents_supported_cli_help(command: str, capsys) -> None:
 
     assert exit_info.value.code == 0
     assert f"usage: chesssim {command}" in capsys.readouterr().out
+
+def test_readme_links_to_the_usage_guide() -> None:
+    readme = GUIDE.parents[1] / "README.md"
+    assert "[manual de uso](docs/USAGE.md)" in readme.read_text(encoding="utf-8")
