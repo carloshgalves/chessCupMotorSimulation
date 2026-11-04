@@ -152,3 +152,123 @@ def test_quality_audit_does_not_merge_distinct_starting_positions(tmp_path):
     assert [g["duplicate_mainline"] for g in games] == [False, True, False]
     assert [g["eligible_for_independent_evidence"] for g in games] == [True, False, True]
     assert {r["game_index"] for r in rows} == {0, 2}
+
+
+def test_real_opening_policy_records_actual_choices_and_seed(tmp_path):
+    """Integration without engine binaries: two real chess book selections."""
+    chess = pytest.importorskip("chess")
+    from chesssim import matches
+    from chesssim.opening_books import SCHEMA, position_token
+
+    a, b = find_player("fischer"), find_player("tal")
+    initial = chess.Board()
+    white_token = position_token(initial)
+    initial.push_uci("e2e4")
+    black_token = position_token(initial)
+
+    def book(slug, color, token, move):
+        return {
+            "schema": SCHEMA, "player": slug,
+            "policy": {"max_plies": 2},
+            "positions": {
+                "white": {token: {move: 1}} if color == "white" else {},
+                "black": {token: {move: 1}} if color == "black" else {},
+            },
+            "source": {"pgn_sha256": ("a" if color == "white" else "b") * 64},
+        }
+
+    class FakeEngine:
+        def __init__(self):
+            self.closed = False
+
+        def play(self, *_args, **_kwargs):
+            raise AssertionError("Book moves should not invoke UCI engine.play")
+
+        def quit(self):
+            self.closed = True
+
+    engines = [FakeEngine(), FakeEngine()]
+    with patch.object(matches, "_open_engine", side_effect=engines):
+        game, meta = matches._play_one(
+            tmp_path, tmp_path / "engine", a, b, 3, None, 2, 2,
+            {"exe": "1" * 64, a.slug: "2" * 64, b.slug: "3" * 64},
+            use_books=False,
+            historical_openings={
+                a.slug: book(a.slug, "white", white_token, "e2e4"),
+                b.slug: book(b.slug, "black", black_token, "e7e5"),
+            },
+            opening_seed=8181,
+        )
+    assert all(engine.closed for engine in engines)
+    assert game.headers["OpeningSeed"] == "8181"
+    assert game.headers["OpeningMinCount"] == "1"
+    assert meta["opening_seed"] == 8181
+    assert meta["opening_moves"] == {"white": 1, "black": 1}
+    assert [r["move"] for r in meta["opening_trace"]] == ["e2e4", "e7e5"]
+    assert [r["book_source_sha256"] for r in meta["opening_trace"]] == ["a" * 64, "b" * 64]
+    assert [r["round"] for r in meta["opening_trace"]] == [2, 2]
+
+
+def test_quality_diagnostic_keeps_rows_but_excludes_duplicate_from_summary(
+    tmp_path, monkeypatch,
+):
+    """The opt-in diagnostic must never silently inflate independent estimates."""
+    pytest.importorskip("chess.engine")
+    import chess.engine
+    from chesssim import quality_audit
+
+    game = _game("e2e4", "e7e5", "g1f3", "b8c6")
+    game.headers["White"] = "A"
+    game.headers["Black"] = "B"
+    sample = tmp_path / "duplicate.pgn"
+    sample.write_text(str(game) + "\n\n" + str(game) + "\n\n", encoding="utf-8")
+    engine_path = tmp_path / "fake-stockfish"
+    engine_path.write_bytes(b"test")
+
+    class FakeJudge:
+        options = {}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+    monkeypatch.setattr(chess.engine.SimpleEngine, "popen_uci", lambda *_args, **_kw: FakeJudge())
+    monkeypatch.setattr(
+        quality_audit, "_evaluate_choice",
+        lambda *_args, **_kw: {"cp_loss": 25, "raw_gap_cp": 25, "mate_affected": False},
+    )
+
+    report = quality_audit.analyze_games_v91(
+        sample, engine_path, tmp_path / "diagnostic.json",
+        depth=3, max_positions=4, min_fullmove=1,
+        dedupe_games=False, sample_mode="spread",
+    )
+    assert report["diversity"]["games_total"] == 2
+    assert report["diversity"]["games_distinct"] == 1
+    assert report["inputs"]["sampled_positions"] == 4
+    assert report["independent_decisions_sampled"] == 2
+    assert report["duplicate_decisions_excluded_from_summary"] == 2
+    assert sum(row["decisions_analyzed"] for row in report["summary"].values()) == 2
+
+
+def test_series_failure_retains_atomic_checkpoint(tmp_path, monkeypatch):
+    from chesssim import duel_styles, matches
+
+    def crash(*_args, **_kwargs):
+        raise RuntimeError("synthetic engine failure")
+
+    monkeypatch.setattr(matches, "play_duel", crash)
+    with pytest.raises(RuntimeError, match="synthetic engine failure"):
+        duel_styles.play_styles(
+            tmp_path, tmp_path, white_name="fischer", black_name="tal",
+            rounds=2, replay=False,
+        )
+    roots = list(tmp_path.glob("style-duels-*"))
+    assert len(roots) == 1
+    doc = json.loads((roots[0] / "series-report.json").read_text(encoding="utf-8"))
+    assert doc["status"] == "FAILED"
+    assert doc["pairs_completed"] == 0
+    assert "synthetic engine failure" in doc["error"]
+    assert doc["planned_pairs"] == 2
