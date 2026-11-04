@@ -68,8 +68,28 @@ jobs:
               assert "chesssim = chesssim.cli:main" in metadata, (
                   "chesssim console entry point is missing"
               )
+              project_metadata = [
+                  name for name in names if name.endswith(".dist-info/METADATA")
+              ]
+              assert len(project_metadata) == 1
+              metadata_text = archive.read(project_metadata[0]).decode("utf-8")
+              assert "License-Expression: GPL-3.0-or-later" in metadata_text
+              assert any(name.endswith(".dist-info/licenses/LICENSE") for name in names)
+              assert any(name.endswith(".dist-info/licenses/NOTICE.md") for name in names)
           print(f"Verified {wheels[0].name} and {sdists[0].name}")
           PY
           python -m pip install --no-deps --target "$WHEEL_INSTALL" dist/*.whl
           PYTHONPATH="$WHEEL_INSTALL" python -m chesssim --help
           PYTHONPATH="$WHEEL_INSTALL" python -m chesssim roster > /dev/null
+
+      - name: Generate resolved Python SBOM (single existing runner)
+        if: matrix.python-version == '3.13' && (github.event_name != 'push' || github.ref == 'refs/heads/main')
+        run: python scripts/generate_sbom.py --out sbom-artifacts
+      - name: Publish SBOM and installed-dependency evidence for 7 days
+        if: matrix.python-version == '3.13' && (github.event_name != 'push' || github.ref == 'refs/heads/main')
+        uses: actions/upload-artifact@v4
+        with:
+          name: resolved-sbom-py313
+          path: sbom-artifacts/
+          if-no-files-found: error
+          retention-days: 7

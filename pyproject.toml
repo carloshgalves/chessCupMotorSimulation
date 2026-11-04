@@ -1,10 +1,12 @@
 [build-system]
-requires = ["setuptools>=69"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "chesssim64"
 version = "0.1.0"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE", "NOTICE.md"]
 description = "ChessCup Motor Simulation: torneios e estudo computacional de estilos de enxadristas"
 requires-python = ">=3.11"
 dependencies = ["chess>=1.11,<2"]

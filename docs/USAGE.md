@@ -2,7 +2,7 @@
 
 Este guia descreve o fluxo operacional disponível na CLI atual. Os exemplos usam Bash em Linux/WSL e caminhos genéricos relativos ao repositório. Nenhum caminho local, executável de motor ou corpus PGN é presumido.
 
-> **Limite importante:** instalar o pacote Python não instala Rodent IV, Stockfish nem bases históricas. Esses recursos são externos e precisam ser obtidos e configurados separadamente.
+> **Limite importante:** instalar o pacote Python não instala Rodent IV, Stockfish nem bases históricas. Esses recursos são externos e precisam ser obtidos e configurados separadamente. Consulte também a [auditoria de dependências, fontes e distribuição](THIRD_PARTY.md).
 
 ## 1. Requisitos e instalação
 
@@ -393,7 +393,7 @@ Principais famílias:
 
 ## 10. Arquivos locais e reprodutibilidade
 
-Os exemplos usam datasets/, calibracoes/, runs/ e reports/ como diretórios locais. Eles são ignorados pelo Git. Mantenha PGNs, executáveis, perfis experimentais, relatórios e registros de coorte fora dos commits, salvo quando houver decisão explícita e documentada de publicação.
+Os exemplos usam datasets/, calibracoes/, runs/ e reports/ como diretórios locais. Eles são ignorados pelo Git. Mantenha PGNs, executáveis, perfis experimentais, relatórios e registros de coorte fora dos commits. Só publique um recurso externo após verificar e documentar a autorização de redistribuição, a proveniência e as condições aplicáveis.
 
 Para reproduzir uma execução, preserve pelo menos:
 
@@ -403,4 +403,18 @@ Para reproduzir uma execução, preserve pelo menos:
 - a versão do código e o protocolo utilizado;
 - os registros de coorte e de embargo exigidos pela pesquisa.
 
-Consulte também [Arquitetura](ARCHITECTURE.md) e [Protocolo de pesquisa](RESEARCH_PROTOCOL.md). Para origem, direitos e condições de redistribuição dos motores e datasets, consulte a [issue #25](https://github.com/carloshgalves/chessCupMotorSimulation/issues/25).
+Consulte também [Arquitetura](ARCHITECTURE.md), [Protocolo de pesquisa](RESEARCH_PROTOCOL.md) e a [auditoria de dependências, fontes e distribuição](THIRD_PARTY.md).
+
+## 11. Licença e geração de SBOM
+
+O código próprio é licenciado sob GPL-3.0-or-later. Veja [a decisão de licença](LICENSE_DECISION.md) e a [auditoria de terceiros](THIRD_PARTY.md); isso não altera os direitos sobre PGNs, engines, perfis, livros ou redes externas.
+
+Para obter um inventário de **pacotes Python resolvidos e realmente instalados**, execute (precisa de acesso ao índice de pacotes):
+
+~~~bash
+python scripts/generate_sbom.py --out sbom-artifacts
+~~~
+
+O diretório informado deve ser novo. O processo cria ambientes virtuais temporários para aplicação, dependências de desenvolvimento/build e ferramenta de geração. Produz `runtime.cdx.json` e `development.cdx.json` (CycloneDX JSON 1.6) e, para cada escopo, evidências de `pip list`, `pip inspect` e `pip freeze --all`; o `manifest.json` registra SHA-256 de cada arquivo, commit e quantidades verificadas.
+
+O CI executa a geração apenas em Python 3.13 quando há PR ou push na `main`, no runner já existente. O artefato `resolved-sbom-py313` fica disponível por 7 dias no GitHub Actions; não deve ser commitado como se representasse outras máquinas. O SBOM não inventaria Rodent IV, Stockfish, seus recursos e PGNs, que devem ser tratados separadamente quando distribuídos.

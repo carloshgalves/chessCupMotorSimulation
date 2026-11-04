@@ -18,10 +18,33 @@ auditorias/
 benchmarks/
 reports/
 runs/
+
+# External engines, books, corpora and downloaded archives
 *.pgn
+*.pgn.gz
+*.pgn.zst
 *.pdf
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.tgz
+*.bz2
+*.xz
+*.zst
 *.exe
+*.dll
+*.so
+*.dylib
+*.pyd
+*.a
+*.lib
+*.o
+*.obj
+*.wasm
 *.bin
+*.nnue
 *.log
 *.sqlite*
 .env
@@ -33,3 +56,6 @@ runs/
 Thumbs.db
 .idea/
 .vscode/
+
+# Generated dependency SBOMs (CI artifacts, not committed inventories)
+sbom-artifacts/
