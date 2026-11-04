@@ -33,6 +33,8 @@ def test_readme_and_usage_link_to_the_third_party_policy() -> None:
     usage = (ROOT / "docs" / "USAGE.md").read_text(encoding="utf-8")
 
     assert "[docs/THIRD_PARTY.md](docs/THIRD_PARTY.md)" in readme
+    assert "`python-chess`" in readme
+    assert "GPL-3.0-or-later" in readme
     assert "[auditoria de dependências, fontes e distribuição](THIRD_PARTY.md)" in usage
 
 

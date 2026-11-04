@@ -9,6 +9,7 @@ Há um protótipo de linha de comando que gera duelos, PGNs e replays offline, c
 ## Requisitos
 
 - Python 3.11 ou superior e ambiente virtual.
+- `python-chess` (distribuição `chess` no PyPI; GPL-3.0-or-later), dependência obrigatória de runtime instalada pelo pacote.
 - Rodent IV instalado **separadamente**, com executável e perfis autorizados pelo usuário.
 - Stockfish instalado **separadamente**, caso deseje analisar qualidade dos lances.
 - PGNs históricos obtidos legalmente e armazenados localmente. Os corpora não são distribuídos neste repositório.
