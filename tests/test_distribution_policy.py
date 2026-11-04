@@ -51,8 +51,14 @@ def test_policy_covers_every_directly_declared_dependency() -> None:
     for license_id in ("GPL-3.0-or-later", "GPL-3.0", "MIT"):
         assert license_id in policy
 
+    assert "e8d84c8c8c189a1cf4eb27c578fc573af3b916d2" in policy
+    assert "ff7cee4244ec96ea488c402669e3674c0574dce6" in policy
+    assert "Copyright © 2025 64 Squares" in policy
     assert "transitivas" in policy
     assert "SBOM" in policy
+
+    assert "license" not in project["project"]
+    assert not (ROOT / "LICENSE").exists()
 
 
 def test_gitignore_excludes_external_payload_extensions() -> None:

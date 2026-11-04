@@ -68,7 +68,8 @@ A licença do repositório upstream não substitui uma verificação de proveni�
 ### 3.2. Stockfish
 
 - Projeto upstream: [official-stockfish/Stockfish](https://github.com/official-stockfish/Stockfish).
-- O arquivo upstream [Copying.txt](https://github.com/official-stockfish/Stockfish/blob/master/Copying.txt) contém a GNU GPL versão 3.
+- O commit upstream consultado nesta revisão é `ff7cee4244ec96ea488c402669e3674c0574dce6`.
+- O arquivo [Copying.txt dessa revisão](https://github.com/official-stockfish/Stockfish/blob/ff7cee4244ec96ea488c402669e3674c0574dce6/Copying.txt) contém a GNU GPL versão 3.
 - O manual de uso deste projeto solicita uma instalação externa e usa o executável indicado pelo usuário para análises independentes.
 
 Não incluir executáveis Stockfish, bibliotecas compiladas ou arquivos de rede NNUE nos commits ou releases. Se uma distribuição futura passar a incluir Stockfish ou componentes derivados, revisar a versão exata, os avisos, o código-fonte correspondente e as demais obrigações da GPL antes da publicação.
@@ -78,8 +79,8 @@ Não incluir executáveis Stockfish, bibliotecas compiladas ou arquivos de rede 
 ### 4.1. PGN Mentor
 
 - Índice consultado pelo código: [PGN Mentor — Download PGN Files](https://www.pgnmentor.com/files.html).
-- A página disponibiliza arquivos PGN para download e informa que o conteúdo é gratuito para acesso.
-- Nas páginas oficiais consultadas para esta revisão, não foi identificada uma licença aberta dos dados nem uma autorização expressa para republicar ou redistribuir os arquivos ou o corpus.
+- A página informa que os arquivos estão disponíveis para download gratuitamente.
+- O rodapé exibe `Copyright © 2025 64 Squares`; a página não apresenta uma licença aberta dos dados nem autorização expressa para republicação ou redistribuição.
 
 Disponibilidade para download não será interpretada como domínio público ou autorização de redistribuição. A política do projeto é manter esses arquivos apenas no ambiente local de pesquisa e não incorporá-los ao repositório, a wheels, a releases ou a serviços de download do projeto.
 
