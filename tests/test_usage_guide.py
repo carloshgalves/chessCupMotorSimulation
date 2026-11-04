@@ -39,6 +39,7 @@ def test_usage_guide_documents_supported_cli_help(command: str, capsys) -> None:
     assert exit_info.value.code == 0
     assert f"usage: chesssim {command}" in capsys.readouterr().out
 
+
 def test_readme_links_to_the_usage_guide() -> None:
     readme = GUIDE.parents[1] / "README.md"
     assert "[manual de uso](docs/USAGE.md)" in readme.read_text(encoding="utf-8")
@@ -62,6 +63,10 @@ DOCUMENTED_OPTIONS = {
 
 @pytest.mark.parametrize(("command", "options"), DOCUMENTED_OPTIONS.items())
 def test_usage_guide_options_exist_in_cli_help(command: str, options: tuple[str, ...], capsys) -> None:
+    guide = GUIDE.read_text(encoding="utf-8")
+    for option in options:
+        assert option in guide
+
     with pytest.raises(SystemExit) as exit_info:
         main([command, "--help"])
 
