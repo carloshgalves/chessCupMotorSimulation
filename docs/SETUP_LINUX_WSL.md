@@ -56,8 +56,10 @@ Em caso de arquivo de perfil ausente, rode o comando de previsão sem aplicar mu
 Para **autorizar expressamente** a instalação dos perfis oficiais que faltam, alteração do registro basic.ini com backup e, quando solicitado, o download dos livros Polyglot referenciados:
 
 ~~~bash
-bash scripts/setup_linux_wsl.sh --skip-install --skip-tests --apply-profiles --with-books
+bash scripts/setup_linux_wsl.sh --skip-install --skip-tests --apply-profiles
 ~~~
+
+Para obter **somente os perfis**, use --apply-profiles sem --with-books. Os livros Polyglot não são necessários para o smoke, que usa --no-books; --with-books é uma autorização adicional, útil apenas em modos que exigem os livros. Se desejar obtê-los, execute novamente com --apply-profiles --with-books.
 
 Esta etapa acessa a fonte upstream fixada no programa e não instala ou atualiza o executável Rodent. A alteração só ocorre mediante a opção --apply-profiles. A execução sem essa opção não modifica perfis ou livros. Recursos externos permanecem sujeitos às suas próprias licenças.
 

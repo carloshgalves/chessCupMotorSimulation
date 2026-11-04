@@ -38,7 +38,7 @@ O instalador em Bash cria/reutiliza uma venv, valida dependências e executa os 
 ~~~bash
 bash scripts/setup_linux_wsl.sh
 export RODENT_IV_HOME="/caminho/para/Rodent-IV"
-bash scripts/setup_linux_wsl.sh --skip-install --skip-tests --apply-profiles --with-books --smoke
+bash scripts/setup_linux_wsl.sh --skip-install --skip-tests --apply-profiles --smoke
 ~~~
 
 A instalação de perfis só ocorre com `--apply-profiles`. O segundo comando verifica um motor UCI real e gera um PGN curto de teste, com JSON auditável; partidas encerradas por limite de lances ficam corretamente como **INCOMPLETE**. Consulte [instalação e diagnóstico Linux/WSL](docs/SETUP_LINUX_WSL.md) para detalhes e erros acionáveis.
