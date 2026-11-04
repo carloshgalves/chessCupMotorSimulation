@@ -18,3 +18,9 @@ O corpus de Mecking contém recortes exploratórios cuja partição e mecanismos
 ## Limitações
 
 Os perfis Rodent IV são configurações de um mesmo motor, não redes treinadas de ponta a ponta de forma independente. Uma simulação jogável não é uma reconstrução comprovada de um jogador histórico.
+
+## Independência das partidas simuladas
+
+A análise pós-jogo registra um SHA-256 canônico do FEN inicial e de toda a sequência de lances UCI. Nomes, data, número de rodada e resultado PGN não criam artificialmente uma nova partida quando a trajetória é a mesma. As séries conservam `games_total`, `games_distinct`, `games_duplicate` e `effective_independent_games`, além das sementes e das condições de abertura observadas. Um PGN vazio não constitui observação independente; partidas incompletas com lances podem subsidiar apenas análises descritivas dos movimentos, não estimativas de resultado de jogo concluído.
+
+Nos relatórios de qualidade e estilo, trajetórias repetidas não devem inflar a amostra independente. A análise diagnóstica de posições duplicadas deve marcar que tais posições **não** entram nas médias agregadas. A alternância de cores e sementes não prova independência estatística. Para inferência, usar jogos distintos e intervalos de incerteza com agrupamento adequado; não reinterpretar decisões de uma mesma partida como observações independentes.

@@ -16,6 +16,7 @@ import chess.engine
 import chess.pgn
 
 from .catalog import Player
+from .game_diversity import audit_mainlines, mainline_identity
 from .registry import registered_aliases
 
 
@@ -131,6 +132,10 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             "TimeControl": f"{clock[0]}+{clock[1]}" if clock else "-",
             "BookMode": "historical-v09-exploratory" if historical_openings else "historical" if use_books else "disabled" if use_books is not None else "legacy",
         })
+        if historical_openings:
+            game.headers["OpeningSeed"] = str(opening_seed)
+            game.headers["OpeningMinCount"] = str(opening_min_count)
+        opening_trace = []
         node = game
         limit = (chess.engine.Limit(depth=depth) if depth is not None
                  else chess.engine.Limit(time=movetime) if movetime is not None
@@ -179,7 +184,11 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                     game.headers["Termination"] = "TimeForfeit"
                     meta = {"round": round_number, "white": white.slug, "black": black.slug,
                             "result": res, "status": "COMPLETED", "termination": "TimeForfeit",
-                            "plies": board.ply(), "elapsed_seconds": elapsed, "clock_left": clocks, "opening_moves": opening_moves}
+                            "plies": board.ply(), "elapsed_seconds": elapsed, "clock_left": clocks,
+                            "opening_moves": opening_moves, "opening_trace": opening_trace,
+                            "opening_seed": opening_seed if historical_openings else None,
+                            "opening_mode": game.headers["BookMode"],
+                            "color_order": f"{white.slug}|{black.slug}"}
                     return game, meta
                 clocks[idx] += clock[1]
             if actual_move is None or actual_move not in board.legal_moves:
@@ -191,6 +200,14 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             if opening_source is not None:
                 node.comment = 'ChessSimulation64 historical opening policy (exploratory)'
                 opening_moves['white' if board.turn == chess.WHITE else 'black'] += 1
+                opening_trace.append({
+                    "ply": board.ply() + 1,
+                    "player": opening_source,
+                    "move": actual_move.uci(),
+                    "seed": opening_seed,
+                    "round": round_number,
+                    "book_source_sha256": historical_openings[opening_source]["source"].get("pgn_sha256"),
+                })
             board.push(actual_move)
 
         outcome = board.outcome(claim_draw=True)
@@ -202,7 +219,12 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
         game.headers["Result"] = res
         game.headers["Termination"] = term
         meta = {"round": round_number, "white": white.slug, "black": black.slug,
-                "result": res, "status": status, "termination": term, "plies": board.ply(), "elapsed_seconds": elapsed, "clock_left": clocks, "opening_moves": opening_moves}
+                "result": res, "status": status, "termination": term, "plies": board.ply(),
+                "elapsed_seconds": elapsed, "clock_left": clocks, "opening_moves": opening_moves,
+                "opening_trace": opening_trace,
+                "opening_seed": opening_seed if historical_openings else None,
+                "opening_mode": game.headers["BookMode"],
+                "color_order": f"{white.slug}|{black.slug}"}
         return game, meta
     finally:
         for e in reversed(engines):
@@ -252,7 +274,14 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
                "book_hashes": book_hashes,
                "historical_opening_policy": ("EXPLORATORY_POSITION_CONDITIONED" if historical_openings else "DISABLED"),
                "opening_seed": opening_seed if historical_openings else None,
-               "games": []}
+               "variation_control": {
+                   "historical_opening_seed_effective": bool(historical_openings),
+                   "internal_uci_book": use_books,
+                   "colors_reversed": reverse,
+                   "warning": ("An opening seed has no effect without the external historical opening policy; "
+                               "internal engine book/engine search randomness is not controlled by this seed."),
+               },
+               "games": [], "diversity": audit_mainlines([])[1]}
     _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
     lineups = [(white, black)] + ([(black, white)] if reverse else [])
     try:
@@ -262,10 +291,15 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
                                    clock=clock, use_books=use_books,
                                    historical_openings=historical_openings,
                                    opening_seed=opening_seed, opening_min_count=opening_min_count)
+            digest, plies = mainline_identity(game)
+            if plies != meta["plies"]:
+                raise RuntimeError("PGN/mainline ply count disagrees with engine record")
+            meta.update({"mainline_sha256": digest, "source": f"game_{i}"})
             games.append(game)
             _atomic_text(folder / f"jogo_{i}.pgn", str(game) + "\n\n")
             _atomic_text(folder / "duelo.pgn", "\n\n".join(str(g) for g in games) + "\n\n")
             summary["games"].append(meta)
+            summary["games"], summary["diversity"] = audit_mainlines(summary["games"])
             _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
             print(f"Resultado: {meta['result']} ({meta['termination']})", flush=True)
         summary["status"] = "COMPLETED" if all(g["status"] == "COMPLETED" for g in summary["games"]) else "INCOMPLETE"

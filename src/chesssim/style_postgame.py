@@ -10,6 +10,8 @@ from hashlib import sha256
 import json
 from pathlib import Path
 
+from .game_diversity import audit_mainlines, mainline_identity
+
 FEATURES = ('capture', 'check', 'pawn_move', 'queen_move', 'king_move',
             'knight_move', 'bishop_move', 'rook_move', 'castle', 'promotion')
 
@@ -27,11 +29,23 @@ def fingerprint(pgn: Path, output: Path, *, opening_plies: int = 16) -> dict:
                                       'by_game': defaultdict(Counter), 'first_moves': Counter()})
     games_count = 0
     duplicate_first_8 = Counter()
+    observations = []
+    seen_mainlines = set()
     with pgn.open(encoding='utf-8-sig', errors='replace') as stream:
         while (g := chess.pgn.read_game(stream)) is not None:
             if g.errors:
                 raise ValueError('Invalid PGN')
             games_count += 1
+            signature, plies = mainline_identity(g)
+            observations.append({
+                'source': games_count, 'mainline_sha256': signature, 'plies': plies,
+                'opening_mode': g.headers.get('BookMode'),
+                'color_order': (g.headers.get('White', '?') + '|' +
+                                g.headers.get('Black', '?')),
+            })
+            if not plies or signature in seen_mainlines:
+                continue
+            seen_mainlines.add(signature)
             label = (g.headers.get('White', 'White'), g.headers.get('Black', 'Black'))
             gid = games_count
             board = g.board()
@@ -82,6 +96,9 @@ def fingerprint(pgn: Path, output: Path, *, opening_plies: int = 16) -> dict:
             duplicate_first_8[' '.join(opening_uci)] += 1
     if not games_count:
         raise ValueError('No games found')
+    _, diversity = audit_mainlines(observations)
+    if not diversity['games_distinct']:
+        raise ValueError('No games with moves eligible for style evidence')
 
     result_players = {}
     for player, stat in sorted(per_player.items()):
@@ -107,11 +124,16 @@ def fingerprint(pgn: Path, output: Path, *, opening_plies: int = 16) -> dict:
                              'feature_rate_differences': gap})
     report = {'protocol': 'descriptive-simulated-style-v9',
               'pgn_sha256': sha256(pgn.read_bytes()).hexdigest(),
-              'games': games_count, 'opening_plies': opening_plies,
+              'games': games_count, 'distinct_games': diversity['games_distinct'],
+              'duplicate_games': diversity['games_duplicate'],
+              'diversity': diversity, 'opening_plies': opening_plies,
               'distinct_first_eight_sequences': len(duplicate_first_8),
               'most_common_first_eight': [{'uci': k, 'games': v} for k, v in duplicate_first_8.most_common(10)],
               'players': result_players, 'pairwise': pairwise,
-              'warning': 'Descriptive statistics only; no claim of blind identifiability or historical fidelity.'}
+              'warning': ('Descriptive statistics only, using distinct complete move trajectories. '
+                          'Incomplete games may contribute move statistics but cannot support '
+                          'completed-game outcome estimates. No claim of blind identifiability '
+                          'or historical fidelity.')}
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     return report
