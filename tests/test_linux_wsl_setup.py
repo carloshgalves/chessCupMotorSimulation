@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+from types import SimpleNamespace
 from pathlib import Path
 import sys
 
@@ -178,3 +181,46 @@ def test_official_preset_must_not_disable_books(capsys):
     assert chesssim_main(["play", "fischer", "tal", "--preset", "official",
                           "--reverse", "--no-books"]) == 2
     assert "--no-books" in capsys.readouterr().err
+
+
+def test_uci_null_move_has_actionable_failure(monkeypatch, tmp_path):
+    import chess.engine
+
+    class NullMoveEngine:
+        options = {}
+        id = {}
+        closed = False
+
+        def play(self, board, limit):
+            return SimpleNamespace(move=None)
+
+        def quit(self):
+            self.closed = True
+
+    engine = NullMoveEngine()
+    monkeypatch.setattr(chess.engine.SimpleEngine, "popen_uci", lambda *a, **k: engine)
+    with pytest.raises(SetupError, match="returned no legal move"):
+        probe_uci(tmp_path / "fake")
+    assert engine.closed
+
+
+def test_bash_wrapper_can_reuse_venv_and_verify_real_synthetic_uci(
+    rodent: Path, tmp_path: Path,
+):
+    repo = Path(__file__).resolve().parents[1]
+    wrapper = repo / "scripts" / "setup_linux_wsl.sh"
+    dest = tmp_path / "pgntest with spaces"
+    environment = dict(os.environ)
+    environment["CHESSSIM_PYTHON"] = sys.executable
+    environment["CHESSSIM_VENV"] = sys.prefix
+    environment["RODENT_IV_HOME"] = str(rodent)
+    environment.pop("CHESSSIM_UCI_ENGINE", None)
+    result = subprocess.run(
+        ["bash", str(wrapper), "--skip-install", "--skip-tests",
+         "--smoke", "--out", str(dest)],
+        cwd=repo, env=environment, capture_output=True, text=True, timeout=60,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert (dest / "smoke_report.json").is_file()
+    assert "SHORT_REAL_UCI_SMOKE" in result.stdout

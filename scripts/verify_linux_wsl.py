@@ -95,7 +95,7 @@ def probe_uci(executable: Path, *, cwd: Path | None = None,
             engine.configure({"UseBook": False})
         board = chess.Board()
         result = engine.play(board, chess.engine.Limit(depth=1))
-        if result.move not in board.legal_moves:
+        if result.move is None or result.move not in board.legal_moves:
             raise SetupError(
                 f"UCI engine at {executable} returned no legal move at depth 1."
             )
