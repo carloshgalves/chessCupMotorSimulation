@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+.venv/
+venv/
+.build/
+build/
+dist/
+
+# Local datasets, run outputs and calibration artifacts
+datasets/
+calibracoes/
+partidas_chesssim*/
+auditorias/
+benchmarks/
+reports/
+runs/
+*.pgn
+*.pdf
+*.exe
+*.bin
+*.log
+*.sqlite*
+.env
+.env.*
+!.env.example
+
+# Editor / operating system
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

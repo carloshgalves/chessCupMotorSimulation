@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chesssim64"
+version = "0.1.0"
+description = "ChessCup Motor Simulation: torneios e estudo computacional de estilos de enxadristas"
+requires-python = ">=3.11"
+dependencies = ["chess>=1.11,<2"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+chesssim = "chesssim.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"chesssim.data" = ["roster.json"]

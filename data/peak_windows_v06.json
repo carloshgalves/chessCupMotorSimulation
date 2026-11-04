@@ -1,0 +1,518 @@
+{
+  "schema": "peak-windows-v6",
+  "policy": "Historical windows are predeclared, never tuned to motor agreement.",
+  "players": {
+    "steinitz": {
+      "name": "Wilhelm Steinitz",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "lasker": {
+      "name": "Emanuel Lasker",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "capablanca": {
+      "name": "José Raúl Capablanca",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "alekhine": {
+      "name": "Alexander Alekhine",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "euwe": {
+      "name": "Max Euwe",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "botvinnik": {
+      "name": "Mikhail Botvinnik",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "smyslov": {
+      "name": "Vasily Smyslov",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "tal": {
+      "name": "Mikhail Tal",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "petrosian": {
+      "name": "Tigran Petrosian",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "spassky": {
+      "name": "Boris Spassky",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "fischer": {
+      "name": "Bobby Fischer",
+      "from_year": 1970,
+      "to_year": 1972,
+      "status": "PROVISIONAL",
+      "justification": "Ciclo de Candidatos e Campeonato Mundial de 1972; hipótese de pesquisa",
+      "references": []
+    },
+    "karpov": {
+      "name": "Anatoly Karpov",
+      "from_year": 1974,
+      "to_year": 1985,
+      "status": "PROVISIONAL",
+      "justification": "Consolidação no topo e primeiros ciclos de título; intervalo candidato amplo",
+      "references": []
+    },
+    "kasparov": {
+      "name": "Garry Kasparov",
+      "from_year": 1985,
+      "to_year": 1995,
+      "status": "PROVISIONAL",
+      "justification": "Primeira década como campeão mundial; intervalo candidato amplo",
+      "references": []
+    },
+    "kramnik": {
+      "name": "Vladimir Kramnik",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "anand": {
+      "name": "Viswanathan Anand",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "carlsen": {
+      "name": "Magnus Carlsen",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "ding-liren": {
+      "name": "Ding Liren",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "mequinho": {
+      "name": "Henrique Mecking",
+      "from_year": 1973,
+      "to_year": 1978,
+      "status": "PROVISIONAL",
+      "justification": "Interzonais de 1973/1976 e ciclos de Candidatos; hipótese de pesquisa",
+      "references": []
+    },
+    "mamedyarov": {
+      "name": "Shakhriyar Mamedyarov",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "vachier-lagrave": {
+      "name": "Maxime Vachier-Lagrave",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "grischuk": {
+      "name": "Alexander Grischuk",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "topalov": {
+      "name": "Veselin Topalov",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "philidor": {
+      "name": "François-André Danican Philidor",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "staunton": {
+      "name": "Howard Staunton",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "anderssen": {
+      "name": "Adolf Anderssen",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "morphy": {
+      "name": "Paul Morphy",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "zukertort": {
+      "name": "Johannes Zukertort",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "chigorin": {
+      "name": "Mikhail Chigorin",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "pillsbury": {
+      "name": "Harry Nelson Pillsbury",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "tarrasch": {
+      "name": "Siegbert Tarrasch",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "marshall": {
+      "name": "Frank Marshall",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "rubinstein": {
+      "name": "Akiba Rubinstein",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "nimzowitsch": {
+      "name": "Aron Nimzowitsch",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "reti": {
+      "name": "Richard Réti",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "keres": {
+      "name": "Paul Keres",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "bronstein": {
+      "name": "David Bronstein",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "reshevsky": {
+      "name": "Samuel Reshevsky",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "najdorf": {
+      "name": "Miguel Najdorf",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "geller": {
+      "name": "Efim Geller",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "korchnoi": {
+      "name": "Viktor Korchnoi",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "larsen": {
+      "name": "Bent Larsen",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "portisch": {
+      "name": "Lajos Portisch",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "taimanov": {
+      "name": "Mark Taimanov",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "polugaevsky": {
+      "name": "Lev Polugaevsky",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "gligoric": {
+      "name": "Svetozar Gligorić",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "ivanchuk": {
+      "name": "Vasyl Ivanchuk",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "timman": {
+      "name": "Jan Timman",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "short": {
+      "name": "Nigel Short",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "kamsky": {
+      "name": "Gata Kamsky",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "shirov": {
+      "name": "Alexei Shirov",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "gelfand": {
+      "name": "Boris Gelfand",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "leko": {
+      "name": "Peter Leko",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "svidler": {
+      "name": "Peter Svidler",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "aronian": {
+      "name": "Levon Aronian",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "caruana": {
+      "name": "Fabiano Caruana",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "nakamura": {
+      "name": "Hikaru Nakamura",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "karjakin": {
+      "name": "Sergey Karjakin",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "nepomniachtchi": {
+      "name": "Ian Nepomniachtchi",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "wesley-so": {
+      "name": "Wesley So",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "menchik": {
+      "name": "Vera Menchik",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "gaprindashvili": {
+      "name": "Nona Gaprindashvili",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "chiburdanidze": {
+      "name": "Maia Chiburdanidze",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "judit-polgar": {
+      "name": "Judit Polgár",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    },
+    "hou-yifan": {
+      "name": "Hou Yifan",
+      "from_year": null,
+      "to_year": null,
+      "status": "UNREVIEWED",
+      "justification": "",
+      "references": []
+    }
+  }
+}
