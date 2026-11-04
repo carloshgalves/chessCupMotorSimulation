@@ -7,8 +7,8 @@ Este guia descreve o fluxo operacional disponível na CLI atual. Os exemplos usa
 ## 1. Requisitos e instalação
 
 - Python 3.11 ou superior, Git e venv.
-- Uma instalação funcional do Rodent IV para gerar partidas.
-- Stockfish instalado separadamente somente para análises independentes de qualidade.
+- Uma instalação funcional do [Rodent IV](https://github.com/nescitus/rodent-iv) para gerar partidas. O projeto não baixa o executável do motor.
+- [Stockfish](https://stockfishchess.org/download/) instalado separadamente somente para análises independentes de qualidade.
 - Arquivos PGN históricos obtidos pelo usuário de fontes apropriadas ou fornecidos localmente.
 
 ~~~bash
@@ -68,6 +68,8 @@ roster lista os 64 participantes. Nesta revisão do catálogo, 21 possuem alias 
 python -m chesssim roster
 python -m chesssim check
 ~~~
+
+setup obtém os arquivos de personalidade ausentes do repositório upstream do Rodent IV, em uma revisão fixada pelo código. A opção --with-books também obtém os livros Polyglot referenciados pelos perfis. A instalação do executável do motor continua sendo uma etapa separada.
 
 setup começa em modo de prévia e não altera a instalação:
 
@@ -164,7 +166,7 @@ A semente permite reproduzir o mesmo sorteio. O comando recusa sobrescrever o ar
 
 ## 4. Obter e preparar corpora PGN
 
-O repositório não contém os corpora históricos. A CLI oferece integração com o índice público do PGN Mentor, mas esse índice é uma fonte de partidas disponíveis, não uma garantia de completude da carreira de qualquer jogador.
+O repositório não contém os corpora históricos. A CLI consulta o [índice público do PGN Mentor](https://www.pgnmentor.com/files.html), mas esse índice é uma fonte de partidas disponíveis, não uma garantia de completude da carreira de qualquer jogador.
 
 ### 4.1. Consultar a disponibilidade
 
