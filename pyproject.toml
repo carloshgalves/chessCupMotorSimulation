@@ -10,7 +10,7 @@ requires-python = ">=3.11"
 dependencies = ["chess>=1.11,<2"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "build>=1.2"]
 
 [project.scripts]
 chesssim = "chesssim.cli:main"
@@ -20,3 +20,10 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "chesssim.data" = ["roster.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "requires_engine: requires an externally installed UCI chess engine configured with CHESSSIM_UCI_ENGINE",
+]
