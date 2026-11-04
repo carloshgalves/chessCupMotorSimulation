@@ -9,7 +9,7 @@ Este documento registra a situação observável das fontes consultadas. Não é
 
 | Componente ou fonte | Situação identificada | Regra operacional |
 |---|---|---|
-| Código próprio do ChessCup Motor Simulation | Sem licença publicada no repositório | Não presumir autorização de reutilização ou redistribuição |
+| Código próprio do ChessCup Motor Simulation | GPL-3.0-or-later (GPLv3 ou posterior) | Arquivos LICENSE, NOTICE.md e metadados PEP 639; cumprir copyleft ao redistribuir a aplicação combinada |
 | `chess` / `python-chess` | GPL-3.0-or-later | Dependência instalada separadamente; revisar compatibilidade antes de distribuir o aplicativo |
 | Rodent IV | Repositório upstream sob GPL-3.0 | Obter o motor separadamente; não incluir executável |
 | Stockfish | GPL-3.0 | Obter o motor separadamente; não incluir executável ou rede NNUE |
@@ -18,15 +18,9 @@ Este documento registra a situação observável das fontes consultadas. Não é
 
 ## 1. Código próprio
 
-Na revisão de `main` usada nesta auditoria:
+O **código próprio** foi licenciado sob **GPL-3.0-or-later**, com texto integral em [LICENSE](../LICENSE), aviso em [NOTICE.md](../NOTICE.md) e expressão SPDX em `project.license` no `pyproject.toml`. O campo `project.license-files` inclui os dois documentos nas distribuições. A decisão e alternativas econômicas constam em [LICENSE_DECISION.md](LICENSE_DECISION.md).
 
-- não há arquivo `LICENSE` no repositório;
-- `pyproject.toml` não declara `project.license`;
-- o README informa que a escolha de licença ainda está pendente.
-
-Portanto, o código próprio **não possui uma licença aberta publicada**. A visibilidade pública do repositório não concede, por si só, permissão para copiar, modificar, sublicenciar ou redistribuir o código.
-
-Esta issue não escolhe uma licença em nome do mantenedor. A decisão precisa ser explícita e deve considerar a dependência de runtime `python-chess`, bem como a forma de distribuição pretendida. Até essa decisão, não adicionar um arquivo de licença nem anunciar o projeto como MIT, GPL ou outra licença.
+Esse licenciamento vale apenas para o código próprio de que o projeto possui direitos; **não relicencia** `python-chess`, Rodent IV, Stockfish, livros Polyglot, redes NNUE nem bases PGN. Ao redistribuir uma aplicação combinada com `python-chess`, devem ser atendidas as obrigações aplicáveis da GPL. Usar o software internamente ou operar um serviço em rede, sem distribuir cópias, não gera automaticamente as obrigações de disponibilização de código que a AGPL criaria.
 
 ## 2. Dependências Python declaradas
 
@@ -35,7 +29,7 @@ O inventário abaixo cobre as dependências diretas declaradas em `pyproject.tom
 | Camada | Distribuição | Restrição declarada | Finalidade | Licença upstream identificada |
 |---|---|---:|---|---|
 | Runtime | `chess` (projeto `python-chess`) | `>=1.11,<2` | Regras, geração/validação de lances, PGN e comunicação UCI | GPL-3.0-or-later |
-| Build | `setuptools` | `>=69` | Backend de empacotamento | MIT |
+| Build | `setuptools` | `>=77` | Backend de empacotamento | MIT |
 | Desenvolvimento | `pytest` | `>=8` | Testes | MIT |
 | Desenvolvimento | `build` | `>=1.2` | Geração de wheel e sdist | MIT |
 | Desenvolvimento | `ruff` | `>=0.11` | Análise estática | MIT |
@@ -50,7 +44,7 @@ Fontes primárias:
 
 A dependência `chess` é obrigatória em runtime. Sua licença não deve ser tratada como um detalhe exclusivo de desenvolvimento. Antes de publicar um aplicativo, instalador ou pacote que a inclua ou combine com o código do projeto, revisar a compatibilidade e as obrigações da licença aplicável. Este inventário não conclui que a licença do código próprio tenha sido automaticamente definida pela licença de uma dependência.
 
-**Limite do inventário:** como as dependências não estão integralmente fixadas em um lockfile, esta tabela não representa a árvore transitiva completa nem um SBOM de uma instalação específica. Antes de cada release, registrar as versões efetivamente resolvidas e gerar/revisar um SBOM (SPDX ou CycloneDX), incluindo dependências transitivas e componentes sem metadados de licença.
+**Inventário resolvido:** esta tabela, isoladamente, não substitui o SBOM. `scripts/generate_sbom.py` resolve e instala as dependências em dois ambientes virtuais novos, valida a correspondência entre pacotes instalados e componentes do CycloneDX 1.6 e salva `runtime.cdx.json`, `development.cdx.json`, `*.packages.json`, `*.inspect.json`, `*.resolved.txt` e `manifest.json` com hashes. O ambiente de desenvolvimento inclui também o backend de build declarado. O SBOM é gerado no CI em Python 3.13 e retido como artefato por 7 dias, sem outro job. Para outras plataformas, outras versões do Python e o release definitivo, executar novamente. Componentes externos (engines, livros, redes, PGNs, bibliotecas do sistema) requerem inventários separados. Não presumir que todos os pacotes possuem metadados de licença completos.
 
 ## 3. Engines e recursos externos
 
@@ -114,9 +108,9 @@ Os diretórios de datasets, calibrações, partidas, auditorias, benchmarks, rel
 
 ## 6. Checklist antes de uma distribuição
 
-- [ ] O mantenedor decidiu e publicou a licença do código próprio.
+- [ ] Confirmar que o release publica a GPL-3.0-or-later, LICENSE, NOTICE.md e o código-fonte correspondente.
 - [ ] A compatibilidade da licença escolhida com `python-chess` e demais dependências foi revisada.
-- [ ] As versões resolvidas e as licenças transitivas foram registradas em um SBOM.
+- [ ] O SBOM CycloneDX foi regenerado para as dependências realmente resolvidas da plataforma e versão Python do release; licenças desconhecidas revisadas.
 - [ ] A versão e o hash de cada engine externa utilizada foram registrados.
 - [ ] Perfis, livros, redes e outros recursos externos foram verificados individualmente.
 - [ ] Cada corpus possui fonte, data, hash e situação de direitos documentados.
@@ -125,6 +119,6 @@ Os diretórios de datasets, calibrações, partidas, auditorias, benchmarks, rel
 
 ## 7. Referências e limites da auditoria
 
-A revisão foi feita sobre o `pyproject.toml`, o código que identifica as fontes externas, a árvore de arquivos versionados e as páginas/licenças upstream listadas acima, em 2026-11-04. Ela não inspeciona instalações locais, arquivos PGN que o usuário tenha obtido, engines presentes fora do repositório, nem todas as dependências transitivas de um ambiente específico.
+A revisão considerou o `pyproject.toml`, o código que identifica fontes externas, a árvore de arquivos versionados e as páginas/licenças upstream listadas acima, em 2026-11-04; a geração dinâmica de SBOM foi acrescentada na mesma data. Ela não inspeciona instalações locais, arquivos PGN que o usuário tenha obtido, engines presentes fora do repositório, nem todas as dependências transitivas de um ambiente específico.
 
 Revalidar este inventário antes de cada release e sempre que uma dependência, engine, fonte PGN ou política de distribuição mudar.

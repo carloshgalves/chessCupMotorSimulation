@@ -56,3 +56,6 @@ runs/
 Thumbs.db
 .idea/
 .vscode/
+
+# Generated dependency SBOMs (CI artifacts, not committed inventories)
+sbom-artifacts/

@@ -59,8 +59,10 @@ def test_policy_covers_every_directly_declared_dependency() -> None:
     assert "transitivas" in policy
     assert "SBOM" in policy
 
-    assert "license" not in project["project"]
-    assert not (ROOT / "LICENSE").exists()
+    assert project["project"]["license"] == "GPL-3.0-or-later"
+    assert project["project"]["license-files"] == ["LICENSE", "NOTICE.md"]
+    assert "GNU GENERAL PUBLIC LICENSE" in (ROOT / "LICENSE").read_text(encoding="utf-8")
+    assert "versão 3" in (ROOT / "NOTICE.md").read_text(encoding="utf-8")
 
 
 def test_gitignore_excludes_external_payload_extensions() -> None:

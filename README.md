@@ -76,6 +76,12 @@ As frentes de trabalho, critérios de aceite e dependências são acompanhados n
 
 ## Direitos e distribuição
 
-O código próprio ainda não tem licença publicada: o repositório não contém arquivo `LICENSE` nem declaração `project.license` no `pyproject.toml`. A publicação do código no GitHub não deve ser interpretada como autorização de reutilização ou redistribuição. A decisão de licença permanece pendente do mantenedor.
+O **código próprio** é distribuído sob a **GNU GPL versão 3 ou posterior** (`GPL-3.0-or-later`): veja [LICENSE](LICENSE), [aviso de direitos](NOTICE.md) e [comparativo/justificativa da licença](docs/LICENSE_DECISION.md). O uso da aplicação não tem taxa de licença, mas a distribuição de cópias precisa respeitar as obrigações da GPL e das licenças dos componentes envolvidos.
 
 O projeto não incorpora executáveis de engines nem corpora PGN de terceiros. Rodent IV, Stockfish, perfis, livros e bases históricas devem ser obtidos separadamente e utilizados de acordo com as respectivas licenças e condições. A auditoria das dependências, fontes e regras de distribuição está em [docs/THIRD_PARTY.md](docs/THIRD_PARTY.md).
+
+## SBOM das dependências resolvidas
+
+Para auditar o que foi **efetivamente instalado**, use `python scripts/generate_sbom.py --out sbom-artifacts`. O script cria ambientes virtuais isolados e gera dois inventários CycloneDX JSON 1.6: `runtime.cdx.json` (aplicação) e `development.cdx.json` (aplicação, ferramentas de desenvolvimento e backend de build). Também conserva as listas de versões resolvidas, `pip inspect` e um manifesto com hashes SHA-256.
+
+Na integração contínua, esse processo roda **somente na matriz Python 3.13**, em pull requests e pushes na `main`, sem contratar serviços pagos ou criar outro runner. Os arquivos ficam disponíveis por **7 dias** no artefato da execução do GitHub Actions. O inventário é específico da plataforma/versão Python e não inclui executáveis UCI, livros, corpora PGN ou bibliotecas do sistema operacional. Consulte [a política de distribuição](docs/THIRD_PARTY.md).
