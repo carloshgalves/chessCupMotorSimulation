@@ -81,13 +81,6 @@ def test_compare_rejects_distinct_pgn(tmp_path: Path):
         compare_quality_reports(docs, tmp_path/'x.json')
 
 
-def test_full_engine_path_requires_python_chess():
-    # CI runners with python-chess can run the full executable smoke test;
-    # it requires a real UCI engine and PGN, not mocked engine conclusions.
-    pytest.importorskip('chess')
-    assert True
-
-
 def test_deduplicates_identical_mainlines_if_chess_available(tmp_path: Path):
     pytest.importorskip('chess')
     from chesssim.quality_audit import _load_positions
