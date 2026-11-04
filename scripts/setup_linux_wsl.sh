@@ -33,6 +33,10 @@ VPY="$VENV/bin/python"
 if [[ "$SKIP_INSTALL" == 0 ]]; then
   if ! "$VPY" -m pip install --disable-pip-version-check -e "$ROOT[dev]"; then echo 'ERROR: pip installation failed; check index/network/build dependencies' >&2; exit 2; fi
 fi
+if ! "$VPY" -c 'import chess, chesssim, pytest' 2>/dev/null; then
+  echo 'ERROR: venv lacks project or test dependencies; rerun without --skip-install' >&2
+  exit 2
+fi
 if ! "$VPY" -m pip check; then echo 'ERROR: inconsistent dependencies; fix venv' >&2; exit 2; fi
 if [[ "$SKIP_TESTS" == 0 ]]; then
   if ! (cd "$ROOT" && "$VPY" -m pytest -q -ra); then echo 'ERROR: project tests failed' >&2; exit 2; fi

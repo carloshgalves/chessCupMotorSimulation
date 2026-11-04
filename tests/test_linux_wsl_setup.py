@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 import sys
 
@@ -117,6 +116,17 @@ def test_real_uci_smoke_produces_valid_incomplete_pgn_and_summary(rodent: Path, 
     payload["games"][0]["result"] = "1-0"
     summary.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(SetupError, match="Result does not match"):
+        validate_pgn(summary.parent, "fischer", "tal")
+    payload["games"][0]["result"] = "*"
+    summary.write_text(json.dumps(payload), encoding="utf-8")
+    combined = summary.parent / "duelo.pgn"
+    original = combined.read_text(encoding="utf-8")
+    # Same result, plies and termination, but different UCI mainline.
+    first = original.find("1. ")
+    assert first >= 0
+    combined.write_text(original[:first] + original[first:].replace("Nh3", "Nf3", 1),
+                        encoding="utf-8")
+    with pytest.raises(SetupError, match="mainline differs"):
         validate_pgn(summary.parent, "fischer", "tal")
 
 

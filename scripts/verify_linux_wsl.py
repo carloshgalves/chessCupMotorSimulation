@@ -146,6 +146,7 @@ def validate_pgn(folder: Path, white: str, black: str) -> dict:
         raise SetupError("Smoke summary has an invalid overall status")
     if summary["status"] != record["status"]:
         raise SetupError("Smoke summary and game status disagree")
+    moves_in_first_pgn: list[str] | None = None
     for path in (pgn_path, combined):
         with path.open(encoding="utf-8") as handle:
             game = chess.pgn.read_game(handle)
@@ -162,12 +163,22 @@ def validate_pgn(folder: Path, white: str, black: str) -> dict:
             board.push(move)
         if board.ply() != record["plies"] or board.ply() < 1:
             raise SetupError(f"Missing or mismatched smoke moves in PGN: {path}")
+        line = [move.uci() for move in game.mainline_moves()]
+        if moves_in_first_pgn is None:
+            moves_in_first_pgn = line
+        elif line != moves_in_first_pgn:
+            raise SetupError("duelo.pgn mainline differs from jogo_1.pgn")
+        outcome = board.outcome(claim_draw=True)
         if record["status"] == "INCOMPLETE":
             if (record["result"], record["termination"]) != ("*", "InterruptedAtPlyLimit"):
                 raise SetupError("An incomplete game must not be counted as a draw/win")
-        elif board.outcome(claim_draw=True) is not None and board.outcome(
-                claim_draw=True
-        ).result() != record["result"]:
+            if outcome is not None:
+                raise SetupError("A terminal PGN must not be labelled incomplete")
+        elif record["termination"] == "TimeForfeit":
+            if record["result"] not in ("1-0", "0-1", "1/2-1/2"):
+                raise SetupError("A clock-forfeited PGN requires a decisive or drawn result")
+        elif (outcome is None or outcome.result() != record["result"]
+              or outcome.termination.name != record["termination"]):
             raise SetupError("Completed PGN conflicts with chess outcome")
     return {
         "folder": str(folder),
