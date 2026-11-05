@@ -86,12 +86,23 @@ def test_quality_report_with_real_uci_subprocess(tmp_path):
 
     report = quality.analyze_games_v91(
         pgn, exe, output, depth=5, max_positions=4, min_fullmove=1,
-        pv_plies=2,
+        pv_plies=2, refine_depth=8, refine_threshold=0,
+        refine_max_positions=2,
     )
     assert report["inputs"]["engine_uci_id"]["name"] == "Quality Audit UCI Stub"
     assert report["inputs"]["engine_configured_options"] == {"Threads":1, "Hash":64}
     assert len(report["decisions"]) == 4
     assert report["reconciliation"]["status"] == "CONSISTENT"
+    assert report["refinement"]["selected"] == 2
+    assert report["refinement"]["independent_selected"] == 2
+    critical = [row for row in report["decisions"] if "refined" in row]
+    assert len(critical) == 2
+    assert all(row["depth"] == 5 and row["refined"]["depth"] == 8
+               for row in critical)
+    assert all(row["stability"]["depth_from"] == 5 and
+               row["stability"]["depth_to"] == 8 for row in critical)
+    assert all(row["stability"]["cp_loss_delta"] ==
+               row["refined"]["cp_loss"] - row["cp_loss"] for row in critical)
     assert sum(row["positions_analyzed"] for row in report["games"]) == 4
     assert all(row["pv_availability"] == {"best": "PRESENT", "forced": "PRESENT"}
                for row in report["decisions"])

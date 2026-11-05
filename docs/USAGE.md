@@ -408,13 +408,89 @@ Para estatísticas descritivas de características dos lances (deduplicadas por 
 python -m chesssim style-audit --pgn /caminho/para/duelo.pgn --out reports/duelo-style.json
 ~~~
 
-Para comparar relatórios de qualidade produzidos a partir do mesmo PGN e do mesmo executável Stockfish:
+### 8.2. Reavaliação multiescala e estabilidade (#19)
+
+Compare **as mesmas decisões do PGN** em profundidades diferentes, com o mesmo
+analisador Stockfish, sem substituir o resultado original. Execute cada
+análise em um destino novo, com a **mesma política de amostragem e orçamento**
+para maximizar a sobreposição das posições:
 
 ~~~bash
-python -m chesssim compare-quality --reports reports/quality-depth-12.json reports/quality-depth-18.json --out reports/quality-comparison.json
+python -m chesssim analyze-quality --pgn runs/confronto/duelo.pgn \
+  --stockfish /usr/games/stockfish --depth 10 \
+  --max-positions 120 --min-fullmove 9 \
+  --out reports/qualidade-d10.json
+
+python -m chesssim analyze-quality --pgn runs/confronto/duelo.pgn \
+  --stockfish /usr/games/stockfish --depth 16 \
+  --max-positions 120 --min-fullmove 9 \
+  --out reports/qualidade-d16.json
+
+python -m chesssim analyze-quality --pgn runs/confronto/duelo.pgn \
+  --stockfish /usr/games/stockfish --depth 22 \
+  --max-positions 120 --min-fullmove 9 \
+  --out reports/qualidade-d22.json
+
+python -m chesssim compare-quality \
+  --reports reports/qualidade-d10.json reports/qualidade-d16.json \
+            reports/qualidade-d22.json \
+  --out reports/estabilidade-d10-d16-d22.json
 ~~~
 
-A comparação exige os mesmos hashes de PGN e Stockfish e alinha somente decisões coincidentes. Diferenças entre profundidades não devem ser interpretadas como validação independente de estilo.
+O comando aceita duas ou mais profundidades **distintas** e as ordena
+numericamente. Exige o mesmo hash de PGN e de executável, e parâmetros/
+identidade UCI compatíveis quando declarados pelos relatórios. O alinhamento
+usa identidade da partida de origem, lance, lado, posição FEN e número do
+meio-lance; posições não coincidentes ou ambíguas **não** são comparadas.
+Arquivos antigos sem FEN/ply recebem ressalva de alinhamento reduzido.
+Relatórios com fontes incongruentes são rejeitados.
+
+O arquivo de estabilidade preserva todas as avaliações originais por
+profundidade em `aligned_history[].evaluations`, incluindo perda, melhor
+lance, PV quando disponível, avaliação forçada e indicadores de mate.
+`consecutive_changes` mostra a divergência da perda em centipeões em
+cada passagem de profundidade; `classification_changed_at_any_step`
+detecta inclusive mudanças transitórias (por exemplo, um erro que volta
+a ficar abaixo de 100 cp). `best_move_change_status_counts` diferencia
+mudanças comprovadas, melhores lances inalterados com PV disponível e
+comparação **desconhecida** quando alguma PV falta. Nesse último caso,
+`best_move_change_rate_known` considera somente decisões com transições
+comparáveis; se não houver nenhuma, será `null`.
+`classification_changes` considera apenas
+a primeira e a última profundidade, enquanto
+`classification_changes_at_any_step` considera todas.
+
+As categorias descritivas são: perda **inferior a 100 cp**,
+**100–249 cp** (erro) e **250 cp ou mais** (erro grave), segundo a
+avaliação do motor na profundidade informada. Valores influenciados por
+mate e buscas forçadas exigem cautela. As observações de trajetórias
+duplicadas ficam em `diagnostic_duplicate_history`, separadas dos
+denominadores independentes. Se não houver posições independentes
+alinhadas, as taxas de mudança e médias de estabilidade serão `null`
+— nunca uma estabilidade perfeita presumida.
+
+Para reavaliar **apenas decisões críticas** na mesma execução, sem criar
+novas médias de profundidades mistas:
+
+~~~bash
+python -m chesssim analyze-quality --pgn runs/confronto/duelo.pgn \
+  --stockfish /usr/games/stockfish --depth 10 \
+  --refine-depth 20 --refine-threshold 100 \
+  --refine-max-positions 20 \
+  --out reports/qualidade-criticas-d10-d20.json
+~~~
+
+Cada decisão reavaliada conserva seu `cp_loss` original, adicionando
+`refined` com a nova busca e `stability` com a mudança de classe,
+perda, melhor lance e ressalva de mate. A seleção reserva primeiro
+o orçamento das posições **independentes**; duplicatas de diagnóstico
+só usam capacidade restante. O `summary` continua referindo-se
+exclusivamente à profundidade-base e `refinement` informa quantas
+decisões foram reavaliadas e quantas mudaram de classe.
+
+**Limitação:** estabilidade do Stockfish depende de profundidade, opções,
+hardware e características da busca; não é precisão Chess.com, estimativa
+de Elo nem evidência de personalidade histórica por si só.
 
 ## 9. Referência da CLI e pesquisa
 
