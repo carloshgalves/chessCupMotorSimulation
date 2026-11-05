@@ -184,9 +184,11 @@ def snapshot(directory: Path, *, match_id: str | None = None,
     attempts = []
     selected_attempt = None
     if (run / "tournament.json").is_file():
-        from .tournament import load_tournament, tournament_status
+        from .tournament import STOP_FILE, _summary, load_tournament
         state = load_tournament(run)
-        tournament = tournament_status(run)
+        # Uma única leitura atômica do manifesto evita mistura entre rodadas.
+        tournament = _summary(state)
+        tournament["stop_requested"] = (run / STOP_FILE).exists()
         from .catalog import find_player
         tournament["names"] = {slug: find_player(slug).name
                                for slug in state["participants"]}
