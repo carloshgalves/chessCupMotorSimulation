@@ -325,14 +325,28 @@ def analyze_games_v91(pgn: Path, engine: Path, out: Path, *, depth: int = 18,
                            'blunder': score['cp_loss'] >= 250})
         # Optional targeted search refinement: preserve original metrics for
         # an apples-to-apples comparison; never mix depths into main summary.
-        ranked = sorted((r for r in output if r['cp_loss'] >= refine_threshold),
+        ranked = sorted((r for r in output if r['cp_loss'] >= refine_threshold and
+                         r['game_index'] not in duplicate_indices),
                         key=lambda x: (-x['cp_loss'], x['global_index']))
-        chosen_refine = ranked[:refine_max_positions] if refine_depth is not None else []
+        # Duplicate trajectories may only consume spare refinement capacity;
+        # they cannot displace any independent critical decision.
+        diagnostic_ranked = sorted(
+            (r for r in output if r['cp_loss'] >= refine_threshold and
+             r['game_index'] in duplicate_indices),
+            key=lambda x: (-x['cp_loss'], x['global_index']))
+        chosen_refine = (
+            ranked[:refine_max_positions] +
+            diagnostic_ranked[:max(0, refine_max_positions - len(ranked))]
+            if refine_depth is not None else []
+        )
+        if chosen_refine:
+            from .quality_stability import compare_depth_evaluations
         for row in chosen_refine:
             board = chess.Board(row['fen'])
             refined = _evaluate_choice(judge, board, chess.Move.from_uci(row['played']),
                                        depth=refine_depth, pv_plies=pv_plies)
             row['refined'] = refined
+            row['stability'] = compare_depth_evaluations(row, refined)
     # Fail closed if the game evidence or judge executable was replaced during
     # the time-consuming UCI search; never publish mismatched provenance.
     if _sha256_file(pgn) != pgn_sha256 or _sha256_file(engine) != engine_sha256:
@@ -402,8 +416,20 @@ def analyze_games_v91(pgn: Path, engine: Path, out: Path, *, depth: int = 18,
             'diagnostic_duplicate_decisions': len(output) - len(independent_decisions),
             'status': 'CONSISTENT',
         },
-        'refinement': {'selected': len(chosen_refine),
-                       'warning': 'Refinements are reported separately and never mixed into base-depth averages.'},
+        'refinement': {
+            'selected': len(chosen_refine),
+            'independent_selected': sum(r['game_index'] not in duplicate_indices
+                                        for r in chosen_refine),
+            'diagnostic_duplicates_selected': sum(r['game_index'] in duplicate_indices
+                                                  for r in chosen_refine),
+            'classification_changes_independent': sum(
+                r['stability']['classification_changed'] for r in chosen_refine
+                if r['game_index'] not in duplicate_indices),
+            'warning': ('Every refined result remains nested under the original decision; '
+                        'base-depth summaries are never replaced with refinement values. '
+                        'Duplicated games use only spare refinement budget; '
+                        'neither depth establishes an Elo or identity verdict.'),
+        },
         'decisions': output,
         'warning': ('All conclusions are depth-dependent. Mate evaluations use a 1000-cp mapping; '
                     'root-move forcing and depth variation introduce search instability. '
@@ -419,55 +445,6 @@ def analyze_games_v91(pgn: Path, engine: Path, out: Path, *, depth: int = 18,
 
 
 def compare_quality_reports(paths: list[Path], out: Path) -> dict:
-    """Legacy-compatible comparison of identical PGN decisions at distinct depths."""
-    if out.exists():
-        raise FileExistsError(out)
-    if len(paths) < 2:
-        raise ValueError('At least two quality reports required')
-    docs = [json.loads(path.read_text(encoding='utf-8')) for path in paths]
-    hashes = [d['inputs']['pgn_sha256'] for d in docs]
-    if len(set(hashes)) != 1:
-        raise ValueError('Cannot compare reports from different PGNs')
-    if len(set(d['inputs']['stockfish_sha256'] for d in docs)) != 1:
-        raise ValueError('Cannot compare reports from different Stockfish executables')
-    def key(row):
-        return (row.get('source_game_index'), row['player'], row['color'],
-                row['fullmove'], row['played'])
-    # Legacy v9 lacks source_game_index: it is possible to have repeated move
-    # keys in repeated games. Use lists and retain only unambiguous exact keys.
-    indices = []
-    collisions = []
-    for doc in docs:
-        idx = defaultdict(list)
-        for r in doc['decisions']:
-            idx[key(r)].append(r)
-        indices.append(idx)
-        collisions.append(sum(len(v) - 1 for v in idx.values() if len(v) > 1))
-    common = sorted(set.intersection(*(set(idx) for idx in indices)), key=str)
-    matched = []
-    for k in common:
-        if any(len(idx[k]) != 1 for idx in indices):
-            continue
-        moves = [idx[k][0] for idx in indices]
-        matched.append({'key': {'source_game_index': k[0], 'player': k[1],
-                                'color': k[2], 'fullmove': k[3], 'played': k[4]},
-                        'loss_by_depth': {str(doc['inputs']['depth']): row['cp_loss'] for doc, row in zip(docs, moves)},
-                        'difference_last_minus_first': moves[-1]['cp_loss'] - moves[0]['cp_loss'],
-                        'classification_changed': (moves[0]['cp_loss'] >= 100) != (moves[-1]['cp_loss'] >= 100) or (moves[0]['cp_loss'] >= 250) != (moves[-1]['cp_loss'] >= 250)})
-    ranking = sorted(matched, key=lambda m: (-abs(m['difference_last_minus_first']), str(m['key'])))
-    result = {'protocol': 'depth-quality-comparison-v9.1',
-              'status': 'EXPLORATORY',
-              'inputs': [{'path': str(p), 'depth': doc['inputs']['depth'],
-                          'sampled_positions': len(doc['decisions'])} for p, doc in zip(paths, docs)],
-              'pgn_sha256': hashes[0],
-              'aligned_decisions': len(matched),
-              'unmatched_or_ambiguous_by_report': [len(d['decisions']) - len(matched) for d in docs],
-              'legacy_collision_counts': collisions,
-              'classification_changes': sum(m['classification_changed'] for m in matched),
-              'largest_changes': ranking[:20],
-              'note': 'Only exact aligned decisions used. Analysis depths do not independently validate move quality.'}
-    out.parent.mkdir(parents=True, exist_ok=True)
-    with out.open('x', encoding='utf-8') as stream:
-        json.dump(result, stream, ensure_ascii=False, indent=2)
-        stream.write('\n')
-    return result
+    """Backward-compatible entry point for strict depth-stability reporting."""
+    from .quality_stability import compare_quality_reports as compare
+    return compare(paths, out)
