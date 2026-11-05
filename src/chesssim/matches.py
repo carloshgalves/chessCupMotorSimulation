@@ -343,7 +343,9 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
             summary["games"], summary["diversity"] = audit_mainlines(summary["games"])
             _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
             print(f"Resultado: {meta['result']} ({meta['termination']})", flush=True)
-            if meta["status"] != "COMPLETED":
+            # Partidas limitadas por plies continuam úteis para auditoria de
+            # diversidade; somente parada/timeout operacional cancela o par.
+            if meta["termination"] in {"OperatorStop", "WallTimeLimit"}:
                 break
         summary["status"] = ("COMPLETED" if len(summary["games"]) == len(lineups)
                              and all(g["status"] == "COMPLETED" for g in summary["games"])
