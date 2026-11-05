@@ -227,7 +227,6 @@ def test_legacy_pgn_without_clock_comments_shows_unknown_time(tmp_path):
     game = chess.pgn.Game()
     game.headers["TimeControl"] = "600+2"
     node = game
-    board = game.board()
     move = chess.Move.from_uci("e2e4")
     node.add_variation(move)
     (folder / "jogo_1.partial.pgn").write_text(str(game), encoding="utf-8")
