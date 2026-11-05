@@ -50,6 +50,8 @@ def main(argv: list[str] | None = None) -> int:
     tournament_init.add_argument("--max-tiebreak-pairs", type=int, default=3,
                                  help="Máximo de pares de jogos antes de arbitragem explícita")
     tournament_init.add_argument("--max-plies", type=int, default=600)
+    tournament_init.add_argument("--max-game-wall-seconds", type=float,
+                                 help="Limite externo de duração da partida; não é derrota por tempo")
 
     tournament_run = sub.add_parser("tournament-run", help="Executa/retoma partidas sem duplicar confrontos")
     tournament_run.add_argument("--rodent", type=Path)
@@ -57,9 +59,20 @@ def main(argv: list[str] | None = None) -> int:
     tournament_run.add_argument("--limit-pairs", type=int, help="Executa no máximo N pares nesta chamada")
     tournament_run.add_argument("--retry-incomplete", action="store_true",
                                 help="Autoriza nova tentativa quando o jogo anterior foi interrompido")
+    tournament_run.add_argument("--max-run-seconds", type=float,
+                                help="Pausa graciosa ao atingir o orçamento desta execução")
 
     tournament_status = sub.add_parser("tournament-status", help="Mostra progresso e pendências do chaveamento")
     tournament_status.add_argument("--run", type=Path, required=True)
+
+    tournament_stop = sub.add_parser("tournament-stop",
+                                     help="Solicita parada graciosa sem aguardar o lock da partida")
+    tournament_stop.add_argument("--run", type=Path, required=True)
+    tournament_stop.add_argument("--reason", default="Solicitado pelo operador")
+
+    tournament_clear = sub.add_parser("tournament-clear-stop",
+                                      help="Libera pedido de parada com exclusão de execução concorrente")
+    tournament_clear.add_argument("--run", type=Path, required=True)
 
     tournament_resolve = sub.add_parser("tournament-resolve", help="Registra arbitragem externa para empate esgotado")
     tournament_resolve.add_argument("--run", type=Path, required=True)
@@ -835,18 +848,27 @@ def main(argv: list[str] | None = None) -> int:
             create_tournament(rodent_root(args), args.out, participants=args.players,
                               seed=args.seed, preset=args.preset,
                               max_tiebreak_pairs=args.max_tiebreak_pairs,
-                              max_plies=args.max_plies)
+                              max_plies=args.max_plies,
+                              max_game_wall_seconds=args.max_game_wall_seconds)
             print(json.dumps(tournament_status(args.out), indent=2, ensure_ascii=False))
         elif args.command == "tournament-run":
             from .tournament import run_tournament
             result = run_tournament(rodent_root(args), args.run,
                                     limit_pairs=args.limit_pairs,
-                                    retry_incomplete=args.retry_incomplete)
+                                    retry_incomplete=args.retry_incomplete,
+                                    max_run_seconds=args.max_run_seconds)
             print(json.dumps(result, indent=2, ensure_ascii=False))
             return 0 if result["status"] in {"PAUSED", "COMPLETED"} else 3
         elif args.command == "tournament-status":
             from .tournament import tournament_status
             print(json.dumps(tournament_status(args.run), indent=2, ensure_ascii=False))
+        elif args.command == "tournament-stop":
+            from .tournament import request_stop
+            print(json.dumps(request_stop(args.run, reason=args.reason),
+                             indent=2, ensure_ascii=False))
+        elif args.command == "tournament-clear-stop":
+            from .tournament import clear_stop
+            print(json.dumps(clear_stop(args.run), indent=2, ensure_ascii=False))
         elif args.command == "tournament-resolve":
             from .tournament import resolve_tiebreak
             print(json.dumps(resolve_tiebreak(args.run, args.match, args.winner,
