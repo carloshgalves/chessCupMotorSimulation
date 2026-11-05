@@ -65,7 +65,8 @@ jobs:
           with ZipFile(wheels[0]) as archive:
               names = set(archive.namelist())
               assert "chesssim/data/roster.json" in names, "Packaged roster is missing"
-              for asset in ("monitor.html", "monitor.css", "monitor.js"):
+              for asset in ("monitor.html", "monitor.css", "monitor.js",
+                            "arena.html", "arena.css", "arena.js"):
                   assert f"chesssim/data/{asset}" in names, f"Live-board asset missing: {asset}"
               entry_points = [
                   name for name in names
@@ -90,6 +91,7 @@ jobs:
           PYTHONPATH="$WHEEL_INSTALL" python -m chesssim --help
           PYTHONPATH="$WHEEL_INSTALL" python -m chesssim roster > /dev/null
           PYTHONPATH="$WHEEL_INSTALL" python -m chesssim watch --help > /dev/null
+          PYTHONPATH="$WHEEL_INSTALL" python -m chesssim arena --help > /dev/null
 
       - name: Generate resolved Python SBOM (single existing runner)
         if: matrix.python-version == '3.13' && (github.event_name != 'push' || github.ref == 'refs/heads/main')
