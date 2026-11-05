@@ -142,7 +142,7 @@ def test_audit_records_engine_identity_exact_uci_pvs_and_consistent_totals(
 def test_duplicate_games_can_be_inspected_without_polluting_aggregate(monkeypatch, audit_input):
     pgn, exe, out = audit_input
     _games(pgn, duplicate=True)
-    report, _ = _run(monkeypatch, pgn, exe, out, dedupe_games=False, max_positions=16)
+    report, _ = _run(monkeypatch, pgn, exe, out, dedupe_games=False, max_positions=20)
     independent = [d for d in report["decisions"] if d["game_index"] != 2]
     assert report["diversity"]["games_duplicate"] == 1
     assert report["sampling"]["diagnostic_duplicate_positions_selected"] > 0
