@@ -93,6 +93,41 @@ def summarize_decisions(rows: list[dict], *, label: str = 'player') -> dict:
     return output
 
 
+def _reconcile_stats(rows: list[dict], published: dict, *, label: str) -> None:
+    """Independent conservation check of values, not only sample counts.
+
+    The primary summary uses statistics.mean/median; this gate independently
+    checks raw sums, sorted middle values, classifications and mate flags.
+    """
+    from math import isclose
+
+    grouped = defaultdict(list)
+    for row in rows:
+        grouped[row[label]].append(row)
+    if set(grouped) != set(published):
+        raise RuntimeError(f'Quality audit reconciliation failed: {label} groups')
+    for name, decisions in grouped.items():
+        stats = published[name]
+        losses = sorted(row['cp_loss'] for row in decisions)
+        count = len(losses)
+        midpoint = count // 2
+        expected_median = (losses[midpoint] if count % 2 else
+                           (losses[midpoint - 1] + losses[midpoint]) / 2)
+        expected = {
+            'decisions_analyzed': count,
+            'median_centipawn_loss': expected_median,
+            'mistakes_over_100cp': sum(loss >= 100 for loss in losses),
+            'blunders_over_250cp': sum(loss >= 250 for loss in losses),
+            'mate_affected_decisions': sum(bool(d.get('mate_affected')) for d in decisions),
+            'negative_unclipped_gaps': sum(d.get('raw_gap_cp', 0) < 0 for d in decisions),
+        }
+        if any(stats.get(field) != value for field, value in expected.items()):
+            raise RuntimeError(f'Quality audit reconciliation failed: {label} metrics')
+        if not isclose(stats['mean_centipawn_loss'] * count, sum(losses),
+                       rel_tol=1e-12, abs_tol=1e-9):
+            raise RuntimeError(f'Quality audit reconciliation failed: {label} mean')
+
+
 def _pv_san(board, pv: list, cap: int) -> list[str]:
     copy = board.copy(stack=False)
     result = []
@@ -329,6 +364,10 @@ def analyze_games_v91(pgn: Path, engine: Path, out: Path, *, depth: int = 18,
     for group in game_report:
         if sum(stats['decisions_analyzed'] for stats in group['by_player'].values()) != group['positions_analyzed']:
             raise RuntimeError('Quality audit reconciliation failed: per-game player totals')
+        _reconcile_stats(by_game.get(group['game_index'], []),
+                         group['by_player'], label='player')
+    _reconcile_stats(independent_decisions, global_summary, label='player')
+    _reconcile_stats(independent_decisions, per_player_color, label='player_color')
     result = {
         'protocol': PROTOCOL,
         'status': 'EXPLORATORY_STRENGTH_DIAGNOSTIC_NOT_ELO',
