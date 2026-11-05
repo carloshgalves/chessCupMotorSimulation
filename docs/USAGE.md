@@ -375,6 +375,10 @@ realmente lançado (`inputs.engine_uci_id`), as opções configuradas e aceitas
 a profundidade fixa (`inputs.analysis_limit`) e a regra de conversão de
 mate em equivalente de centipeões (`inputs.mate_mapping_cp`).
 
+Os hashes são verificados novamente após a leitura das posições e ao fim da
+avaliação UCI. Mudanças de PGN ou executável durante a execução provocam falha
+sem gerar relatório, para evitar a associação de decisões a versões erradas.
+
 Cada item de `decisions` inclui posição FEN, lance jogado, melhor lance
 proposto (quando a PV está disponível), perdas e avaliações, além das
 variantes principais em SAN **e** UCI. As PVs são verificadas contra a
