@@ -208,7 +208,10 @@ def test_static_assets_use_safe_text_updates_and_no_external_content(tmp_path):
     assert 'href="/app.css"' in html
     assert "https://" not in html and "http://" not in html
     assert "innerHTML" not in script and "eval(" not in script
-    assert "textContent" in script and 'fetch("/api/state"' in script
+    assert "textContent" in script and 'fetch("/api/state" + query' in script
+    assert 'id="bracket"' in html and 'id="attempts"' in html
+    assert "setSelection(match.id)" in script and "hashchange" in script
+    assert "URLSearchParams" in script and 'aria-pressed' in script
     assert 'id="pause"' in html and 'id="live"' in html
     assert 'id="white-clock"' in html and 'id="black-clock"' in html
 
@@ -423,3 +426,4 @@ def test_scores_rounds_and_replays_survive_monitor_restart(four_player_cup):
         assert len(historical["duel"]["games"]) == 2
         assert historical["duel"]["games"][0]["states"][-1]["san"] == "Nc6"
         assert historical["tournament"]["rounds"] == 2
+        assert historical["tournament"]["names"][finalists[0]]
