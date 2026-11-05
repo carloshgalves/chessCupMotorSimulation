@@ -61,8 +61,9 @@ def _states(game: chess.pgn.Game) -> list[dict]:
         uci = move.uci()
         board.push(move)
         seconds = node.clock()
-        if seconds is not None:
-            clocks[actor] = seconds
+        # Legacy PGNs may contain TimeControl but no [%clk] annotations:
+        # the moving side's remaining time is then unknown, not initial.
+        clocks[actor] = seconds
         states.append({"fen": board.fen(), "san": san,
                        "last": [uci[:2], uci[2:4]],
                        "turn": "white" if board.turn == chess.WHITE else "black",
@@ -133,7 +134,8 @@ def _latest_duel(run: Path, state: dict) -> tuple[Path | None, str | None]:
                     continue
     if not candidates:
         return None, None
-    _, _, folder, match_id = max(candidates, key=lambda row: (row[0], row[1]))
+    # Prefer fresh disk evidence over stale RUNNING manifests left by a crash.
+    _, _, folder, match_id = max(candidates, key=lambda row: (row[1], row[0]))
     return folder, match_id
 
 
