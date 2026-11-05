@@ -334,10 +334,12 @@ class ArenaManager:
             session["status"] = "FAILED"
             session["error_code"] = "ENGINE_OR_ARTIFACT_FAILURE"
         finally:
-            try:
-                self._save(folder, session)
-            finally:
-                with self._lock:
+            # Publish the terminal checkpoint and clear the busy flag as one
+            # observable transition. Readers of status() use this same lock.
+            with self._lock:
+                try:
+                    self._save(folder, session)
+                finally:
                     self._active = False
 
     def stop(self) -> dict:
