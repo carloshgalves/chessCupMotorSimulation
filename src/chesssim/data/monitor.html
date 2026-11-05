@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Copa dos Imortais | Ao vivo</title>
+  <link rel="stylesheet" href="/app.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main class="layout">
+    <header class="topbar">
+      <div class="brand">
+        <div class="kicker">CHESSCUP MOTOR SIMULATION</div>
+        <h1>Copa dos Imortais <span>· Ao vivo</span></h1>
+        <p>Tabuleiro local conectado aos PGNs do Rodent IV. Somente visualização.</p>
+      </div>
+      <div class="connection" id="connection" role="status" aria-live="polite">Conectando…</div>
+    </header>
+    <div class="content">
+      <section class="arena" aria-label="Arena">
+        <div class="player black-player">
+          <div><div class="eyebrow">PRETAS</div><div class="player-name" id="black-name">—</div></div>
+          <div><div class="clock" id="black-clock" aria-label="Relógio das pretas">—:—</div></div>
+        </div>
+        <div class="board-shell">
+          <div class="board" id="board" role="img" aria-label="Tabuleiro de xadrez, posição inicial"></div>
+        </div>
+        <div class="player white-player">
+          <div><div class="eyebrow">BRANCAS</div><div class="player-name" id="white-name">—</div></div>
+          <div class="clock" id="white-clock" aria-label="Relógio das brancas">—:—</div>
+        </div>
+        <div class="clock-note">Relógios após cada lance. Durante a reflexão, valores estimados localmente.</div>
+      </section>
+      <aside class="sidebar">
+        <section class="panel">
+          <div class="panel-kicker">CONFRONTO</div>
+          <h2 id="match-title">Aguardando partida</h2>
+          <p id="match-status">Nenhum lance registrado.</p>
+          <label for="games">Partida exibida</label>
+          <select id="games" aria-label="Selecionar partida"></select>
+          <div class="small-meta" id="tournament-meta">—</div>
+        </section>
+        <section class="panel history">
+          <div class="panel-kicker">LANCES</div>
+          <div class="headline" id="headline" aria-live="polite">Posição inicial</div>
+          <ol id="moves" aria-label="Últimos lances"></ol>
+          <div class="seek-label"><label for="seek">Revisão</label><span id="ply-count">0 / 0</span></div>
+          <input type="range" id="seek" min="0" max="0" value="0" step="1" aria-label="Navegar pelos meios-lances">
+          <div class="buttons" aria-label="Controles de replay">
+            <button type="button" id="start" title="Primeiro lance" aria-label="Ir ao início">⏮</button>
+            <button type="button" id="prev" title="Lance anterior" aria-label="Lance anterior">◀</button>
+            <button type="button" id="pause" class="accent" aria-pressed="false">⏸ Pausar visualização</button>
+            <button type="button" id="next" title="Próximo lance" aria-label="Próximo lance">▶</button>
+            <button type="button" id="end" title="Último lance" aria-label="Ir ao fim">⏭</button>
+          </div>
+          <button type="button" class="live-button" id="live">● Voltar ao vivo</button>
+          <p class="hint" id="view-status">A reprodução segue o lance mais recente.</p>
+        </section>
+        <section class="panel footer-note">
+          <div class="panel-kicker">CONTROLE DE OPERAÇÃO</div>
+          <p>Esta página não envia lances nem para o motor. Pausar aqui não pausa o torneio.</p>
+          <p>Para interromper a execução, utilize <code>tournament-stop</code> em outra aba do terminal.</p>
+          <div class="small-meta" id="updated">—</div>
+        </section>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

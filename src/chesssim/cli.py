@@ -80,6 +80,12 @@ def main(argv: list[str] | None = None) -> int:
     tournament_resolve.add_argument("--winner", required=True)
     tournament_resolve.add_argument("--reason", required=True, help="Justificativa formal registrada no manifesto")
 
+    watch = sub.add_parser("watch", help="Tabuleiro local ao vivo para torneio ou duelo")
+    watch.add_argument("--run", type=Path, required=True,
+                       help="Diretório com tournament.json ou summary.json")
+    watch.add_argument("--port", type=int, default=8765,
+                       help="Porta local (padrão 8765; 0 escolhe uma livre)")
+
     play = sub.add_parser("play", help="Executa duelo real entre dois perfis oficiais")
     play.add_argument("--rodent", type=Path)
     play.add_argument("white", help="Slug ou nome completo da personalidade")
@@ -843,6 +849,9 @@ def main(argv: list[str] | None = None) -> int:
                 args.out.parent.mkdir(parents=True, exist_ok=True)
                 args.out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
                 print(f"Sorteio salvo em {args.out}")
+        elif args.command == "watch":
+            from .live_board import serve
+            serve(args.run, port=args.port)
         elif args.command == "tournament-init":
             from .tournament import create_tournament, tournament_status
             create_tournament(rodent_root(args), args.out, participants=args.players,
