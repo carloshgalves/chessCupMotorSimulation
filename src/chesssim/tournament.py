@@ -30,7 +30,45 @@ def load_tournament(directory: Path) -> dict:
     data = json.loads(path.read_text(encoding="utf-8"))
     if data.get("schema") != SCHEMA:
         raise ValueError(f"Manifesto de torneio incompatível: {path}")
+    _check_bracket(data)
     return data
+
+
+
+def _check_bracket(state: dict) -> None:
+    """Não permite que um estado editado mude adversários ou a progressão da chave."""
+    players = state["participants"]
+    if len(players) < 2 or len(players) & (len(players) - 1) or len(set(players)) != len(players):
+        raise ValueError("Participantes inconsistentes no manifesto")
+    expected = list(players)
+    random.Random(state["seed"]).shuffle(expected)
+    if state["initial_bracket"] != expected:
+        raise ValueError("Sorteio persistido diverge da semente")
+    rounds = state["rounds"]
+    if not rounds:
+        raise ValueError("Torneio sem rodada")
+    for index, rd in enumerate(rounds, 1):
+        matches = rd["matches"]
+        if rd["number"] != index or len(matches) != len(expected) // 2:
+            raise ValueError("Estrutura de rodadas inconsistente")
+        for number, match in enumerate(matches, 1):
+            if (match["id"] != f"r{index:02d}-m{number:02d}" or
+                    match["players"] != expected[2 * number - 2:2 * number] or
+                    len(match["attempts"]) > state["max_tiebreak_pairs"]):
+                raise ValueError(f"Chaveamento inconsistente: {match['id']}")
+            if (match["winner"] is not None and
+                    (match["winner"] not in match["players"] or
+                     match["status"] != "COMPLETED")):
+                raise ValueError(f"Vencedor inconsistente: {match['id']}")
+        if index < len(rounds):
+            if any(m["winner"] is None for m in matches):
+                raise ValueError("Rodada posterior existe antes da conclusão da anterior")
+            expected = [m["winner"] for m in matches]
+    if state["champion"] is not None:
+        if len(rounds[-1]["matches"]) != 1 or (
+                state["champion"] != rounds[-1]["matches"][0]["winner"]):
+            raise ValueError("Campeão incompatível com a final")
+
 
 
 @contextmanager
@@ -263,7 +301,8 @@ def _reconcile(directory: Path, state: dict, match: dict) -> None:
     present = set()
     seen_failures = set()
     previous = {x["folder"]: x for x in match["attempts"]}
-    was_final = match.get("winner") is not None
+    previous_winner = match.get("winner")
+    was_final = previous_winner is not None
     for summary_file in sorted(base.glob("*/summary.json")):
         folder = str(summary_file.parent.relative_to(directory))
         present.add(folder)
@@ -287,8 +326,8 @@ def _reconcile(directory: Path, state: dict, match: dict) -> None:
     match["excluded_attempts"] = [{"folder": p, "reason": "NOT_COMPLETED"}
                                   for p in sorted(seen_failures)]
     _refresh_match(match, state["max_tiebreak_pairs"])
-    if was_final and match["winner"] is None:
-        raise RuntimeError(f"Vencedor previamente confirmado deixou de existir: {match['id']}")
+    if was_final and match["winner"] != previous_winner:
+        raise RuntimeError(f"Vencedor previamente confirmado foi alterado: {match['id']}")
 
 
 def _advance(state: dict) -> None:
@@ -340,6 +379,7 @@ def run_tournament(root: Path, directory: Path, *, limit_pairs: int | None = Non
         state = load_tournament(directory)
         _verify_resources(root, state)
         played = 0
+        failed_this_run = set()
         while True:
             # Valida todos os artefatos já incorporados, inclusive de rodadas anteriores.
             for rd in state["rounds"]:
@@ -350,8 +390,10 @@ def run_tournament(root: Path, directory: Path, *, limit_pairs: int | None = Non
             if state["champion"] is not None:
                 break
             current = state["rounds"][-1]
-            pending = [m for m in current["matches"] if m["status"] == "PENDING" or
-                       (retry_incomplete and m["status"] == "RETRY_REQUIRED")]
+            pending = [m for m in current["matches"]
+                       if m["id"] not in failed_this_run and
+                       (m["status"] == "PENDING" or
+                        (retry_incomplete and m["status"] == "RETRY_REQUIRED"))]
             if not pending:
                 state["status"] = "BLOCKED"
                 break
@@ -374,6 +416,8 @@ def run_tournament(root: Path, directory: Path, *, limit_pairs: int | None = Non
                     raise
                 finally:
                     _reconcile(directory, state, match)
+                    if match["status"] == "RETRY_REQUIRED":
+                        failed_this_run.add(match["id"])
                     _save(directory, state)
                 played += 1
             _advance(state)
