@@ -80,6 +80,18 @@ def main(argv: list[str] | None = None) -> int:
     tournament_resolve.add_argument("--winner", required=True)
     tournament_resolve.add_argument("--reason", required=True, help="Justificativa formal registrada no manifesto")
 
+    arena = sub.add_parser("arena", help="Arena local opt-in para lançar e acompanhar duelos UCI")
+    arena.add_argument("--rodent", type=Path,
+                       help="Raiz local da instalação Rodent IV")
+    arena.add_argument("--out", type=Path, required=True,
+                       help="Diretório dedicado a sessões da arena")
+    arena.add_argument("--port", type=int, default=8766,
+                       help="Porta local (padrão 8766)")
+    arena.add_argument("--opening-books", type=Path,
+                       help="Pasta de repertórios JSON pré-aprovados por slug")
+    arena.add_argument("--max-game-wall-seconds", type=float, default=3600,
+                       help="Limite de duração operacional por partida")
+
     watch = sub.add_parser("watch", help="Tabuleiro local ao vivo para torneio ou duelo")
     watch.add_argument("--run", type=Path, required=True,
                        help="Diretório com tournament.json ou summary.json")
@@ -849,6 +861,11 @@ def main(argv: list[str] | None = None) -> int:
                 args.out.parent.mkdir(parents=True, exist_ok=True)
                 args.out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
                 print(f"Sorteio salvo em {args.out}")
+        elif args.command == "arena":
+            from .arena import serve
+            serve(rodent_root(args), args.out, port=args.port,
+                  opening_books=args.opening_books,
+                  max_game_wall_seconds=args.max_game_wall_seconds)
         elif args.command == "watch":
             from .live_board import serve
             serve(args.run, port=args.port)
