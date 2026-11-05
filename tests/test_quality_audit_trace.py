@@ -96,8 +96,9 @@ def audit_input(tmp_path):
 def _run(monkeypatch, pgn, exe, out, *, fake=None, **kwargs):
     judge = fake or StableJudge()
     monkeypatch.setattr(chess.engine.SimpleEngine, "popen_uci", lambda *a, **kw: judge)
+    budget = kwargs.pop("max_positions", 12)
     return quality.analyze_games_v91(
-        pgn, exe, out, depth=5, max_positions=12, min_fullmove=1,
+        pgn, exe, out, depth=5, max_positions=budget, min_fullmove=1,
         pv_plies=2, **kwargs
     ), judge
 
