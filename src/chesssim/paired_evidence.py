@@ -8,7 +8,6 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from hashlib import sha256
 from html import escape
-from itertools import combinations
 import json
 import math
 from pathlib import Path
