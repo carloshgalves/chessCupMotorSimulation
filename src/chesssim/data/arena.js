@@ -201,7 +201,7 @@ $("swap").addEventListener("click", () => {
   $("black").value = a;
   updateForm();
 });
-for (const field of ("white","black","mode","preset","opening","reverse","max-plies")) {
+for (const field of ["white","black","mode","preset","opening","reverse","max-plies"]) {
   $(field).addEventListener("change", updateForm);
 }
 $("launch").disabled = true;
