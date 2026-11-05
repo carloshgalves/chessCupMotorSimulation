@@ -447,3 +447,35 @@ for raw in sys.stdin:
             break
         time.sleep(0.02)
     assert all(not Path(f"/proc/{pid}").exists() for pid in pids)
+
+
+def test_deep_json_and_duplicate_keys_are_rejected(rodent_stub):
+    with arena_server(rodent_stub) as (server, base):
+        deeply_nested = (b"[" * 1500) + b"1" + (b"]" * 1500)
+        with pytest.raises(HTTPError) as err:
+            post(base, "/api/arena/launch", deeply_nested, server.arena_token)
+        assert err.value.code == 400
+        assert json.loads(err.value.read())["error"] == "Corpo JSON inválido"
+        duplicate = b'{"white":"fischer","white":"tal"}'
+        with pytest.raises(HTTPError) as err:
+            post(base, "/api/arena/launch", duplicate, server.arena_token)
+        assert err.value.code == 400
+        assert json.loads(err.value.read())["error"] == "Campo JSON duplicado"
+
+
+def test_session_metadata_id_and_state_are_strictly_validated(rodent_stub):
+    root, workspace = rodent_stub
+    workspace.mkdir()
+    location = workspace / "session-20261105T110000Z-bad"
+    location.mkdir()
+    path = location / "session.json"
+    content = {"schema": "chesssim-arena-session-v1", "id": "session-other",
+               "status": "COMPLETED", "config": GOOD}
+    path.write_text(json.dumps(content), encoding="utf-8")
+    with pytest.raises(ValueError, match="incompatível"):
+        arena.ArenaManager(root, workspace, runner=fake_duel)
+    # Failed preflight cannot lock out the operator's next valid session.
+    content["id"] = location.name
+    path.write_text(json.dumps(content), encoding="utf-8")
+    with arena_server(rodent_stub) as (_, base):
+        assert api(base)["session"]["id"] == location.name
