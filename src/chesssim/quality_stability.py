@@ -130,6 +130,20 @@ def _evaluation(row: dict, depth: int, *, source_index: int) -> dict:
     if row.get("depth", depth) != depth:
         raise ValueError("Row search depth contradicts report depth")
     classification = decision_class(row.get("cp_loss"))
+    best_cp, played_cp = row.get("best_eval_cp"), row.get("played_eval_cp")
+    if best_cp is not None and played_cp is not None:
+        if any(type(v) not in (int, float) or not isfinite(v)
+               for v in (best_cp, played_cp)):
+            raise ValueError("Non-finite centipawn evaluations")
+        raw_gap = best_cp - played_cp
+        recorded_gap = row.get("raw_gap_cp")
+        if recorded_gap is not None and (
+                type(recorded_gap) not in (int, float) or
+                not isfinite(recorded_gap) or
+                abs(recorded_gap - raw_gap) > 1e-8):
+            raise ValueError("Quality row has inconsistent raw centipawn gap")
+        if abs(row["cp_loss"] - max(0, raw_gap)) > 1e-8:
+            raise ValueError("Quality row has inconsistent centipawn loss")
     payload = {
         "depth": depth,
         "decision_index": source_index,
