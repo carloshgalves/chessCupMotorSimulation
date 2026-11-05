@@ -105,6 +105,9 @@ def test_full_paired_json_and_script_free_html_with_game_level_uncertainty(tmp_p
         "win": 2, "draw": 1, "loss": 3
     }
     assert report["players"]["A"]["incomplete_results_excluded"] == 1
+    assert report["players"]["A"]["total_played_moves"] == 19
+    assert report["players"]["A"]["strength"]["decisions_non_mate"] == 18
+    assert report["players"]["A"]["strength"]["non_mate_sampled_move_fraction"] == pytest.approx(18/19)
     strength = report["players"]["A"]["strength"]["game_level"]
     assert strength["games"] == 7
     assert strength["bootstrap_ci95"] is not None
@@ -122,6 +125,7 @@ def test_full_paired_json_and_script_free_html_with_game_level_uncertainty(tmp_p
     assert len(pair["game_records"]) == 7
     assert "<script" not in html.read_text(encoding="utf-8")
     assert "Força ≠ identidade de estilo" in html.read_text(encoding="utf-8")
+    assert "Cobertura CP sem mate" in html.read_text(encoding="utf-8")
     with pytest.raises(FileExistsError):
         paired_evidence(pgn, quality, out, html=html)
 
@@ -244,4 +248,36 @@ def test_html_and_json_destinations_must_be_distinct(tmp_path):
     pgn,quality,out,_=_write_case(tmp_path)
     with pytest.raises(ValueError,match="different paths"):
         paired_evidence(pgn,quality,out,html=out,bootstrap=200)
+    assert not out.exists()
+
+
+
+@pytest.mark.parametrize("mutation,diagnostic", [
+    ("inconsistent_cp", "inconsistent centipawn loss"),
+    ("inconsistent_raw_gap", "inconsistent raw centipawn gap"),
+    ("nonfinite_engine", "non-finite engine evaluations"),
+    ("mate_unclassified", "explicitly classify mate-affected"),
+])
+def test_report_validates_stockfish_score_consistency(tmp_path, mutation, diagnostic):
+    pgn, quality, out, _ = _write_case(tmp_path, duplicate=False)
+    doc = json.loads(quality.read_text(encoding="utf-8"))
+    row = doc["decisions"][0]
+    row.update({"best_eval_cp": 100, "played_eval_cp": 90, "raw_gap_cp": 10,
+                "cp_loss": 10, "mate_affected": True})
+    if mutation == "inconsistent_cp": row["cp_loss"] = 20
+    elif mutation == "inconsistent_raw_gap": row["raw_gap_cp"] = 14
+    elif mutation == "nonfinite_engine": row["best_eval_cp"] = "nan"
+    elif mutation == "mate_unclassified": row.pop("mate_affected")
+    quality.write_text(json.dumps(doc), encoding="utf-8")
+    with pytest.raises(ValueError, match=diagnostic):
+        paired_evidence(pgn, quality, out, bootstrap=200)
+    assert not out.exists()
+
+
+def test_report_rejects_out_of_range_bootstrap_seed_and_opening_window(tmp_path):
+    pgn, quality, out, _ = _write_case(tmp_path)
+    for keyword in ({"bootstrap": 10}, {"bootstrap": True},
+                    {"seed": -1}, {"opening_plies": 500}):
+        with pytest.raises(ValueError):
+            paired_evidence(pgn, quality, out, **keyword)
     assert not out.exists()
