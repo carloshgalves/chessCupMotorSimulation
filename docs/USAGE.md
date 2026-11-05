@@ -367,6 +367,37 @@ O relatório registra hashes do PGN e do executável Stockfish, profundidade, po
 
 Essa métrica é um diagnóstico dependente de profundidade, não Elo, força de torneio ou prova de identidade histórica. As avaliações `analyze-games` e `analyze-quality` usam a identidade de partida baseada na posição inicial e na sequência completa de lances UCI. Metadados PGN diferentes não transformam uma repetição em uma observação nova. `--keep-duplicate-games` permite inspecionar posições repetidas para diagnóstico, mas **não** inclui as decisões duplicadas nas estimativas agregadas. Os relatórios apresentam `diversity.games_total`, `games_distinct`, `games_duplicate` e referências à primeira ocorrência.
 
+### 8.1. Trilha independente por decisão (#18)
+
+O JSON de `analyze-quality` registra a identificação UCI anunciada pelo motor
+realmente lançado (`inputs.engine_uci_id`), as opções configuradas e aceitas
+(`inputs.engine_configured_options`), o hash SHA-256 do executável e do PGN,
+a profundidade fixa (`inputs.analysis_limit`) e a regra de conversão de
+mate em equivalente de centipeões (`inputs.mate_mapping_cp`).
+
+Cada item de `decisions` inclui posição FEN, lance jogado, melhor lance
+proposto (quando a PV está disponível), perdas e avaliações, além das
+variantes principais em SAN **e** UCI. As PVs são verificadas contra a
+posição original antes de publicação. A PV do cálculo forçado deve começar
+pelo lance realmente jogado; sem uma PV informada, `best_move` permanece
+`null` e `pv_availability` registra a ausência. O sistema **não inventa**
+um melhor lance para preencher lacunas de evidência.
+
+`games[].by_player` e `summary` mostram as contagens e médias por
+partida e por enxadrista; `summary_by_player_color` oferece também o recorte
+por lado. `reconciliation` contabiliza todas as posições, as posições
+independentes e os diagnósticos de duplicatas sem misturar suas médias.
+A mediana de conjuntos pares usa a média dos dois valores centrais.
+Esses números são derivados **da amostra selecionada**, não da totalidade
+dos lances da partida; com amostragem estrita, alguns pares partida/cor
+podem receber menos posições que o limite máximo solicitado.
+
+As avaliações centipeões em situações de mate usam uma convenção de
+`1000 cp` para exibição e preservam separadamente `best_mate_in` e
+`played_mate_in`. Elas não devem ser lidas como perdas posicionais usuais.
+O relatório continua sendo diagnóstico independente da *qualidade de busca*
+e **não** comprova precisão histórica, rating Elo ou identidade de estilo.
+
 Para estatísticas descritivas de características dos lances (deduplicadas por trajetória completa, sem apagar os jogos brutos):
 
 ~~~bash
