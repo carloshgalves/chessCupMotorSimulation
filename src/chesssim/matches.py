@@ -223,6 +223,10 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                     "book_source_sha256": historical_openings[opening_source].get("source", {}).get("pgn_sha256"),
                 })
             board.push(actual_move)
+            if clocks is not None:
+                # Standard PGN [%clk] tag: replay and monitor show actual time
+                # remaining at this ply, not a guessed rating or engine claim.
+                node.set_clock(max(0.0, clocks[idx]))
             if on_progress is not None:
                 on_progress(game)
             if clocks is not None:
