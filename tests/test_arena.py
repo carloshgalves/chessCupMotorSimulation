@@ -220,7 +220,10 @@ def test_one_active_match_and_stop_are_cooperative(rodent_stub):
         out = fake_duel(root, output, white, black, **kwargs)
         state = json.loads((out / "summary.json").read_text(encoding="utf-8"))
         state["status"] = "INCOMPLETE"
-        (out / "summary.json").write_text(json.dumps(state), encoding="utf-8")
+        # Production checkpoints use atomic replacement. Avoid test-only
+        # torn JSON reads when the status thread polls this checkpoint.
+        from chesssim.matches import _atomic_text
+        _atomic_text(out / "summary.json", json.dumps(state))
         return out
     with arena_server(rodent_stub, runner=waiting_runner) as (server, base):
         with post(base, "/api/arena/launch", GOOD, server.arena_token) as r:
