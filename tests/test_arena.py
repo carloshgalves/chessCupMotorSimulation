@@ -42,8 +42,11 @@ def fake_duel(root, destination, white, black, **kwargs):
         assert board.outcome().result() == "0-1"
         (out / f"jogo_{i}.pgn").write_text(str(game) + "\n", encoding="utf-8")
         results.append({"status": "COMPLETED", "result": "0-1"})
-    (out / "summary.json").write_text(
-        json.dumps({"status": "COMPLETED", "games": results}), encoding="utf-8")
+    # Mirror the real match writer: never expose a half-written JSON file
+    # to a concurrent arena status poll.
+    from chesssim.matches import _atomic_text
+    _atomic_text(out / "summary.json",
+                 json.dumps({"status": "COMPLETED", "games": results}))
     return out
 
 
@@ -532,3 +535,52 @@ def test_terminal_checkpoint_and_busy_are_atomically_published(rodent_stub, monk
         assert reader_done.is_set()
         assert result[0]["busy"] is False
         assert result[0]["session"]["status"] == "FAILED"
+
+
+
+def test_partial_live_checkpoint_is_not_reported_as_corrupt_completed_game(rodent_stub):
+    """A legacy writer may expose zero-byte JSON during active execution."""
+    entered = threading.Event()
+    release = threading.Event()
+
+    def legacy_runner(root, output, white, black, **kwargs):
+        folder = output / f"{white.slug}-vs-{black.slug}" / "test-run"
+        folder.mkdir(parents=True)
+        (folder / "summary.json").write_text("", encoding="utf-8")
+        entered.set()
+        assert release.wait(timeout=4)
+        from chesssim.matches import _atomic_text
+        _atomic_text(folder / "summary.json",
+                     json.dumps({"status": "COMPLETED", "games": []}))
+        return folder
+
+    with arena_server(rodent_stub, runner=legacy_runner) as (server, base):
+        with post(base, "/api/arena/launch", GOOD, server.arena_token) as response:
+            assert response.status == 202
+        try:
+            assert entered.wait(timeout=3)
+            for _ in range(5):
+                state = api(base)
+                assert state["busy"] is True
+                assert state["session"]["status"] == "RUNNING"
+                assert state["session"]["duel"] is None
+        finally:
+            release.set()
+        finished = wait_for(server.arena_manager, "COMPLETED")
+        assert finished["duel"] == {"status": "COMPLETED", "results": []}
+
+
+def test_corrupt_completed_duel_summary_fails_closed_in_api(rodent_stub):
+    with arena_server(rodent_stub) as (server, base):
+        with post(base, "/api/arena/launch", GOOD, server.arena_token) as response:
+            assert response.status == 202
+        done = wait_for(server.arena_manager, "COMPLETED")
+        folder = (rodent_stub[1] / done["id"] / "duels" /
+                  "fischer-vs-tal" / "20261105T000000Z-test")
+        (folder / "summary.json").write_text("", encoding="utf-8")
+        with pytest.raises(HTTPError) as failure:
+            urlopen(base + "/api/arena", timeout=5)
+        assert failure.value.code == 503
+        message = failure.value.read().decode("utf-8")
+        assert "Estado da arena indisponível" in message
+        assert str(rodent_stub[1]) not in message
