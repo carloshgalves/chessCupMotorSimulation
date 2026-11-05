@@ -191,6 +191,12 @@ class ArenaManager:
             raise ValueError("Limite de duração deve estar entre 30 e 86400 segundos")
         self.max_game_wall_seconds = float(max_game_wall_seconds)
         self.runner = runner or play_duel
+        # Bloqueio mantido durante toda a vida da arena, inclusive entre duelos:
+        # não permite duas instâncias apontando para o mesmo workspace.
+        from .tournament import _lock
+        self._process_lock = _lock(self.workspace)
+        self._process_lock.__enter__()
+        self._process_lock_closed = False
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._active = False
@@ -324,9 +330,11 @@ class ArenaManager:
             session["status"] = "FAILED"
             session["error_code"] = "ENGINE_OR_ARTIFACT_FAILURE"
         finally:
-            self._save(folder, session)
-            with self._lock:
-                self._active = False
+            try:
+                self._save(folder, session)
+            finally:
+                with self._lock:
+                    self._active = False
 
     def stop(self) -> dict:
         with self._lock:
@@ -340,8 +348,13 @@ class ArenaManager:
             if self._active:
                 self._stop.set()
             thread = self._thread
-        if thread is not None:
-            thread.join()
+        try:
+            if thread is not None:
+                thread.join()
+        finally:
+            if not self._process_lock_closed:
+                self._process_lock_closed = True
+                self._process_lock.__exit__(None, None, None)
 
 
 def _decode_json(body: bytes) -> dict:
@@ -383,7 +396,11 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 return
             url = urlsplit(self.path)
             if url.path == "/api/arena":
-                self._json(200, manager.status())
+                try:
+                    self._json(200, manager.status())
+                except (ValueError, OSError, KeyError, TypeError,
+                        json.JSONDecodeError):
+                    self._json(503, {"error": "Estado da arena indisponível"})
             elif url.path == "/api/state":
                 try:
                     self._json(200, manager.state())
@@ -472,6 +489,10 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 self._json(400, {"error": str(exc)})
             except ArenaBusy as exc:
                 self._json(409, {"error": str(exc)})
+            except (OSError, RuntimeError, ValueError) as exc:
+                print(f"Falha operacional local: {type(exc).__name__}: {exc}",
+                      flush=True)
+                self._json(503, {"error": "Não foi possível iniciar o motor local"})
 
     return ArenaHandler
 
@@ -486,7 +507,12 @@ def create_server(root: Path, workspace: Path, *, port: int = 8766,
                            max_game_wall_seconds=max_game_wall_seconds,
                            runner=runner)
     token = secrets.token_urlsafe(32)
-    server = ThreadingHTTPServer(("127.0.0.1", port), make_arena_handler(manager, token))
+    try:
+        server = ThreadingHTTPServer(("127.0.0.1", port),
+                                     make_arena_handler(manager, token))
+    except BaseException:
+        manager.shutdown()
+        raise
     server.daemon_threads = True
     server.arena_manager = manager
     server.arena_token = token
