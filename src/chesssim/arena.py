@@ -1,0 +1,495 @@
+"""Explicit opt-in local arena: one UCI duel at a time, protected POST controls.
+
+The existing chesssim watch server stays read-only. No user-supplied paths,
+shell commands or untrusted executable names are accepted by this service.
+"""
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from http.server import ThreadingHTTPServer
+from importlib.resources import files
+from pathlib import Path
+import json
+import math
+import secrets
+import threading
+import uuid
+from urllib.parse import urlsplit
+
+from .catalog import load_roster, find_player
+from .live_board import SCHEMA, make_handler, snapshot
+from .matches import _atomic_text, official_book_hashes, play_duel, validate
+from .peak_windows import CLOCK_PRESETS, PROVISIONAL_PEAKS
+
+MAX_JSON_BYTES = 4096
+PRESETS = {"official": (600, 2), **CLOCK_PRESETS}
+ALLOWED_KEYS = {"white", "black", "mode", "preset", "depth", "movetime",
+                "reverse", "opening_mode", "seed", "max_plies"}
+STATUSES = {"STARTING", "RUNNING", "COMPLETED", "INCOMPLETE", "FAILED", "INTERRUPTED"}
+
+
+class BadLaunch(ValueError):
+    """Client-supplied launch configuration is invalid."""
+
+
+class ArenaBusy(RuntimeError):
+    """A previous match is still executing in this local service."""
+
+
+def _integer(value: object, lower: int, upper: int, name: str) -> int:
+    if type(value) is not int or not lower <= value <= upper:
+        raise BadLaunch(f"{name} deve ser inteiro entre {lower} e {upper}")
+    return value
+
+
+def normalize_config(raw: object) -> dict:
+    if not isinstance(raw, dict) or set(raw) - ALLOWED_KEYS:
+        raise BadLaunch("Configuração desconhecida ou inválida")
+    white = raw.get("white")
+    black = raw.get("black")
+    if not isinstance(white, str) or not isinstance(black, str):
+        raise BadLaunch("Selecione dois jogadores")
+    slugs = {p.slug for p in load_roster()}
+    if white not in slugs or black not in slugs or white == black:
+        raise BadLaunch("Jogadores diferentes e cadastrados são obrigatórios")
+    mode = raw.get("mode")
+    if mode not in ("depth", "movetime", "preset"):
+        raise BadLaunch("Limite de busca inválido")
+    reverse = raw.get("reverse", True)
+    if type(reverse) is not bool:
+        raise BadLaunch("Inversão de cores deve ser booleana")
+    opening = raw.get("opening_mode", "none")
+    if opening not in ("none", "internal", "historical"):
+        raise BadLaunch("Modo de abertura inválido")
+    max_plies = _integer(raw.get("max_plies", 400 if mode != "preset" else 600),
+                         40, 600, "max_plies")
+    result = {"white": white, "black": black, "mode": mode, "reverse": reverse,
+              "opening_mode": opening, "max_plies": max_plies,
+              "preset": None, "depth": None, "movetime": None, "seed": None}
+    if mode == "preset":
+        preset = raw.get("preset")
+        if preset not in PRESETS or "depth" in raw or "movetime" in raw:
+            raise BadLaunch("Escolha exclusivamente um ritmo de relógio")
+        if not reverse:
+            raise BadLaunch("Presets de torneio exigem ambas as cores")
+        if preset == "official" and opening != "internal":
+            raise BadLaunch("Protocolo official exige livro UCI interno")
+        if preset == "official" and max_plies != 600:
+            raise BadLaunch("Protocolo official exige limite de segurança 600")
+        if preset == "official" and "seed" in raw:
+            raise BadLaunch("Semente não integra o protocolo official")
+        result["preset"] = preset
+    elif mode == "depth":
+        if "movetime" in raw or "preset" in raw:
+            raise BadLaunch("Não misture limites de busca")
+        result["depth"] = _integer(raw.get("depth", 6), 1, 16, "depth")
+    else:
+        if "depth" in raw or "preset" in raw:
+            raise BadLaunch("Não misture limites de busca")
+        seconds = raw.get("movetime")
+        if type(seconds) not in (float, int) or not math.isfinite(seconds) or not 0.05 <= seconds <= 10:
+            raise BadLaunch("movetime deve estar entre 0,05 e 10 segundos")
+        result["movetime"] = float(seconds)
+    if opening == "historical":
+        if result["preset"] == "official":
+            raise BadLaunch("Abertura externa não pertence ao protocolo official")
+        result["seed"] = _integer(raw.get("seed"), 0, 2_147_483_647, "seed")
+    elif "seed" in raw:
+        raise BadLaunch("Semente só é efetiva com abertura externa histórica")
+    return result
+
+
+def _profiles(root: Path) -> list[dict]:
+    players = []
+    for p in load_roster():
+        available = False
+        if p.rodent_alias:
+            try:
+                validate(root, p, p)
+                available = True
+            except (FileNotFoundError, ValueError, OSError):
+                pass
+        period = p.peak_period
+        hypothesis = PROVISIONAL_PEAKS.get(p.slug)
+        if period:
+            window = period
+            window_status = "CATALOG_REFERENCE_UNVERIFIED"
+            justification = "Metadado do catálogo; intervalo não comprova fidelidade do motor."
+        elif hypothesis:
+            window = f"{hypothesis[0]}–{hypothesis[1]}"
+            window_status = "RESEARCH_HYPOTHESIS"
+            justification = hypothesis[2]
+        else:
+            window = None
+            window_status = "UNREVIEWED"
+            justification = "Sem janela histórica aprovada no catálogo."
+        players.append({
+            "slug": p.slug, "name": p.name, "group": p.group,
+            "alias": p.rodent_alias, "installed": available,
+            "model_status": ("RODENT_PROFILE_AVAILABLE_NOT_VALIDATED" if available else
+                             "PROFILE_UNAVAILABLE"),
+            "historically_validated": False,
+            "reference_period": window,
+            "reference_status": window_status,
+            "reference_note": justification,
+            "provenance": ("Alias oficial reconhecido no registro Rodent IV"
+                           if p.rodent_alias else "Elenco histórico sem perfil Rodent registrado"),
+        })
+    return players
+
+
+def _validated_books(book_dir: Path | None, white: str, black: str) -> dict:
+    if book_dir is None:
+        raise BadLaunch("Pasta de repertórios históricos não configurada na CLI")
+    from .opening_books import load_opening_book
+    selected = {}
+    for slug in (white, black):
+        path = book_dir / f"{slug}.json"
+        if not path.is_file() or path.is_symlink():
+            raise BadLaunch(f"Repertório não disponível para {slug}")
+        if path.stat().st_size > 5 * 1024 * 1024:
+            raise BadLaunch(f"Repertório excede limite para {slug}")
+        try:
+            book = load_opening_book(path, slug)
+        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
+            raise BadLaunch(f"Repertório inválido para {slug}") from exc
+        selected[slug] = book
+    return selected
+
+
+def _load_json_file(path: Path) -> dict:
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 256 * 1024:
+        raise ValueError("Manifesto de sessão inválido")
+    result = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(result, dict) or result.get("schema") != "chesssim-arena-session-v1":
+        raise ValueError("Manifesto de sessão incompatível")
+    return result
+
+
+class ArenaManager:
+    def __init__(self, root: Path, workspace: Path, *,
+                 opening_books: Path | None = None,
+                 max_game_wall_seconds: float = 3600,
+                 runner=None):
+        self.root = root.expanduser().resolve(strict=True)
+        self.workspace = workspace.expanduser().absolute()
+        if self.workspace.is_symlink():
+            raise ValueError("A pasta da arena não pode ser um link simbólico")
+        self.workspace.mkdir(parents=True, exist_ok=True)
+        self.workspace = self.workspace.resolve(strict=True)
+        if not self.workspace.is_dir():
+            raise ValueError("Saída da arena inválida")
+        if opening_books is not None:
+            if opening_books.is_symlink() or not opening_books.is_dir():
+                raise ValueError("Diretório de livros históricos inválido")
+            opening_books = opening_books.resolve(strict=True)
+        self.opening_books = opening_books
+        if not isinstance(max_game_wall_seconds, (float, int)) or (
+                not math.isfinite(max_game_wall_seconds) or
+                not 30 <= max_game_wall_seconds <= 86400):
+            raise ValueError("Limite de duração deve estar entre 30 e 86400 segundos")
+        self.max_game_wall_seconds = float(max_game_wall_seconds)
+        self.runner = runner or play_duel
+        self._lock = threading.Lock()
+        self._stop = threading.Event()
+        self._active = False
+        self._thread: threading.Thread | None = None
+        self._selected: Path | None = None
+        candidates = sorted(self.workspace.glob("session-*/session.json"))
+        if candidates:
+            chosen = candidates[-1]
+            if chosen.parent.parent.resolve() != self.workspace:
+                raise ValueError("Sessão fora da arena")
+            _load_json_file(chosen)
+            self._selected = chosen.parent
+
+    def _save(self, folder: Path, state: dict) -> None:
+        _atomic_text(folder / "session.json",
+                     json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+
+    def _status_unlocked(self) -> dict | None:
+        if self._selected is None:
+            return None
+        state = _load_json_file(self._selected / "session.json")
+        if state["status"] in ("STARTING", "RUNNING") and not self._active:
+            state = {**state, "status": "INTERRUPTED"}
+        folder = self._duel_folder()
+        duel_summary = None
+        if folder is not None and (folder / "summary.json").is_file():
+            summary = json.loads((folder / "summary.json").read_text(encoding="utf-8"))
+            if isinstance(summary, dict):
+                duel_summary = {
+                    "status": summary.get("status", "UNKNOWN"),
+                    "results": [g.get("result") for g in summary.get("games", [])
+                                if isinstance(g, dict)],
+                }
+        return {"id": state["id"], "status": state["status"],
+                "config": state["config"], "created_utc": state["created_utc"],
+                "duel": duel_summary,
+                "error": state.get("error_code")}
+
+    def status(self) -> dict:
+        with self._lock:
+            selected = self._status_unlocked()
+            return {"session": selected, "busy": self._active,
+                    "players": _profiles(self.root),
+                    "presets": {name: {"initial_seconds": v[0], "increment_seconds": v[1]}
+                                for name, v in PRESETS.items()},
+                    "opening_books_configured": self.opening_books is not None}
+
+    def _duel_folder(self) -> Path | None:
+        if self._selected is None:
+            return None
+        root = self._selected / "duels"
+        candidates = sorted(root.glob("*/*/summary.json"))
+        if not candidates:
+            return None
+        path = candidates[-1]
+        if path.is_symlink() or path.parent.is_symlink() or (
+                path.parent.parent.is_symlink()):
+            raise ValueError("Artefato redirecionado por link simbólico")
+        if not path.resolve(strict=True).is_relative_to(self._selected.resolve()):
+            raise ValueError("Artefato fora da sessão")
+        return path.parent
+
+    def state(self) -> dict:
+        with self._lock:
+            folder = self._duel_folder()
+        if folder is None:
+            return {"schema": SCHEMA, "mode": "duel", "tournament": None,
+                    "duel": None, "server_time": datetime.now(timezone.utc).isoformat()}
+        return snapshot(folder)
+
+    def launch(self, raw: object) -> dict:
+        config = normalize_config(raw)
+        with self._lock:
+            if self._active:
+                raise ArenaBusy("Já existe confronto em andamento")
+            white, black = (find_player(config[x]) for x in ("white", "black"))
+            try:
+                _, files = validate(self.root, white, black)
+                if config["opening_mode"] == "internal":
+                    official_book_hashes(self.root, files)
+                opening = (_validated_books(self.opening_books, white.slug, black.slug)
+                           if config["opening_mode"] == "historical" else None)
+            except (FileNotFoundError, OSError, ValueError) as exc:
+                raise BadLaunch("Perfis ou livros do duelo não estão prontos") from exc
+            ident = "session-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:12]
+            folder = self.workspace / ident
+            folder.mkdir(mode=0o700, exist_ok=False)
+            state = {
+                "schema": "chesssim-arena-session-v1",
+                "id": ident, "created_utc": datetime.now(timezone.utc).isoformat(),
+                "status": "STARTING", "config": config,
+            }
+            self._save(folder, state)
+            self._selected = folder
+            self._active = True
+            self._stop = threading.Event()
+            thread = threading.Thread(
+                target=self._execute, args=(folder, state, white, black, opening, self._stop),
+                name="chesssim-arena-duel", daemon=False)
+            self._thread = thread
+            thread.start()
+            return {"id": ident, "status": "STARTING"}
+
+    def _execute(self, folder, session, white, black, opening, stop_event) -> None:
+        config = session["config"]
+        try:
+            session["status"] = "RUNNING"
+            self._save(folder, session)
+            clock = PRESETS[config["preset"]] if config["preset"] else None
+            kwargs = {
+                "depth": config["depth"], "movetime": config["movetime"],
+                "clock": clock, "reverse": config["reverse"],
+                "max_plies": config["max_plies"],
+                "use_books": config["opening_mode"] == "internal",
+                "stop_check": stop_event.is_set,
+                "max_wall_seconds": self.max_game_wall_seconds,
+            }
+            if opening is not None:
+                kwargs.update({"historical_openings": opening,
+                               "opening_seed": config["seed"], "opening_min_count": 1})
+            output = self.runner(self.root, folder / "duels", white, black, **kwargs)
+            if not output.resolve().is_relative_to(folder.resolve()):
+                raise RuntimeError("Saída do duelo fora da sessão autorizada")
+            summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
+            if summary.get("status") not in {"COMPLETED", "INCOMPLETE", "FAILED"}:
+                raise RuntimeError("Estado final do duelo não reconhecido")
+            session["status"] = summary["status"]
+        except Exception as exc:
+            # Keep details on the local server stderr, never expose path/stack to UI.
+            print(f"Falha do confronto local: {type(exc).__name__}: {exc}", flush=True)
+            session["status"] = "FAILED"
+            session["error_code"] = "ENGINE_OR_ARTIFACT_FAILURE"
+        finally:
+            self._save(folder, session)
+            with self._lock:
+                self._active = False
+
+    def stop(self) -> dict:
+        with self._lock:
+            if not self._active:
+                raise ArenaBusy("Não há confronto em execução")
+            self._stop.set()
+            return {"stop_requested": True}
+
+    def shutdown(self) -> None:
+        with self._lock:
+            if self._active:
+                self._stop.set()
+            thread = self._thread
+        if thread is not None:
+            thread.join()
+
+
+def _decode_json(body: bytes) -> dict:
+    def pairs(items):
+        result = {}
+        for key, val in items:
+            if key in result:
+                raise BadLaunch("Campo JSON duplicado")
+            result[key] = val
+        return result
+    try:
+        payload = json.loads(body.decode("utf-8"), object_pairs_hook=pairs)
+    except (ValueError, UnicodeError, json.JSONDecodeError) as exc:
+        raise BadLaunch("Corpo JSON inválido") from exc
+    if not isinstance(payload, dict):
+        raise BadLaunch("Corpo deve ser um objeto JSON")
+    return payload
+
+
+def make_arena_handler(manager: ArenaManager, token: str):
+    Base = make_handler(manager.workspace)
+
+    class ArenaHandler(Base):
+        server_version = "ChessSimArena/1"
+
+        def _authorized_host(self) -> bool:
+            host = self.headers.get("Host")
+            return host in {f"127.0.0.1:{self.server.server_port}",
+                            f"localhost:{self.server.server_port}"}
+
+        def _json(self, status: int, payload: dict) -> None:
+            self._reply(status, json.dumps(payload, ensure_ascii=False,
+                                          allow_nan=False).encode("utf-8"),
+                        "application/json; charset=utf-8")
+
+        def do_GET(self) -> None:
+            if not self._authorized_host():
+                self._reply(403, b"Forbidden", "text/plain; charset=utf-8")
+                return
+            url = urlsplit(self.path)
+            if url.path == "/api/arena":
+                self._json(200, manager.status())
+            elif url.path == "/api/state":
+                try:
+                    self._json(200, manager.state())
+                except (ValueError, OSError, FileNotFoundError,
+                        KeyError, TypeError, json.JSONDecodeError):
+                    self._json(503, {"error": "Estado do duelo indisponível"})
+            elif url.path in ("/", "/arena.js", "/arena.css", "/viewer"):
+                asset = {"/": "arena.html", "/arena.js": "arena.js",
+                         "/arena.css": "arena.css", "/viewer": "monitor.html"}[url.path]
+                kind = ("text/html; charset=utf-8" if asset.endswith(".html") else
+                        "text/javascript; charset=utf-8" if asset.endswith(".js") else
+                        "text/css; charset=utf-8")
+                body = files("chesssim.data").joinpath(asset).read_bytes()
+                if url.path == "/viewer":
+                    # The read-only viewer can be embedded only by this same-origin arena.
+                    self.send_response(200)
+                    self.send_header("Content-Type", kind)
+                    self.send_header("Content-Length", str(len(body)))
+                    self.send_header("Cache-Control", "no-store")
+                    self.send_header("Referrer-Policy", "no-referrer")
+                    self.send_header("X-Content-Type-Options", "nosniff")
+                    self.send_header("X-Frame-Options", "SAMEORIGIN")
+                    self.send_header("Content-Security-Policy",
+                                     "default-src 'none'; script-src 'self'; style-src 'self'; "
+                                     "connect-src 'self'; base-uri 'none'; frame-ancestors 'self'")
+                    self.end_headers()
+                    self.wfile.write(body)
+                else:
+                    self._reply(200, body, kind)
+            else:
+                super().do_GET()  # /app.js, /app.css and nothing else
+
+        def do_POST(self) -> None:
+            if not self._authorized_host():
+                self._json(403, {"error": "Host não autorizado"})
+                return
+            route = urlsplit(self.path)
+            if route.path not in ("/api/arena/launch", "/api/arena/stop") or route.query:
+                self._json(404, {"error": "Rota desconhecida"})
+                return
+            origins = {f"http://127.0.0.1:{self.server.server_port}",
+                       f"http://localhost:{self.server.server_port}"}
+            if (self.headers.get("Origin") not in origins or
+                    not secrets.compare_digest(self.headers.get("X-Chesssim-Token", ""), token)):
+                self._json(403, {"error": "Acesso não autorizado"})
+                return
+            if (self.headers.get("Content-Type", "").split(";")[0] != "application/json"
+                    or self.headers.get("Transfer-Encoding")):
+                self._json(415, {"error": "Apenas JSON local é permitido"})
+                return
+            try:
+                size = int(self.headers.get("Content-Length", "-1"))
+            except ValueError:
+                size = -1
+            if not 0 <= size <= MAX_JSON_BYTES:
+                self._json(413, {"error": "Corpo excede limite"})
+                return
+            body = self.rfile.read(size)
+            if len(body) != size:
+                self._json(400, {"error": "Corpo incompleto"})
+                return
+            try:
+                data = _decode_json(body)
+                if route.path.endswith("/launch"):
+                    self._json(202, manager.launch(data))
+                else:
+                    if data:
+                        raise BadLaunch("Parada não aceita parâmetros")
+                    self._json(202, manager.stop())
+            except BadLaunch as exc:
+                self._json(400, {"error": str(exc)})
+            except ArenaBusy as exc:
+                self._json(409, {"error": str(exc)})
+
+    return ArenaHandler
+
+
+def create_server(root: Path, workspace: Path, *, port: int = 8766,
+                  opening_books: Path | None = None,
+                  max_game_wall_seconds: float = 3600,
+                  runner=None):
+    if not isinstance(port, int) or not 0 <= port <= 65535:
+        raise ValueError("Porta inválida")
+    manager = ArenaManager(root, workspace, opening_books=opening_books,
+                           max_game_wall_seconds=max_game_wall_seconds,
+                           runner=runner)
+    token = secrets.token_urlsafe(32)
+    server = ThreadingHTTPServer(("127.0.0.1", port), make_arena_handler(manager, token))
+    server.daemon_threads = True
+    server.arena_manager = manager
+    server.arena_token = token
+    return server
+
+
+def serve(root: Path, workspace: Path, *, port: int = 8766,
+          opening_books: Path | None = None,
+          max_game_wall_seconds: float = 3600) -> None:
+    server = create_server(root, workspace, port=port,
+                           opening_books=opening_books,
+                           max_game_wall_seconds=max_game_wall_seconds)
+    print(f"Arena local: http://127.0.0.1:{server.server_port}/#token={server.arena_token}",
+          flush=True)
+    print("Token local: não compartilhe o endereço completo. Ctrl+C solicita parada.", flush=True)
+    try:
+        server.serve_forever(poll_interval=0.25)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+        server.arena_manager.shutdown()
