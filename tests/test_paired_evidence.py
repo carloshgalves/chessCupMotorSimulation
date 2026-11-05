@@ -233,7 +233,7 @@ def test_empty_and_low_game_accounting(tmp_path):
     doc["inputs"]["pgn_sha256"]=sha256(pgn.read_bytes()).hexdigest()
     doc["decisions"]=[r for r in doc["decisions"] if r["source_game_index"] == 0]
     quality.write_text(json.dumps(doc),encoding="utf-8")
-    report=paired_evidence(pgn,quality,out,bootstrap=200)
+    report=paired_evidence(pgn,quality,out,bootstrap=200,opening_plies=2)
     assert report["accounting"]["distinct_nonempty_games"]==1
     assert report["pairwise"][0]["strength_paired_by_game"]["games"]==1
     assert report["pairwise"][0]["strength_paired_by_game"]["bootstrap_ci95"] is None
