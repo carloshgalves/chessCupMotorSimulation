@@ -5,8 +5,10 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 import json
+import math
 import os
 import random
+import time
 
 import chess.pgn
 
@@ -19,6 +21,7 @@ from .protocol import OFFICIAL
 SCHEMA = "chesssim-tournament-v1"
 RESULTS = {"1-0", "0-1", "1/2-1/2"}
 CLOCKS = {"official": (600, 2), **CLOCK_PRESETS}
+STOP_FILE = ".stop-requested.json"
 
 
 def _save(directory: Path, state: dict) -> None:
@@ -34,6 +37,37 @@ def load_tournament(directory: Path) -> dict:
     return data
 
 
+def _stop_file(directory: Path) -> Path:
+    return directory.expanduser().resolve() / STOP_FILE
+
+
+def request_stop(directory: Path, *, reason: str = "Solicitado pelo operador") -> dict:
+    """Pedido idempotente, sem esperar o lock do orquestrador."""
+    directory = directory.expanduser().resolve()
+    load_tournament(directory)
+    reason = reason.strip()
+    if not reason or len(reason) > 256:
+        raise ValueError("Motivo deve conter de 1 a 256 caracteres")
+    path = _stop_file(directory)
+    try:
+        with path.open("x", encoding="utf-8") as stream:
+            json.dump({"requested_utc": datetime.now(timezone.utc).isoformat(),
+                       "reason": reason}, stream, ensure_ascii=False)
+            stream.write("\n")
+    except FileExistsError:
+        pass
+    return tournament_status(directory)
+
+
+def clear_stop(directory: Path) -> dict:
+    """A liberação só acontece sem outra execução usando a chave do torneio."""
+    directory = directory.expanduser().resolve()
+    with _lock(directory):
+        load_tournament(directory)
+        _stop_file(directory).unlink(missing_ok=True)
+        return tournament_status(directory)
+
+
 
 def _check_bracket(state: dict) -> None:
     """Não permite que um estado editado mude adversários ou a progressão da chave."""
@@ -47,6 +81,10 @@ def _check_bracket(state: dict) -> None:
     rounds = state["rounds"]
     if not rounds:
         raise ValueError("Torneio sem rodada")
+    wall = state.get("max_game_wall_seconds")
+    if wall is not None and (not isinstance(wall, (int, float)) or
+                             not math.isfinite(wall) or wall <= 0):
+        raise ValueError("Limite de tempo inválido no manifesto")
     for index, rd in enumerate(rounds, 1):
         matches = rd["matches"]
         if rd["number"] != index or len(matches) != len(expected) // 2:
@@ -133,7 +171,8 @@ def _preflight(root: Path, slugs: list[str], preset: str) -> dict:
 
 def create_tournament(root: Path, directory: Path, *, participants: list[str],
                       seed: int, preset: str = "official",
-                      max_tiebreak_pairs: int = 3, max_plies: int = 600) -> dict:
+                      max_tiebreak_pairs: int = 3, max_plies: int = 600,
+                      max_game_wall_seconds: float | None = None) -> dict:
     directory = directory.expanduser().resolve()
     root = root.expanduser().resolve()
     if directory.exists():
@@ -144,6 +183,9 @@ def create_tournament(root: Path, directory: Path, *, participants: list[str],
         raise ValueError("max_tiebreak_pairs deve estar entre 1 e 20")
     if max_plies < 2:
         raise ValueError("max_plies deve ser >= 2")
+    if max_game_wall_seconds is not None and (
+            not math.isfinite(max_game_wall_seconds) or max_game_wall_seconds <= 0):
+        raise ValueError("max_game_wall_seconds deve ser finito e positivo")
     selected = [find_player(p) for p in participants]
     if len(selected) < 2 or len(selected) > 64 or len(selected) & (len(selected) - 1):
         raise ValueError("Informe 2, 4, 8, 16, 32 ou 64 participantes")
@@ -160,6 +202,7 @@ def create_tournament(root: Path, directory: Path, *, participants: list[str],
              "status": "READY", "seed": seed, "participants": slugs,
              "initial_bracket": shuffled, "preset": preset,
              "clock": list(CLOCKS[preset]), "max_plies": max_plies,
+             "max_game_wall_seconds": max_game_wall_seconds,
              "max_tiebreak_pairs": max_tiebreak_pairs,
              "engine": "Rodent IV", "historically_validated": False,
              "resources": resources, "rounds": [_round(1, shuffled)],
@@ -366,18 +409,31 @@ def _summary(state: dict) -> dict:
 
 
 def tournament_status(directory: Path) -> dict:
-    return _summary(load_tournament(directory))
+    report = _summary(load_tournament(directory))
+    report["stop_requested"] = _stop_file(directory).exists()
+    return report
 
 
 def run_tournament(root: Path, directory: Path, *, limit_pairs: int | None = None,
-                   retry_incomplete: bool = False) -> dict:
+                   retry_incomplete: bool = False,
+                   max_run_seconds: float | None = None) -> dict:
     directory = directory.expanduser().resolve()
     root = root.expanduser().resolve()
     if limit_pairs is not None and limit_pairs < 1:
         raise ValueError("limit_pairs deve ser positivo")
+    if max_run_seconds is not None and (
+            not math.isfinite(max_run_seconds) or max_run_seconds <= 0):
+        raise ValueError("max_run_seconds deve ser finito e positivo")
     with _lock(directory):
         state = load_tournament(directory)
         _verify_resources(root, state)
+        started = time.monotonic()
+
+        def should_stop() -> bool:
+            return (_stop_file(directory).exists() or
+                    (max_run_seconds is not None and
+                     time.monotonic() - started >= max_run_seconds))
+
         played = 0
         failed_this_run = set()
         while True:
@@ -389,6 +445,10 @@ def run_tournament(root: Path, directory: Path, *, limit_pairs: int | None = Non
             _save(directory, state)
             if state["champion"] is not None:
                 break
+            if should_stop():
+                state["status"] = "PAUSED"
+                _save(directory, state)
+                return _summary(state)
             current = state["rounds"][-1]
             pending = [m for m in current["matches"]
                        if m["id"] not in failed_this_run and
@@ -398,6 +458,10 @@ def run_tournament(root: Path, directory: Path, *, limit_pairs: int | None = Non
                 state["status"] = "BLOCKED"
                 break
             for match in pending:
+                if should_stop():
+                    state["status"] = "PAUSED"
+                    _save(directory, state)
+                    return _summary(state)
                 if limit_pairs is not None and played >= limit_pairs:
                     state["status"] = "PAUSED"
                     _save(directory, state)
@@ -410,7 +474,9 @@ def run_tournament(root: Path, directory: Path, *, limit_pairs: int | None = Non
                     play_duel(root, _duel_dir(directory, match), a, b,
                               depth=None, clock=tuple(state["clock"]),
                               reverse=True, max_plies=state["max_plies"],
-                              use_books=state["preset"] == "official")
+                              use_books=state["preset"] == "official",
+                              stop_check=should_stop,
+                              max_wall_seconds=state.get("max_game_wall_seconds"))
                 except BaseException:
                     state["status"] = "BLOCKED"
                     raise
@@ -422,6 +488,9 @@ def run_tournament(root: Path, directory: Path, *, limit_pairs: int | None = Non
                 played += 1
             _advance(state)
             if state["champion"] is not None:
+                break
+            if should_stop():
+                state["status"] = "PAUSED"
                 break
             if limit_pairs is not None and played >= limit_pairs:
                 state["status"] = "PAUSED"

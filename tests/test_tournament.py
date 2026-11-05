@@ -34,7 +34,7 @@ def harness(tmp_path, monkeypatch):
     monkeypatch.setattr(tournament, "_preflight", preflight)
 
     def fake_play_duel(root, output_dir, a, b, *, depth, clock, reverse,
-                       max_plies, use_books):
+                       max_plies, use_books, stop_check=None, max_wall_seconds=None):
         del root, depth, max_plies
         assert reverse is True
         assert clock in tournament.CLOCKS.values()
@@ -320,3 +320,88 @@ def test_tampered_bracket_is_rejected_before_playing(harness):
     with pytest.raises(ValueError, match="Chaveamento inconsistente"):
         tournament.run_tournament(root, run)
     assert not calls
+
+
+def test_stop_before_start_and_clear_only_when_not_running(harness):
+    begin, calls, _, _, root = harness
+    run = begin()
+    requested = tournament.request_stop(run, reason="Suspender antes de iniciar")
+    assert requested["stop_requested"] is True
+    assert tournament.request_stop(run)["stop_requested"] is True  # idempotente
+    paused = tournament.run_tournament(root, run)
+    assert paused["status"] == "PAUSED"
+    assert not calls
+    with tournament._lock(run):
+        with pytest.raises(RuntimeError, match="Outra execução"):
+            tournament.clear_stop(run)
+    assert tournament.clear_stop(run)["stop_requested"] is False
+    completed = tournament.run_tournament(root, run)
+    assert completed["status"] == "COMPLETED"
+    assert len(calls) == 1
+
+
+def test_stop_while_running_preserves_partial_and_requires_retry(harness, monkeypatch):
+    begin, calls, _, fake, root = harness
+    run = begin()
+    partial = []
+
+    def interrupt(root_arg, output_dir, a, b, **kwargs):
+        assert callable(kwargs["stop_check"])
+        tournament.request_stop(run, reason="Parar torneio em curso")
+        assert kwargs["stop_check"]() is True
+        folder = output_dir / f"{a.slug}-vs-{b.slug}" / "partial-test"
+        folder.mkdir(parents=True)
+        (folder / "summary.json").write_text(
+            json.dumps({"status": "INCOMPLETE"}), encoding="utf-8")
+        partial.append(folder)
+        return folder
+
+    monkeypatch.setattr(tournament, "play_duel", interrupt)
+    paused = tournament.run_tournament(root, run)
+    assert paused["status"] == "PAUSED"
+    assert paused["champion"] is None
+    assert paused["matches_retry_required"] == ["r01-m01"]
+    assert len(partial) == 1
+    assert tournament.clear_stop(run)["stop_requested"] is False
+    monkeypatch.setattr(tournament, "play_duel", fake)
+    done = tournament.run_tournament(root, run, retry_incomplete=True)
+    assert done["status"] == "COMPLETED"
+    assert len(calls) == 1
+    state = tournament.load_tournament(run)
+    assert len(state["rounds"][0]["matches"][0]["excluded_attempts"]) == 1
+
+
+def test_max_run_seconds_pauses_without_starting_pair(harness, monkeypatch):
+    begin, calls, _, _, root = harness
+    run = begin()
+    tick = iter([0.0, 2.0])
+    monkeypatch.setattr(tournament.time, "monotonic", lambda: next(tick))
+    paused = tournament.run_tournament(root, run, max_run_seconds=1)
+    assert paused["status"] == "PAUSED"
+    assert not calls
+    assert tournament.load_tournament(run)["status"] == "PAUSED"
+
+
+def test_wall_time_budget_frozen_and_validated(harness):
+    begin, calls, _, _, root = harness
+    for seconds in (0, -1, float("nan"), float("inf")):
+        with pytest.raises(ValueError, match="finito e positivo"):
+            tournament.create_tournament(
+                root, root / "invalid", participants=["fischer", "tal"],
+                seed=2026, max_game_wall_seconds=seconds)
+        assert not (root / "invalid").exists()
+    with pytest.raises(ValueError, match="max_run_seconds"):
+        tournament.run_tournament(root, begin(), max_run_seconds=0)
+    assert not calls
+
+
+def test_cli_stop_status_clear_without_engine(harness, capsys):
+    begin, _, _, _, _ = harness
+    run = begin()
+    from chesssim.cli import main
+    assert main(["tournament-stop", "--run", str(run), "--reason", "Dormir"]) == 0
+    assert json.loads(capsys.readouterr().out)["stop_requested"] is True
+    assert main(["tournament-status", "--run", str(run)]) == 0
+    assert json.loads(capsys.readouterr().out)["stop_requested"] is True
+    assert main(["tournament-clear-stop", "--run", str(run)]) == 0
+    assert json.loads(capsys.readouterr().out)["stop_requested"] is False

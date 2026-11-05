@@ -8,6 +8,7 @@ import json
 import uuid
 import re
 import time
+from typing import Callable
 
 from .protocol import OFFICIAL
 
@@ -102,7 +103,10 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
               hashes: dict[str, str], *, clock: tuple[int, int] | None = None,
               use_books: bool | None = None,
               historical_openings: dict | None = None, opening_seed: int = 2029,
-              opening_min_count: int = 1) -> tuple[chess.pgn.Game, dict]:
+              opening_min_count: int = 1,
+              stop_check: Callable[[], bool] | None = None,
+              on_progress: Callable[[chess.pgn.Game], None] | None = None,
+              max_wall_seconds: float | None = None) -> tuple[chess.pgn.Game, dict]:
     engines = []
     try:
         w = _open_engine(root, exe, white, book=use_books)
@@ -143,8 +147,18 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
         clocks = [float(clock[0]), float(clock[0])] if clock else None
         elapsed = [0.0, 0.0]
         opening_moves = {'white': 0, 'black': 0}
+        started = time.monotonic()
+        interrupted = None
+        if on_progress is not None:
+            on_progress(game)
         for ply in range(max_plies):
             if board.is_game_over(claim_draw=True):
+                break
+            if stop_check is not None and stop_check():
+                interrupted = "OperatorStop"
+                break
+            if max_wall_seconds is not None and time.monotonic() - started >= max_wall_seconds:
+                interrupted = "WallTimeLimit"
                 break
             actor = w if board.turn == chess.WHITE else b
             idx = 0 if board.turn else 1
@@ -209,9 +223,16 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                     "book_source_sha256": historical_openings[opening_source].get("source", {}).get("pgn_sha256"),
                 })
             board.push(actual_move)
+            if on_progress is not None:
+                on_progress(game)
+            if clocks is not None:
+                print(f"Relógios: brancas={clocks[0]:.1f}s | pretas={clocks[1]:.1f}s",
+                      flush=True)
 
         outcome = board.outcome(claim_draw=True)
-        if outcome is None:
+        if interrupted is not None:
+            res, term, status = "*", interrupted, "INCOMPLETE"
+        elif outcome is None:
             # Não se inventam empates: partida interrompida fica como inconclusiva.
             res, term, status = "*", "InterruptedAtPlyLimit", "INCOMPLETE"
         else:
@@ -230,8 +251,14 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
         for e in reversed(engines):
             try:
                 e.quit()
-            except Exception:
+            except BaseException:
+                # SimpleEngine.close encerra o transporte, mesmo se o UCI quit falhar.
                 pass
+            finally:
+                try:
+                    e.close()
+                except BaseException:
+                    pass
 
 
 def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
@@ -239,7 +266,9 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
               reverse: bool = True, max_plies: int = 400,
               clock: tuple[int, int] | None = None, use_books: bool | None = None,
               historical_openings: dict | None = None, opening_seed: int = 2029,
-              opening_min_count: int = 1) -> Path:
+              opening_min_count: int = 1,
+              stop_check: Callable[[], bool] | None = None,
+              max_wall_seconds: float | None = None) -> Path:
     root = root.expanduser().resolve()
     exe, profile_paths = validate(root, white, black)
     if sum(x is not None for x in (depth, movetime, clock)) != 1:
@@ -252,6 +281,8 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
         raise ValueError("Movetime deve ser positivo")
     if max_plies < 1:
         raise ValueError("Max-plies deve ser >= 1")
+    if max_wall_seconds is not None and max_wall_seconds <= 0:
+        raise ValueError("max_wall_seconds deve ser positivo")
     if not 1 <= opening_min_count <= 100:
         raise ValueError('Opening min_count must be 1..100')
     if historical_openings and (use_books is True or clock == (600, 2)):
@@ -286,11 +317,21 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
     lineups = [(white, black)] + ([(black, white)] if reverse else [])
     try:
         for i, (w, b) in enumerate(lineups, 1):
+            if stop_check is not None and stop_check():
+                break
             print(f"\n=== Jogo {i}: {w.name} (brancas) x {b.name} (pretas) ===", flush=True)
+
+            def checkpoint(partial_game: chess.pgn.Game) -> None:
+                # O arquivo .partial é uma evidência, nunca um resultado válido.
+                _atomic_text(folder / f"jogo_{i}.partial.pgn",
+                             str(partial_game) + "\n\n")
+
             game, meta = _play_one(root, exe, w, b, depth, movetime, max_plies, i, hashes,
                                    clock=clock, use_books=use_books,
                                    historical_openings=historical_openings,
-                                   opening_seed=opening_seed, opening_min_count=opening_min_count)
+                                   opening_seed=opening_seed, opening_min_count=opening_min_count,
+                                   stop_check=stop_check, on_progress=checkpoint,
+                                   max_wall_seconds=max_wall_seconds)
             digest, plies = mainline_identity(game)
             if plies != meta["plies"]:
                 raise RuntimeError("PGN/mainline ply count disagrees with engine record")
@@ -302,7 +343,13 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
             summary["games"], summary["diversity"] = audit_mainlines(summary["games"])
             _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
             print(f"Resultado: {meta['result']} ({meta['termination']})", flush=True)
-        summary["status"] = "COMPLETED" if all(g["status"] == "COMPLETED" for g in summary["games"]) else "INCOMPLETE"
+            # Partidas limitadas por plies continuam úteis para auditoria de
+            # diversidade; somente parada/timeout operacional cancela o par.
+            if meta["termination"] in {"OperatorStop", "WallTimeLimit"}:
+                break
+        summary["status"] = ("COMPLETED" if len(summary["games"]) == len(lineups)
+                             and all(g["status"] == "COMPLETED" for g in summary["games"])
+                             else "INCOMPLETE")
     except BaseException as ex:
         summary["status"] = "FAILED"
         summary["error"] = f"{type(ex).__name__}: {ex}"

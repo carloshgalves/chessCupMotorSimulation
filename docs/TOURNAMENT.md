@@ -51,6 +51,67 @@ congelados. O preset `official` é **10+2**, com livros internos habilitados.
 Os presets experimentais usam os relógios já disponíveis no projeto e não
 habilitam os livros internos.
 
+## Parar uma Copa com segurança
+
+O controle é feito por **outra aba do terminal**, sem encerrar à força a
+execução ativa. O comando cria um pedido persistente e não precisa adquirir
+o lock usado pelo processo que está jogando:
+
+~~~bash
+python -m chesssim tournament-stop \
+  --run runs/copa-piloto-4 --reason "Encerrar sessão de hoje"
+python -m chesssim tournament-status --run runs/copa-piloto-4
+~~~
+
+O motor verifica o pedido **antes de cada lance seguinte**. A solicitação não
+interrompe instantaneamente uma busca UCI em andamento. O `SimpleEngine`
+utiliza timeout de comunicação e tenta encerrar o motor no bloco de limpeza
+(com `close` de fallback quando `quit` falhar). Não há garantia contra
+desligamento forçado do sistema nem processos externos que ignorem o kernel.
+
+Cada lance aceito gera um checkpoint atômico
+`jogo_N.partial.pgn`, com resultado `*`; esse arquivo é evidência de
+progresso, **não uma partida concluída nem um resultado para classificação**.
+O PGN de cada jogo concluído e `summary.json` continuam sendo as fontes
+oficiais do resultado. A saída do terminal mostra também os relógios
+restantes após os lances quando houver preset de tempo.
+
+Para retomar quando a sessão parar:
+
+~~~bash
+python -m chesssim tournament-clear-stop --run runs/copa-piloto-4
+python -m chesssim tournament-run --run runs/copa-piloto-4 \
+  --retry-incomplete --limit-pairs 1
+~~~
+
+`tournament-clear-stop` exige que nenhuma execução esteja ativa. A retomada
+recomeça o **par de jogos** interrompido; os artefatos parciais continuam
+arquivados e não entram na pontuação.
+
+### Limites de tempo de operação
+
+Os comandos aceitam também orçamentos de parede (wall-clock), distintos do
+relógio enxadrístico:
+
+~~~bash
+python -m chesssim tournament-init \
+  --players lasker marshall fischer tal \
+  --preset official --seed 2026 \
+  --max-game-wall-seconds 7200 \
+  --out runs/copa-piloto-4
+
+python -m chesssim tournament-run --run runs/copa-piloto-4 \
+  --max-run-seconds 1800 --limit-pairs 1
+~~~
+
+Esses valores são exemplos, não configurações obrigatórias. O limite por
+partida é **congelado na criação do torneio**; atingir esse orçamento marca a
+partida `INCOMPLETE`, sem atribuir derrota/empate. O limite por execução
+faz uma pausa graciosa e não se mantém entre chamadas. Os limites são
+verificados entre lances, não são deadlines preemptivas durante uma busca
+bloqueada. A limitação de CPU permanece em uma thread por motor do protocolo
+e **não equivale a uma quota do sistema operacional**.
+
 ## Interrupções e empates
 
 - Partida incompleta ou falha **não é declarada empate nem vitória**; o
