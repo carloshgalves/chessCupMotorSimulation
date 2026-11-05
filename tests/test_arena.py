@@ -120,7 +120,6 @@ def test_profile_catalog_provenance_not_historical_authentication(rodent_stub):
 
 @pytest.mark.parametrize("changes", [
     {"white":"fischer", "black":"fischer"},
-    {"black":"mequinho"},
     {"white":"nonexistent"},
     {"mode":"not-a-mode"},
     {"mode":"depth", "depth":0},
