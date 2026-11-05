@@ -3,6 +3,9 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 import json
+from pathlib import Path
+import shutil
+import subprocess
 import threading
 import time
 from urllib.error import HTTPError
@@ -348,3 +351,31 @@ def test_bad_persisted_state_returns_sanitized_http_error(rodent_stub):
             urlopen(base + "/api/arena", timeout=5)
         assert err.value.code == 503
         assert b"Estado da arena indispon" in err.value.read()
+
+
+def test_arena_markup_never_includes_remote_scripts_or_inline_secrets():
+    root = Path(__file__).resolve().parents[1] / "src" / "chesssim" / "data"
+    html = (root / "arena.html").read_text(encoding="utf-8")
+    script = (root / "arena.js").read_text(encoding="utf-8")
+    assert "http://" not in html and "https://" not in html
+    assert 'src="/arena.js"' in html
+    assert 'src="/viewer"' in html
+    assert 'id="duel-form"' in html
+    assert "innerHTML" not in script and "eval(" not in script
+    assert "textContent" in script
+    assert "X-Chesssim-Token" in script
+    assert "fetch(\"/api/arena\"" in script
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js unavailable")
+def test_arena_browser_form_contract_and_javascript_syntax():
+    root = Path(__file__).resolve().parents[1]
+    script = root / "src" / "chesssim" / "data" / "arena.js"
+    harness = root / "tests" / "assets" / "arena_browser_harness.cjs"
+    syntax = subprocess.run(["node", "--check", str(script)],
+                            capture_output=True, text=True, timeout=8, check=False)
+    assert syntax.returncode == 0, syntax.stderr
+    checked = subprocess.run(["node", str(harness), str(script)],
+                             capture_output=True, text=True, timeout=12, check=False)
+    assert checked.returncode == 0, checked.stdout + checked.stderr
+    assert "Arena browser controls: PASS" in checked.stdout
