@@ -84,7 +84,8 @@ def _read_games(pgn: Path, *, opening_plies: int) -> tuple[list[dict], list[dict
         if plies:
             seen.add(signature)
         white, black = game.headers.get("White", "?"), game.headers.get("Black", "?")
-        if not white.strip() or not black.strip() or white == black:
+        if (not white.strip() or not black.strip() or
+                white.strip() == "?" or black.strip() == "?" or white == black):
             raise ValueError(f"Invalid player identities in game {index + 1}")
         result = game.headers.get("Result", "*")
         if result not in ("1-0", "0-1", "1/2-1/2", "*"):
@@ -149,7 +150,7 @@ def _strength(quality: dict, games: list[dict]) -> tuple[dict, dict]:
     rows = quality.get("decisions")
     if not isinstance(inputs, dict) or not isinstance(rows, list):
         raise ValueError("Quality JSON missing decisions and inputs")
-    if not isinstance(inputs.get("depth"), int) or type(inputs["depth"]) is not int:
+    if type(inputs.get("depth")) is not int or not 1 <= inputs["depth"] <= 35:
         raise ValueError("Quality JSON has invalid depth")
     meta = {g["source_game_index"]: g for g in games}
     positions = {
@@ -296,6 +297,12 @@ def paired_evidence(pgn: Path, quality_json: Path, out: Path, *,
     quality = json.loads(quality_json.read_text(encoding="utf-8"))
     if not isinstance(quality, dict) or not isinstance(quality.get("inputs"), dict):
         raise ValueError("Malformed quality JSON")
+    if quality.get("protocol") != "independent-stockfish-postgame-v9.1":
+        raise ValueError("Unsupported quality analysis protocol")
+    engine_digest = quality["inputs"].get("stockfish_sha256")
+    if (not isinstance(engine_digest, str) or len(engine_digest) != 64 or
+            any(ch not in "0123456789abcdef" for ch in engine_digest)):
+        raise ValueError("Quality report lacks a valid Stockfish fingerprint")
     if quality["inputs"].get("pgn_sha256") != pgn_hash:
         raise ValueError("Quality JSON is not derived from this exact PGN")
     all_games, eligible = _read_games(pgn, opening_plies=opening_plies)
