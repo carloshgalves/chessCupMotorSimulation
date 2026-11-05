@@ -71,7 +71,7 @@ class StableJudge:
                 (m for m in board.legal_moves if m != candidate), key=lambda x: x.uci()
             )[0]
         if self.invalid == "illegal":
-            pv = [chess.Move.from_uci("a1a1")]
+            pv = [chess.Move.from_uci("a1a8")]
         if self.invalid == "missing":
             pv = []
         # Forced move is 40 cp worse except where already the best root move.
