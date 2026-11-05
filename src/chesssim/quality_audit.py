@@ -320,11 +320,15 @@ def analyze_games_v91(pgn: Path, engine: Path, out: Path, *, depth: int = 18,
     per_player_color = summarize_decisions(independent_decisions, label='player_color')
     # Explicit reconciliation makes sample-level/pairwise summaries auditable:
     # grouping by game or color must not silently include duplicate evidence.
-    assert sum(row['positions_analyzed'] for row in game_report) == len(output)
-    assert sum(stats['decisions_analyzed'] for stats in global_summary.values()) == len(independent_decisions)
-    assert sum(stats['decisions_analyzed'] for stats in per_player_color.values()) == len(independent_decisions)
+    if sum(row['positions_analyzed'] for row in game_report) != len(output):
+        raise RuntimeError('Quality audit reconciliation failed: game-level decisions')
+    if sum(stats['decisions_analyzed'] for stats in global_summary.values()) != len(independent_decisions):
+        raise RuntimeError('Quality audit reconciliation failed: global player totals')
+    if sum(stats['decisions_analyzed'] for stats in per_player_color.values()) != len(independent_decisions):
+        raise RuntimeError('Quality audit reconciliation failed: player/color totals')
     for group in game_report:
-        assert sum(stats['decisions_analyzed'] for stats in group['by_player'].values()) == group['positions_analyzed']
+        if sum(stats['decisions_analyzed'] for stats in group['by_player'].values()) != group['positions_analyzed']:
+            raise RuntimeError('Quality audit reconciliation failed: per-game player totals')
     result = {
         'protocol': PROTOCOL,
         'status': 'EXPLORATORY_STRENGTH_DIAGNOSTIC_NOT_ELO',
