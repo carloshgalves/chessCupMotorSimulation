@@ -162,7 +162,11 @@ def _load_json_file(path: Path) -> dict:
     if path.is_symlink() or not path.is_file() or path.stat().st_size > 256 * 1024:
         raise ValueError("Manifesto de sessão inválido")
     result = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(result, dict) or result.get("schema") != "chesssim-arena-session-v1":
+    if (not isinstance(result, dict) or
+            result.get("schema") != "chesssim-arena-session-v1" or
+            result.get("id") != path.parent.name or
+            result.get("status") not in STATUSES or
+            not isinstance(result.get("config"), dict)):
         raise ValueError("Manifesto de sessão incompatível")
     return result
 
@@ -367,7 +371,7 @@ def _decode_json(body: bytes) -> dict:
         return result
     try:
         payload = json.loads(body.decode("utf-8"), object_pairs_hook=pairs)
-    except (ValueError, UnicodeError, json.JSONDecodeError) as exc:
+    except (ValueError, UnicodeError, RecursionError, json.JSONDecodeError) as exc:
         raise BadLaunch("Corpo JSON inválido") from exc
     if not isinstance(payload, dict):
         raise BadLaunch("Corpo deve ser um objeto JSON")
