@@ -492,6 +492,72 @@ decisões foram reavaliadas e quantas mudaram de classe.
 hardware e características da busca; não é precisão Chess.com, estimativa
 de Elo nem evidência de personalidade histórica por si só.
 
+### 8.3. Evidências pareadas de estilo e força (#20)
+
+A comparação de perfis deve manter **resultados, qualidade de busca e
+características de estilo** em dimensões separadas. Não há um único
+número que demonstre que um agente joga como uma pessoa histórica.
+
+Depois de produzir um PGN consolidado e o respectivo JSON de
+`analyze-quality` (mesmo conteúdo do PGN, byte a byte):
+
+~~~bash
+python -m chesssim paired-evidence \
+  --pgn runs/fischer-tal/serie-completa.pgn \
+  --quality runs/fischer-tal/qualidade.json \
+  --opening-plies 16 --bootstrap 1000 --seed 2026 \
+  --out reports/pareado.json \
+  --html reports/pareado.html
+~~~
+
+O HTML é um painel **offline e estático**, sem JavaScript, recursos externos
+ou execução de motor. O JSON contém uma trilha auditável:
+
+- **Resultado:** vitórias, empates e derrotas declarados no PGN, somente
+  quando `Result` não é `*`. Partidas incompletas continuam
+  contribuindo para estatísticas descritivas de lances, mas não para
+  desfechos concluídos.
+- **Força:** perda em centipeões do JSON Stockfish, condicionada às
+  posições realmente amostradas. A média é calculada **primeiro por
+  partida**, depois entre partidas com posições avaliadas. Decisões
+  afetadas pela conversão numérica de mate são contabilizadas à parte,
+  e não entram na média de CP.
+- **Estilo:** proporção de capturas, xeques, movimentos de cada tipo
+  de peça, roque e promoção; separa abertura e meio-jogo/final.
+  A diferença entre jogadores é calculada dentro de cada partida e
+  depois resumida entre partidas, não somando centenas de lances
+  como se fossem observações independentes.
+- **Mesmas posições:** identifica FENs **exatamente iguais**, incluindo
+  lado a jogar, direitos de roque, en passant e contadores. Mostra
+  distribuição dos lances de cada jogador em até 10 exemplos e se
+  escolheram alternativas iguais ou diferentes. São contrastes
+  descritivos, não novas partidas independentes.
+- **Incerteza por jogo:** só há intervalo bootstrap de 95% quando
+  pelo menos **cinco partidas distintas** contribuírem. Com menos
+  dados, a incerteza é rotulada `SMALL_GAME_SAMPLE` e o intervalo
+  fica `null`. O bootstrap reamostra partidas, nunca lances;
+  é descritivo, não uma prova de eficácia ou identificação histórica.
+
+O pareamento de **força** compara a média de CP dos dois jogadores
+dentro de cada partida que tem amostras não afetadas por mate para ambos.
+Essas médias podem corresponder a **posições diferentes**: trata-se de
+um contraste por confronto, não de uma comparação causal de força
+em uma posição idêntica. Posições idênticas são apresentadas em outra
+seção e não atribuem centipeões a escolhas que o Stockfish não analisou.
+
+Trajetórias PGN exatamente duplicadas, mesmo com cabeçalhos diferentes,
+não ampliam o número de partidas. O relatório verifica que as decisões
+Stockfish identificam corretamente partida, ply, FEN, lance, jogador e
+cor no PGN correspondente, e recusa fontes incompatíveis ou adulteradas.
+Relatórios já existentes não são sobrescritos.
+
+**Interpretação:** diferenças de CP, resultados e padrões por fase são
+variáveis observadas, mas não provas de que a personalidade Rodent seja
+historicamente autêntica. As partidas dentro de uma mesma amostra podem
+ter dependências por abertura, emparelhamento e configuração do motor,
+mesmo quando suas sequências completas são distintas. A precisão
+do Chess.com, o Elo e a identidade de estilo não são inferidos.
+
 ## 9. Referência da CLI e pesquisa
 
 A CLI possui comandos de operação, aquisição de dados, calibração, auditoria e pesquisa. Consulte a ajuda do comando antes de executar uma operação:
