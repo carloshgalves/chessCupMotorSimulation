@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Copa dos Imortais · Arena local</title>
+  <link rel="stylesheet" href="/arena.css">
+  <script src="/arena.js" defer></script>
+</head>
+<body>
+  <main class="layout">
+    <header class="top">
+      <div>
+        <div class="overline">CHESSCUP MOTOR SIMULATION</div>
+        <h1>Arena de confrontos</h1>
+        <p>Configure um duelo Rodent IV e acompanhe o resultado. Execução local.</p>
+      </div>
+      <span id="connection" role="status" aria-live="polite">Conectando…</span>
+    </header>
+    <div class="columns">
+      <section class="controls">
+        <section class="panel">
+          <div class="section-header">
+            <div>
+              <span class="overline">NOVO CONFRONTO</span>
+              <h2>Escolha os enxadristas</h2>
+            </div>
+            <span class="provisional">Modelos experimentais</span>
+          </div>
+          <form id="duel-form">
+            <div class="players">
+              <div class="player-slot">
+                <label for="white">Peças brancas</label>
+                <select id="white" required></select>
+                <div id="white-profile" class="profile" aria-live="polite"></div>
+              </div>
+              <button id="swap" type="button" class="swap" aria-label="Inverter as cores dos jogadores" title="Inverter cores">⇄ Inverter</button>
+              <div class="player-slot">
+                <label for="black">Peças pretas</label>
+                <select id="black" required></select>
+                <div id="black-profile" class="profile" aria-live="polite"></div>
+              </div>
+            </div>
+            <fieldset>
+              <legend>Limite de busca</legend>
+              <div class="field-grid">
+                <div>
+                  <label for="mode">Tipo</label>
+                  <select id="mode">
+                    <option value="depth">Profundidade por lance</option>
+                    <option value="movetime">Segundos por lance</option>
+                    <option value="preset">Relógio de torneio</option>
+                  </select>
+                </div>
+                <div id="depth-wrap">
+                  <label for="depth">Profundidade (1–16)</label>
+                  <input type="number" id="depth" value="6" min="1" max="16" step="1">
+                </div>
+                <div id="movetime-wrap" hidden>
+                  <label for="movetime">Segundos (0,05–10)</label>
+                  <input type="number" id="movetime" value="0.5" min="0.05" max="10" step="0.05">
+                </div>
+                <div id="preset-wrap" hidden>
+                  <label for="preset">Ritmo de jogo</label>
+                  <select id="preset">
+                    <option value="official">Oficial · 10+2</option>
+                    <option value="classical">Clássico · 60+30</option>
+                    <option value="rapid">Rápido · 15+10</option>
+                    <option value="blitz">Blitz · 3+2</option>
+                    <option value="bullet">Bullet · 1+0</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="max-plies">Limite de meios-lances</label>
+                  <input type="number" id="max-plies" value="400" min="40" max="600" step="1">
+                </div>
+              </div>
+              <label class="checkbox">
+                <input type="checkbox" id="reverse" checked>
+                <span>Disputar também a partida com cores invertidas</span>
+              </label>
+            </fieldset>
+            <fieldset>
+              <legend>Política de abertura</legend>
+              <label for="opening">Repertório</label>
+              <select id="opening">
+                <option value="none">Sem livro de abertura</option>
+                <option value="internal">Livro interno UCI do Rodent</option>
+                <option value="historical">Repertórios externos condicionados (exploratório)</option>
+              </select>
+              <div id="seed-wrap" hidden>
+                <label for="seed">Semente de abertura</label>
+                <input type="number" id="seed" min="0" max="2147483647" value="2029" step="1">
+              </div>
+              <p id="opening-note" class="note">Sementes só alteram a política externa de abertura quando ativada.</p>
+            </fieldset>
+            <div class="actions">
+              <button id="launch" type="submit" class="primary">Iniciar confronto</button>
+              <button id="stop" type="button" disabled>Solicitar parada</button>
+            </div>
+            <p id="launch-feedback" role="status" aria-live="polite" class="feedback"></p>
+          </form>
+        </section>
+        <section class="panel">
+          <span class="overline">ESTADO DA EXECUÇÃO</span>
+          <h2 id="session-title">Nenhuma sessão iniciada</h2>
+          <p id="session-status">Aguardando.</p>
+          <dl id="session-details" class="summary"></dl>
+          <p class="note">Apenas uma execução por vez. Fechar a aba não cancela o motor; solicitar parada é cooperativo, entre lances.</p>
+        </section>
+        <section class="panel">
+          <span class="overline">SOBRE OS PERFIS</span>
+          <p class="note">Os períodos mostrados são metadados históricos ou hipóteses de pesquisa. Um perfil Rodent IV instalado <strong>não</strong> significa personalidade historicamente validada. Essa arena não atribui Elo nem precisão.</p>
+          <p class="note">Token de execução fornecido no endereço local do terminal. Não compartilhe a URL completa.</p>
+        </section>
+      </section>
+      <section class="viewer">
+        <div class="viewer-head">
+          <div>
+            <span class="overline">TABULEIRO E REPLAY</span>
+            <h2>Acompanhamento local</h2>
+          </div>
+          <a href="/viewer" target="_blank" rel="noopener noreferrer">Abrir separadamente</a>
+        </div>
+        <iframe id="board-frame" src="/viewer" title="Tabuleiro de confronto, lances e relógios" loading="eager"></iframe>
+        <p class="note">Pausar o replay não pausa o confronto. Resultados são lidos dos PGNs e resumos produzidos pelo simulador.</p>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
