@@ -191,12 +191,6 @@ class ArenaManager:
             raise ValueError("Limite de duração deve estar entre 30 e 86400 segundos")
         self.max_game_wall_seconds = float(max_game_wall_seconds)
         self.runner = runner or play_duel
-        # Bloqueio mantido durante toda a vida da arena, inclusive entre duelos:
-        # não permite duas instâncias apontando para o mesmo workspace.
-        from .tournament import _lock
-        self._process_lock = _lock(self.workspace)
-        self._process_lock.__enter__()
-        self._process_lock_closed = False
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._active = False
@@ -209,6 +203,12 @@ class ArenaManager:
                 raise ValueError("Sessão fora da arena")
             _load_json_file(chosen)
             self._selected = chosen.parent
+        # Pré-voo da sessão concluído; só agora reter o bloqueio do workspace.
+        # Erros de leitura anteriores não deixam a arena bloqueada.
+        from .tournament import _lock
+        self._process_lock = _lock(self.workspace)
+        self._process_lock.__enter__()
+        self._process_lock_closed = False
 
     def _save(self, folder: Path, state: dict) -> None:
         _atomic_text(folder / "session.json",
