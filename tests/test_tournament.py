@@ -290,3 +290,33 @@ def test_concurrent_tournament_lock_denies_second_runner(harness):
     with tournament._lock(run):
         with pytest.raises(RuntimeError, match="Outra execução"):
             tournament.run_tournament(root, run)
+
+def test_retry_incomplete_does_not_spin_forever(harness, monkeypatch):
+    begin, _, _, _, root = harness
+    run = begin()
+    calls = []
+
+    def always_incomplete(root_arg, output_dir, a, b, **kwargs):
+        calls.append(1)
+        folder = output_dir / f"{a.slug}-vs-{b.slug}" / f"failed-{len(calls):03d}"
+        folder.mkdir(parents=True)
+        (folder / "summary.json").write_text(
+            json.dumps({"status": "INCOMPLETE"}), encoding="utf-8")
+        return folder
+
+    monkeypatch.setattr(tournament, "play_duel", always_incomplete)
+    report = tournament.run_tournament(root, run, retry_incomplete=True)
+    assert report["status"] == "BLOCKED"
+    assert report["matches_retry_required"] == ["r01-m01"]
+    assert len(calls) == 1
+
+
+def test_tampered_bracket_is_rejected_before_playing(harness):
+    begin, calls, _, _, root = harness
+    run = begin(("fischer", "tal", "lasker", "marshall"))
+    data = tournament.load_tournament(run)
+    data["rounds"][0]["matches"][0]["players"].reverse()
+    tournament._save(run, data)
+    with pytest.raises(ValueError, match="Chaveamento inconsistente"):
+        tournament.run_tournament(root, run)
+    assert not calls
