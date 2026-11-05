@@ -212,3 +212,37 @@ def test_fingerprints_stream_in_chunks_without_loading_whole_engine(tmp_path):
     path.write_bytes(b"x" * (1024 * 1024 + 11))
     from hashlib import sha256
     assert quality._sha256_file(path) == sha256(path.read_bytes()).hexdigest()
+
+
+
+def test_hash_guard_rejects_pgn_changed_while_sampling(monkeypatch, audit_input):
+    pgn, exe, out = audit_input
+    original = quality._load_positions
+
+    def mutate_after_sampling(*args, **kwargs):
+        records, games = original(*args, **kwargs)
+        with pgn.open("ab") as stream:
+            stream.write(b"\n")
+        return records, games
+
+    monkeypatch.setattr(quality, "_load_positions", mutate_after_sampling)
+    with pytest.raises(ValueError, match="changed while selecting"):
+        _run(monkeypatch, pgn, exe, out)
+    assert not out.exists()
+
+
+def test_reconciliation_failure_prevents_partial_quality_report(monkeypatch, audit_input):
+    pgn, exe, out = audit_input
+    original = quality.summarize_decisions
+
+    def inconsistent(rows, *, label="player"):
+        result = original(rows, label=label)
+        if label == "player_color":
+            first = next(iter(result.values()))
+            first["decisions_analyzed"] += 1
+        return result
+
+    monkeypatch.setattr(quality, "summarize_decisions", inconsistent)
+    with pytest.raises(RuntimeError, match="reconciliation failed: player/color"):
+        _run(monkeypatch, pgn, exe, out)
+    assert not out.exists()
