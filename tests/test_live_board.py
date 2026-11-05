@@ -438,3 +438,33 @@ def test_bracket_browser_interaction_contract():
                             capture_output=True, text=True, timeout=15, check=False)
     assert result.returncode == 0, result.stdout + result.stderr
     assert "smoke: PASS" in result.stdout
+
+
+def test_internal_symlink_cannot_relabel_other_match_as_history(four_player_cup):
+    run, state = four_player_cup
+    first, second = state["rounds"][0]["matches"]
+    target = attempt_folder(run, second, "genuine")
+    write_duel(target, "COMPLETED")
+    write_game(target, 1, final=True)
+    impostor = attempt_folder(run, first, "impostor")
+    impostor.mkdir(parents=True)
+    (impostor / "summary.json").symlink_to(target / "summary.json")
+    with pytest.raises(ValueError, match="Link simbólico"):
+        live_board.snapshot(run, match_id=first["id"])
+
+
+def test_internal_pgn_symlink_refused_for_archived_attempt(tmp_path):
+    folder = tmp_path / "duel"
+    write_duel(folder)
+    original = write_game(folder, 2, moves=OPENING, final=True)
+    (folder / "jogo_1.partial.pgn").symlink_to(original)
+    with pytest.raises(ValueError, match="Link simbólico"):
+        live_board.snapshot(folder)
+
+
+def test_excessive_duel_summary_is_refused_before_json_parse(tmp_path):
+    folder = tmp_path / "duel"
+    write_duel(folder)
+    (folder / "summary.json").write_bytes(b" " * (256 * 1024 + 1))
+    with pytest.raises(ValueError, match="excedeu limite"):
+        live_board.snapshot(folder)
