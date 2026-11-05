@@ -483,7 +483,7 @@ def main(argv: list[str] | None = None) -> int:
     qa91.add_argument('--refine-max-positions', type=int, default=20)
     qa91.add_argument('--out', type=Path, required=True)
 
-    dq91 = sub.add_parser('compare-quality', help='align and compare existing Stockfish JSON reports by identical decisions')
+    dq91 = sub.add_parser('compare-quality', help='audit identical PGN decisions across two or more Stockfish depths without overwriting prior evaluations')
     dq91.add_argument('--reports', type=Path, nargs='+', required=True)
     dq91.add_argument('--out', type=Path, required=True)
 
@@ -533,8 +533,13 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == 'compare-quality':
             from .quality_audit import compare_quality_reports
             result = compare_quality_reports(args.reports, args.out)
-            print(json.dumps({'out': str(args.out), 'aligned_decisions': result['aligned_decisions'],
+            print(json.dumps({'out': str(args.out), 'status': result['status'],
+                'depths': result['depths'], 'aligned_decisions': result['aligned_decisions'],
+                'diagnostic_duplicate_aligned': result['diagnostic_duplicate_aligned'],
                 'classification_changes': result['classification_changes'],
+                'classification_changes_at_any_step': result['classification_changes_at_any_step'],
+                'classification_change_rate': result['classification_change_rate'],
+                'mean_cp_loss_range': result['mean_cp_loss_range'],
                 'largest_changes': result['largest_changes'][:5]}, ensure_ascii=False, indent=2))
         elif args.command == 'style-audit':
             from .style_postgame import fingerprint
