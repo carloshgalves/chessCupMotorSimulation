@@ -487,6 +487,17 @@ def main(argv: list[str] | None = None) -> int:
     dq91.add_argument('--reports', type=Path, nargs='+', required=True)
     dq91.add_argument('--out', type=Path, required=True)
 
+    paired = sub.add_parser('paired-evidence', help='compare game-clustered quality, phase-style, outcomes and exact-position choices')
+    paired.add_argument('--pgn', type=Path, required=True)
+    paired.add_argument('--quality', type=Path, required=True,
+                        help='JSON from analyze-quality for the exact PGN')
+    paired.add_argument('--out', type=Path, required=True)
+    paired.add_argument('--html', type=Path,
+                        help='Optional standalone offline HTML dashboard')
+    paired.add_argument('--opening-plies', type=int, default=16)
+    paired.add_argument('--bootstrap', type=int, default=1000)
+    paired.add_argument('--seed', type=int, default=2026)
+
     sa9 = sub.add_parser('style-audit', help='postgame style fingerprints (opening/middlegame, by player)')
     sa9.add_argument('--pgn', type=Path, required=True)
     sa9.add_argument('--opening-plies', type=int, default=16)
@@ -541,6 +552,23 @@ def main(argv: list[str] | None = None) -> int:
                 'classification_change_rate': result['classification_change_rate'],
                 'mean_cp_loss_range': result['mean_cp_loss_range'],
                 'largest_changes': result['largest_changes'][:5]}, ensure_ascii=False, indent=2))
+        elif args.command == 'paired-evidence':
+            from .paired_evidence import paired_evidence
+            result = paired_evidence(args.pgn, args.quality, args.out,
+                                     html=args.html, opening_plies=args.opening_plies,
+                                     bootstrap=args.bootstrap, seed=args.seed)
+            print(json.dumps({
+                'out': str(args.out), 'html': str(args.html) if args.html else None,
+                'status': result['status'],
+                'distinct_games': result['accounting']['distinct_nonempty_games'],
+                'duplicate_games_excluded': result['accounting']['duplicate_games_excluded'],
+                'pairwise': [{
+                    'a': item['a'], 'b': item['b'],
+                    'paired_strength_games': item['strength_paired_by_game']['games'],
+                    'mean_cp_loss_difference': item['strength_paired_by_game']['mean'],
+                    'exact_fen_positions': item['same_position_choices']['exact_fen_positions']
+                } for item in result['pairwise']]
+            }, ensure_ascii=False, indent=2))
         elif args.command == 'style-audit':
             from .style_postgame import fingerprint
             result = fingerprint(args.pgn, args.out, opening_plies=args.opening_plies)
