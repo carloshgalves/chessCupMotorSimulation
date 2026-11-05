@@ -173,6 +173,8 @@ def snapshot(directory: Path, *, match_id: str | None = None,
         raise ValueError("Informe uma pasta de torneio ou confronto")
     tournament = None
     folder = None
+    if attempt is not None and match_id is None:
+        raise InvalidSelection("Tentativa sem confronto")
     selected_match = None
     attempts = []
     selected_attempt = None
@@ -180,6 +182,9 @@ def snapshot(directory: Path, *, match_id: str | None = None,
         from .tournament import load_tournament, tournament_status
         state = load_tournament(run)
         tournament = tournament_status(run)
+        from .catalog import find_player
+        tournament["names"] = {slug: find_player(slug).name
+                               for slug in state["participants"]}
         matches = {m["id"]: m for rd in state["rounds"] for m in rd["matches"]}
         if match_id is not None and match_id not in matches:
             raise InvalidSelection("Confronto não pertence a este torneio")
