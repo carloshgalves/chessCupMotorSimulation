@@ -451,7 +451,12 @@ lance, PV quando disponível, avaliação forçada e indicadores de mate.
 `consecutive_changes` mostra a divergência da perda em centipeões em
 cada passagem de profundidade; `classification_changed_at_any_step`
 detecta inclusive mudanças transitórias (por exemplo, um erro que volta
-a ficar abaixo de 100 cp). `classification_changes` considera apenas
+a ficar abaixo de 100 cp). `best_move_change_status_counts` diferencia
+mudanças comprovadas, melhores lances inalterados com PV disponível e
+comparação **desconhecida** quando alguma PV falta. Nesse último caso,
+`best_move_change_rate_known` considera somente decisões com transições
+comparáveis; se não houver nenhuma, será `null`.
+`classification_changes` considera apenas
 a primeira e a última profundidade, enquanto
 `classification_changes_at_any_step` considera todas.
 
