@@ -227,11 +227,29 @@ class ArenaManager:
         folder = self._duel_folder()
         duel_summary = None
         if folder is not None and (folder / "summary.json").is_file():
-            summary = json.loads((folder / "summary.json").read_text(encoding="utf-8"))
-            if isinstance(summary, dict):
+            # Checkpoints created by our own engine are atomic; during a
+            # third-party/legacy non-atomic write, an active duel may briefly
+            # expose an incomplete file. Do not present it as a final result.
+            try:
+                summary = json.loads((folder / "summary.json").read_text(
+                    encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                if not self._active:
+                    raise ValueError("Resumo de confronto final inválido") from exc
+                summary = None
+            if summary is not None and not isinstance(summary, dict):
+                if not self._active:
+                    raise ValueError("Resumo de confronto final inválido")
+                summary = None
+            if summary is not None:
+                games = summary.get("games", [])
+                if not isinstance(games, list):
+                    if not self._active:
+                        raise ValueError("Lista final de partidas inválida")
+                    games = []
                 duel_summary = {
                     "status": summary.get("status", "UNKNOWN"),
-                    "results": [g.get("result") for g in summary.get("games", [])
+                    "results": [g.get("result") for g in games
                                 if isinstance(g, dict)],
                 }
         return {"id": state["id"], "status": state["status"],
