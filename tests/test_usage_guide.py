@@ -28,7 +28,7 @@ DOCUMENTED_COMMANDS = (
 )
 DOCUMENTED_OPTIONS = {
     "setup": ("--apply", "--with-books"),
-    "play": ("--depth", "--movetime", "--reverse", "--preset", "--max-plies"),
+    "play": ("--depth", "--movetime", "--reverse", "--preset", "--max-plies", "--no-books"),
     "corpus-fetch": ("--dry-run", "--out", "--delay"),
     "corpus-build": ("--match-name", "--sources", "--out"),
     "opening-build": (

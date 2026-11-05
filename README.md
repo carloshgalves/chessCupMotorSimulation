@@ -30,6 +30,19 @@ export RODENT_IV_HOME="/caminho/para/Rodent-IV"
 python3 -m chesssim --help
 ```
 
+
+### Setup Linux/WSL com smoke test real
+
+O instalador em Bash cria/reutiliza uma venv, valida dependências e executa os testes. Rodent IV e Stockfish devem ser obtidos separadamente; o script não distribui nem baixa executáveis:
+
+~~~bash
+bash scripts/setup_linux_wsl.sh
+export RODENT_IV_HOME="/caminho/para/Rodent-IV"
+bash scripts/setup_linux_wsl.sh --skip-install --skip-tests --apply-profiles --smoke
+~~~
+
+A instalação de perfis só ocorre com `--apply-profiles`. O segundo comando verifica um motor UCI real e gera um PGN curto de teste, com JSON auditável; partidas encerradas por limite de lances ficam corretamente como **INCOMPLETE**. Consulte [instalação e diagnóstico Linux/WSL](docs/SETUP_LINUX_WSL.md) para detalhes e erros acionáveis.
+
 ## Manual de execução
 
 O [manual de uso](docs/USAGE.md) reúne os comandos da CLI e exemplos reproduzíveis para configurar o Rodent IV, obter e preparar corpora PGN, construir repertórios, gerar duelos, usar o perfil provisório e abrir replays offline. Os exemplos usam caminhos genéricos; executáveis e corpora externos precisam ser instalados/obtidos separadamente.

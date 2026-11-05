@@ -26,6 +26,18 @@ python -m chesssim roster
 
 O pacote também instala o comando de console chesssim. Os exemplos usam python -m chesssim para deixar explícito qual ambiente Python executa a aplicação. Para executar apenas a aplicação, sem ferramentas de desenvolvimento, python -m pip install -e . é suficiente; o extra .[dev] também instala pytest, build e Ruff.
 
+
+### 1.1. Instalação automatizada Linux/WSL
+
+O fluxo recomendado para máquinas novas está em [Setup Linux/WSL e smoke test UCI real](SETUP_LINUX_WSL.md). Ele executa pip check e pytest, verifica caminhos configurados por `RODENT_IV_HOME` e `CHESSSIM_UCI_ENGINE`, e só altera os perfis quando `--apply-profiles` é fornecido:
+
+~~~bash
+bash scripts/setup_linux_wsl.sh
+bash scripts/setup_linux_wsl.sh --skip-install --skip-tests --rodent "/caminho/para/Rodent-IV" --smoke
+~~~
+
+O PGN de smoke com limite de meios-lances pode ser **INCOMPLETE**, o que não é um empate. Os relatórios são gravados em destino exclusivo para não sobrescrever histórico de testes.
+
 ## 2. Configurar o Rodent IV
 
 A variável RODENT_IV_HOME aponta para a **raiz** da instalação. O projeto espera encontrar esta estrutura:
@@ -119,6 +131,7 @@ Os identificadores podem ser os slugs apresentados por roster ou o nome completo
 Opções relevantes:
 
 - --depth N: profundidade de busca por lance. O padrão é 6.
+- --no-books: desliga o livro UCI em duelo de desenvolvimento/smoke; não permitido com --preset official (protocolo oficial exige livros).
 - --movetime SEGUNDOS: tempo de busca por lance, alternativa a --depth. Os dois argumentos são mutuamente exclusivos.
 - --reverse: executa uma segunda partida com as cores trocadas. Sem essa opção, é gerada apenas uma partida.
 - --max-plies N: limite de meios-lances (plies), não de lances completos. O padrão é 400.

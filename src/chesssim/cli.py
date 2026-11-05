@@ -45,6 +45,7 @@ def main(argv: list[str] | None = None) -> int:
     play.add_argument("white", help="Slug ou nome completo da personalidade")
     play.add_argument("black", help="Slug ou nome completo da personalidade")
     play.add_argument("--reverse", action="store_true", help="Segunda partida com cores invertidas")
+    play.add_argument("--no-books", action="store_true", help="Desabilita livro UCI em duelo de desenvolvimento/smoke")
     speed = play.add_mutually_exclusive_group()
     speed.add_argument("--depth", type=int, help="Profundidade por lance (padrão: 6)")
     speed.add_argument("--movetime", type=float, help="Segundos por lance, alternativa ao depth")
@@ -807,6 +808,8 @@ def main(argv: list[str] | None = None) -> int:
             if a.slug == b.slug:
                 raise ValueError("Não é permitido jogar consigo mesmo neste estágio")
             from .matches import play_duel
+            if args.no_books and args.preset == "official":
+                raise ValueError("--no-books é incompatível com o preset official, que exige livros")
             if args.preset and (args.depth is not None or args.movetime is not None):
                 raise ValueError("Não misture --preset official e limites de desenvolvimento")
             if args.preset and not args.reverse:
@@ -816,7 +819,8 @@ def main(argv: list[str] | None = None) -> int:
             depth = None if args.preset or args.movetime is not None else (args.depth if args.depth is not None else 6)
             play_duel(rodent_root(args), args.out, a, b, depth=depth,
                       movetime=args.movetime, reverse=args.reverse, max_plies=args.max_plies or (600 if args.preset else 400),
-                      clock=clock, use_books=(True if args.preset == "official" else
+                      clock=clock, use_books=(False if args.no_books else
+                                             True if args.preset == "official" else
                                              False if args.preset else None))
         return 0
     except (ValueError, FileNotFoundError, FileExistsError, RuntimeError, OSError) as exc:
