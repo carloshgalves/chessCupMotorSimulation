@@ -130,7 +130,7 @@ def test_bracket_rounds_resume_without_replaying_finished_pairs(harness):
 
 
 def test_tie_never_auto_advances_and_requires_arbitration(harness):
-    begin, calls, _, _, root = harness
+    begin, _, results, _, root = harness
     results.extend([["1/2-1/2", "1/2-1/2"]])
     run = begin(max_pairs=1)
     report = tournament.run_tournament(root, run)
@@ -150,7 +150,7 @@ def test_tie_never_auto_advances_and_requires_arbitration(harness):
 
 
 def test_tie_second_pair_can_decide_match(harness):
-    begin, calls, _, _, root = harness
+    begin, calls, results, _, root = harness
     results.extend([["1-0", "1-0"], ["1-0", "0-1"]])
     run = begin()
     report = tournament.run_tournament(root, run)
