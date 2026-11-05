@@ -288,3 +288,30 @@ def test_malformed_summary_yields_sanitized_http_error(tmp_path):
     # Server preflight rejects invalid data without binding a listening socket.
     with pytest.raises(ValueError, match="Resumo de confronto inválido"):
         live_board.create_server(folder, port=0)
+
+
+def test_latest_corrupt_tournament_attempt_returns_503_not_old_game(tmp_path, monkeypatch):
+    monkeypatch.setattr(tournament, "_preflight", lambda root, slugs, preset: {
+        "engine_sha256": "test", "profile_sha256": {s: "test" for s in slugs},
+        "book_sha256": {}, "books_by_player": {s: [] for s in slugs}})
+    run = tmp_path / "copa"
+    state = tournament.create_tournament(
+        tmp_path, run, participants=["fischer", "tal"], seed=2026, preset="rapid")
+    match = state["rounds"][0]["matches"][0]
+    a, b = match["players"]
+    base_dir = run / "matches" / match["id"] / "duels" / f"{a}-vs-{b}"
+    old = base_dir / "old"
+    write_duel(old, "COMPLETED")
+    write_game(old, 1, final=True)
+    latest = base_dir / "latest"
+    write_duel(latest)
+    write_game(latest, 1)
+    with server_at(run) as base:
+        assert load_api(base)["duel"]["folder"] == "latest"
+        (latest / "summary.json").write_text("not json", encoding="utf-8")
+        with pytest.raises(HTTPError) as failed:
+            urlopen(base + "/api/state", timeout=3)
+        assert failed.value.code == 503
+        body = failed.value.read().decode("utf-8")
+        assert "Nao foi possivel ler" in body
+        assert str(tmp_path) not in body
