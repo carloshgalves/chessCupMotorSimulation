@@ -281,3 +281,37 @@ def test_report_rejects_out_of_range_bootstrap_seed_and_opening_window(tmp_path)
         with pytest.raises(ValueError):
             paired_evidence(pgn, quality, out, **keyword)
     assert not out.exists()
+
+
+
+@pytest.mark.parametrize("mutation,diagnostic", [
+    ("protocol", "Unsupported quality analysis protocol"),
+    ("missing_engine_hash", "valid Stockfish fingerprint"),
+    ("bad_depth", "invalid depth"),
+])
+def test_unknown_quality_contract_is_rejected(tmp_path, mutation, diagnostic):
+    pgn, quality, out, _ = _write_case(tmp_path)
+    doc = json.loads(quality.read_text(encoding="utf-8"))
+    if mutation == "protocol":
+        doc["protocol"] = "unknown-quality-v999"
+    elif mutation == "missing_engine_hash":
+        doc["inputs"]["stockfish_sha256"] = None
+    else:
+        doc["inputs"]["depth"] = -5
+    quality.write_text(json.dumps(doc), encoding="utf-8")
+    with pytest.raises(ValueError, match=diagnostic):
+        paired_evidence(pgn, quality, out, bootstrap=200)
+    assert not out.exists()
+
+
+def test_unknown_player_header_is_rejected_before_publishing(tmp_path):
+    pgn, quality, out, _ = _write_case(tmp_path, duplicate=False)
+    source = pgn.read_text(encoding="utf-8")
+    source = source.replace('[White "A"]', '[White "?"]', 1)
+    pgn.write_text(source, encoding="utf-8")
+    doc = json.loads(quality.read_text(encoding="utf-8"))
+    doc["inputs"]["pgn_sha256"] = sha256(pgn.read_bytes()).hexdigest()
+    quality.write_text(json.dumps(doc), encoding="utf-8")
+    with pytest.raises(ValueError, match="Invalid player identities"):
+        paired_evidence(pgn, quality, out, bootstrap=200)
+    assert not out.exists()
