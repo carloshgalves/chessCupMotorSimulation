@@ -42,8 +42,11 @@ def fake_duel(root, destination, white, black, **kwargs):
         assert board.outcome().result() == "0-1"
         (out / f"jogo_{i}.pgn").write_text(str(game) + "\n", encoding="utf-8")
         results.append({"status": "COMPLETED", "result": "0-1"})
-    (out / "summary.json").write_text(
-        json.dumps({"status": "COMPLETED", "games": results}), encoding="utf-8")
+    # Mirror the real match writer: never expose a half-written JSON file
+    # to a concurrent arena status poll.
+    from chesssim.matches import _atomic_text
+    _atomic_text(out / "summary.json",
+                 json.dumps({"status": "COMPLETED", "games": results}))
     return out
 
 
