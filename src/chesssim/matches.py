@@ -317,6 +317,8 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
     lineups = [(white, black)] + ([(black, white)] if reverse else [])
     try:
         for i, (w, b) in enumerate(lineups, 1):
+            if stop_check is not None and stop_check():
+                break
             print(f"\n=== Jogo {i}: {w.name} (brancas) x {b.name} (pretas) ===", flush=True)
 
             def checkpoint(partial_game: chess.pgn.Game) -> None:
@@ -343,7 +345,9 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
             print(f"Resultado: {meta['result']} ({meta['termination']})", flush=True)
             if meta["status"] != "COMPLETED":
                 break
-        summary["status"] = "COMPLETED" if all(g["status"] == "COMPLETED" for g in summary["games"]) else "INCOMPLETE"
+        summary["status"] = ("COMPLETED" if len(summary["games"]) == len(lineups)
+                             and all(g["status"] == "COMPLETED" for g in summary["games"])
+                             else "INCOMPLETE")
     except BaseException as ex:
         summary["status"] = "FAILED"
         summary["error"] = f"{type(ex).__name__}: {ex}"
