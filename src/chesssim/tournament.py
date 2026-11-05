@@ -188,9 +188,21 @@ def _valid_completed_attempt(directory: Path, state: dict, match: dict,
                 raise RuntimeError(f"Resultados ou trajetórias inconsistentes: {pgn_file}")
             if pgn.headers.get("Termination") != games[i].get("termination"):
                 raise RuntimeError(f"Terminação do PGN diverge do resumo: {pgn_file}")
+            if (pgn.headers.get("EngineSHA256") != state["resources"]["engine_sha256"]
+                    or pgn.headers.get("WhiteProfileSHA256") !=
+                    state["resources"]["profile_sha256"][expected_white]
+                    or pgn.headers.get("BlackProfileSHA256") !=
+                    state["resources"]["profile_sha256"][expected_black]
+                    or pgn.headers.get("TimeControl") !=
+                    f"{state['clock'][0]}+{state['clock'][1]}"):
+                raise RuntimeError(f"Cabeçalhos de proveniência divergentes: {pgn_file}")
             if games[i]["termination"] == "TimeForfeit":
-                if not isinstance(games[i].get("clock_left"), list):
-                    raise RuntimeError(f"Falta evidência do relógio: {pgn_file}")
+                remaining = games[i].get("clock_left")
+                board = pgn.end().board()
+                loser_index = 0 if board.turn else 1
+                if (not isinstance(remaining, list) or len(remaining) != 2 or
+                        remaining[loser_index] > 0):
+                    raise RuntimeError(f"Tempo não comprovado no resumo: {pgn_file}")
             else:
                 outcome = pgn.end().board().outcome(claim_draw=True)
                 if outcome is None or outcome.result() != result:
@@ -251,11 +263,14 @@ def _reconcile(directory: Path, state: dict, match: dict) -> None:
     present = set()
     seen_failures = set()
     previous = {x["folder"]: x for x in match["attempts"]}
+    was_final = match.get("winner") is not None
     for summary_file in sorted(base.glob("*/summary.json")):
         folder = str(summary_file.parent.relative_to(directory))
         present.add(folder)
         summary = json.loads(summary_file.read_text(encoding="utf-8"))
         if summary.get("status") != "COMPLETED":
+            if folder in previous:
+                raise RuntimeError(f"Confronto contabilizado deixou de estar concluído: {folder}")
             seen_failures.add(folder)
             continue
         attempt = _valid_completed_attempt(directory, state, match, summary_file)
@@ -263,6 +278,8 @@ def _reconcile(directory: Path, state: dict, match: dict) -> None:
             if previous[folder] != attempt:
                 raise RuntimeError(f"Artefato de partida alterado após registro: {folder}")
         else:
+            if was_final:
+                raise RuntimeError(f"Nova tentativa após encerramento do confronto: {folder}")
             match["attempts"].append(attempt)
     if set(previous) - present:
         raise RuntimeError("Artefato de confronto já registrado foi apagado")
@@ -270,6 +287,8 @@ def _reconcile(directory: Path, state: dict, match: dict) -> None:
     match["excluded_attempts"] = [{"folder": p, "reason": "NOT_COMPLETED"}
                                   for p in sorted(seen_failures)]
     _refresh_match(match, state["max_tiebreak_pairs"])
+    if was_final and match["winner"] is None:
+        raise RuntimeError(f"Vencedor previamente confirmado deixou de existir: {match['id']}")
 
 
 def _advance(state: dict) -> None:
@@ -288,8 +307,16 @@ def _advance(state: dict) -> None:
 
 def _summary(state: dict) -> dict:
     matches = [m for rd in state["rounds"] for m in rd["matches"]]
+    bracket = [{
+        "round": rd["number"],
+        "matches": [{"id": m["id"], "players": m["players"],
+                     "score": _score(m), "status": m["status"],
+                     "winner": m["winner"], "pairs_played": len(m["attempts"]),
+                     "duels": [a["folder"] for a in m["attempts"]]}
+                    for m in rd["matches"]]
+    } for rd in state["rounds"]]
     return {"status": state["status"], "champion": state["champion"],
-            "participants": len(state["participants"]),
+            "participants": len(state["participants"]), "bracket": bracket,
             "rounds": len(state["rounds"]),
             "matches_completed": sum(m["winner"] is not None for m in matches),
             "matches_total_generated": len(matches),
@@ -342,6 +369,9 @@ def run_tournament(root: Path, directory: Path, *, limit_pairs: int | None = Non
                               depth=None, clock=tuple(state["clock"]),
                               reverse=True, max_plies=state["max_plies"],
                               use_books=state["preset"] == "official")
+                except BaseException:
+                    state["status"] = "BLOCKED"
+                    raise
                 finally:
                     _reconcile(directory, state, match)
                     _save(directory, state)
