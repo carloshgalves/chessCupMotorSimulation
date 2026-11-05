@@ -200,7 +200,10 @@ def compare_quality_reports(paths: list[Path], out: Path) -> dict:
     common = set.intersection(*(set(idx) for idx in indices))
     histories = []
     diagnostic_histories = []
-    for key in sorted(common, key=str):
+    for key in sorted(common, key=lambda k: (
+            k[0] if k[0] is not None else -1,
+            k[4] if k[4] is not None else ((k[3] - 1) * 2 + (1 if k[2] == "white" else 2)),
+            str(k))):
         if any(len(index[key]) != 1 for index in indices):
             continue  # Never choose an arbitrary colliding observation.
         entries = [idx[key][0] for idx in indices]
