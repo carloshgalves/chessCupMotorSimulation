@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-
 import chess
 import chess.pgn
 import pytest
@@ -100,7 +98,7 @@ def harness(tmp_path, monkeypatch):
 
 
 def test_two_players_complete_two_legal_games(harness):
-    begin, calls, results, _, root = harness
+    begin, calls, _, _, root = harness
     run = begin()
     report = tournament.run_tournament(root, run)
     assert report["status"] == "COMPLETED"
@@ -115,7 +113,7 @@ def test_two_players_complete_two_legal_games(harness):
 
 
 def test_bracket_rounds_resume_without_replaying_finished_pairs(harness):
-    begin, calls, results, _, root = harness
+    begin, calls, _, _, root = harness
     run = begin(("lasker", "marshall", "fischer", "tal"), preset="rapid")
     first = tournament.run_tournament(root, run, limit_pairs=1)
     assert first["status"] == "PAUSED"
@@ -132,7 +130,7 @@ def test_bracket_rounds_resume_without_replaying_finished_pairs(harness):
 
 
 def test_tie_never_auto_advances_and_requires_arbitration(harness):
-    begin, calls, results, _, root = harness
+    begin, calls, _, _, root = harness
     results.extend([["1/2-1/2", "1/2-1/2"]])
     run = begin(max_pairs=1)
     report = tournament.run_tournament(root, run)
@@ -152,7 +150,7 @@ def test_tie_never_auto_advances_and_requires_arbitration(harness):
 
 
 def test_tie_second_pair_can_decide_match(harness):
-    begin, calls, results, _, root = harness
+    begin, calls, _, _, root = harness
     results.extend([["1-0", "1-0"], ["1-0", "0-1"]])
     run = begin()
     report = tournament.run_tournament(root, run)
@@ -162,7 +160,7 @@ def test_tie_second_pair_can_decide_match(harness):
 
 
 def test_crash_after_completed_duel_is_recovered_from_disk(harness):
-    begin, calls, results, fake, root = harness
+    begin, calls, _, fake, root = harness
     run = begin()
     match = tournament.load_tournament(run)["rounds"][0]["matches"][0]
     a, b = (find_player(x) for x in match["players"])
@@ -175,7 +173,7 @@ def test_crash_after_completed_duel_is_recovered_from_disk(harness):
 
 
 def test_mutated_pgn_after_checkpoint_is_rejected(harness):
-    begin, calls, results, _, root = harness
+    begin, calls, _, _, root = harness
     run = begin()
     tournament.run_tournament(root, run)
     pgn = calls[0] / "duelo.pgn"
@@ -185,9 +183,8 @@ def test_mutated_pgn_after_checkpoint_is_rejected(harness):
 
 
 def test_incomplete_attempt_requires_explicit_retry(harness, monkeypatch):
-    begin, calls, results, fake, root = harness
+    begin, calls, _, fake, root = harness
     run = begin()
-    original = tournament.play_duel
 
     def interrupted(root_arg, output_dir, a, b, **kwargs):
         folder = output_dir / f"{a.slug}-vs-{b.slug}" / "attempt-aborted"
@@ -209,7 +206,7 @@ def test_incomplete_attempt_requires_explicit_retry(harness, monkeypatch):
 
 
 def test_freezes_engine_and_profiles_before_resume(harness, monkeypatch):
-    begin, calls, results, fake, root = harness
+    begin, calls, _, _, root = harness
     run = begin()
     monkeypatch.setattr(tournament, "_preflight", lambda *args: {"changed": True})
     with pytest.raises(RuntimeError, match="divergiram"):
@@ -218,7 +215,7 @@ def test_freezes_engine_and_profiles_before_resume(harness, monkeypatch):
 
 
 def test_invalid_roster_rejected_before_creating_files(harness):
-    begin, calls, results, _, root = harness
+    begin, _, _, _, root = harness
     with pytest.raises(ValueError, match="repetidos"):
         begin(("fischer", "fischer"))
     assert not (root / "copa-0").exists()
@@ -231,7 +228,7 @@ def test_invalid_roster_rejected_before_creating_files(harness):
 
 
 def test_cli_status_without_rodent(harness, capsys):
-    begin, calls, results, _, root = harness
+    begin, _, _, _, _ = harness
     run = begin()
     from chesssim.cli import main
     assert main(["tournament-status", "--run", str(run)]) == 0
