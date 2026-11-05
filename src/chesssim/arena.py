@@ -371,6 +371,8 @@ def _decode_json(body: bytes) -> dict:
         return result
     try:
         payload = json.loads(body.decode("utf-8"), object_pairs_hook=pairs)
+    except BadLaunch:
+        raise
     except (ValueError, UnicodeError, RecursionError, json.JSONDecodeError) as exc:
         raise BadLaunch("Corpo JSON inválido") from exc
     if not isinstance(payload, dict):
