@@ -246,3 +246,22 @@ def test_reconciliation_failure_prevents_partial_quality_report(monkeypatch, aud
     with pytest.raises(RuntimeError, match="reconciliation failed: player/color"):
         _run(monkeypatch, pgn, exe, out)
     assert not out.exists()
+
+
+
+@pytest.mark.parametrize("field", ["mean_centipawn_loss", "median_centipawn_loss",
+                                    "mistakes_over_100cp", "negative_unclipped_gaps"])
+def test_corrupted_aggregate_metric_aborts_report(monkeypatch, audit_input, field):
+    pgn, exe, out = audit_input
+    original = quality.summarize_decisions
+
+    def drifted(rows, *, label="player"):
+        values = original(rows, label=label)
+        if label == "player" and len(rows) == 12:
+            values[next(iter(values))][field] += 1
+        return values
+
+    monkeypatch.setattr(quality, "summarize_decisions", drifted)
+    with pytest.raises(RuntimeError, match="reconciliation failed: player"):
+        _run(monkeypatch, pgn, exe, out)
+    assert not out.exists()
