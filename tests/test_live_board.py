@@ -427,3 +427,14 @@ def test_scores_rounds_and_replays_survive_monitor_restart(four_player_cup):
         assert historical["duel"]["games"][0]["states"][-1]["san"] == "Nc6"
         assert historical["tournament"]["rounds"] == 2
         assert historical["tournament"]["names"][finalists[0]]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js not installed")
+def test_bracket_browser_interaction_contract():
+    root = Path(__file__).resolve().parents[1]
+    harness = root / "tests" / "assets" / "monitor_browser_harness.cjs"
+    javascript = root / "src" / "chesssim" / "data" / "monitor.js"
+    result = subprocess.run(["node", str(harness), str(javascript)],
+                            capture_output=True, text=True, timeout=15, check=False)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "smoke: PASS" in result.stdout
