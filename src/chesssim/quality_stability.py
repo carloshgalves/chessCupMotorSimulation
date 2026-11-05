@@ -5,7 +5,7 @@ historical-style validation. Inputs remain immutable; no depth overwrites anothe
 """
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from hashlib import sha256
 import json
 from math import isfinite
@@ -239,6 +239,11 @@ def compare_quality_reports(paths: list[Path], out: Path) -> dict:
             "best_move_changed_at_any_step": any(
                 d["best_move_changed"] is True for d in diffs
             ),
+            "best_move_change_status": (
+                "CHANGED" if any(d["best_move_changed"] is True for d in diffs)
+                else "UNKNOWN" if any(d["best_move_changed"] is None for d in diffs)
+                else "UNCHANGED"
+            ),
             "mate_affected": any(ev["mate_affected"] for ev in evaluations),
         }
         (diagnostic_histories if duplicate else histories).append(decisions)
@@ -251,6 +256,8 @@ def compare_quality_reports(paths: list[Path], out: Path) -> dict:
     changed = sum(row["classification_changed"] for row in histories)
     changed_any = sum(row["classification_changed_at_any_step"] for row in histories)
     unstable_move = sum(row["best_move_changed_at_any_step"] for row in histories)
+    best_move_statuses = Counter(row["best_move_change_status"] for row in histories)
+    best_move_known = best_move_statuses["CHANGED"] + best_move_statuses["UNCHANGED"]
     partial = any(key[0] is None or key[4] is None or key[6] is None
                   for key in common)
     input_data = [
@@ -282,6 +289,12 @@ def compare_quality_reports(paths: list[Path], out: Path) -> dict:
         "classification_changes": changed,
         "classification_changes_at_any_step": changed_any,
         "best_move_changes_at_any_step": unstable_move,
+        "best_move_change_status_counts": {
+            "changed": best_move_statuses["CHANGED"],
+            "unchanged": best_move_statuses["UNCHANGED"],
+            "unknown": best_move_statuses["UNKNOWN"],
+        },
+        "best_move_change_rate_known": unstable_move / best_move_known if best_move_known else None,
         "classification_change_rate": changed / count if count else None,
         "classification_change_rate_any_step": changed_any / count if count else None,
         "mean_cp_loss_range": mean(row["range_cp"] for row in histories) if count else None,
@@ -296,6 +309,7 @@ def compare_quality_reports(paths: list[Path], out: Path) -> dict:
             "Exact game/ply/FEN identifiers were required for alignment.",
             "Root-move forced searches may vary even at the same requested depth.",
             "Unmatched decisions are not assumed stable, nor included in change-rate denominators.",
+            "When any principal variation is missing, best-move stability is UNKNOWN rather than unchanged.",
         ],
     }
     out.parent.mkdir(parents=True, exist_ok=True)
