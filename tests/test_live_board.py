@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 import json
+import os
 from pathlib import Path
 import threading
 from urllib.error import HTTPError
@@ -216,3 +217,43 @@ def test_cli_watch_appears_in_help(capsys):
         main(["watch", "--help"])
     assert exited.value.code == 0
     assert "--run" in capsys.readouterr().out
+
+
+def test_legacy_pgn_without_clock_comments_shows_unknown_time(tmp_path):
+    folder = tmp_path / "duel"
+    write_duel(folder)
+    game = chess.pgn.Game()
+    game.headers["TimeControl"] = "600+2"
+    node = game
+    board = game.board()
+    move = chess.Move.from_uci("e2e4")
+    node.add_variation(move)
+    (folder / "jogo_1.partial.pgn").write_text(str(game), encoding="utf-8")
+    data = live_board.snapshot(folder)["duel"]["games"][0]
+    assert data["states"][0]["clocks"] == [600.0, 600.0]
+    assert data["states"][1]["clocks"] == [None, 600.0]
+
+
+def test_fresh_completed_attempt_beats_stale_running_attempt(tmp_path, monkeypatch):
+    monkeypatch.setattr(tournament, "_preflight", lambda root, slugs, preset: {
+        "engine_sha256": "test", "profile_sha256": {s: "test" for s in slugs},
+        "book_sha256": {}, "books_by_player": {s: [] for s in slugs}})
+    run = tmp_path / "copa"
+    state = tournament.create_tournament(
+        tmp_path, run, participants=["fischer", "tal"], seed=2026, preset="rapid")
+    match = state["rounds"][0]["matches"][0]
+    a, b = match["players"]
+    base = run / "matches" / match["id"] / "duels" / f"{a}-vs-{b}"
+    old = base / "crashed"
+    write_duel(old, status="RUNNING")
+    old_pgn = write_game(old, 1, moves=OPENING[:1])
+    new = base / "finished"
+    write_duel(new, status="COMPLETED")
+    new_pgn = write_game(new, 1, moves=OPENING, final=True)
+    for path in (old / "summary.json", old_pgn):
+        os.utime(path, (1000, 1000))
+    for path in (new / "summary.json", new_pgn):
+        os.utime(path, (2000, 2000))
+    report = live_board.snapshot(run)
+    assert report["duel"]["folder"] == "finished"
+    assert len(report["duel"]["games"][0]["states"]) == 5
