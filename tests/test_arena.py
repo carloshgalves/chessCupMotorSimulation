@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from urllib.error import HTTPError
@@ -15,7 +16,7 @@ import chess
 import chess.pgn
 import pytest
 
-from chesssim import arena
+from chesssim import arena, matches
 
 
 FOOLS_MATE = ("f2f3", "e7e5", "g2g4", "d8h4")
@@ -379,3 +380,70 @@ def test_arena_browser_form_contract_and_javascript_syntax():
                              capture_output=True, text=True, timeout=12, check=False)
     assert checked.returncode == 0, checked.stdout + checked.stderr
     assert "Arena browser controls: PASS" in checked.stdout
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Native process smoke is Linux-only")
+def test_real_uci_process_launches_via_arena_without_external_engine(rodent_stub, monkeypatch):
+    root, _ = rodent_stub
+    engine = root / "rodent-iv-plain.exe"
+    engine.write_text("""#!/usr/bin/env python3
+import os
+from pathlib import Path
+import sys
+
+with Path("arena-uci-pids.txt").open("a", encoding="ascii") as file:
+    file.write(str(os.getpid()) + "\\n")
+
+sequence = ["f2f3", "e7e5", "g2g4", "d8h4"]
+moves = []
+for raw in sys.stdin:
+    cmd = raw.strip()
+    if cmd == "uci":
+        print("id name Arena Test UCI")
+        print("option name Personality type combo default Fischer var Fischer var Tal")
+        print("option name Threads type spin default 1 min 1 max 8")
+        print("option name Hash type spin default 64 min 1 max 1024")
+        print("option name UseBook type check default false")
+        print("uciok", flush=True)
+    elif cmd == "isready":
+        print("readyok", flush=True)
+    elif cmd.startswith("position "):
+        moves = cmd.split(" moves ", 1)[1].split() if " moves " in cmd else []
+    elif cmd.startswith("go"):
+        print("bestmove " + sequence[len(moves) % 4], flush=True)
+    elif cmd == "quit":
+        break
+""", encoding="utf-8")
+    engine.chmod(0o755)
+    for name in ("fischer", "tal"):
+        (root / f"{name}.txt").write_text("profile " + name, encoding="utf-8")
+
+    def preflight(root_arg, white, black):
+        assert root_arg == root
+        return engine, {
+            white.slug: root / f"{white.slug}.txt",
+            black.slug: root / f"{black.slug}.txt",
+        }
+
+    monkeypatch.setattr(arena, "validate", preflight)
+    monkeypatch.setattr(matches, "validate", preflight)
+    with arena_server(rodent_stub, runner=matches.play_duel) as (server, base):
+        with post(base, "/api/arena/launch", GOOD, server.arena_token) as response:
+            assert response.status == 202
+        done = wait_for(server.arena_manager, "COMPLETED", seconds=10)
+        assert done["duel"]["results"] == ["0-1", "0-1"]
+        game_state = api(base, "/api/state")
+        assert [g["states"][-1]["san"] for g in game_state["duel"]["games"]] == [
+            "Qh4#", "Qh4#",
+        ]
+        session_id = done["id"]
+        assert (rodent_stub[1] / session_id / "session.json").is_file()
+
+    pids = [int(pid) for pid in (root / "arena-uci-pids.txt")
+            .read_text(encoding="ascii").splitlines()]
+    assert len(pids) == 4  # two subprocesses per game, two color orders
+    for _ in range(100):
+        if not any(Path(f"/proc/{pid}").exists() for pid in pids):
+            break
+        time.sleep(0.02)
+    assert all(not Path(f"/proc/{pid}").exists() for pid in pids)
