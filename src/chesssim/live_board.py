@@ -32,6 +32,9 @@ def _checked_file(run: Path, path: Path) -> Path:
     target = path.resolve(strict=True)
     if not target.is_relative_to(run.resolve(strict=True)):
         raise ValueError("Arquivo de partida fora do diretório monitorado")
+    # Links internos também poderiam fazer um confronto exibir um PGN de outro.
+    if target != path.absolute():
+        raise ValueError("Link simbólico não permitido em artefatos da Copa")
     if not target.is_file():
         raise ValueError("Artefato esperado não é arquivo")
     return target
@@ -77,6 +80,8 @@ def _states(game: chess.pgn.Game) -> list[dict]:
 
 def _duel_snapshot(run: Path, folder: Path, *, match_id: str | None = None) -> dict:
     summary_path = _checked_file(run, folder / "summary.json")
+    if summary_path.stat().st_size > 256 * 1024:
+        raise ValueError("Resumo de confronto excedeu limite de visualização")
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     if not isinstance(summary, dict):
         raise ValueError("Resumo de confronto inválido")
