@@ -5,7 +5,7 @@ historical-style validation. Inputs remain immutable; no depth overwrites anothe
 """
 from __future__ import annotations
 
-from collections import Counter, defaultdict
+from collections import defaultdict
 from hashlib import sha256
 import json
 from math import isfinite
