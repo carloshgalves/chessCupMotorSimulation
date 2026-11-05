@@ -266,3 +266,25 @@ def test_live_board_javascript_syntax():
     result = subprocess.run(["node", "--check", str(asset)], capture_output=True,
                             text=True, check=False, timeout=10)
     assert result.returncode == 0, result.stderr
+
+
+def test_time_forfeit_displays_authoritative_final_clocks(tmp_path):
+    folder = tmp_path / "duel"
+    write_duel(folder, status="COMPLETED",
+               games=[{"status": "COMPLETED", "termination": "TimeForfeit",
+                       "clock_left": [-0.4, 35.6]}])
+    write_game(folder, 1, final=True)
+    game = live_board.snapshot(folder)["duel"]["games"][0]
+    assert game["status"] == "COMPLETED"
+    assert game["states"][-1]["clocks"] == [0.0, 35.6]
+
+
+def test_malformed_summary_yields_sanitized_http_error(tmp_path):
+    folder = tmp_path / "duel"
+    write_duel(folder)
+    (folder / "summary.json").write_text('["not an object"]', encoding="utf-8")
+    with pytest.raises(ValueError, match="Resumo de confronto inválido"):
+        live_board.snapshot(folder)
+    # Server preflight rejects invalid data without binding a listening socket.
+    with pytest.raises(ValueError, match="Resumo de confronto inválido"):
+        live_board.create_server(folder, port=0)
