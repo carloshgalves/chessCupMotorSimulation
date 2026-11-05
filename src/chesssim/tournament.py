@@ -183,9 +183,18 @@ def _valid_completed_attempt(directory: Path, state: dict, match: dict,
             digest, plies = mainline_identity(pgn)
             if (result not in RESULTS or games[i].get("status") != "COMPLETED"
                     or pgn.headers.get("Result") != result or
-                    digests is None or games[i].get("mainline_sha256") != digest
+                    games[i].get("mainline_sha256") != digest
                     or games[i].get("plies") != plies):
                 raise RuntimeError(f"Resultados ou trajetórias inconsistentes: {pgn_file}")
+            if pgn.headers.get("Termination") != games[i].get("termination"):
+                raise RuntimeError(f"Terminação do PGN diverge do resumo: {pgn_file}")
+            if games[i]["termination"] == "TimeForfeit":
+                if not isinstance(games[i].get("clock_left"), list):
+                    raise RuntimeError(f"Falta evidência do relógio: {pgn_file}")
+            else:
+                outcome = pgn.end().board().outcome(claim_draw=True)
+                if outcome is None or outcome.result() != result:
+                    raise RuntimeError(f"Resultado não comprovado pelo tabuleiro: {pgn_file}")
             results.append(result)
             digests.append(digest)
         if chess.pgn.read_game(stream) is not None:
@@ -302,18 +311,18 @@ def run_tournament(root: Path, directory: Path, *, limit_pairs: int | None = Non
         raise ValueError("limit_pairs deve ser positivo")
     with _lock(directory):
         state = load_tournament(directory)
-        if state["status"] == "COMPLETED":
-            return _summary(state)
         _verify_resources(root, state)
         played = 0
-        while state["champion"] is None:
-            current = state["rounds"][-1]
-            for match in current["matches"]:
-                _reconcile(directory, state, match)
+        while True:
+            # Valida todos os artefatos já incorporados, inclusive de rodadas anteriores.
+            for rd in state["rounds"]:
+                for match in rd["matches"]:
+                    _reconcile(directory, state, match)
             _advance(state)
             _save(directory, state)
             if state["champion"] is not None:
                 break
+            current = state["rounds"][-1]
             pending = [m for m in current["matches"] if m["status"] == "PENDING" or
                        (retry_incomplete and m["status"] == "RETRY_REQUIRED")]
             if not pending:
@@ -337,7 +346,9 @@ def run_tournament(root: Path, directory: Path, *, limit_pairs: int | None = Non
                     _reconcile(directory, state, match)
                     _save(directory, state)
                 played += 1
-                # Um mesmo empate pode exigir outro par. O laço externo o agenda.
+            _advance(state)
+            if state["champion"] is not None:
+                break
             if limit_pairs is not None and played >= limit_pairs:
                 state["status"] = "PAUSED"
                 break
