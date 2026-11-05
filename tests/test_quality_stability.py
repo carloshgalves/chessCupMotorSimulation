@@ -363,3 +363,38 @@ def test_all_principal_variations_unavailable_gives_no_best_move_rate(reports):
     assert result["best_move_change_rate_known"] is None
     assert result["best_move_changes_at_any_step"] == 0
     assert result["aligned_decisions"] == 3
+
+
+
+@pytest.mark.parametrize("field,wrong,error", [
+    ("cp_loss", 70, "inconsistent centipawn loss"),
+    ("raw_gap_cp", 40, "inconsistent raw centipawn gap"),
+    ("best_eval_cp", "unavailable", "Non-finite centipawn evaluations"),
+])
+def test_invalid_engine_evaluation_triplet_is_not_published(reports, field, wrong, error):
+    paths, out = reports
+    doc = json.loads(paths[1].read_text(encoding="utf-8"))
+    doc["decisions"][0][field] = wrong
+    paths[1].write_text(json.dumps(doc), encoding="utf-8")
+    with pytest.raises(ValueError, match=error):
+        compare_quality_reports(paths, out)
+    assert not out.exists()
+
+
+def test_negative_unclipped_gap_is_valid_when_cp_loss_is_zero(reports):
+    paths, out = reports
+    for path in paths:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        row = doc["decisions"][2]
+        row["best_eval_cp"] = -20
+        row["played_eval_cp"] = 10
+        row["raw_gap_cp"] = -30
+        row["cp_loss"] = 0
+        path.write_text(json.dumps(doc), encoding="utf-8")
+    result = compare_quality_reports(paths, out)
+    assert result["aligned_decisions"] == 3
+    assert result["aligned_history"][2]["loss_by_depth"] == {
+        "8": 0, "12": 0, "20": 0
+    }
+    assert all(e["raw_gap_cp"] == -30 for e in
+               result["aligned_history"][2]["evaluations"])
