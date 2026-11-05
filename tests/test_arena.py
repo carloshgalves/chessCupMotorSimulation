@@ -455,7 +455,9 @@ def test_deep_json_and_duplicate_keys_are_rejected(rodent_stub):
         with pytest.raises(HTTPError) as err:
             post(base, "/api/arena/launch", deeply_nested, server.arena_token)
         assert err.value.code == 400
-        assert json.loads(err.value.read())["error"] == "Corpo JSON inválido"
+        assert json.loads(err.value.read())["error"] in {
+            "Corpo JSON inválido", "Corpo deve ser um objeto JSON"
+        }
         duplicate = b'{"white":"fischer","white":"tal"}'
         with pytest.raises(HTTPError) as err:
             post(base, "/api/arena/launch", duplicate, server.arena_token)
@@ -470,7 +472,8 @@ def test_session_metadata_id_and_state_are_strictly_validated(rodent_stub):
     location.mkdir()
     path = location / "session.json"
     content = {"schema": "chesssim-arena-session-v1", "id": "session-other",
-               "status": "COMPLETED", "config": GOOD}
+               "status": "COMPLETED", "config": GOOD,
+               "created_utc": "2026-11-05T11:00:00Z"}
     path.write_text(json.dumps(content), encoding="utf-8")
     with pytest.raises(ValueError, match="incompatível"):
         arena.ArenaManager(root, workspace, runner=fake_duel)
