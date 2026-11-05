@@ -5,6 +5,8 @@ from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
 import threading
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -257,3 +259,11 @@ def test_fresh_completed_attempt_beats_stale_running_attempt(tmp_path, monkeypat
     report = live_board.snapshot(run)
     assert report["duel"]["folder"] == "finished"
     assert len(report["duel"]["games"][0]["states"]) == 5
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js not installed; browser JS syntax optional")
+def test_live_board_javascript_syntax():
+    asset = Path(__file__).resolve().parents[1] / "src" / "chesssim" / "data" / "monitor.js"
+    result = subprocess.run(["node", "--check", str(asset)], capture_output=True,
+                            text=True, check=False, timeout=10)
+    assert result.returncode == 0, result.stderr
