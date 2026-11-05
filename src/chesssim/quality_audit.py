@@ -16,6 +16,15 @@ from .game_diversity import audit_mainlines, mainline_identity, opening_seed_fro
 PROTOCOL = "independent-stockfish-postgame-v9.1"
 
 
+def _sha256_file(path: Path) -> str:
+    """Stream a source fingerprint rather than loading the complete PGN/engine."""
+    digest = sha256()
+    with path.open("rb") as stream:
+        for piece in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(piece)
+    return digest.hexdigest()
+
+
 def spread_indices(total: int, limit: int) -> list[int]:
     """Deterministic, approximately evenly spaced local integer indices."""
     if total <= 0 or limit <= 0:
@@ -226,7 +235,11 @@ def analyze_games_v91(pgn: Path, engine: Path, out: Path, *, depth: int = 18,
         raise ValueError('Invalid PV or refinement budget')
     if refine_depth is not None and (refine_depth <= depth or refine_depth > 35):
         raise ValueError('refine_depth must be above depth and <= 35')
+    pgn_sha256 = _sha256_file(pgn)
+    engine_sha256 = _sha256_file(engine)
     records, games = _load_positions(pgn, min_fullmove=min_fullmove, dedupe_games=dedupe_games)
+    if _sha256_file(pgn) != pgn_sha256:
+        raise ValueError('PGN changed while selecting quality-analysis positions')
     _, diversity = audit_mainlines(games)
     duplicate_indices = {g['game_index'] for g in games if g['duplicate_mainline']}
     # Audit-critical: independent estimates must be invariant to the
@@ -285,6 +298,10 @@ def analyze_games_v91(pgn: Path, engine: Path, out: Path, *, depth: int = 18,
             refined = _evaluate_choice(judge, board, chess.Move.from_uci(row['played']),
                                        depth=refine_depth, pv_plies=pv_plies)
             row['refined'] = refined
+    # Fail closed if the game evidence or judge executable was replaced during
+    # the time-consuming UCI search; never publish mismatched provenance.
+    if _sha256_file(pgn) != pgn_sha256 or _sha256_file(engine) != engine_sha256:
+        raise ValueError('PGN or Stockfish executable changed during quality analysis')
     by_game = defaultdict(list)
     for item in output:
         by_game[item['game_index']].append(item)
@@ -312,8 +329,8 @@ def analyze_games_v91(pgn: Path, engine: Path, out: Path, *, depth: int = 18,
         'protocol': PROTOCOL,
         'status': 'EXPLORATORY_STRENGTH_DIAGNOSTIC_NOT_ELO',
         'inputs': {
-            'pgn_sha256': sha256(pgn.read_bytes()).hexdigest(),
-            'stockfish_sha256': sha256(engine.read_bytes()).hexdigest(),
+            'pgn_sha256': pgn_sha256,
+            'stockfish_sha256': engine_sha256,
             'depth': depth, 'eligible_positions': len(records),
             'sampled_positions': len(output), 'min_fullmove': min_fullmove,
             'sample_mode': sample_mode, 'dedupe_games': dedupe_games,
