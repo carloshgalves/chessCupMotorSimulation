@@ -218,3 +218,24 @@ def test_invalid_wall_limit_preflight(engine_fixture, tmp_path):
     with pytest.raises(ValueError, match="max_wall_seconds"):
         matches.play_duel(root, tmp_path / "duels", white, black, max_wall_seconds=0)
     assert not (tmp_path / "duels").exists()
+
+
+def test_clock_annotations_are_written_to_live_checkpoints(engine_fixture):
+    root, engine, white, black, _, engines = engine_fixture
+    snapshots = []
+
+    def checkpoint(game):
+        snapshots.append(str(game))
+
+    game, meta = matches._play_one(
+        root, engine, white, black, None, None, 2, 1,
+        {"exe": "sha", white.slug: "white", black.slug: "black"},
+        clock=(600, 2), use_books=False, on_progress=checkpoint)
+    assert meta["status"] == "INCOMPLETE"
+    assert len(snapshots) == 3
+    assert "[%clk" in snapshots[-1]
+    nodes = list(game.mainline())
+    assert len(nodes) == 2
+    assert all(node.clock() is not None for node in nodes)
+    assert all(600 <= node.clock() <= 602 for node in nodes)
+    assert all(e.closed for e in engines)
