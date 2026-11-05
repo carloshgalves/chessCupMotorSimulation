@@ -88,6 +88,10 @@ def test_three_depths_retained_in_order_without_overwriting_originals(reports):
     assert report["classification_change_rate"] == 1/3
     assert report["classification_change_rate_any_step"] == 2/3
     assert report["best_move_changes_at_any_step"] == 1
+    assert report["best_move_change_status_counts"] == {
+        "changed": 1, "unchanged": 2, "unknown": 0
+    }
+    assert report["best_move_change_rate_known"] == pytest.approx(1/3)
     assert report["unmatched_or_ambiguous_by_report"] == [0,0,0]
     assert report["mean_cp_loss_range"] == pytest.approx((100+150+15)/3)
     assert report["median_cp_loss_range"] == 100
@@ -324,3 +328,38 @@ def test_refinement_never_prioritizes_duplicate_trajectory(monkeypatch,tmp_path)
     assert report["reconciliation"]["independent_decisions"]==8
     assert report["summary"]["Alpha"]["decisions_analyzed"]==4
     assert report["summary"]["Beta"]["decisions_analyzed"]==4
+
+
+
+def test_missing_principal_variation_marks_best_move_stability_unknown(reports):
+    paths, out = reports
+    middle = json.loads(paths[1].read_text(encoding="utf-8"))
+    middle["decisions"][2]["best_move"] = None
+    middle["decisions"][2]["best_line_uci"] = []
+    paths[1].write_text(json.dumps(middle), encoding="utf-8")
+    result = compare_quality_reports(paths, out)
+    assert result["aligned_decisions"] == 3
+    assert result["best_move_change_status_counts"] == {
+        "changed": 1, "unchanged": 1, "unknown": 1
+    }
+    assert result["best_move_change_rate_known"] == pytest.approx(1/2)
+    third = next(row for row in result["aligned_history"]
+                 if row["key"]["ply"] == 3)
+    assert third["best_move_change_status"] == "UNKNOWN"
+    assert third["best_move_changed_at_any_step"] is False
+    assert third["consecutive_changes"][0]["best_move_changed"] is None
+
+
+def test_all_principal_variations_unavailable_gives_no_best_move_rate(reports):
+    paths, out = reports
+    for path in paths:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        for row in doc["decisions"]:
+            row["best_move"] = None
+            row["best_line_uci"] = []
+        path.write_text(json.dumps(doc), encoding="utf-8")
+    result = compare_quality_reports(paths, out)
+    assert result["best_move_change_status_counts"]["unknown"] == 3
+    assert result["best_move_change_rate_known"] is None
+    assert result["best_move_changes_at_any_step"] == 0
+    assert result["aligned_decisions"] == 3
