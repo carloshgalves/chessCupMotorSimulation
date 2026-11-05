@@ -472,7 +472,8 @@ def _render_html(report: dict) -> str:
             "/" + str(outcomes["loss"]) + "</td><td>" +
             _fmt(strength["mean"]) + "</td><td>" +
             str(strength["games"]) + "</td><td>" +
-            e(strength["uncertainty"]) + "</td></tr>"
+            _fmt(item["strength"]["non_mate_sampled_move_fraction"], pct=True) +
+            "</td><td>" + e(strength["uncertainty"]) + "</td></tr>"
         )
     sections = []
     for pair in report["pairwise"]:
@@ -527,7 +528,8 @@ def _render_html(report: dict) -> str:
         "precisão Chess.com nem fidelidade histórica.</p>"
         "<section><h2>Jogadores</h2><table><thead><tr><th>Jogador</th>"
         "<th>Partidas</th><th>V/E/D</th><th>CP médio por partida</th>"
-        "<th>Jogos com CP</th><th>Incerteza</th></tr></thead><tbody>" +
+        "<th>Jogos com CP</th><th>Cobertura CP sem mate</th>"
+        "<th>Incerteza</th></tr></thead><tbody>" +
         "".join(rows) + "</tbody></table></section>" +
         "".join(sections) +
         "<section><h2>Limites da evidência</h2><ul>" +
