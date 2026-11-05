@@ -50,6 +50,10 @@ def harness(tmp_path, monkeypatch):
             game = chess.pgn.Game()
             game.headers["White"] = white.name
             game.headers["Black"] = black.name
+            game.headers["EngineSHA256"] = state["resources"]["engine_sha256"]
+            game.headers["WhiteProfileSHA256"] = state["resources"]["profile_sha256"][white.slug]
+            game.headers["BlackProfileSHA256"] = state["resources"]["profile_sha256"][black.slug]
+            game.headers["TimeControl"] = f"{clock[0]}+{clock[1]}"
             node = game
             board = game.board()
             for uci in SEQUENCES[result]:
@@ -108,6 +112,7 @@ def test_two_players_complete_two_legal_games(harness):
     match = state["rounds"][0]["matches"][0]
     assert report["champion"] == match["players"][0]
     assert len(match["attempts"][0]["mainline_sha256"]) == 2
+    assert report["bracket"][0]["matches"][0]["score"][match["players"][0]] == 2
     assert tournament.run_tournament(root, run) == report
     assert len(calls) == 1
 
@@ -235,3 +240,53 @@ def test_cli_status_without_rodent(harness, capsys):
     payload = json.loads(capsys.readouterr().out)
     assert payload["participants"] == 2
     assert payload["status"] == "READY"
+
+def test_summary_retroactively_demoted_to_failed_is_rejected(harness):
+    begin, calls, _, _, root = harness
+    run = begin()
+    tournament.run_tournament(root, run)
+    summary_path = calls[0] / "summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    summary["status"] = "FAILED"
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+    with pytest.raises(RuntimeError, match="deixou de estar concluído"):
+        tournament.run_tournament(root, run)
+
+
+def test_new_attempt_after_winner_is_rejected(harness):
+    begin, calls, _, fake, root = harness
+    run = begin()
+    tournament.run_tournament(root, run)
+    match = tournament.load_tournament(run)["rounds"][0]["matches"][0]
+    a, b = (find_player(x) for x in match["players"])
+    fake(root, tournament._duel_dir(run, match), a, b, depth=None,
+         clock=(600, 2), reverse=True, max_plies=600, use_books=True)
+    with pytest.raises(RuntimeError, match="após encerramento"):
+        tournament.run_tournament(root, run)
+
+
+def test_engine_failure_leaves_auditable_blocked_state(harness, monkeypatch):
+    begin, _, _, _, root = harness
+    run = begin()
+
+    def stopped(root_arg, output_dir, a, b, **kwargs):
+        folder = output_dir / f"{a.slug}-vs-{b.slug}" / "aborted"
+        folder.mkdir(parents=True)
+        (folder / "summary.json").write_text(
+            json.dumps({"status": "FAILED"}), encoding="utf-8")
+        raise RuntimeError("Engine stopped")
+
+    monkeypatch.setattr(tournament, "play_duel", stopped)
+    with pytest.raises(RuntimeError, match="Engine stopped"):
+        tournament.run_tournament(root, run)
+    state = tournament.load_tournament(run)
+    assert state["status"] == "BLOCKED"
+    assert state["rounds"][0]["matches"][0]["status"] == "RETRY_REQUIRED"
+
+
+def test_concurrent_tournament_lock_denies_second_runner(harness):
+    begin, _, _, _, root = harness
+    run = begin()
+    with tournament._lock(run):
+        with pytest.raises(RuntimeError, match="Outra execução"):
+            tournament.run_tournament(root, run)
