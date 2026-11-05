@@ -118,7 +118,7 @@ def _duel_snapshot(run: Path, folder: Path, *, match_id: str | None = None) -> d
 
 
 def _latest_duel(run: Path, state: dict) -> tuple[Path | None, str | None]:
-    """Choose current RUNNING attempt, otherwise the most recently updated."""
+    """Use latest on-disk checkpoint, never hide corruption behind older data."""
     candidates = []
     for round_data in state.get("rounds", []):
         for match in round_data.get("matches", []):
@@ -126,26 +126,16 @@ def _latest_duel(run: Path, state: dict) -> tuple[Path | None, str | None]:
             a, b = match["players"]
             base = run / "matches" / match_id / "duels" / f"{a}-vs-{b}"
             for item in base.glob("*/summary.json"):
-                try:
-                    checked = _checked_file(run, item)
-                    folder = checked.parent
-                    data = json.loads(checked.read_text(encoding="utf-8"))
-                    if not isinstance(data, dict):
-                        raise ValueError("Resumo do confronto inválido")
-                    files_changed = [checked.stat().st_mtime]
-                    for p in folder.glob("jogo_*.partial.pgn"):
-                        files_changed.append(_checked_file(run, p).stat().st_mtime)
-                    live = data.get("status") == "RUNNING"
-                    candidates.append((int(live), max(files_changed), folder, match_id))
-                except (ValueError, OSError, json.JSONDecodeError):
-                    # A malformed attempt will be reported if selected directly.
-                    continue
+                checked = _checked_file(run, item)
+                folder = checked.parent
+                timestamps = [checked.stat().st_mtime]
+                for p in folder.glob("jogo_*.partial.pgn"):
+                    timestamps.append(_checked_file(run, p).stat().st_mtime)
+                candidates.append((max(timestamps), folder, match_id))
     if not candidates:
         return None, None
-    # Prefer fresh disk evidence over stale RUNNING manifests left by a crash.
-    _, _, folder, match_id = max(candidates, key=lambda row: (row[1], row[0]))
+    _, folder, match_id = max(candidates, key=lambda row: (row[0], str(row[1])))
     return folder, match_id
-
 
 def snapshot(directory: Path) -> dict:
     run = directory.expanduser().resolve(strict=True)
