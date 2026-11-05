@@ -94,6 +94,12 @@ def _duel_snapshot(run: Path, folder: Path, *, match_id: str | None = None) -> d
         if not isinstance(metadata, dict):
             raise ValueError("Metadados de partida inválidos")
         states = _states(game)
+        if metadata.get("termination") == "TimeForfeit":
+            final_clocks = metadata.get("clock_left")
+            if (isinstance(final_clocks, list) and len(final_clocks) == 2 and
+                    all(isinstance(c, (int, float)) for c in final_clocks)):
+                # No timed-out move is added to PGN; show the final official clock.
+                states[-1]["clocks"] = [max(0.0, float(c)) for c in final_clocks]
         games.append({
             "id": f"{folder.name}:game-{index}",
             "number": index,
@@ -124,6 +130,8 @@ def _latest_duel(run: Path, state: dict) -> tuple[Path | None, str | None]:
                     checked = _checked_file(run, item)
                     folder = checked.parent
                     data = json.loads(checked.read_text(encoding="utf-8"))
+                    if not isinstance(data, dict):
+                        raise ValueError("Resumo do confronto inválido")
                     files_changed = [checked.stat().st_mtime]
                     for p in folder.glob("jogo_*.partial.pgn"):
                         files_changed.append(_checked_file(run, p).stat().st_mtime)
@@ -193,7 +201,8 @@ def make_handler(directory: Path):
                 try:
                     payload = json.dumps(snapshot(root), ensure_ascii=False,
                                          allow_nan=False).encode("utf-8")
-                except (ValueError, FileNotFoundError, OSError, json.JSONDecodeError):
+                except (ValueError, FileNotFoundError, OSError, TypeError, KeyError,
+                        json.JSONDecodeError):
                     payload = b'{"error":"Nao foi possivel ler o estado local da partida"}'
                     self._reply(503, payload, "application/json; charset=utf-8")
                     return
