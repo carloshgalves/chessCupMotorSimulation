@@ -37,7 +37,7 @@ function displayProfile(slot, slug) {
     return;
   }
   const title = document.createElement("strong");
-  title.textContent = p.installed ? "Rodent IV disponível" : "Perfil indisponível";
+  title.textContent = p.installed ? "Alias e arquivo do perfil encontrados" : "Perfil indisponível";
   const provenance = document.createElement("p");
   provenance.textContent = p.provenance + (p.alias ? " · Alias: " + p.alias : "");
   const windowNote = document.createElement("p");
