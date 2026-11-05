@@ -40,6 +40,33 @@ def main(argv: list[str] | None = None) -> int:
     draw.add_argument("--seed", type=int, required=True)
     draw.add_argument("--out", type=Path, help="Salva o sorteio JSON neste caminho")
 
+    tournament_init = sub.add_parser("tournament-init", help="Cria chave eliminatória auditável para perfis disponíveis")
+    tournament_init.add_argument("--rodent", type=Path)
+    tournament_init.add_argument("--players", nargs="+", required=True, help="2, 4, 8, 16, 32 ou 64 slugs")
+    tournament_init.add_argument("--out", type=Path, required=True, help="Nova pasta exclusiva do torneio")
+    tournament_init.add_argument("--seed", type=int, default=2026)
+    tournament_init.add_argument("--preset", choices=["official", "classical", "rapid", "blitz", "bullet"],
+                                 default="official")
+    tournament_init.add_argument("--max-tiebreak-pairs", type=int, default=3,
+                                 help="Máximo de pares de jogos antes de arbitragem explícita")
+    tournament_init.add_argument("--max-plies", type=int, default=600)
+
+    tournament_run = sub.add_parser("tournament-run", help="Executa/retoma partidas sem duplicar confrontos")
+    tournament_run.add_argument("--rodent", type=Path)
+    tournament_run.add_argument("--run", type=Path, required=True)
+    tournament_run.add_argument("--limit-pairs", type=int, help="Executa no máximo N pares nesta chamada")
+    tournament_run.add_argument("--retry-incomplete", action="store_true",
+                                help="Autoriza nova tentativa quando o jogo anterior foi interrompido")
+
+    tournament_status = sub.add_parser("tournament-status", help="Mostra progresso e pendências do chaveamento")
+    tournament_status.add_argument("--run", type=Path, required=True)
+
+    tournament_resolve = sub.add_parser("tournament-resolve", help="Registra arbitragem externa para empate esgotado")
+    tournament_resolve.add_argument("--run", type=Path, required=True)
+    tournament_resolve.add_argument("--match", required=True, help="Identificador rNN-mNN")
+    tournament_resolve.add_argument("--winner", required=True)
+    tournament_resolve.add_argument("--reason", required=True, help="Justificativa formal registrada no manifesto")
+
     play = sub.add_parser("play", help="Executa duelo real entre dois perfis oficiais")
     play.add_argument("--rodent", type=Path)
     play.add_argument("white", help="Slug ou nome completo da personalidade")
@@ -803,6 +830,27 @@ def main(argv: list[str] | None = None) -> int:
                 args.out.parent.mkdir(parents=True, exist_ok=True)
                 args.out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
                 print(f"Sorteio salvo em {args.out}")
+        elif args.command == "tournament-init":
+            from .tournament import create_tournament, tournament_status
+            create_tournament(rodent_root(args), args.out, participants=args.players,
+                              seed=args.seed, preset=args.preset,
+                              max_tiebreak_pairs=args.max_tiebreak_pairs,
+                              max_plies=args.max_plies)
+            print(json.dumps(tournament_status(args.out), indent=2, ensure_ascii=False))
+        elif args.command == "tournament-run":
+            from .tournament import run_tournament
+            result = run_tournament(rodent_root(args), args.run,
+                                    limit_pairs=args.limit_pairs,
+                                    retry_incomplete=args.retry_incomplete)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 0 if result["status"] in {"PAUSED", "COMPLETED"} else 3
+        elif args.command == "tournament-status":
+            from .tournament import tournament_status
+            print(json.dumps(tournament_status(args.run), indent=2, ensure_ascii=False))
+        elif args.command == "tournament-resolve":
+            from .tournament import resolve_tiebreak
+            print(json.dumps(resolve_tiebreak(args.run, args.match, args.winner,
+                                               args.reason), indent=2, ensure_ascii=False))
         elif args.command == "play":
             a, b = find_player(args.white), find_player(args.black)
             if a.slug == b.slug:
