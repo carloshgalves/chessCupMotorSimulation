@@ -68,7 +68,8 @@ def normalize_config(raw: object) -> dict:
               "preset": None, "depth": None, "movetime": None, "seed": None}
     if mode == "preset":
         preset = raw.get("preset")
-        if preset not in PRESETS or "depth" in raw or "movetime" in raw:
+        if not isinstance(preset, str) or preset not in PRESETS or (
+                "depth" in raw or "movetime" in raw):
             raise BadLaunch("Escolha exclusivamente um ritmo de relógio")
         if not reverse:
             raise BadLaunch("Presets de torneio exigem ambas as cores")
@@ -408,6 +409,21 @@ def make_arena_handler(manager: ArenaManager, token: str):
                     self.send_header("Content-Security-Policy",
                                      "default-src 'none'; script-src 'self'; style-src 'self'; "
                                      "connect-src 'self'; base-uri 'none'; frame-ancestors 'self'")
+                    self.end_headers()
+                    self.wfile.write(body)
+                elif url.path == "/":
+                    # Only the opt-in launcher embeds its own read-only local viewer.
+                    self.send_response(200)
+                    self.send_header("Content-Type", kind)
+                    self.send_header("Content-Length", str(len(body)))
+                    self.send_header("Cache-Control", "no-store")
+                    self.send_header("Referrer-Policy", "no-referrer")
+                    self.send_header("X-Content-Type-Options", "nosniff")
+                    self.send_header("X-Frame-Options", "DENY")
+                    self.send_header("Content-Security-Policy",
+                                     "default-src 'none'; script-src 'self'; style-src 'self'; "
+                                     "connect-src 'self'; frame-src 'self'; form-action 'none'; "
+                                     "base-uri 'none'; frame-ancestors 'none'")
                     self.end_headers()
                     self.wfile.write(body)
                 else:
