@@ -1,0 +1,154 @@
+"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const vm = require("node:vm");
+const {URL, URLSearchParams} = require("node:url");
+
+const source = fs.readFileSync(process.argv[2], "utf8");
+const FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+const E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
+const tournament = {
+  status:"RUNNING", champion:null, names:{
+    fischer:"Bobby Fischer",tal:"Mikhail Tal",lasker:"Emanuel Lasker",marshall:"Frank Marshall"
+  }, matches_completed:1, matches_total_generated:2,stop_requested:false,
+  bracket:[{round:1,matches:[
+    {id:"r01-m01",players:["fischer","tal"],score:{fischer:2,tal:0},
+     status:"COMPLETED",winner:"fischer",pairs_played:1},
+    {id:"r01-m02",players:["lasker","marshall"],score:{lasker:0.5,marshall:0.5},
+     status:"RUNNING",winner:null,pairs_played:0}
+  ]}]
+};
+const states=[
+  {fen:FEN,san:"Início",last:null,turn:"white",clocks:[600,600]},
+  {fen:E4,san:"e4",last:["e2","e4"],turn:"black",clocks:[598,600]}
+];
+const game=(id,white,black)=>({
+  id:id+":game-1",number:1,white,black,result:"*",status:"RUNNING",
+  live:true,updated_at:Date.now()/1000,states
+});
+const makeResponse=(match,attempt)=>{
+  const id=match||"r01-m02";
+  const historical=id==="r01-m01";
+  const folder=historical?(attempt===1?"old-1":"old-2"):"current";
+  const chosen=historical?game(folder,"Bobby Fischer","Mikhail Tal"):
+    game(folder,"Emanuel Lasker","Frank Marshall");
+  return {schema:"chesssim-live-board-v1",mode:"tournament",tournament,
+    duel:{folder,match_id:id,status:historical?"COMPLETED":"RUNNING",games:[chosen]},
+    selection:{match_id:id,attempt:attempt|| (historical?2:1)},
+    attempts:historical?
+      [{index:1,status:"COMPLETED",updated_at:1000},
+       {index:2,status:"COMPLETED",updated_at:2000}]:
+      [{index:1,status:"RUNNING",updated_at:3000}],
+    server_time:"2026-11-05T12:00:00Z"};
+};
+
+class FakeElement {
+  constructor(tag){
+    this.tagName=tag.toUpperCase();
+    this.children=[];this.attributes={};this.events={};
+    this.dataset={};this.value="";this.textContent="";
+    this.className="";this.scrollTop=0;
+    this.classList={
+      add:()=>{},
+      toggle:()=>{}
+    };
+  }
+  append(...items){this.children.push(...items);}
+  appendChild(item){this.children.push(item);return item;}
+  replaceChildren(...items){this.children=items;}
+  setAttribute(key,value){this.attributes[key]=value;}
+  addEventListener(name,listener){this.events[name]=listener;}
+}
+function descendants(node) {
+  return [node,...node.children.flatMap(descendants)];
+}
+function browser(initialHash="") {
+  const elements=new Map();
+  const events={};
+  const requests=[];
+  let hash=initialHash;
+  const location={
+    get hash(){return hash;},
+    set hash(value){
+      hash=value;
+      if(events.hashchange) events.hashchange();
+    }
+  };
+  const document={
+    getElementById(id){
+      if(!elements.has(id)) elements.set(id,new FakeElement("div"));
+      return elements.get(id);
+    },
+    createElement(tag){return new FakeElement(tag);},
+    createDocumentFragment(){return new FakeElement("fragment");},
+    addEventListener(name,listener){events[name]=listener;}
+  };
+  const fetch=async (uri)=>{
+    requests.push(uri);
+    const params=new URL("http://127.0.0.1:8765"+uri).searchParams;
+    const match=params.get("match");
+    const raw=params.get("attempt");
+    const attempt=raw?Number(raw):null;
+    return {ok:true,json:async()=>makeResponse(match,attempt)};
+  };
+  const context=vm.createContext({
+    document,window:{location,addEventListener(name,listener){events[name]=listener;}},
+    HTMLElement:FakeElement,URLSearchParams,fetch,Date,Math,Number,String,
+    setInterval(){return 1;},console
+  });
+  vm.runInContext(source,context,{filename:"monitor.js",timeout:3000});
+  return {elements,requests,location,events,context};
+}
+const flush=()=>new Promise(resolve=>setImmediate(resolve));
+(async()=>{
+  const app=browser();
+  await flush();
+  assert.equal(app.requests[0],"/api/state");
+  const panel=app.elements.get("bracket-panel");
+  assert.equal(panel.hidden,false);
+  const buttons=descendants(app.elements.get("bracket")).filter(n=>n.tagName==="BUTTON");
+  assert.equal(buttons.length,2,"both knockout matches rendered");
+  assert(buttons[0].attributes["aria-label"].includes("Bobby Fischer"));
+  assert.equal(app.elements.get("match-title").textContent,
+               "Emanuel Lasker × Frank Marshall");
+  assert(buttons[0].children.some(n=>n.tagName==="DIV"));
+
+  buttons[0].events.click();
+  await flush();
+  assert.equal(app.location.hash,"#match=r01-m01");
+  assert(app.requests.includes("/api/state?match=r01-m01"));
+  assert.equal(app.elements.get("match-title").textContent,
+               "Bobby Fischer × Mikhail Tal");
+  const attempts=app.elements.get("attempts");
+  assert.equal(attempts.children.length,3,"latest plus two saved attempts");
+  attempts.value="1";
+  attempts.events.change();
+  await flush();
+  assert.equal(app.location.hash,"#match=r01-m01&attempt=1");
+  assert(app.requests.includes("/api/state?match=r01-m01&attempt=1"));
+
+  const replay=browser(app.location.hash);
+  await flush();
+  assert(replay.requests.includes("/api/state?match=r01-m01&attempt=1"),
+         "historical replay survives reload");
+  assert.equal(replay.elements.get("match-title").textContent,
+               "Bobby Fischer × Mikhail Tal");
+
+  const oldOption=app.elements.get("attempts").children[1];
+  await vm.runInContext("poll()",app.context);
+  assert.equal(app.elements.get("attempts").children[1],oldOption,
+               "attempt dropdown must stay stable during refresh");
+
+  const pause=app.elements.get("pause");
+  pause.events.click();
+  assert.equal(pause.attributes["aria-pressed"],"true");
+  pause.events.click();
+  assert.equal(pause.attributes["aria-pressed"],"false");
+  app.elements.get("live").events.click();
+  await flush();
+  assert.equal(app.location.hash,"");
+  assert.equal(app.elements.get("match-title").textContent,
+               "Emanuel Lasker × Frank Marshall");
+  assert.equal(app.requests.at(-1),"/api/state");
+  console.log("Live bracket browser smoke: PASS");
+})().catch(error=>{console.error(error);process.exitCode=1;});

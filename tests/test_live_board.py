@@ -208,7 +208,10 @@ def test_static_assets_use_safe_text_updates_and_no_external_content(tmp_path):
     assert 'href="/app.css"' in html
     assert "https://" not in html and "http://" not in html
     assert "innerHTML" not in script and "eval(" not in script
-    assert "textContent" in script and 'fetch("/api/state"' in script
+    assert "textContent" in script and 'fetch("/api/state" + query' in script
+    assert 'id="bracket"' in html and 'id="attempts"' in html
+    assert "setSelection(match.id)" in script and "hashchange" in script
+    assert "URLSearchParams" in script and 'aria-pressed' in script
     assert 'id="pause"' in html and 'id="live"' in html
     assert 'id="white-clock"' in html and 'id="black-clock"' in html
 
@@ -315,3 +318,168 @@ def test_latest_corrupt_tournament_attempt_returns_503_not_old_game(tmp_path, mo
         body = failed.value.read().decode("utf-8")
         assert "Nao foi possivel ler" in body
         assert str(tmp_path) not in body
+
+
+@pytest.fixture
+def four_player_cup(tmp_path, monkeypatch):
+    monkeypatch.setattr(tournament, "_preflight", lambda root, slugs, preset: {
+        "engine_sha256": "test", "profile_sha256": {s: "test" for s in slugs},
+        "book_sha256": {}, "books_by_player": {s: [] for s in slugs}})
+    run = tmp_path / "copa-4"
+    state = tournament.create_tournament(
+        tmp_path, run, participants=["fischer", "tal", "lasker", "marshall"],
+        seed=2026, preset="rapid")
+    return run, state
+
+
+def attempt_folder(run, match, name):
+    a, b = match["players"]
+    return run / "matches" / match["id"] / "duels" / f"{a}-vs-{b}" / name
+
+
+def test_api_navigates_previous_matches_and_attempts_without_disk_path_input(four_player_cup):
+    run, state = four_player_cup
+    match1, match2 = state["rounds"][0]["matches"]
+    first = attempt_folder(run, match1, "20261105T100000Z-aaa")
+    second = attempt_folder(run, match1, "20261105T100010Z-bbb")
+    write_duel(first, "INCOMPLETE")
+    write_game(first, 1, moves=OPENING[:1])
+    write_duel(second, "COMPLETED", games=[{"status": "COMPLETED"}] * 2)
+    write_game(second, 1, moves=OPENING, final=True)
+    write_game(second, 2, moves=OPENING, final=True,
+               white="Mikhail Tal", black="Bobby Fischer")
+    selected = live_board.snapshot(run, match_id=match1["id"], attempt=1)
+    assert selected["selection"] == {"match_id": match1["id"], "attempt": 1}
+    assert selected["duel"]["folder"] == first.name
+    assert selected["duel"]["status"] == "INCOMPLETE"
+    assert selected["duel"]["games"][0]["result"] == "*"
+    assert [a["status"] for a in selected["attempts"]] == ["INCOMPLETE", "COMPLETED"]
+    with server_at(run) as base:
+        from urllib.parse import urlencode
+        params = urlencode({"match": match1["id"], "attempt": 2})
+        with urlopen(base + "/api/state?" + params, timeout=3) as response:
+            data = json.load(response)
+        assert data["duel"]["folder"] == second.name
+        assert len(data["duel"]["games"]) == 2
+        assert data["duel"]["games"][1]["white"] == "Mikhail Tal"
+        assert data["selection"]["attempt"] == 2
+        empty = urlencode({"match": match2["id"]})
+        with urlopen(base + "/api/state?" + empty, timeout=3) as response:
+            data = json.load(response)
+        assert data["duel"] is None
+        assert data["selection"]["match_id"] == match2["id"]
+        assert len(data["attempts"]) == 0
+        with urlopen(base + "/api/state", timeout=3) as response:
+            default = json.load(response)
+        assert default["duel"]["folder"] == second.name
+
+
+def test_reject_unknown_match_and_invalid_attempt_query(four_player_cup):
+    run, state = four_player_cup
+    match = state["rounds"][0]["matches"][0]
+    for params in ({"match": "r99-m99"}, {"match": "../secret"},
+                   {"match": match["id"], "attempt": "0"},
+                   {"match": match["id"], "attempt": "100000"},
+                   {"match": match["id"], "attempt": "-1"},
+                   {"attempt": "1"}, {"unknown": "x"}):
+        from urllib.parse import urlencode
+        with server_at(run) as base:
+            with pytest.raises(HTTPError) as exc:
+                urlopen(base + "/api/state?" + urlencode(params), timeout=3)
+            assert exc.value.code == 400
+    with server_at(run) as base:
+        for suffix in ("match=r01-m01&match=r01-m02",
+                       "match=r01-m01&attempt=1&x=1"):
+            with pytest.raises(HTTPError) as exc:
+                urlopen(base + "/api/state?" + suffix, timeout=3)
+            assert exc.value.code == 400
+    with pytest.raises(live_board.InvalidSelection):
+        live_board.snapshot(run, match_id="r01-m99")
+    with pytest.raises(live_board.InvalidSelection):
+        live_board.snapshot(run, match_id=match["id"], attempt=1)
+
+
+def test_scores_rounds_and_replays_survive_monitor_restart(four_player_cup):
+    run, state = four_player_cup
+    left, right = state["rounds"][0]["matches"]
+    for match in (left, right):
+        match["attempts"].append({"folder": "saved", "results": ["1-0", "0-1"]})
+        match["winner"] = match["players"][0]
+        match["status"] = "COMPLETED"
+        folder = attempt_folder(run, match, "saved")
+        write_duel(folder, "COMPLETED", games=[{"status": "COMPLETED"}] * 2)
+        write_game(folder, 1, final=True)
+        write_game(folder, 2, final=True)
+    finalists = [m["winner"] for m in (left, right)]
+    state["rounds"].append(tournament._round(2, finalists))
+    tournament._save(run, state)
+    with server_at(run) as base:
+        before = load_api(base)
+        assert len(before["tournament"]["bracket"]) == 2
+        assert before["tournament"]["bracket"][0]["matches"][0]["winner"] == finalists[0]
+        assert before["tournament"]["bracket"][0]["matches"][0]["score"][finalists[0]] == 2.0
+    with server_at(run) as base:
+        after = load_api(base)
+        assert after["tournament"]["bracket"] == before["tournament"]["bracket"]
+        with urlopen(base + "/api/state?match=" + left["id"], timeout=3) as response:
+            historical = json.load(response)
+        assert len(historical["duel"]["games"]) == 2
+        assert historical["duel"]["games"][0]["states"][-1]["san"] == "Nc6"
+        assert historical["tournament"]["rounds"] == 2
+        assert historical["tournament"]["names"][finalists[0]]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js not installed")
+def test_bracket_browser_interaction_contract():
+    root = Path(__file__).resolve().parents[1]
+    harness = root / "tests" / "assets" / "monitor_browser_harness.cjs"
+    javascript = root / "src" / "chesssim" / "data" / "monitor.js"
+    result = subprocess.run(["node", str(harness), str(javascript)],
+                            capture_output=True, text=True, timeout=15, check=False)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "smoke: PASS" in result.stdout
+
+
+def test_internal_symlink_cannot_relabel_other_match_as_history(four_player_cup):
+    run, state = four_player_cup
+    first, second = state["rounds"][0]["matches"]
+    target = attempt_folder(run, second, "genuine")
+    write_duel(target, "COMPLETED")
+    write_game(target, 1, final=True)
+    impostor = attempt_folder(run, first, "impostor")
+    impostor.mkdir(parents=True)
+    (impostor / "summary.json").symlink_to(target / "summary.json")
+    with pytest.raises(ValueError, match="Link simbólico"):
+        live_board.snapshot(run, match_id=first["id"])
+
+
+def test_internal_pgn_symlink_refused_for_archived_attempt(tmp_path):
+    folder = tmp_path / "duel"
+    write_duel(folder)
+    original = write_game(folder, 2, moves=OPENING, final=True)
+    (folder / "jogo_1.partial.pgn").symlink_to(original)
+    with pytest.raises(ValueError, match="Link simbólico"):
+        live_board.snapshot(folder)
+
+
+def test_excessive_duel_summary_is_refused_before_json_parse(tmp_path):
+    folder = tmp_path / "duel"
+    write_duel(folder)
+    (folder / "summary.json").write_bytes(b" " * (256 * 1024 + 1))
+    with pytest.raises(ValueError, match="excedeu limite"):
+        live_board.snapshot(folder)
+
+
+def test_bracket_and_selection_use_same_manifest_read(four_player_cup, monkeypatch):
+    run, _ = four_player_cup
+    original = tournament.load_tournament
+    calls = []
+
+    def spy(folder):
+        calls.append(folder)
+        return original(folder)
+
+    monkeypatch.setattr(tournament, "load_tournament", spy)
+    report = live_board.snapshot(run)
+    assert report["tournament"]["participants"] == 4
+    assert len(calls) == 1

@@ -10,8 +10,45 @@ let feed = null;
 let pinned = null;
 let cursor = 0;
 let activeKey = "";
-let selectionSignature = "";
+let selectionSignature = null;
+let attemptSignature = null;
+let bracketSignature = null;
 let fetching = false;
+let requestVersion = 0;
+
+function readSelection() {
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  const match = params.get("match");
+  if (!match || !/^r[0-9]{2}-m[0-9]{2}$/.test(match)) {
+    return {match: null, attempt: null};
+  }
+  const raw = params.get("attempt");
+  const attempt = raw && /^[1-9][0-9]{0,4}$/.test(raw) ? Number(raw) : null;
+  return {match, attempt};
+}
+let selection = readSelection();
+
+function setSelection(match, attempt=null) {
+  const fragment = match ? "#match=" + encodeURIComponent(match) +
+    (attempt !== null ? "&attempt=" + encodeURIComponent(String(attempt)) : "") : "";
+  if (window.location.hash === fragment) {
+    applySelection();
+  } else {
+    window.location.hash = fragment;
+  }
+}
+function applySelection() {
+  selection = readSelection();
+  requestVersion++;
+  pinned = null;
+  activeKey = "";
+  cursor = 0;
+  selectionSignature = null;
+  attemptSignature = null;
+  bracketSignature = null;
+  poll();
+}
+window.addEventListener("hashchange", applySelection);
 
 function availableGames() {
   return feed && feed.duel && Array.isArray(feed.duel.games) ? feed.duel.games : [];
@@ -31,12 +68,19 @@ function freezeView() {
     }
   }
 }
-function goLive() {
+function resumeView() {
   pinned = null;
   activeKey = "";
   const game = currentGame();
   cursor = game ? game.states.length - 1 : 0;
   render();
+}
+function goLive() {
+  if (selection.match) {
+    setSelection(null);
+    return;
+  }
+  resumeView();
 }
 function stepTo(ply) {
   freezeView();
@@ -157,8 +201,106 @@ function updateSelector() {
     selector.appendChild(option);
   }
 }
+function updateAttemptSelector() {
+  const select = $("attempts");
+  const attempts = feed && Array.isArray(feed.attempts) ? feed.attempts : [];
+  const match = feed && feed.selection && feed.selection.match_id;
+  // O timestamp muda a cada lance; não recriar o select enquanto o usuário o opera.
+  const signature = JSON.stringify({
+    match, attempts: attempts.map(a => [a.index, a.status])
+  });
+  if (signature !== attemptSignature) {
+    attemptSignature = signature;
+    select.replaceChildren();
+    const latest = document.createElement("option");
+    latest.value = "";
+    latest.textContent = attempts.length ?
+      "Última tentativa (automática)" : "Nenhuma tentativa registrada";
+    select.appendChild(latest);
+    for (const attempt of attempts) {
+      const option = document.createElement("option");
+      option.value = String(attempt.index);
+      option.textContent = "Tentativa " + attempt.index + " · " + attempt.status;
+      select.appendChild(option);
+    }
+  }
+  select.disabled = !match || attempts.length === 0;
+  select.value = selection.attempt === null ? "" : String(selection.attempt);
+}
+function renderBracket() {
+  const panel = $("bracket-panel");
+  const tournament = feed && feed.tournament;
+  panel.hidden = !tournament;
+  if (!tournament) return;
+  const bracket = Array.isArray(tournament.bracket) ? tournament.bracket : [];
+  const names = tournament.names || {};
+  const displayName = (slug) => names[slug] || slug;
+  const current = selection.match || (feed.selection && feed.selection.match_id);
+  $("bracket-status").textContent = tournament.champion ?
+    "Campeão: " + displayName(tournament.champion) + " · Torneio encerrado" :
+    tournament.matches_completed + " confrontos resolvidos · " +
+    (tournament.status || "Aguardando") + " · Pontos acumulados por confronto";
+  const signature = JSON.stringify({bracket, current, champion:tournament.champion});
+  if (signature === bracketSignature) return;
+  bracketSignature = signature;
+  const holder = $("bracket");
+  const oldScroll = holder.scrollTop;
+  const fragment = document.createDocumentFragment();
+  for (const rd of bracket) {
+    const group = document.createElement("section");
+    group.className = "round-group";
+    const title = document.createElement("h3");
+    title.className = "round-title";
+    title.textContent = "Rodada " + rd.round;
+    const meta = document.createElement("span");
+    meta.className = "round-meta";
+    meta.textContent = " · " + rd.matches.length + " confronto(s)";
+    title.appendChild(meta);
+    group.appendChild(title);
+    for (const match of rd.matches) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "bracket-match";
+      button.classList.toggle("selected", match.id === current);
+      button.setAttribute("aria-pressed", match.id === current ? "true" : "false");
+      button.setAttribute("aria-label", "Ver " + match.id + ": " +
+        match.players.map(displayName).join(" contra "));
+      const label = document.createElement("div");
+      label.className = "match-label";
+      const id = document.createElement("span");
+      id.textContent = match.id;
+      const status = document.createElement("span");
+      status.textContent = match.status;
+      label.append(id, status);
+      button.appendChild(label);
+      for (const slug of match.players) {
+        const row = document.createElement("div");
+        row.className = "match-line";
+        if (match.winner === slug) row.classList.add("winner");
+        if (match.winner && match.winner !== slug) row.classList.add("loser");
+        const name = document.createElement("span");
+        name.className = "match-name";
+        name.textContent = displayName(slug);
+        const score = document.createElement("span");
+        score.className = "match-score";
+        const value = match.score && match.score[slug];
+        score.textContent = (typeof value === "number" ?
+          value.toLocaleString("pt-BR", {maximumFractionDigits:1}) : "—") + " pt";
+        row.append(name, score);
+        button.appendChild(row);
+      }
+      button.addEventListener("click", () => setSelection(match.id));
+      group.appendChild(button);
+    }
+    fragment.appendChild(group);
+  }
+  holder.replaceChildren(fragment);
+  holder.scrollTop = oldScroll;
+}
 function render() {
   updateSelector();
+  updateAttemptSelector();
+  renderBracket();
   const game = currentGame();
   const state = game ? game.states[Math.min(cursor, game.states.length - 1)] :
                 {fen:initialFEN,last:null,turn:"white",clocks:[null,null]};
@@ -166,14 +308,20 @@ function render() {
   paintClocks();
   const tournament = feed && feed.tournament;
   const duel = feed && feed.duel;
-  const names = game ? game.white + " × " + game.black : "Aguardando partida";
+  const chosenMatch = tournament && feed.selection &&
+    tournament.bracket.flatMap(rd => rd.matches)
+      .find(m => m.id === feed.selection.match_id);
+  const names = game ? game.white + " × " + game.black : chosenMatch ?
+    chosenMatch.players.map(slug => tournament.names[slug] || slug).join(" × ") :
+    "Aguardando partida";
   $("match-title").textContent = names;
   $("white-name").textContent = game ? game.white : "—";
   $("black-name").textContent = game ? game.black : "—";
   $("headline").textContent = game && cursor ? 
     Math.ceil(cursor / 2) + (cursor % 2 ? ". " : "... ") + state.san :
     "Posição inicial";
-  $("match-status").textContent = !duel ? "Nenhum confronto iniciado." :
+  $("match-status").textContent = !duel ?
+    (chosenMatch ? "Confronto ainda sem partidas registradas." : "Nenhum confronto iniciado.") :
     "Confronto: " + duel.status + (game ? " · Partida: " + game.status +
        " · Resultado: " + game.result : "");
   $("tournament-meta").textContent = tournament ?
@@ -190,6 +338,7 @@ function render() {
   $("pause").setAttribute("aria-pressed", pinned ? "true" : "false");
   $("view-status").textContent = pinned ?
     "Visualização pausada. O torneio continua jogando." :
+    selection.match ? "Revisão histórica selecionada; o torneio pode seguir em outra rodada." :
     "A visualização acompanha o lance mais recente.";
   $("updated").textContent = game ?
     "Última atualização: " + new Date(game.updated_at * 1000).toLocaleTimeString("pt-BR") :
@@ -200,10 +349,15 @@ function render() {
 async function poll() {
   if (fetching) return;
   fetching = true;
+  const revision = requestVersion;
   try {
-    const response = await fetch("/api/state", {cache:"no-store"});
+    const query = selection.match ?
+      "?match=" + encodeURIComponent(selection.match) +
+      (selection.attempt !== null ? "&attempt=" + String(selection.attempt) : "") : "";
+    const response = await fetch("/api/state" + query, {cache:"no-store"});
     if (!response.ok) throw new Error("HTTP " + response.status);
     const next = await response.json();
+    if (revision !== requestVersion) return;
     if (next.schema !== "chesssim-live-board-v1") throw new Error("Formato inesperado");
     feed = next;
     if (!pinned) {
@@ -218,6 +372,7 @@ async function poll() {
     $("connection").className = "connection error";
   } finally {
     fetching = false;
+    if (revision !== requestVersion) poll();
   }
 }
 $("games").addEventListener("change", () => {
@@ -229,7 +384,13 @@ $("games").addEventListener("change", () => {
     render();
   }
 });
-$("pause").addEventListener("click", () => pinned ? goLive() : (freezeView(),render()));
+$("attempts").addEventListener("change", () => {
+  const match = selection.match || (feed && feed.selection && feed.selection.match_id);
+  if (!match) return;
+  const raw = $("attempts").value;
+  setSelection(match, raw ? Number(raw) : null);
+});
+$("pause").addEventListener("click", () => pinned ? resumeView() : (freezeView(),render()));
 $("live").addEventListener("click", goLive);
 $("start").addEventListener("click", () => stepTo(0));
 $("end").addEventListener("click", () => {

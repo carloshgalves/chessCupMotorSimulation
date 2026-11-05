@@ -54,3 +54,24 @@ button.accent{flex:1;font-size:.81rem}
 .footer-note{font-size:.8rem}.footer-note code{color:#eed6a2}
 @media(max-width:870px){.content{grid-template-columns:1fr}.arena{max-width:680px;width:100%;margin:auto}.board-shell{max-width:none}.sidebar{max-width:680px;width:100%;margin:auto}}
 @media(max-width:470px){.layout{padding:12px}.topbar{flex-direction:column;align-items:flex-start;margin-bottom:12px}.player{padding:8px}.clock{min-width:90px;font-size:1.35rem;padding:7px}.square{font-size:clamp(27px,8.5vw,46px)}.board{min-height:0}.panel{padding:14px}.buttons{gap:3px}.buttons button{padding:7px}}
+
+
+/* Torneio mata-mata: resultados oficiais e histórico selecionável */
+.bracket-panel[hidden]{display:none}
+.bracket-panel h2{margin:6px 0 8px}
+#bracket{max-height:440px;overflow-y:auto;display:grid;gap:12px;padding:2px 3px 3px 0;scrollbar-color:#5f7f8a #14262d}
+.round-group{border-top:1px solid var(--border);padding-top:10px;display:grid;gap:7px}
+.round-title{color:#bcd0d4;font-weight:740;font-size:.87rem;margin:0 0 2px}
+.round-meta{font-size:.73rem;color:var(--muted);font-weight:500}
+.bracket-match{width:100%;padding:10px 11px;text-align:left;display:grid;gap:6px;border-radius:9px;background:#203640;border:1px solid #3c5963;min-height:62px}
+.bracket-match:hover{background:#315261}
+.bracket-match.selected{border-color:#e6c77d;box-shadow:inset 0 0 0 1px #d7b765}
+.bracket-match .match-label{display:flex;justify-content:space-between;gap:7px;color:#b4c9cd;font-size:.7rem;letter-spacing:.045em}
+.bracket-match .match-line{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.bracket-match .match-name{font-weight:640;font-size:.9rem;overflow-wrap:anywhere}
+.bracket-match .match-score{font-size:.91rem;flex-shrink:0;font-variant-numeric:tabular-nums;color:#fff}
+.bracket-match .winner{color:#a7f0ba}
+.bracket-match .match-line.loser{opacity:.68}
+.bracket-match .match-status{font-size:.75rem;color:#aec1c6}
+#attempts:disabled,#games:disabled{opacity:.64;cursor:not-allowed}
+@media(max-width:870px){#bracket{max-height:310px}}

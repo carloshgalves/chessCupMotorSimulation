@@ -59,6 +59,42 @@ python -m chesssim tournament-stop --run runs/copa-piloto-4
 Isso é distinto de pausar apenas a visualização. Depois de liberada a parada,
 a retomada dos confrontos incompletos exige `--retry-incomplete`.
 
+## Chaveamento, classificação e histórico (#23)
+
+No monitor de um torneio, a seção **Chaveamento da Copa** exibe todas as
+rodadas já criadas, os dois participantes de cada confronto, pontuação
+acumulada **dentro do confronto**, vencedor e estado de resolução. A
+pontuação não é rating Elo nem classificação geral por força: o vencedor
+avança à rodada seguinte, e um empate não resolvido permanece sinalizado.
+
+- Clique em um confronto de qualquer rodada para selecionar os PGNs
+  anteriores. A escolha é feita por identificador do manifesto (por
+  exemplo, `r01-m01`), **sem aceitar caminho de arquivo fornecido pelo
+  navegador**.
+- Na caixa **Tentativa**, é possível escolher um par de jogos anterior,
+  inclusive um interrompido (claramente rotulado como incompleto).
+  As partidas não concluídas não viram resultados oficiais na tabela.
+- Selecione **Jogo 1** ou **Jogo 2** e use a barra ou setas do replay
+  para navegar pelos lances. Para voltar à transmissão atual, clique
+  em **Voltar ao vivo**.
+- O confronto e a tentativa selecionados ficam no fragmento da URL
+  (exemplo: `#match=r01-m01&attempt=2`). É possível recarregar a página
+  ou compartilhar essa referência **somente com outro navegador no mesmo
+  computador**. Não são armazenadas cópias de resultados no navegador.
+- Os dados são lidos do manifesto persistido e dos PGNs a cada atualização.
+  Fechar/reabrir o navegador ou o monitor não descarta a tabela; o torneio
+  continua independente da aba. Uma seleção para confronto ainda não
+  iniciado exibe o confronto pendente, não inventa partidas.
+- A seleção explícita não acompanha automaticamente outro confronto:
+  o botão **Voltar ao vivo** retorna ao mais recente do torneio.
+
+A API local somente leitura aceita `/api/state?match=r01-m01` e
+`/api/state?match=r01-m01&attempt=2`. Confrontos inexistentes,
+tentativas fora do histórico e parâmetros desconhecidos são recusados
+com HTTP 400, sem revelar caminhos locais. Alterações de resultados
+continuam sendo feitas exclusivamente pelo orquestrador, nunca por
+essa interface.
+
 ## Segurança e limitações
 
 - O servidor escuta **somente `127.0.0.1`**, não abre a interface à rede,
