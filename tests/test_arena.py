@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 import json
-from pathlib import Path
 import threading
 import time
 from urllib.error import HTTPError
@@ -14,7 +13,6 @@ import chess.pgn
 import pytest
 
 from chesssim import arena
-from chesssim.catalog import find_player
 
 
 FOOLS_MATE = ("f2f3", "e7e5", "g2g4", "d8h4")
