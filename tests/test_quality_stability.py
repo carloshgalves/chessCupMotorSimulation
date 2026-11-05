@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from copy import deepcopy
 import json
-from pathlib import Path
 
 import chess
 import chess.engine
