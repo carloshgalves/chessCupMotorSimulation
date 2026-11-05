@@ -1,7 +1,6 @@
 """Linux subprocess integration: UCI children terminate after a cooperative stop."""
 from __future__ import annotations
 
-import os
 from pathlib import Path
 import sys
 import time
