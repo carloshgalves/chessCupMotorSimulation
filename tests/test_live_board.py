@@ -211,7 +211,6 @@ def test_static_assets_use_safe_text_updates_and_no_external_content(tmp_path):
 
 
 def test_cli_watch_appears_in_help(capsys):
-    assert main(["watch", "--help"]) == 0 if False else True
     # argparse's built-in help exits cleanly instead of returning to main.
     with pytest.raises(SystemExit) as exited:
         main(["watch", "--help"])
