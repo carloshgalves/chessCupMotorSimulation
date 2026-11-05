@@ -205,7 +205,10 @@ function updateAttemptSelector() {
   const select = $("attempts");
   const attempts = feed && Array.isArray(feed.attempts) ? feed.attempts : [];
   const match = feed && feed.selection && feed.selection.match_id;
-  const signature = JSON.stringify({match, attempts});
+  // O timestamp muda a cada lance; não recriar o select enquanto o usuário o opera.
+  const signature = JSON.stringify({
+    match, attempts: attempts.map(a => [a.index, a.status])
+  });
   if (signature !== attemptSignature) {
     attemptSignature = signature;
     select.replaceChildren();
