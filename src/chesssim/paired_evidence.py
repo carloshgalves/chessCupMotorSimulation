@@ -190,8 +190,24 @@ def _strength(quality: dict, games: list[dict]) -> tuple[dict, dict]:
         value = row.get("cp_loss")
         if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
             raise ValueError("Quality report has invalid centipawn loss")
+        if type(row.get("mate_affected")) is not bool:
+            raise ValueError("Quality decision must explicitly classify mate-affected scores")
+        best, played = row.get("best_eval_cp"), row.get("played_eval_cp")
+        if best is not None and played is not None:
+            if (type(best) not in (int, float) or
+                    type(played) not in (int, float) or
+                    not math.isfinite(best) or not math.isfinite(played)):
+                raise ValueError("Quality report has non-finite engine evaluations")
+            raw = best - played
+            original_gap = row.get("raw_gap_cp")
+            if original_gap is not None and (
+                    type(original_gap) not in (int, float) or
+                    not math.isfinite(original_gap) or abs(original_gap - raw) > 1e-8):
+                raise ValueError("Quality report has inconsistent raw centipawn gap")
+            if abs(max(0, raw) - value) > 1e-8:
+                raise ValueError("Quality report has inconsistent centipawn loss")
         all_counts["independent_quality_decisions"] += 1
-        if row.get("mate_affected"):
+        if row["mate_affected"]:
             all_counts["mate_affected_excluded_from_cp_mean"] += 1
         else:
             per_game[gi][match["player"]].append(value)
@@ -306,8 +322,13 @@ def paired_evidence(pgn: Path, quality_json: Path, out: Path, *,
                     for feature in FEATURES
                 },
             }
+        total_played_moves = sum(
+            g["_features"][player][phase]["moves"]
+            for g in owned for phase in PHASES
+        )
         player_reports[player] = {
             "distinct_games": len(owned),
+            "total_played_moves": total_played_moves,
             "completed_outcomes": {k: result_counts[k] for k in ("win", "draw", "loss")},
             "incomplete_results_excluded": result_counts[None],
             "strength": {
@@ -317,7 +338,11 @@ def paired_evidence(pgn: Path, quality_json: Path, out: Path, *,
                 "decisions_non_mate": sum(
                     len(strength[g["source_game_index"]][player]) for g in owned
                 ),
-                "warning": "CP values use sampled, potentially non-equivalent chess positions; not Elo.",
+                "non_mate_sampled_move_fraction": (
+                    sum(len(strength[g["source_game_index"]][player]) for g in owned)
+                    / total_played_moves if total_played_moves else None
+                ),
+                "warning": "CP values cover sampled, potentially non-equivalent chess positions; non-mate coverage is shown explicitly, not Elo.",
             },
             "style": per_phase,
         }
@@ -344,6 +369,7 @@ def paired_evidence(pgn: Path, quality_json: Path, out: Path, *,
                     a: mean(aa) if aa else None,
                     b: mean(bb) if bb else None,
                 },
+                "non_mate_decisions_sampled": {a: len(aa), b: len(bb)},
                 "paired_cp_difference": difference,
             })
         style = {
