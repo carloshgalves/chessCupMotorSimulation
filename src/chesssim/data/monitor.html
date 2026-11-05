@@ -39,7 +39,16 @@
           <p id="match-status">Nenhum lance registrado.</p>
           <label for="games">Partida exibida</label>
           <select id="games" aria-label="Selecionar partida"></select>
+          <label for="attempts">Tentativa do confronto (histórico)</label>
+          <select id="attempts" aria-label="Selecionar tentativa anterior"></select>
           <div class="small-meta" id="tournament-meta">—</div>
+        </section>
+        <section class="panel bracket-panel" id="bracket-panel" hidden>
+          <div class="panel-kicker">CLASSIFICAÇÃO · MATA-MATA</div>
+          <h2>Chaveamento da Copa</h2>
+          <p id="bracket-status">Aguardando confrontos.</p>
+          <div id="bracket" aria-label="Rodadas e confrontos do torneio"></div>
+          <p class="hint">Pontuação dos pares disputados. Vitória no confronto avança à rodada seguinte.</p>
         </section>
         <section class="panel history">
           <div class="panel-kicker">LANCES</div>
