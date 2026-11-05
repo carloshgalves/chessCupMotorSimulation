@@ -468,3 +468,18 @@ def test_excessive_duel_summary_is_refused_before_json_parse(tmp_path):
     (folder / "summary.json").write_bytes(b" " * (256 * 1024 + 1))
     with pytest.raises(ValueError, match="excedeu limite"):
         live_board.snapshot(folder)
+
+
+def test_bracket_and_selection_use_same_manifest_read(four_player_cup, monkeypatch):
+    run, _ = four_player_cup
+    original = tournament.load_tournament
+    calls = []
+
+    def spy(folder):
+        calls.append(folder)
+        return original(folder)
+
+    monkeypatch.setattr(tournament, "load_tournament", spy)
+    report = live_board.snapshot(run)
+    assert report["tournament"]["participants"] == 4
+    assert len(calls) == 1
