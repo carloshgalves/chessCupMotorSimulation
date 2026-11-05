@@ -485,3 +485,50 @@ def test_session_metadata_id_and_state_are_strictly_validated(rodent_stub):
     path.write_text(json.dumps(content), encoding="utf-8")
     with arena_server(rodent_stub) as (_, base):
         assert api(base)["session"]["id"] == location.name
+
+
+
+def test_terminal_checkpoint_and_busy_are_atomically_published(rodent_stub, monkeypatch):
+    """A terminal status must never be readable while busy still says True."""
+    entered = threading.Event()
+    release = threading.Event()
+    reader_started = threading.Event()
+    reader_done = threading.Event()
+    result = []
+
+    def broken(*args, **kwargs):
+        raise RuntimeError("synthetic crash")
+
+    with arena_server(rodent_stub, runner=broken) as (server, base):
+        manager = server.arena_manager
+        original_save = manager._save
+
+        def delay_terminal_save(folder, state):
+            if state["status"] == "FAILED":
+                entered.set()
+                assert release.wait(timeout=4)
+            return original_save(folder, state)
+
+        monkeypatch.setattr(manager, "_save", delay_terminal_save)
+        with post(base, "/api/arena/launch", GOOD, server.arena_token) as response:
+            assert response.status == 202
+        assert entered.wait(timeout=3)
+
+        def observe():
+            reader_started.set()
+            result.append(manager.status())
+            reader_done.set()
+
+        reader = threading.Thread(target=observe, daemon=True)
+        reader.start()
+        try:
+            assert reader_started.wait(timeout=2)
+            assert not reader_done.wait(timeout=0.05), (
+                "A terminal checkpoint cannot be observed before releasing busy"
+            )
+        finally:
+            release.set()
+            reader.join(timeout=3)
+        assert reader_done.is_set()
+        assert result[0]["busy"] is False
+        assert result[0]["session"]["status"] == "FAILED"
