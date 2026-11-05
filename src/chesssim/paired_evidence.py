@@ -76,8 +76,6 @@ def _feature_flags(board, move) -> dict:
 
 
 def _read_games(pgn: Path, *, opening_plies: int) -> tuple[list[dict], list[dict]]:
-    import chess.pgn
-
     all_games = []
     seen = set()
     for index, game in enumerate(_parse_games(pgn)):
