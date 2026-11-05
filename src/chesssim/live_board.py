@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib.resources import files
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 import json
 import re
 
@@ -17,6 +17,10 @@ import chess
 import chess.pgn
 
 MAX_PGN_BYTES = 2 * 1024 * 1024
+class InvalidSelection(ValueError):
+    """Client-selected match or attempt is not part of the tournament."""
+
+
 SCHEMA = "chesssim-live-board-v1"
 _ASSETS = {"/": ("monitor.html", "text/html; charset=utf-8"),
            "/app.js": ("monitor.js", "text/javascript; charset=utf-8"),
@@ -137,25 +141,97 @@ def _latest_duel(run: Path, state: dict) -> tuple[Path | None, str | None]:
     _, folder, match_id = max(candidates, key=lambda row: (row[0], str(row[1])))
     return folder, match_id
 
-def snapshot(directory: Path) -> dict:
+
+def _match_attempts(run: Path, match: dict) -> list[dict]:
+    """Enumerate saved duels, indexed by immutable attempt folder ordering."""
+    match_id = match["id"]
+    a, b = match["players"]
+    base = run / "matches" / match_id / "duels" / f"{a}-vs-{b}"
+    attempts = []
+    for summary_file in sorted(base.glob("*/summary.json")):
+        checked = _checked_file(run, summary_file)
+        folder = checked.parent
+        if checked.stat().st_size > 256 * 1024:
+            raise ValueError("Resumo excedeu limite de visualização")
+        metadata = json.loads(checked.read_text(encoding="utf-8"))
+        if not isinstance(metadata, dict) or not isinstance(metadata.get("status"), str):
+            raise ValueError("Resumo de tentativa inválido")
+        timestamps = [checked.stat().st_mtime]
+        for p in folder.glob("jogo_*.pgn"):
+            timestamps.append(_checked_file(run, p).stat().st_mtime)
+        for p in folder.glob("jogo_*.partial.pgn"):
+            timestamps.append(_checked_file(run, p).stat().st_mtime)
+        attempts.append({"index": len(attempts) + 1, "folder": folder,
+                         "status": metadata["status"], "updated_at": max(timestamps)})
+    return attempts
+
+
+def snapshot(directory: Path, *, match_id: str | None = None,
+             attempt: int | None = None) -> dict:
     run = directory.expanduser().resolve(strict=True)
     if not run.is_dir():
         raise ValueError("Informe uma pasta de torneio ou confronto")
-    match_id = None
     tournament = None
+    folder = None
+    selected_match = None
+    attempts = []
+    selected_attempt = None
     if (run / "tournament.json").is_file():
-        from .tournament import tournament_status
+        from .tournament import load_tournament, tournament_status
+        state = load_tournament(run)
         tournament = tournament_status(run)
-        folder, match_id = _latest_duel(run, json.loads(
-            _checked_file(run, run / "tournament.json").read_text(encoding="utf-8")))
+        matches = {m["id"]: m for rd in state["rounds"] for m in rd["matches"]}
+        if match_id is not None and match_id not in matches:
+            raise InvalidSelection("Confronto não pertence a este torneio")
+        if match_id is None:
+            folder, selected_match = _latest_duel(run, state)
+        else:
+            selected_match = match_id
+        if selected_match is not None:
+            attempts = _match_attempts(run, matches[selected_match])
+            if attempt is not None:
+                if attempt < 1 or attempt > len(attempts):
+                    raise InvalidSelection("Tentativa inexistente neste confronto")
+                selected_attempt = attempt
+                folder = attempts[attempt - 1]["folder"]
+            elif attempts:
+                chosen = max(attempts, key=lambda x: (x["updated_at"], str(x["folder"])))
+                selected_attempt = chosen["index"]
+                folder = chosen["folder"]
+        elif attempt is not None:
+            raise InvalidSelection("Tentativa sem confronto")
     elif (run / "summary.json").is_file():
+        if match_id is not None or attempt is not None:
+            raise InvalidSelection("Seleção de confronto requer torneio")
         folder = run
     else:
         raise ValueError("Pasta não contém manifesto de torneio nem resumo de duelo")
-    duel = _duel_snapshot(run, folder, match_id=match_id) if folder else None
+    duel = _duel_snapshot(run, folder, match_id=selected_match) if folder else None
+    public_attempts = [{k: a[k] for k in ("index", "status", "updated_at")}
+                       for a in attempts]
     return {"schema": SCHEMA, "mode": "tournament" if tournament else "duel",
             "tournament": tournament, "duel": duel,
+            "selection": {"match_id": selected_match, "attempt": selected_attempt},
+            "attempts": public_attempts,
             "server_time": datetime.now(timezone.utc).isoformat()}
+
+
+def _parse_selection(query: str) -> tuple[str | None, int | None]:
+    try:
+        params = parse_qs(query, keep_blank_values=True, max_num_fields=2)
+    except ValueError as exc:
+        raise InvalidSelection("Consulta inválida") from exc
+    if (set(params) - {"match", "attempt"} or
+            any(len(values) != 1 for values in params.values())):
+        raise InvalidSelection("Consulta inválida")
+    match_id = params.get("match", [None])[0]
+    raw_attempt = params.get("attempt", [None])[0]
+    if match_id is not None and not re.fullmatch(r"r[0-9]{2}-m[0-9]{2}", match_id):
+        raise InvalidSelection("Identificador de confronto inválido")
+    if raw_attempt is not None and (match_id is None or
+            not re.fullmatch(r"[1-9][0-9]{0,4}", raw_attempt)):
+        raise InvalidSelection("Número de tentativa inválido")
+    return match_id, int(raw_attempt) if raw_attempt is not None else None
 
 
 def make_handler(directory: Path):
@@ -186,11 +262,17 @@ def make_handler(directory: Path):
             if host not in permitted:
                 self._reply(403, b"Forbidden", "text/plain; charset=utf-8")
                 return
-            route = urlsplit(self.path).path
+            url = urlsplit(self.path)
+            route = url.path
             if route == "/api/state":
                 try:
-                    payload = json.dumps(snapshot(root), ensure_ascii=False,
-                                         allow_nan=False).encode("utf-8")
+                    match_id, attempt = _parse_selection(url.query)
+                    payload = json.dumps(snapshot(root, match_id=match_id, attempt=attempt),
+                                         ensure_ascii=False, allow_nan=False).encode("utf-8")
+                except InvalidSelection:
+                    self._reply(400, b'{"error":"Selecao de partida invalida"}',
+                                "application/json; charset=utf-8")
+                    return
                 except (ValueError, FileNotFoundError, OSError, TypeError, KeyError,
                         json.JSONDecodeError):
                     payload = b'{"error":"Nao foi possivel ler o estado local da partida"}'
