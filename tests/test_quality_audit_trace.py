@@ -181,3 +181,34 @@ def test_mate_score_keeps_distance_and_cp_mapping_separate():
     assert quality._eval_pov(info, chess.BLACK) == {
         "cp_equivalent": -997, "mate_in": -3
     }
+
+
+
+@pytest.mark.parametrize("which", ["pgn", "engine"])
+def test_mutating_evidence_during_uci_search_refuses_report(
+    monkeypatch, audit_input, which
+):
+    pgn, exe, out = audit_input
+    target = pgn if which == "pgn" else exe
+    judge = StableJudge()
+    original = judge.analyse
+    calls = [0]
+
+    def mutate_once(board, limit, **kwargs):
+        if not calls[0]:
+            with target.open("ab") as stream:
+                stream.write(b"\n")
+        calls[0] += 1
+        return original(board, limit, **kwargs)
+
+    judge.analyse = mutate_once
+    with pytest.raises(ValueError, match="changed during quality analysis"):
+        _run(monkeypatch, pgn, exe, out, fake=judge)
+    assert not out.exists()
+
+
+def test_fingerprints_stream_in_chunks_without_loading_whole_engine(tmp_path):
+    path = tmp_path / "simulated-stockfish"
+    path.write_bytes(b"x" * (1024 * 1024 + 11))
+    from hashlib import sha256
+    assert quality._sha256_file(path) == sha256(path.read_bytes()).hexdigest()
