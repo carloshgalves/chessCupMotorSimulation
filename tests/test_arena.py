@@ -310,3 +310,41 @@ def test_external_historical_books_are_explicit_and_seeded(rodent_stub, tmp_path
     assert calls[0]["opening_seed"]==2030
     assert set(calls[0]["historical_openings"])=={"fischer","tal"}
     assert calls[0]["use_books"] is False
+
+
+def test_workspace_lock_rejects_second_server_even_on_other_port(rodent_stub):
+    with arena_server(rodent_stub) as (server, base):
+        with pytest.raises(RuntimeError, match="Outra execução"):
+            arena.create_server(rodent_stub[0], rodent_stub[1], port=0,
+                                runner=fake_duel)
+        assert api(base)["busy"] is False
+    with arena_server(rodent_stub) as (_, base):
+        assert api(base)["session"] is None
+
+
+def test_worker_exception_is_recorded_and_slot_released(rodent_stub):
+    def broken(*args, **kwargs):
+        raise RuntimeError("sensitive local engine path")
+    with arena_server(rodent_stub, runner=broken) as (server, base):
+        with post(base, "/api/arena/launch", GOOD, server.arena_token) as r:
+            assert r.status == 202
+        state = wait_for(server.arena_manager, "FAILED")
+        assert state["error"] == "ENGINE_OR_ARTIFACT_FAILURE"
+        assert "sensitive" not in json.dumps(api(base))
+        assert api(base)["busy"] is False
+        assert state["id"].startswith("session-")
+
+
+def test_bad_persisted_state_returns_sanitized_http_error(rodent_stub):
+    with arena_server(rodent_stub) as (server, base):
+        manager = server.arena_manager
+        chosen = manager.workspace / "session-20261105T100000Z-dead"
+        chosen.mkdir()
+        (chosen / "session.json").write_text(
+            '{"schema":"chesssim-arena-session-v1","status":null}',
+            encoding="utf-8")
+        manager._selected = chosen
+        with pytest.raises(HTTPError) as err:
+            urlopen(base + "/api/arena", timeout=5)
+        assert err.value.code == 503
+        assert b"Estado da arena indispon" in err.value.read()
