@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 from statistics import mean, median
 
+from .game_diversity import audit_mainlines, mainline_identity, opening_seed_from_headers
+
 PROTOCOL = "independent-stockfish-postgame-v9.1"
 
 
@@ -139,9 +141,10 @@ def _load_positions(pgn: Path, *, min_fullmove: int, dedupe_games: bool) -> tupl
             if game.errors:
                 raise ValueError(f'Malformed PGN in game {original_game_index + 1}')
             moves = list(game.mainline_moves())
-            signature = sha256(' '.join(m.uci() for m in moves).encode('utf-8')).hexdigest()
-            duplicate = signature in seen
-            seen.add(signature)
+            signature, plies = mainline_identity(game)
+            duplicate = bool(plies) and signature in seen
+            if plies:
+                seen.add(signature)
             meta = {
                 'source_game_index': original_game_index,
                 'game_index': original_game_index,
@@ -149,6 +152,12 @@ def _load_positions(pgn: Path, *, min_fullmove: int, dedupe_games: bool) -> tupl
                 'black': game.headers.get('Black', '?'),
                 'result': game.headers.get('Result', '*'),
                 'mainline_sha256': signature,
+                'plies': plies,
+                'source': original_game_index + 1,
+                'opening_seed': opening_seed_from_headers(game.headers),
+                'opening_mode': game.headers.get('BookMode'),
+                'color_order': (game.headers.get('White', '?') + '|' +
+                                game.headers.get('Black', '?')),
                 'duplicate_mainline': duplicate,
                 'excluded_from_analysis': duplicate and dedupe_games,
             }
@@ -169,7 +178,8 @@ def _load_positions(pgn: Path, *, min_fullmove: int, dedupe_games: bool) -> tupl
                         'played_san': board.san(move),
                     })
                 board.push(move)
-    return records, games
+    annotated, _ = audit_mainlines(games)
+    return records, annotated
 
 
 def analyze_games_v91(pgn: Path, engine: Path, out: Path, *, depth: int = 18,
@@ -190,7 +200,29 @@ def analyze_games_v91(pgn: Path, engine: Path, out: Path, *, depth: int = 18,
     if refine_depth is not None and (refine_depth <= depth or refine_depth > 35):
         raise ValueError('refine_depth must be above depth and <= 35')
     records, games = _load_positions(pgn, min_fullmove=min_fullmove, dedupe_games=dedupe_games)
-    chosen, sampling = select_decisions(records, limit=max_positions, mode=sample_mode)
+    _, diversity = audit_mainlines(games)
+    duplicate_indices = {g['game_index'] for g in games if g['duplicate_mainline']}
+    # Audit-critical: independent estimates must be invariant to the
+    # --keep-duplicate-games option. Reserve the same unique-game sampling
+    # budget first; duplicate diagnostics may use ONLY spare capacity.
+    unique_records = [r for r in records if r['game_index'] not in duplicate_indices]
+    chosen, sampling = select_decisions(unique_records, limit=max_positions, mode=sample_mode)
+    independent_sample_size = len(chosen)
+    diagnostic_count = 0
+    if not dedupe_games and independent_sample_size < max_positions:
+        repeated = [r for r in records if r['game_index'] in duplicate_indices]
+        diagnostic_indices = spread_indices(len(repeated), max_positions - independent_sample_size)
+        chosen.extend(repeated[index] for index in diagnostic_indices)
+        diagnostic_count = len(diagnostic_indices)
+        chosen.sort(key=lambda row: row['global_index'])
+    sampling['independent_positions_selected'] = independent_sample_size
+    sampling['diagnostic_duplicate_positions_selected'] = diagnostic_count
+    sampling['actual_positions'] = len(chosen)
+    if not dedupe_games:
+        sampling['warning'] += (
+            ' Duplicates may be inspected within spare max_positions budget, '
+            'but never replace independent decisions in aggregate estimates.'
+        )
     output = []
     with chess.engine.SimpleEngine.popen_uci(str(engine), timeout=120) as judge:
         settings = {}
@@ -229,7 +261,11 @@ def analyze_games_v91(pgn: Path, engine: Path, out: Path, *, depth: int = 18,
             continue
         rows = by_game.get(game['game_index'], [])
         game_report.append({**game, 'positions_analyzed': len(rows),
+                            'diagnostic_only': game['duplicate_mainline'],
                             'by_player': summarize_decisions(rows)})
+    # Diagnostic analysis may inspect duplicates without counting them in
+    # aggregate independent-evidence estimates.
+    independent_decisions = [r for r in output if r['game_index'] not in duplicate_indices]
     result = {
         'protocol': PROTOCOL,
         'status': 'EXPLORATORY_STRENGTH_DIAGNOSTIC_NOT_ELO',
@@ -244,14 +280,19 @@ def analyze_games_v91(pgn: Path, engine: Path, out: Path, *, depth: int = 18,
             'refine_max_positions': refine_max_positions,
         },
         'sampling': sampling,
+        'diversity': diversity,
+        'independent_decisions_sampled': len(independent_decisions),
+        'duplicate_decisions_excluded_from_summary': len(output) - len(independent_decisions),
         'games': game_report,
         'excluded_duplicate_games': [g for g in games if g['excluded_from_analysis']],
-        'summary': summarize_decisions(output),
+        'summary': summarize_decisions(independent_decisions),
         'refinement': {'selected': len(chosen_refine),
                        'warning': 'Refinements are reported separately and never mixed into base-depth averages.'},
         'decisions': output,
         'warning': ('All conclusions are depth-dependent. Mate evaluations use a 1000-cp mapping; '
                     'root-move forcing and depth variation introduce search instability. '
+                    'Duplicate trajectories are excluded from the aggregate summary, '
+                    'even when diagnostic inspection retains duplicate games. '
                     'Not a rating or historical identity evaluation.'),
     }
     out.parent.mkdir(parents=True, exist_ok=True)

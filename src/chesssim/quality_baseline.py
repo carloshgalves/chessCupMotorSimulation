@@ -9,6 +9,8 @@ from hashlib import sha256
 import json
 from pathlib import Path
 
+from .game_diversity import audit_mainlines, mainline_identity, opening_seed_from_headers
+
 
 def _sample_indices(total: int, limit: int) -> set[int]:
     """Spread a bounded sample across the eligible game decision sequence."""
@@ -38,10 +40,22 @@ def analyze_games(pgn: Path, engine: Path, out: Path, *, depth: int = 12,
     if not 1 <= depth <= 35 or not 1 <= max_positions <= 5000 or not 1 <= min_fullmove <= 100:
         raise ValueError('Invalid analysis budget')
     records = []
+    observations = []
+    seen_mainlines = set()
     with pgn.open(encoding='utf-8-sig', errors='replace') as stream:
         while (g := chess.pgn.read_game(stream)) is not None:
             if g.errors:
                 raise ValueError('Malformed PGN; refusing silent quality analysis')
+            digest, plies = mainline_identity(g)
+            observations.append({
+                "source": len(observations) + 1, "mainline_sha256": digest, "plies": plies,
+                "opening_seed": opening_seed_from_headers(g.headers),
+                "opening_mode": g.headers.get("BookMode"),
+                "color_order": g.headers.get("White", "?") + "|" + g.headers.get("Black", "?"),
+            })
+            if not plies or digest in seen_mainlines:
+                continue
+            seen_mainlines.add(digest)
             board = g.board()
             for move in g.mainline_moves():
                 if board.fullmove_number >= min_fullmove and not board.is_game_over():
@@ -49,6 +63,7 @@ def analyze_games(pgn: Path, engine: Path, out: Path, *, depth: int = 12,
                                     board.fen(), move.uci(), board.turn,
                                     board.fullmove_number))
                 board.push(move)
+    _, diversity = audit_mainlines(observations)
     if not records:
         raise ValueError('No eligible positions for quality analysis')
     chosen = _sample_indices(len(records), max_positions)
@@ -97,8 +112,10 @@ def analyze_games(pgn: Path, engine: Path, out: Path, *, depth: int = 12,
                          'stockfish_sha256': sha256(engine.read_bytes()).hexdigest(),
                          'depth': depth, 'eligible_positions': len(records),
                          'sampled_positions': len(data), 'min_fullmove': min_fullmove},
+              'diversity': diversity,
               'summary': summary, 'decisions': data,
-              'warning': 'No rating inference; depth-limited root-move analysis with deterministic spread sampling.'}
+              'warning': ('No rating inference; depth-limited root-move analysis with deterministic '
+                          'spread sampling. Exact duplicate mainlines were excluded before sampling.')}
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     return result

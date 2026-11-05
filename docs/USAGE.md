@@ -339,7 +339,7 @@ Para um repertório de jogador oficial, informe --black-book ou --white-book con
 
 Quando recebe repertórios, o comando usa as escolhas históricas fornecidas e desativa os livros internos do Rodent durante o duelo. Sem --white-book e --black-book, nenhum repertório histórico externo é aplicado.
 
-O comando cria summary.json, duelo.pgn e, por padrão, replay.html em cada diretório de par. O replay é um arquivo HTML autônomo: não exige servidor, rede, CDN ou motor de xadrez.
+O comando cria summary.json, duelo.pgn e, por padrão, replay.html em cada diretório de par. Os pares ficam agrupados em um diretório novo `style-duels-<timestamp>-<id>`, que contém `series-report.json`. Esse relatório registra os pares já concluídos, `seed_base`, seed por par, variação observada e contagens de partidas totais/distintas/duplicadas em toda a série; as sementes controlam apenas a política externa de repertório histórico quando ela está ativa. O replay é um arquivo HTML autônomo: não exige servidor, rede, CDN ou motor de xadrez.
 
 ### 7.1. Gerar replay a partir de qualquer PGN
 
@@ -365,9 +365,9 @@ python -m chesssim analyze-quality \
 
 O relatório registra hashes do PGN e do executável Stockfish, profundidade, posições amostradas, variantes principais e perda em centipeões. A amostragem padrão é balanceada por partida e cor; por isso, o número efetivamente analisado pode ser menor que --max-positions.
 
-Essa métrica é um diagnóstico dependente de profundidade, não Elo, força de torneio ou prova de identidade histórica.
+Essa métrica é um diagnóstico dependente de profundidade, não Elo, força de torneio ou prova de identidade histórica. As avaliações `analyze-games` e `analyze-quality` usam a identidade de partida baseada na posição inicial e na sequência completa de lances UCI. Metadados PGN diferentes não transformam uma repetição em uma observação nova. `--keep-duplicate-games` permite inspecionar posições repetidas para diagnóstico, mas **não** inclui as decisões duplicadas nas estimativas agregadas. Os relatórios apresentam `diversity.games_total`, `games_distinct`, `games_duplicate` e referências à primeira ocorrência.
 
-Para estatísticas descritivas de características dos lances:
+Para estatísticas descritivas de características dos lances (deduplicadas por trajetória completa, sem apagar os jogos brutos):
 
 ~~~bash
 python -m chesssim style-audit --pgn /caminho/para/duelo.pgn --out reports/duelo-style.json
@@ -431,3 +431,11 @@ python scripts/generate_sbom.py --out sbom-artifacts
 O diretório informado deve ser novo. O processo cria ambientes virtuais temporários para aplicação, dependências de desenvolvimento/build e ferramenta de geração. Produz `runtime.cdx.json` e `development.cdx.json` (CycloneDX JSON 1.6) e, para cada escopo, evidências de `pip list`, `pip inspect` e `pip freeze --all`; o `manifest.json` registra SHA-256 de cada arquivo, commit e quantidades verificadas.
 
 O CI executa a geração apenas em Python 3.13 quando há PR ou push na `main`, no runner já existente. O artefato `resolved-sbom-py313` fica disponível por 7 dias no GitHub Actions; não deve ser commitado como se representasse outras máquinas. O SBOM não inventaria Rodent IV, Stockfish, seus recursos e PGNs, que devem ser tratados separadamente quando distribuídos.
+
+## 12. Auditoria de diversidade (issue #15)
+
+`play` e cada par de `play-styles` preservam todas as partidas, mas incluem `diversity` e `games[*].mainline_sha256` em `summary.json`. A identidade canônica deriva do FEN inicial e de todos os lances da linha principal em UCI, ignorando cabeçalhos como `Event`, `White` e `Round`. Partidas vazias são reportadas e não constituem evidência. Partidas incompletas com lances podem ser descritas estatisticamente, mas não equivalem a partidas concluídas.
+
+`play-styles` cria ainda `series-report.json` com a agregação das **duas cores e de todos os pares**. Seis partidas produzidas por três pares podem corresponder a apenas duas trajetórias únicas — o relatório conserva ambas as contagens, marca a primeira ocorrência e exclui as repetidas do `effective_independent_games`. Em caso de erro, salva o último checkpoint da série com status `FAILED`, sem apagar os PGNs anteriores. Seeds distintas não garantem aberturas/lances distintos; quando `--white-book` e `--black-book` são omitidos, a semente é apenas agendada e não altera o repertório. A aleatoriedade de livros internos UCI e da busca do motor não é controlada pela semente externa.
+
+**Observação:** contagem de trajetórias únicas não constitui, por si só, uma estimativa de variância, força Elo ou identidade histórica; resultados de partida dependem também da posição inicial, relógio, engine e condições de execução.

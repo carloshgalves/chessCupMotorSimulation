@@ -417,7 +417,8 @@ def main(argv: list[str] | None = None) -> int:
     qa91.add_argument('--max-positions', type=int, default=120)
     qa91.add_argument('--min-fullmove', type=int, default=9)
     qa91.add_argument('--sample-mode', choices=['balanced', 'spread'], default='balanced')
-    qa91.add_argument('--keep-duplicate-games', action='store_true')
+    qa91.add_argument('--keep-duplicate-games', action='store_true',
+                       help='Evaluate duplicate positions for diagnosis only; exclude them from aggregate estimates')
     qa91.add_argument('--pv-plies', type=int, default=10)
     qa91.add_argument('--refine-depth', type=int)
     qa91.add_argument('--refine-threshold', type=int, default=100)
@@ -468,6 +469,8 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({'out': str(args.out), 'status': result['status'],
                 'sampled_positions': result['inputs']['sampled_positions'],
                 'excluded_duplicate_games': len(result['excluded_duplicate_games']),
+                'diversity': result['diversity'],
+                'independent_decisions_sampled': result['independent_decisions_sampled'],
                 'summary': result['summary']}, ensure_ascii=False, indent=2))
         elif args.command == 'compare-quality':
             from .quality_audit import compare_quality_reports
@@ -479,6 +482,8 @@ def main(argv: list[str] | None = None) -> int:
             from .style_postgame import fingerprint
             result = fingerprint(args.pgn, args.out, opening_plies=args.opening_plies)
             print(json.dumps({'out': str(args.out), 'games': result['games'],
+                'distinct_games': result['distinct_games'],
+                'duplicate_games': result['duplicate_games'],
                 'players': result['players'], 'pairwise': result['pairwise']}, ensure_ascii=False, indent=2))
         elif args.command == 'temporal-compare':
             from .temporal_paired import temporal_compare
