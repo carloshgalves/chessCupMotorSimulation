@@ -71,7 +71,17 @@ def source_download(row: dict) -> tuple[str, str]:
     page = unescape(_read(source, max_bytes=300_000).decode("utf-8", "replace"))
     unaccented = "".join(c for c in unicodedata.normalize("NFKD", page.lower()) if not unicodedata.combining(c))
     if IDENTITY_TOKENS[row["slug"]] not in unaccented:
-        raise ValueError("Archive landing page does not identify selected player")
+        # Fotoburo de Boer identifies this image by accession rather than
+        # people in its HTML.  Commons describes the very same accession as
+        # "Gelfand vs Kortsnoj", Hoogovens Chess Tournament, 23 Jan 1991:
+        # https://commons.wikimedia.org/wiki/File:GelfandKortsnoj1991.jpg
+        special_gelfand = (
+            row["slug"] == "gelfand" and
+            "NL-HlmNHA_1478_35753K00_23" in page and
+            "Hoogovens" in page and "1991" in page
+        )
+        if not special_gelfand:
+            raise ValueError("Archive landing page does not identify selected player")
     origin = urlsplit(source).hostname
     if origin == "www.nationaalarchief.nl":
         decoded = page.replace("\\u0022", '"')
