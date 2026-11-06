@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "taimanov",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão soviético e conciliei a carreira no xadrez com a música.",
   "era_label": "1956–1971",
@@ -12,7 +12,8 @@
       "year": 1956,
       "text": "Venci o Campeonato Soviético após os desempates.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 1971,
       "text": "Disputei um match de Candidatos contra Bobby Fischer.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -30,7 +32,8 @@
       "title": "Campeonato soviético",
       "summary": "Venci o Campeonato Soviético após os desempates.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -38,7 +41,8 @@
       "title": "Match de Candidatos",
       "summary": "Disputei um match de Candidatos contra Bobby Fischer.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -48,6 +52,13 @@
       "title": "Chess.com — perfil histórico de taimanov",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/mark-taimanov",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "European Chess Union — campeonato soviético 1956 e Fischer 1971",
+      "publisher": "European Chess Union",
+      "url": "https://www.europechess.org/in-memoriam-mark-taimanov/",
       "accessed_at": "2026-11-06"
     }
   ]

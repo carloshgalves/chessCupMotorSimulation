@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "polugaevsky",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui bicampeão soviético e participei de ciclos consecutivos de Candidatos.",
   "era_label": "1967–1980",
@@ -12,7 +12,8 @@
       "year": 1967,
       "text": "Dividi o primeiro lugar do Campeonato Soviético com Mikhail Tal.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 1968,
       "text": "Conquistei novamente o Campeonato Soviético.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -28,7 +30,9 @@
       "year": 1980,
       "text": "Disputei as semifinais dos Candidatos contra Viktor Korchnoi.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2",
+        "audit-3"
       ]
     }
   ],
@@ -38,7 +42,8 @@
       "title": "Campeonato soviético",
       "summary": "Dividi o primeiro lugar do Campeonato Soviético com Mikhail Tal.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -46,7 +51,8 @@
       "title": "Bicampeonato soviético",
       "summary": "Conquistei novamente o Campeonato Soviético.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -54,7 +60,9 @@
       "title": "Matches de Candidatos",
       "summary": "Disputei as semifinais dos Candidatos contra Viktor Korchnoi.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2",
+        "audit-3"
       ]
     }
   ],
@@ -64,6 +72,20 @@
       "title": "Chess.com — perfil histórico de polugaevsky",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/lev-polugaevsky",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Chess.com — bicampeonato soviético 1967–1968 e Candidatos 1980",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/lev-polugaevsky",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "Los Angeles Times — participações no ciclo de Candidatos",
+      "publisher": "Los Angeles Times",
+      "url": "https://www.latimes.com/archives/la-xpm-1995-09-10-mn-44299-story.html",
       "accessed_at": "2026-11-06"
     }
   ]

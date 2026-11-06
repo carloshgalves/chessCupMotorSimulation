@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "staunton",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui um dos principais mestres ingleses e ajudei a organizar o histórico torneio de Londres.",
   "era_label": "1843–1851",
@@ -12,7 +12,8 @@
       "year": 1843,
       "text": "Derrotei Pierre de Saint-Amant em um match realizado em Paris.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 1851,
       "text": "Ajudei a organizar o torneio internacional de Londres de 1851.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     }
   ],
@@ -30,7 +32,8 @@
       "title": "Match de Paris",
       "summary": "Derrotei Pierre de Saint-Amant em um match realizado em Paris.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -38,7 +41,8 @@
       "title": "Torneio de Londres",
       "summary": "Ajudei a organizar o torneio internacional de Londres de 1851.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     }
   ],
@@ -48,6 +52,20 @@
       "title": "Referência histórica de staunton",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/howard-staunton",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Chess.com — match Staunton–Saint-Amant 1843",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/staunton-beats-a-saint",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "Chess.com — organização do torneio de Londres 1851",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/london-1851-the-first-international-chess-tournament",
       "accessed_at": "2026-11-06"
     }
   ]

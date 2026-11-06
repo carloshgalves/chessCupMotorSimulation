@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "chigorin",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui um dos mais importantes mestres russos da era romântica e desafiei Steinitz.",
   "era_label": "1889–1903",
@@ -12,7 +12,8 @@
       "year": 1889,
       "text": "Dividi o primeiro lugar no torneio de Nova York e disputei um match mundial contra Steinitz.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 1892,
       "text": "Disputei novamente o campeonato mundial contra Steinitz.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -28,7 +30,8 @@
       "year": 1899,
       "text": "Conquistei o primeiro Campeonato de Toda a Rússia.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-4"
       ]
     }
   ],
@@ -38,7 +41,8 @@
       "title": "Torneio de Nova York",
       "summary": "Dividi o primeiro lugar no torneio de Nova York e disputei um match mundial contra Steinitz.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -46,7 +50,8 @@
       "title": "Segundo mundial",
       "summary": "Disputei novamente o campeonato mundial contra Steinitz.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -54,7 +59,8 @@
       "title": "Campeonato russo",
       "summary": "Conquistei o primeiro Campeonato de Toda a Rússia.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-4"
       ]
     }
   ],
@@ -64,6 +70,27 @@
       "title": "Referência histórica de chigorin",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/mikhail-chigorin",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Comissão Histórica FIDE — Nova York 1889 e Steinitz",
+      "publisher": "FIDE",
+      "url": "https://his.fide.com/2026/05/08/chess-in-the-19th-century-milestones-of-1889/",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "Chess.com — revanche mundial de 1892",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/mikhail-chigorin",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-4",
+      "title": "Chess.com — primeiro Campeonato de Toda a Rússia 1899",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/19th-century-chess",
       "accessed_at": "2026-11-06"
     }
   ]

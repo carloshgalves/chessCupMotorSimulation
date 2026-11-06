@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "portisch",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão húngaro diversas vezes e alcancei as semifinais dos Candidatos.",
   "era_label": "1958–1981",
@@ -12,7 +12,8 @@
       "year": 1958,
       "text": "Conquistei meu primeiro Campeonato Húngaro de xadrez.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 1977,
       "text": "Alcancei as semifinais dos matches de Candidatos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -28,7 +30,8 @@
       "year": 1980,
       "text": "Voltei a alcançar as semifinais dos matches de Candidatos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -38,7 +41,8 @@
       "title": "Primeiro título húngaro",
       "summary": "Conquistei meu primeiro Campeonato Húngaro de xadrez.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -46,7 +50,8 @@
       "title": "Candidatos",
       "summary": "Alcancei as semifinais dos matches de Candidatos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -54,7 +59,8 @@
       "title": "Novo ciclo de Candidatos",
       "summary": "Voltei a alcançar as semifinais dos matches de Candidatos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -62,6 +68,13 @@
     {
       "id": "source-1",
       "title": "Chess.com — perfil histórico de portisch",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/lajos-portisch",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Chess.com — campeão da Hungria desde 1958 e semifinalista 1977/1980",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/lajos-portisch",
       "accessed_at": "2026-11-06"

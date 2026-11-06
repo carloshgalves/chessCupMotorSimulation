@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "zukertort",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Venci Londres 1883 e disputei o primeiro match oficial da história do campeonato mundial.",
   "era_label": "1883–1886",
@@ -12,7 +12,8 @@
       "year": 1883,
       "text": "Venci o torneio internacional de Londres à frente de Wilhelm Steinitz.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 1886,
       "text": "Disputei contra Steinitz o primeiro match oficial pelo Campeonato Mundial.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -30,7 +32,8 @@
       "title": "Torneio de Londres",
       "summary": "Venci o torneio internacional de Londres à frente de Wilhelm Steinitz.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -38,7 +41,8 @@
       "title": "Primeiro mundial oficial",
       "summary": "Disputei contra Steinitz o primeiro match oficial pelo Campeonato Mundial.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -48,6 +52,13 @@
       "title": "Referência histórica de zukertort",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/Johannes-Zukertort",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Comissão Histórica FIDE — Londres 1883 e primeiro mundial 1886",
+      "publisher": "FIDE",
+      "url": "https://his.fide.com/2026/05/08/chess-in-the-19th-century-milestones-of-1886/",
       "accessed_at": "2026-11-06"
     }
   ]
