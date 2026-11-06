@@ -34,7 +34,7 @@ def test_all_64_are_accessible_and_have_historical_packs():
         if pack["portrait"] is not None:
             assert pack["portrait"]["approval_status"] == "approved"
             assert pack["portrait"]["local_asset"] == f"history/portraits/{player.slug}.jpg"
-            assert pack["portrait"]["source_url"].startswith(("https://commons.wikimedia.org/wiki/File:", "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/", "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/", "https://www.flickr.com/photos/8022405@N02/"))
+            assert pack["portrait"]["source_url"].startswith(("https://commons.wikimedia.org/wiki/File:", "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/", "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/", "https://www.flickr.com/photos/8022405@N02/", "https://www.flickr.com/photos/suspeeters/"))
         if pack["has_historical_pack"]:
             assert pack["schema"] == SCHEMA
             assert pack["narrative_voice"] == "first_person_editorial"
@@ -300,4 +300,8 @@ def test_original_flickr_photographer_manifest_is_licensed():
     assert len({row["slug"] for row in photos}) == len(photos)
     assert all(row["license"] in ("CC BY-SA 2.0", "CC BY 2.0") for row in photos)
     assert all(row["author"] == "Andreas Kontokanis" for row in photos)
+    other = [row for row in manifest["candidates"] if
+             row["source_url"].startswith("https://www.flickr.com/photos/suspeeters/")]
+    assert len(other) == 1
+    assert other[0]["slug"] == "leko" and other[0]["author"] == "Frans Peeters"
     assert all(row["event"] and row["event_date"] and row["source_url"] for row in photos)

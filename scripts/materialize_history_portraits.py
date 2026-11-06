@@ -81,7 +81,7 @@ def manifest_rows() -> list[dict]:
                            re.fullmatch(r"/beelden/beeldbankdeboer/detail/[0-9a-f-]{36}", url.path))
         commons = url.hostname == "commons.wikimedia.org" and url.path.startswith("/wiki/File:")
         flickr = (url.hostname == "www.flickr.com" and
-                  re.fullmatch(r"/photos/(?:8022405@N02|karpidis)/[0-9]{8,20}/?", url.path))
+                  re.fullmatch(r"/photos/(?:8022405@N02|karpidis|suspeeters)/[0-9]{8,20}/?", url.path))
         if url.scheme != "https" or not (commons or approved_archive or holland_archive or flickr):
             raise ValueError("Unexpected or unapproved photo source")
         if not all(isinstance(row[k], str) and row[k].strip()

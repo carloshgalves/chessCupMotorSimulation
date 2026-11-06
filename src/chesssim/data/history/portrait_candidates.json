@@ -631,6 +631,51 @@
         0.5,
         0.45
       ]
+    },
+    {
+      "slug": "shirov",
+      "file": "6352157086.jpg",
+      "event": "European Team Chess Championship, Porto Carras",
+      "event_date": "2011-11-11",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/6352157086",
+      "centering": [
+        0.5,
+        0.43
+      ]
+    },
+    {
+      "slug": "svidler",
+      "file": "6312101622.jpg",
+      "event": "European Team Chess Championship, Porto Carras",
+      "event_date": "2011-11-03",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/6312101622",
+      "centering": [
+        0.58,
+        0.4
+      ]
+    },
+    {
+      "slug": "leko",
+      "file": "54275360618.jpg",
+      "event": "Tata Steel Chess Tournament, Wijk aan Zee",
+      "event_date": "2025-01-18",
+      "author": "Frans Peeters",
+      "rights_holder": "Frans Peeters",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/suspeeters/54275360618",
+      "centering": [
+        0.75,
+        0.5
+      ]
     }
   ]
 }

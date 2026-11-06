@@ -51,7 +51,7 @@ def obtain(row: dict) -> bytes:
 
     url = row["source_url"]
     match = re.fullmatch(
-        r"https://www\.flickr\.com/photos/8022405@N02/([0-9]{8,20})/?", url
+        r"https://www\.flickr\.com/photos/(?:8022405@N02|suspeeters)/([0-9]{8,20})/?", url
     )
     if not match:
         raise ValueError("Unexpected Flickr album/profile")
@@ -69,12 +69,13 @@ def obtain(row: dict) -> bytes:
     remote, license_url = marker.groups()
     if license_url != row["license_url"]:
         raise ValueError(f"Live license differs for {row['slug']}: {license_url}")
-    if not re.search(r'"/(?:photos/karpidis/|photos/8022405@N02/)' + photo_id + r'/?', page):
-        # Flickr may normalize the vanity account to karpidis.
-        if f"/photos/karpidis/{photo_id}" not in page:
-            raise ValueError("Flickr ID not present in the original photo page")
-    if "Andreas Kontokanis" not in page and "karpidis" not in page:
-        raise ValueError("Photographer attribution missing")
+    if not any(f"/photos/{alias}/{photo_id}" in page
+               for alias in ("karpidis", "8022405@N02", "suspeeters")):
+        raise ValueError("Flickr ID not present in first-party photo page")
+    if row["author"] not in {"Andreas Kontokanis", "Frans Peeters"}:
+        raise ValueError("Unknown photographic rights holder")
+    if row["author"] not in page:
+        raise ValueError("Photographer attribution missing from first-party page")
     media = urlsplit(remote)
     if media.hostname != "live.staticflickr.com" or not re.search(
         r"/" + photo_id + r"_[a-zA-Z0-9]+(?:_[a-z])?\.jpg$", media.path

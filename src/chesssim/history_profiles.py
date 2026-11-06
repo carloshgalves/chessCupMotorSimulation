@@ -94,7 +94,7 @@ def validate_history_pack(data: object, *, slug: str) -> dict:
         commons = (parsed.hostname == "commons.wikimedia.org" and
                    parsed.path.startswith("/wiki/File:"))
         flickr = (parsed.hostname == "www.flickr.com" and
-                  re.fullmatch(r"/photos/(?:8022405@N02|karpidis)/[0-9]{8,20}/?", parsed.path))
+                  re.fullmatch(r"/photos/(?:8022405@N02|karpidis|suspeeters)/[0-9]{8,20}/?", parsed.path))
         if not (archive or holland or commons or flickr):
             raise ValueError("Origem do retrato não pertence a acervo auditado")
         digest = _text(portrait["sha256"], "portrait.sha256", max_len=64)
