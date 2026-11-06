@@ -422,3 +422,24 @@ def test_duplicate_json_keys_rejected_with_coverage_warning(tmp_path):
     data=history_stats.list_stats(tmp_path,"fischer")
     assert data["completed_games"]==0
     assert data["coverage"]["complete"] is False
+
+
+def test_archive_limits_error_instead_of_publishing_truncated_totals(tmp_path,monkeypatch):
+    arena_session(tmp_path)
+    arena_session(tmp_path,session="session-20261106T120001Z-123456789abc")
+    monkeypatch.setattr(history_stats,"MAX_RUNS",1)
+    with pytest.raises(history_stats.InvalidStats,match="limite"):
+        history_stats.list_stats(tmp_path,"fischer")
+    monkeypatch.setattr(history_stats,"MAX_RUNS",300)
+    monkeypatch.setattr(history_stats,"MAX_ATTEMPTS",1)
+    with pytest.raises(history_stats.InvalidStats,match="limite"):
+        history_stats.list_stats(tmp_path,"fischer")
+
+
+def test_no_historical_pgn_can_count_as_simulator_victory(tmp_path):
+    historical=tmp_path/"history-games/games"
+    historical.mkdir(parents=True)
+    (historical/"h-synthetic.pgn").write_text(str(game()[0]),encoding="utf-8")
+    data=history_stats.list_stats(tmp_path,"fischer")
+    assert data["completed_games"]==data["run_count"]==0
+    assert data["source_scope"]["historical_pgns_included"] is False
