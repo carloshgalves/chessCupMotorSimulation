@@ -63,11 +63,12 @@
     for (const [id, offset] of [["history-left", -1], ["history-right", 1]]) {
       const slot = byId(id), neighbor = playerAt(state.index + offset);
       slot.replaceChildren();
-      const button = make("button", null, "history-side-button");
+      // Keep attribution links OUTSIDE the button: nested interactive
+      // controls are invalid and inaccessible.
+      slot.append(portrait(neighbor.slug, neighbor.portrait, true));
+      const button = make("button", "Selecionar " + neighbor.name,
+                          "history-side-button");
       button.type = "button";
-      button.setAttribute("aria-label", "Selecionar " + neighbor.name);
-      button.append(portrait(neighbor.slug, neighbor.portrait, true));
-      button.append(make("span", neighbor.name));
       button.addEventListener("click", () => move(offset));
       slot.append(button);
     }
