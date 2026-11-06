@@ -96,6 +96,7 @@ jobs:
                   assert portrait["license"] in ("CC0 1.0", "CC BY-SA 3.0", "CC BY-SA 2.0", "CC BY 2.0", "Public Domain Mark 1.0")
               assert baseline.issubset(seen_slugs), "Baseline photo biographies missing"
               assert len(referenced_photos) >= len(baseline), "Baseline portraits missing"
+              assert len(referenced_photos) >= 58, "At least 58 curated portraits must ship in the wheel"
               assert {root + f"portraits/{slug}.jpg" for slug in baseline}.issubset(referenced_photos)
               actual_photos = {n for n in names if n.startswith(root + "portraits/") and n.endswith(".jpg")}
               assert actual_photos == referenced_photos, "Orphan portraits or undisclosed photos in wheel"

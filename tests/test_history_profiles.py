@@ -340,3 +340,21 @@ def test_menchik_1926_photo_source_not_confused_with_cc0():
     assert row["license"] == "Public Domain Mark 1.0"
     assert row["event_date"] == "1926-02" and "British Chess Magazine" in row["event"]
     assert row["source_url"] == "https://www.chesshistory.com/winter/extra/menchikclub.html"
+
+
+def test_history_58_documented_portraits_retained_without_orphans():
+    """PR #55's approved photo inventory must not regress while new sources are curated."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1] / "src/chesssim/data/history"
+    available = {p.stem for p in (root / "portraits").glob("*.jpg")}
+    assert len(available) >= 58
+    for slug in available:
+        profile = load_history_profile(slug)
+        assert profile["portrait"] is not None
+        assert profile["portrait"]["license"] in {
+            "CC0 1.0", "CC BY-SA 3.0", "CC BY-SA 2.0", "CC BY 2.0",
+            "Public Domain Mark 1.0",
+        }
+    assert "philidor" in available
+    assert "não é fotografia" in load_history_profile("philidor")["portrait"]["alt"]

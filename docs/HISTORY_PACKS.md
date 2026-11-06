@@ -4,7 +4,7 @@
 
 Uma biografia por jogador do elenco, editada como dados e acessada por um **slug canônico**. O código do carregador é único; acrescentar um jogador consiste em criar `src/chesssim/data/history/<slug>.json` e preencher os mesmos campos. O nome e o grupo **não** são copiados: vêm de `roster.json`.
 
-Nesta primeira entrega existem **22 packs: 21 personalidades com alias oficial do Rodent IV e Mequinho, cujo perfil experimental é tratado separadamente**. Os demais **42** integrantes do elenco retornam um registro completo e pesquisável com `has_historical_pack=false`, `review_status=pending`, nenhuma conquista e foto ausente. Um jogador sem motor instalado continua pesquisável e pode receber um pack no futuro. Mequinho possui um pack próprio por sua importância no projeto, **sem** que isso o transforme em uma das 21 personalidades oficiais do Rodent IV ou valide o estilo do modelo.
+**Estado atual na PR #55 (06/11/2026): 64/64 packs disponíveis.** Os 22 packs do lote inicial foram complementados por 42 packs de cronologia e fatos revisados em lotes separados. **58/64 jogadores possuem um retrato histórico ou representação artística documentada**, e os seis restantes retornam placeholder. A existência de biografia/retrato não significa motor UCI disponível ou modelo de estilo validado. Mequinho possui pack próprio sem se tornar uma das 21 personalidades oficiais do Rodent IV.
 
 ## Voz narrativa
 
@@ -109,6 +109,8 @@ A integridade é validada para cada `portrait` presente, enquanto os demais usam
 
 A Arena local agora oferece uma aba História com navegação horizontal pelo elenco, biografia individual, conquistas e linha do tempo. As 13 fotos incorporadas são acompanhadas de créditos de autoria, evento, fonte original, licença e aviso de recorte, sem depender de scripts ou imagens externas. As fotografias sem licença disponível continuam com placeholder. A API permanece somente leitura e não altera o token de execução da Arena. Ver `src/chesssim/data/history.js`, `history.css` e `tests/assets/history_browser_harness.cjs`. A homologação visual com navegador real e a integração das partidas/estatísticas permanecem etapas próprias.
 
-## Restante do acervo e rota de importação sem rede
+## Retratos históricos: inventário atualizado e importação offline
 
-A situação por jogador (51 JPEGs ausentes, 11 com fonte catalogada) está em `docs/HISTORY_PORTRAIT_BACKLOG.md`. Há dois candidatos novos além dos nove já existentes: **Judit Polgár (Chess Classic Mainz 2008, CC BY-SA 3.0)** e **Garry Kasparov (Optiebeurs 1988, CC0 1.0)**. O trabalho de direitos e aquisição desses arquivos permanece pendente. Para arquivos já obtidos de forma autorizada, `scripts/import_local_history_portrait.py` cria o JPEG 480×480 e grava metadata/hash sem consultar nenhum host remoto. O bloqueio do Wikimedia não deve ser contornado.
+**58 imagens empacotadas; seis pendentes**, discriminadas por motivo e direitos em `docs/HISTORY_PORTRAIT_BACKLOG.md`. O acervo combina CC0, CC BY, CC BY-SA e 12 registros Public Domain Mark; a última marca **não é** licença CC0. A aquisição da Cleveland Public Library foi tratada separadamente, com aviso de direitos territoriais. A figura de Philidor é uma gravura do século XVIII, explicitamente descrita como representação artística.
+
+O importador local `scripts/import_local_history_portrait.py` mantém o fluxo autorizado de incorporar novas fotos sem rede: cada arquivo exige origem, licença, autoria, JPEG derivado e hash. **Não substituir placeholders por imagens sem documentação**. A homologação visual real no Debian/Chrome, a continuação das partidas históricas e as estatísticas continuam sob as issues #48–#53.

@@ -1,74 +1,25 @@
-# Inventário de pendências de retratos — issue #47
+# Situação consolidada dos retratos — ChessSimulation / issue #47
 
-**Atualizado em:** 2026-11-06 · **PR:** #55 · **elenco:** 64 enxadristas · **JPEGs incorporados:** 13 · **faltam:** 51
+**Revisão: 06/11/2026 · PR #55 (Draft).**
 
-A lista diferencia **fotografia efetivamente empacotada** de **candidata identificada**, sem tratar resultado de busca como licença. Fotografias são exclusivamente de torneios/matches oficiais, com identificação do atleta, evento e direitos. Nenhuma imagem nova foi adquirida após o bloqueio por política de robôs do Wikimedia.
+O elenco possui **64/64 packs biográficos** e **58/64 retratos visuais empacotados**. Dos 58, há fotografias de torneios, retratos históricos e reproduções artísticas corretamente descritas nos metadados, incluindo a gravura de Philidor. A expressão "58 fotografias" seria historicamente imprecisa. Os seis registros abaixo permanecem com `portrait: null`, apresentando fallback na interface.
 
-| Jogador | Grupo | Situação | Fonte |
-| --- | --- | --- | --- |
-| Wilhelm Steinitz | mundiais e convites | Pesquisa documental pendente | — |
-| Emanuel Lasker | mundiais e convites | Pesquisa documental pendente | — |
-| José Raúl Capablanca | mundiais e convites | Pesquisa documental pendente | — |
-| Alexander Alekhine | mundiais e convites | Pesquisa documental pendente | — |
-| Mikhail Botvinnik | mundiais e convites | Pesquisa documental pendente | — |
-| Mikhail Tal | mundiais e convites | Pesquisa documental pendente | — |
-| Bobby Fischer | mundiais e convites | Pesquisa documental pendente | — |
-| Garry Kasparov | mundiais e convites | Fonte encontrada, JPEG pendente | [CC0 1.0 — Optiebeurs Chess Tournament, Amsterdam](https://commons.wikimedia.org/wiki/File:Optiebeurs_schaakvierkamp_Garri_Kasparov_tegen_Anatoli_Karpov_%28rechts%29,_Bestanddeelnr_934-2524.jpg) |
-| Vladimir Kramnik | mundiais e convites | Pesquisa documental pendente | — |
-| Ding Liren | mundiais e convites | Fonte encontrada, JPEG pendente | [CC BY-SA 3.0 — Candidates Tournament 2018](https://commons.wikimedia.org/wiki/File:Ding_Liren_2018_Candidates.jpg) |
-| Shakhriyar Mamedyarov | mundiais e convites | Pesquisa documental pendente | — |
-| Maxime Vachier-Lagrave | mundiais e convites | Pesquisa documental pendente | — |
-| Alexander Grischuk | mundiais e convites | Pesquisa documental pendente | — |
-| François-André Danican Philidor | pioneiros | Pesquisa documental pendente | — |
-| Howard Staunton | pioneiros | Pesquisa documental pendente | — |
-| Adolf Anderssen | pioneiros | Pesquisa documental pendente | — |
-| Paul Morphy | pioneiros | Pesquisa documental pendente | — |
-| Johannes Zukertort | pioneiros | Pesquisa documental pendente | — |
-| Mikhail Chigorin | pioneiros | Pesquisa documental pendente | — |
-| Harry Nelson Pillsbury | pioneiros | Pesquisa documental pendente | — |
-| Siegbert Tarrasch | pioneiros | Pesquisa documental pendente | — |
-| Frank Marshall | pioneiros | Pesquisa documental pendente | — |
-| Akiba Rubinstein | pioneiros | Pesquisa documental pendente | — |
-| Aron Nimzowitsch | pioneiros | Pesquisa documental pendente | — |
-| Richard Réti | pioneiros | Pesquisa documental pendente | — |
-| Paul Keres | gigantes sem coroa | Fonte encontrada, JPEG pendente | [CC0 1.0 — Hoogovens Chess Tournament](https://commons.wikimedia.org/wiki/File:Hoogoven_Schaaktoernooi_Keres,_Bestanddeelnr_922-0145.jpg) |
-| Samuel Reshevsky | gigantes sem coroa | Pesquisa documental pendente | — |
-| Efim Geller | gigantes sem coroa | Fonte encontrada, JPEG pendente | [CC0 1.0 — Hoogovens Chess Tournament](https://commons.wikimedia.org/wiki/File:Hoogoven_Schaaktoernooi_Geller_%28links%29_en_Keres,_Bestanddeelnr_922-0477.jpg) |
-| Viktor Korchnoi | gigantes sem coroa | Pesquisa documental pendente | — |
-| Lajos Portisch | gigantes sem coroa | Fonte encontrada, JPEG pendente | [CC0 1.0 — IBM International Chess Tournament, Amsterdam](https://commons.wikimedia.org/wiki/File:PortischIBM1969.jpg) |
-| Mark Taimanov | gigantes sem coroa | Pesquisa documental pendente | — |
-| Lev Polugaevsky | gigantes sem coroa | Pesquisa documental pendente | — |
-| Svetozar Gligorić | gigantes sem coroa | Pesquisa documental pendente | — |
-| Vasyl Ivanchuk | modernos | Pesquisa documental pendente | — |
-| Nigel Short | modernos | Pesquisa documental pendente | — |
-| Gata Kamsky | modernos | Pesquisa documental pendente | — |
-| Alexei Shirov | modernos | Pesquisa documental pendente | — |
-| Boris Gelfand | modernos | Pesquisa documental pendente | — |
-| Peter Leko | modernos | Pesquisa documental pendente | — |
-| Peter Svidler | modernos | Pesquisa documental pendente | — |
-| Levon Aronian | modernos | Pesquisa documental pendente | — |
-| Fabiano Caruana | modernos | Fonte encontrada, JPEG pendente | [CC BY-SA 3.0 — Tata Steel Chess Tournament](https://commons.wikimedia.org/wiki/File:FabianoCaruana13.jpg) |
-| Hikaru Nakamura | modernos | Fonte encontrada, JPEG pendente | [CC BY-SA 3.0 — Tata Steel Chess Tournament](https://commons.wikimedia.org/wiki/File:HikaruNakamura13b.jpg) |
-| Sergey Karjakin | modernos | Pesquisa documental pendente | — |
-| Ian Nepomniachtchi | modernos | Pesquisa documental pendente | — |
-| Wesley So | modernos | Pesquisa documental pendente | — |
-| Vera Menchik | rainhas | Pesquisa documental pendente | — |
-| Nona Gaprindashvili | rainhas | Fonte encontrada, JPEG pendente | [CC0 1.0 — Hoogovens Women's Chess Tournament](https://commons.wikimedia.org/wiki/File:Gaprindashvili1963.jpg) |
-| Maia Chiburdanidze | rainhas | Fonte encontrada, JPEG pendente | [CC0 1.0 — OHRA Chess Tournament, Amsterdam](https://commons.wikimedia.org/wiki/File:Ohra_schaaktoernooi_Maja_Chiburdanidze_tijdens_haar_partij_met_Pieterse,_Bestanddeelnr_933-7153.jpg) |
-| Judit Polgár | rainhas | Fonte encontrada, JPEG pendente | [CC BY-SA 3.0 — Chess Classic Mainz](https://commons.wikimedia.org/wiki/File:Judit_Polgar.jpg) |
-| Hou Yifan | rainhas | Fonte encontrada, JPEG pendente | [CC BY-SA 3.0 — Tata Steel Chess Tournament](https://commons.wikimedia.org/wiki/File:HouYifan13b.jpg) |
+| Jogador | Estado em 06/11/2026 | Fonte analisada e próximo bloqueio |
+| --- | --- | --- |
+| Alexander Alekhine | **PENDENTE — 0 JPEG** | [Retrato de 1918 identificado como domínio público](https://commons.wikimedia.org/wiki/File:Alexander_Alekhine.jpg) e [acervo fotográfico da FIDE](https://museum.fide.com/thematic_collections/alexander-alekhine-in-photographs). Necessário arquivo por meio permitido e verificação do direito aplicável no Brasil; não usar o site bloqueado como meio indireto. |
+| Bobby Fischer | **PENDENTE — 0 JPEG; fonte CC0 verificada** | [Nationaal Archief, foto de 15/07/1971](https://www.nationaalarchief.nl/onderzoeken/fotocollectie/abc6ac60-d0b4-102d-bcf8-003048976d84), fotógrafo desconhecido/Anefo. Página oficial identifica CC0. O serviço de imagem respondeu 404 (derivado) e 406 (original com Accept JPEG); não existe JPG importado. |
+| Frank Marshall | **PENDENTE — 0 JPEG; direitos não avaliados** | [Cleveland Public Library, partida Marshall–Réti, Moscou 1925](https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/108). A ficha possui marca **CNE: Copyright Not Evaluated**, e não PDM/CC0; não importar sem base adicional. |
+| Aron Nimzowitsch | **PENDENTE — 0 JPEG; direitos não avaliados** | [Cleveland Public Library, retrato de 1932](https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/75). Classificado **CNE**, sem licença de redistribuição demonstrada. |
+| Richard Réti | **PENDENTE — 0 JPEG; direitos não avaliados** | [Cleveland Public Library, partida de Moscou 1925](https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/108). Mesma ficha CNE do registro de Marshall; não duplicar imagem nem tratar localização do rosto como verificada sem inspeção. |
+| Gata Kamsky | **PENDENTE — 0 JPEG; licença identificada** | [Imagem do Grenke Open 2016, autor GFHund](https://commons.wikimedia.org/wiki/File:Kamsky,Gata_2016_Karlsruhe.jpeg) publicada como **CC BY-SA 4.0**. Obter arquivo licenciado do titular ou canal de download oficialmente permitido; preservar attribution, licença e indicação da transformação. |
 
-## Procedimento de aquisição sem contornar bloqueios
+## Direitos, nomenclatura e integridade
 
-1. Conferir a página original do titular e a licença atual, inclusive autor, evento, identidade e direito de modificação/redistribuição. Para arquivos do [Nationaal Archief](https://www.nationaalarchief.nl/onderzoeken/open-data/fotos), somente registros com **botão de download e indicador CC0/Public Domain** são dados abertos.
-2. Obter o arquivo pelo **download oficial permitido** ou diretamente do titular; não repetir APIs que retornaram robot-policy 429, não alternar IP ou consumir URLs técnicas para contornar a limitação.
-3. Adicionar a fonte comprovada ao manifesto (`portrait_candidates.json`) com evento, data, fotógrafo, titular, licença e posição de recorte. Para os 11 candidatos já catalogados sem JPEG, as fontes estão nesta tabela.
-4. Importar offline pelo `scripts/import_local_history_portrait.py` (Pillow instalado somente para curadoria), declarar que a fonte e os direitos foram conferidos e inspecionar visualmente o retrato.
-5. Rodar testes do contrato, empacotamento e SHA-256 do wheel; revisar créditos na interface História. Não declarar entrega até o JPEG existir na branch.
+- **27** imagens CC0 1.0; **3** CC BY-SA 3.0; **15** CC BY-SA 2.0; **1** CC BY 2.0; **12** com **Public Domain Mark 1.0**: total **58 arquivos JPEG locais** com `sha256` e dados de proveniência.
+- **Public Domain Mark (PDM) não é licença nem autorização universal**; a Cleveland utiliza a indicação `NoC-US` para parte do acervo. A situação autoral em jurisdição brasileira deve ser verificada antes de eventual redistribuição pública, especialmente na hipótese de comercialização.
+- O manifesto `portrait_candidates.json` registra **59 linhas**: 58 imagens incorporadas mais uma única fonte candidata ainda não materializada (**Fischer**). Outros casos sem licença/arquivo não foram falsamente aprovados no manifesto.
+- A gravura de **Philidor, 1772**, veio da coleção Open Access do Metropolitan Museum of Art; `alt` e `derivative_note` identificam expressamente o desenho, não uma fotografia em vida.
+- Não usar Google Imagens, agregadores de fotos, APIs bloqueadas, material licenciado apenas para uso editorial ou cópias de procedência incerta como alternativa automática.
+- Antes do merge, executar testes, inspecionar visualmente **identidade e recorte dos 58 retratos** em Chrome/Debian, confirmar crédito/alt/license na aba História, verificar o wheel e tratar o aceite de direitos territoriais como gate separado.
 
-## Pesquisa de direitos não transformada em manifest
-
-- [Vera Menchik durante a Olimpíada de Praga de 1931](https://commons.wikimedia.org/wiki/File:Vera_Menchik_1931_chess_olympiad_Prague.png): imagem identificada como de torneio, descrita no Commons como domínio público em determinadas jurisdições; **pendente de análise documental da cadeia de publicação e do enquadramento jurídico brasileiro**. A marcação de domínio público não é equivalente a uma licença CC0 e não deve ser falsamente registrada como tal.
-- [José Raúl Capablanca em exibição simultânea em 1919](https://commons.wikimedia.org/wiki/File:J._R._Capablanca_at_chess_tournament.jpg): candidato histórico descrito como domínio público em parte das jurisdições; requer conferência da fonte primária, evento e enquadramento da licença antes de entrar no manifesto técnico.
-
-**Backlog aberto:** a falta de licença demonstrável ou de arquivo binário exige placeholder, não reprodução de fotografia aleatória do Google Imagens.
+**Não fechar #47**: além destes seis retratos, a issue acompanha a homologação de direitos e de apresentação da interface. A PR #55 permanece Draft até o gate humano.
