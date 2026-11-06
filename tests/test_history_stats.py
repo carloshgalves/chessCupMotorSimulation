@@ -541,3 +541,11 @@ def test_tournament_attempt_scan_limit_is_not_a_silent_truncation(tmp_path, monk
     monkeypatch.setattr(history_stats, "MAX_SUMMARIES", 1)
     with pytest.raises(ValueError, match="Limite de tentativas"):
         stat(tmp_path)
+
+
+def test_game_count_cap_cannot_be_swallowed_as_corrupt_record(tmp_path, monkeypatch):
+    session(tmp_path, 0, results=("1-0", "0-1"))
+    monkeypatch.setattr(history_stats, "MAX_GAMES", 1)
+    with pytest.raises(history_stats.StatisticsCapacityExceeded,
+                       match="Limite de partidas"):
+        stat(tmp_path)
