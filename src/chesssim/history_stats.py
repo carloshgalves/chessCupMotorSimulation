@@ -11,6 +11,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from hashlib import sha256
 from io import StringIO
+import json
 from pathlib import Path
 import re
 import math
@@ -36,6 +37,29 @@ SESSION_ID = re.compile(r"session-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{12}\Z")
 ATTEMPT = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}\Z")
 RESULTS = frozenset({"1-0", "0-1", "1/2-1/2"})
 COUNTERS = ("games", "completed", "wins", "draws", "losses", "incomplete")
+
+
+def _json_bytes(raw: bytes) -> dict:
+    """Strictly parse exactly the bytes covered by a tournament SHA-256."""
+    def unique_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise InvalidCatalogue("Chave duplicada em JSON")
+            result[key] = value
+        return result
+
+    def nonfinite(value):
+        raise InvalidCatalogue("Número não finito em resumo")
+
+    try:
+        data = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_pairs,
+                          parse_constant=nonfinite)
+    except (UnicodeError, ValueError, RecursionError) as exc:
+        raise InvalidCatalogue("Resumo local inválido") from exc
+    if not isinstance(data, dict):
+        raise InvalidCatalogue("Resumo não é objeto")
+    return data
 
 
 def _timestamp(value: object) -> str | None:
@@ -229,7 +253,7 @@ def _tournament_attempt(root: Path, run: Path, state: dict,
     if (sha256(summary_raw).hexdigest() != attempt.get("summary_sha256")
             or sha256(pgn_raw).hexdigest() != attempt.get("pgn_sha256")):
         raise InvalidCatalogue("Hashes do ledger e dos arquivos divergem")
-    summary = _json(root, relative / "summary.json", MAX_MANIFEST_BYTES)
+    summary = _json_bytes(summary_raw)
     meta_games = summary.get("games")
     if (summary.get("status") != "COMPLETED" or summary.get("players") != [a, b]
             or not isinstance(meta_games, list) or len(meta_games) != 2
