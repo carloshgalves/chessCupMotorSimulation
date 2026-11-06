@@ -1,0 +1,32 @@
+name: History portraits - one-time free-license import
+on:
+  push:
+    branches:
+      - feat/history-biographical-packs-47
+    paths:
+      - .github/workflows/history-portraits-once.yml
+permissions:
+  contents: write
+jobs:
+  import_portraits:
+    if: github.repository == 'carloshgalves/chessCupMotorSimulation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/history-biographical-packs-47
+          persist-credentials: true
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install 'Pillow>=11,<13'
+      - name: Verify Wikimedia Commons license metadata and materialize local JPEGs
+        run: python scripts/materialize_history_portraits.py --apply
+      - name: Commit photographs and source attributions to PR branch
+        run: |
+          git add src/chesssim/data/history/*.json src/chesssim/data/history/portraits/
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'assets(history): add tournament photos under verified CC licenses'
+            git push origin HEAD:feat/history-biographical-packs-47
+          fi
