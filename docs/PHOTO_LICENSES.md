@@ -54,3 +54,11 @@ A segunda leva foi selecionada por ocorrência documentada em torneios oficiais;
 | ding-liren | Candidates Tournament 2018 (2018-02-24) | Vladimir Barskij / Chess Federation of Russia | CC BY-SA 3.0 | [Arquivo no Commons](https://commons.wikimedia.org/wiki/File:Ding_Liren_2018_Candidates.jpg) |
 
 **Estado de publicação:** cada pack só passa a referenciar a fotografia depois que o importador obtém o JPEG local, confere a licença no Commons e registra SHA-256, fotógrafo, evento, URL e derivação. Usuários das futuras telas História (#48/#49) devem visualizar os créditos e o vínculo de licença.
+
+## Resultado da aquisição do segundo lote — 06/11/2026
+
+A aquisição ampliou o número de JPEGs efetivamente presentes de **7 para 13**. A versão atual contém, além dos sete originais, retratos de **David Bronstein, Magnus Carlsen, Max Euwe, Miguel Najdorf, Vasily Smyslov e Jan Timman**, com hash e metadados CC0/CC BY-SA nos respectivos packs.
+
+Os outros **9 candidatos** do manifesto ampliado permanecem **sem arquivo e sem associação `portrait`**: Portisch, Keres, Geller, Gaprindashvili, Chiburdanidze, Nakamura, Caruana, Hou Yifan e Ding Liren. O serviço conserva os placeholders. A Wikimedia Commons rejeitou novas requisições do runner compartilhado (HTTP 429 com **robot policy**). A aquisição automática foi interrompida e o workflow temporário foi excluído; não se deve repetir chamadas automáticas de forma contínua. Solicitar autorização de acesso, utilizar transferência disponibilizada oficialmente pela origem ou selecionar outra fonte livre é preferível a contornar o bloqueio.
+
+O manifesto mantém esses nove **como candidatos, não como fotografias aprovadas**, até que exista arquivo local comprovado por SHA-256 e licença/documentação suficientes. A ausência de retrato não invalida o pack biográfico.
