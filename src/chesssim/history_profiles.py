@@ -18,7 +18,7 @@ _REQUIRED = {
 _FIRST_PERSON = (
     "Fui ", "Venci ", "Conquistei ", "Derrotei ", "Defendi ",
     "Mantive ", "Disputei ", "Publiquei ", "Tornei-me ",
-    "Alcancei ", "Recebi ", "Recuperei ", "Voltei ",
+    "Alcancei ", "Recebi ", "Recuperei ", "Voltei ", "Concluí ",
     "Joguei ", "Desenvolvi ", "Ajudei ",
 )
 
