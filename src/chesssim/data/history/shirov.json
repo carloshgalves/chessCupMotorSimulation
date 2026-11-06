@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Venci uma eliminatória contra Kramnik e fui finalista do Mundial da FIDE.",
   "era_label": "1998–2000",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/shirov.jpg",
+    "alt": "shirov fotografado em European Team Chess Championship, Porto Carras (2011-11-11)",
+    "author": "Andreas Kontokanis",
+    "license": "CC BY-SA 2.0",
+    "source_url": "https://www.flickr.com/photos/8022405@N02/6352157086",
+    "verified_at": "2026-11-06",
+    "event": "European Team Chess Championship, Porto Carras",
+    "event_date": "2011-11-11",
+    "rights_holder": "Andreas Kontokanis",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "sha256": "1a41e461cc5dcad3d23074a5ef5ee7a57a1996a5f1cc805047c4f31f4c2cc285",
+    "derivative_note": "Recorte quadrado de 480×480 px de imagem de torneio. A fotografia derivada mantém a licença da fonte; atribuição ao fotógrafo.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",
