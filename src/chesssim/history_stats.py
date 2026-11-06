@@ -11,6 +11,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from hashlib import sha256
 from io import StringIO
+from itertools import islice
 import json
 from pathlib import Path
 import re
@@ -420,9 +421,13 @@ def _tournament_games(root: Path, names: dict[str, str], slug: str,
                     # may represent crashes or tampering. Report them in
                     # coverage; never reinterpret them as scored games.
                     a, b = match["players"]
-                    attempt_root = root / run / "matches" / match["id"] / (
-                        "duels") / (a + "-vs-" + b)
-                    physical = sorted(attempt_root.glob("*/summary.json"))
+                    attempt_root = (root / run / "matches" / match["id"] /
+                                    "duels" / (a + "-vs-" + b))
+                    # Cap iteration before sorting or materializing the
+                    # directory, including maliciously large workspaces.
+                    remaining = MAX_SUMMARIES - physical_count
+                    physical = sorted(islice(
+                        attempt_root.glob("*/summary.json"), remaining + 1))
                     physical_count += len(physical)
                     if physical_count > MAX_SUMMARIES:
                         raise InvalidCatalogue("Limite de tentativas físicas excedido")
