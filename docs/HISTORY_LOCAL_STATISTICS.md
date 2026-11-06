@@ -88,6 +88,12 @@ O exemplo apresenta **sem dados**, e não uma taxa de vitórias hipotética.
   correspondem aos hashes, engine/perfis, cores, resultados e trajetórias
   gravados. Tentativas excluídas da classificação **não pontuam**; seu
   número fica visível em `excluded_attempts`.
+- Jogos concluídos somente são pontuados quando a posição terminal prova o
+  resultado ou quando a queda de tempo documentada comprova relógio, lado
+  perdedor e eventual empate por insuficiência de material. O campo
+  `Result` isolado nunca é evidência suficiente.
+- Tentativas físicas de torneio que não constem no ledger nem no inventário
+  de exclusões são assinaladas como cobertura parcial, sem alterar o placar.
 - Interrupções da Arena com PGN legal e status `INCOMPLETE`
   contam em `incomplete`, nunca em W/D/L. Uma tentativa `FAILED`
   sem resultado verificável aparece em cobertura, não como derrota.

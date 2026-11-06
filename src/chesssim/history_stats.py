@@ -11,6 +11,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from hashlib import sha256
 from io import StringIO
+from itertools import islice
 import json
 from pathlib import Path
 import re
@@ -37,6 +38,10 @@ SESSION_ID = re.compile(r"session-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{12}\Z")
 ATTEMPT = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}\Z")
 RESULTS = frozenset({"1-0", "0-1", "1/2-1/2"})
 COUNTERS = ("games", "completed", "wins", "draws", "losses", "incomplete")
+
+
+class StatisticsCapacityExceeded(InvalidCatalogue):
+    """A bounded scan was exceeded; never return misleading partial totals."""
 
 
 def _json_bytes(raw: bytes) -> dict:
@@ -96,11 +101,32 @@ def _validated_result(game: chess.pgn.Game, white: str, black: str,
         identity, _ = mainline_identity(game)
         if identity != meta["mainline_sha256"]:
             raise InvalidCatalogue("Assinatura da partida divergente")
-    # A recorded completion may be a resignation or timeout. When there is
-    # a terminal board state, its winner must still agree with the summary.
-    outcome = game.end().board().outcome(claim_draw=True)
-    if outcome is not None and status == "COMPLETED" and outcome.result() != result:
-        raise InvalidCatalogue("Resultado contradiz o tabuleiro")
+    # Every scored finish requires a terminal board result or a documented
+    # time forfeit. PGN headers and summary alone cannot prove a win.
+    board = game.end().board()
+    outcome = board.outcome(claim_draw=True)
+    if meta.get("termination") is not None and (
+            meta["termination"] != game.headers.get("Termination")):
+        raise InvalidCatalogue("Terminação diverge do PGN")
+    if status == "INCOMPLETE":
+        if outcome is not None:
+            raise InvalidCatalogue("Partida terminal indevidamente interrompida")
+        return
+    if outcome is not None:
+        if outcome.result() != result:
+            raise InvalidCatalogue("Resultado contradiz o tabuleiro")
+        return
+    if game.headers.get("Termination") != "TimeForfeit":
+        raise InvalidCatalogue("Resultado final sem prova de término")
+    clocks = meta.get("clock_left")
+    loser_index = 0 if board.turn == chess.WHITE else 1
+    expected = ("1/2-1/2" if board.has_insufficient_material(not board.turn)
+                else "0-1" if board.turn == chess.WHITE else "1-0")
+    if (not isinstance(clocks, list) or len(clocks) != 2
+            or any(type(v) not in (int, float) or not math.isfinite(v)
+                   for v in clocks)
+            or clocks[loser_index] > 0 or result != expected):
+        raise InvalidCatalogue("Queda de tempo sem comprovação")
 
 
 def _arena_games(root: Path, names: dict[str, str], slug: str,
@@ -210,8 +236,12 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
                             coverage["rejected_games"] += 1
                     for game_record in verified:
                         _record(game_record, seen, records, coverage)
+                except StatisticsCapacityExceeded:
+                    raise
                 except (InvalidCatalogue, ValueError, KeyError, TypeError, OSError):
                     _mark(coverage, "arena_summary")
+        except StatisticsCapacityExceeded:
+            raise
         except (InvalidCatalogue, ValueError, KeyError, TypeError, OSError):
             _mark(coverage, "arena_manifest")
 
@@ -358,6 +388,7 @@ def _tournament_games(root: Path, names: dict[str, str], slug: str,
         ({root / "tournament.json"} if (root / "tournament.json").exists() else set()))
     if len(paths) > MAX_TOURNAMENTS:
         raise InvalidCatalogue("Limite de torneios excedido")
+    physical_count = 0
     for manifest in paths:
         relative = manifest.relative_to(root)
         run = relative.parent
@@ -394,6 +425,21 @@ def _tournament_games(root: Path, names: dict[str, str], slug: str,
                             conflicts.add(folder)
                         else:
                             grouped[folder] = attempt
+                    # Physical attempts not present in the canonical ledger
+                    # may represent crashes or tampering. Report them in
+                    # coverage; never reinterpret them as scored games.
+                    a, b = match["players"]
+                    attempt_root = (root / run / "matches" / match["id"] /
+                                    "duels" / (a + "-vs-" + b))
+                    # Cap iteration before sorting or materializing the
+                    # directory, including maliciously large workspaces.
+                    remaining = MAX_SUMMARIES - physical_count
+                    physical = sorted(islice(
+                        attempt_root.glob("*/summary.json"), remaining + 1))
+                    physical_count += len(physical)
+                    if physical_count > MAX_SUMMARIES:
+                        raise StatisticsCapacityExceeded("Limite de tentativas físicas excedido")
+                    declared = set(grouped)
                     excluded = match.get("excluded_attempts", [])
                     if not isinstance(excluded, list) or len(excluded) > MAX_SUMMARIES:
                         _mark(coverage, "excluded_attempt_manifest")
@@ -403,6 +449,16 @@ def _tournament_games(root: Path, names: dict[str, str], slug: str,
                                 coverage["excluded_attempts"] += 1
                             else:
                                 _mark(coverage, "excluded_attempt_manifest")
+                    excluded_names = {
+                        entry.get("folder") for entry in excluded
+                        if isinstance(entry, dict) and
+                        isinstance(entry.get("folder"), str)
+                    } if isinstance(excluded, list) else set()
+                    for physical_summary in physical:
+                        relative_folder = physical_summary.parent.relative_to(root / run)
+                        identifier = relative_folder.as_posix()
+                        if identifier not in declared and identifier not in excluded_names:
+                            _mark(coverage, "unregistered_tournament_attempt")
                     for folder, attempt in grouped.items():
                         coverage["candidate_games"] += 2
                         if folder in conflicts:
@@ -415,10 +471,14 @@ def _tournament_games(root: Path, names: dict[str, str], slug: str,
                             )
                             for record in game_records:
                                 _record(record, seen, records, coverage)
+                        except StatisticsCapacityExceeded:
+                            raise
                         except (InvalidCatalogue, OSError, ValueError, TypeError,
                                 KeyError, IndexError, AttributeError):
                             coverage["rejected_games"] += 2
                             _mark(coverage, "tournament_attempt")
+        except StatisticsCapacityExceeded:
+            raise
         except (InvalidCatalogue, OSError, ValueError, TypeError, KeyError,
                 IndexError, AttributeError):
             _mark(coverage, "tournament_manifest")
@@ -430,7 +490,7 @@ def _record(game: dict, seen: set[str], records: list[dict],
         coverage["duplicate_records"] += 1
         return
     if len(seen) >= MAX_GAMES:
-        raise InvalidCatalogue("Limite de partidas excedido")
+        raise StatisticsCapacityExceeded("Limite de partidas excedido")
     seen.add(game["id"])
     records.append(game)
     coverage["verified_games"] += 1
