@@ -517,3 +517,27 @@ def test_time_forfeit_requires_clock_proof_and_correct_winner(tmp_path):
         rejected = stat(tmp_path)
         assert rejected["totals"]["games"] == 0
         assert rejected["coverage"]["partial"] is True
+
+
+def test_unregistered_tournament_attempt_is_visible_in_coverage_not_scored(tmp_path):
+    root, _, folder = cup(tmp_path)
+    unexpected = folder.parent / "attempt-unregistered"
+    unexpected.mkdir()
+    (unexpected / "summary.json").write_bytes((folder / "summary.json").read_bytes())
+    report = stat(tmp_path)
+    assert report["totals"]["tournaments"] == 1
+    assert report["totals"]["games"] == 2
+    assert report["totals"]["duels"] == 1
+    assert report["coverage"]["rejected_records"] == 1
+    assert report["coverage"]["partial"] is True
+
+
+def test_tournament_attempt_scan_limit_is_not_a_silent_truncation(tmp_path, monkeypatch):
+    root, _, folder = cup(tmp_path)
+    for index in range(2):
+        unexpected = folder.parent / f"attempt-unknown-{index}"
+        unexpected.mkdir()
+        (unexpected / "summary.json").write_bytes((folder / "summary.json").read_bytes())
+    monkeypatch.setattr(history_stats, "MAX_SUMMARIES", 1)
+    with pytest.raises(ValueError, match="Limite de tentativas"):
+        stat(tmp_path)
