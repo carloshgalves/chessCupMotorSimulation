@@ -4,7 +4,7 @@
   "review_status": "pending",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui vencedor de Hastings e campeão norte-americano no fim do século XIX.",
-  "era_label": "1895–1898",
+  "era_label": "1895–1898 (Hastings e matches com Showalter)",
   "portrait": null,
   "highlights": [
     {
@@ -18,9 +18,9 @@
     {
       "id": "achievement-2",
       "year": 1898,
-      "text": "Conquistei o Campeonato dos Estados Unidos.",
+      "text": "Derrotei Jackson Showalter em um match disputado em Nova York.",
       "source_ids": [
-        "source-1"
+        "source-2"
       ]
     }
   ],
@@ -35,10 +35,10 @@
     },
     {
       "year": 1898,
-      "title": "Campeonato americano",
-      "summary": "Conquistei o Campeonato dos Estados Unidos.",
+      "title": "Match contra Jackson Showalter",
+      "summary": "Derrotei Jackson Showalter em um match disputado em Nova York.",
       "source_ids": [
-        "source-1"
+        "source-2"
       ]
     }
   ],
@@ -48,6 +48,13 @@
       "title": "Referência histórica de pillsbury",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/harry-pillsbury",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "source-2",
+      "title": "Chess.com — cronologia do xadrez do século XIX (matches 1897 e 1898)",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/19th-century-chess",
       "accessed_at": "2026-11-06"
     }
   ]
