@@ -172,6 +172,7 @@ def test_reversed_colors_are_two_games_one_duel_with_correct_perspective(tmp_pat
     }
     assert report["opponents"][0]["slug"] == "tal"
     assert report["opponents"][0]["wins"] == 1
+    assert report["opponents"][0]["duels"] == 1
     tal = stat(tmp_path, "tal")
     assert tal["totals"]["wins"] == 1 and tal["totals"]["losses"] == 1
     assert report["scope"]["from_utc"].startswith("2026-11-06")
