@@ -9,8 +9,8 @@ jogador**, com dados de origem e hashes verificáveis.
 
 | Rota GET | Resultado |
 | --- | --- |
-| /api/history/players/{slug}/games | schema history-games-v1, contagem, limite e até cinco cartões |
-| /api/history/games/{game_id}/replay | schema history-replay-v1, cartão e posições FEN/SAN calculadas de PGN válido |
+| /api/history/players/{slug}/games | schema chesssim-history-games-v1, contagem, limite e até cinco cartões |
+| /api/history/games/{game_id}/replay | schema chesssim-history-replay-v1, cartão e posições FEN/SAN calculadas de PGN válido |
 
 As respostas efetivas usam as versões de contrato
 `chesssim-history-games-v1` e `chesssim-history-replay-v1`.
@@ -73,12 +73,13 @@ considerados. Jogos `FAILED` e `INTERRUPTED` não entram como
 partidas válidas. Um jogo `INCOMPLETE` é identificado e não recebe
 resultado final. O catálogo dá prioridade aos históricos curados (ordenados
 por prioridade explícita e ID), depois aos simulados (sessões mais recentes
-primeiro). A deduplicação por hash impede preencher os cinco cartões com
-cópias byte a byte da mesma partida.
+primeiro). A deduplicação por hash e assinatura semântica (jogadores, evento, data,
+rodada, posição inicial e lances) impede preencher os cinco cartões com
+cópias da mesma partida mesmo se o PGN tiver espaços diferentes.
 
 O diretório de sessões fica sob controle do operador. Arquivos corrompidos,
 symlinks, caminhos divergentes, hashes incompatíveis, jogadores inconsistentes,
-encoding e PGNs ilegais são recusados; o endpoint devolve erro genérico em
+encoding e PGNs ilegais e JSON com chaves duplicadas ou números não finitos são recusados; o endpoint devolve erro genérico em
 vez de fornecer replay inseguro. Para reduzir uso de recursos, há limites de
 volume para arquivos, manifestos e quantidade de sessões pesquisadas.
 
