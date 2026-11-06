@@ -245,7 +245,9 @@ def test_history_browser_navigation_sources_credits_and_syntax():
     assert syntax.returncode == 0, syntax.stdout + syntax.stderr
     shared = root / "src/chesssim/data/chess_board.js"
     replay = root / "src/chesssim/data/history_replay.js"
-    test = subprocess.run(["node", str(harness), str(script), str(shared), str(replay)],
+    stats = root / "src/chesssim/data/history_stats.js"
+    test = subprocess.run(["node", str(harness), str(script), str(shared),
+                           str(replay), str(stats)],
                           capture_output=True, text=True, timeout=12, check=False)
     assert test.returncode == 0, test.stdout + test.stderr
     assert "photo credits: PASS" in test.stdout
