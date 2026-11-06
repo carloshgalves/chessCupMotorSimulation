@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui vencedor de torneios clássicos de elite e conquistei mundiais em ritmos rápidos.",
   "era_label": "1989–2016",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/ivanchuk.jpg",
+    "alt": "ivanchuk fotografado em European Club Cup, Heraklion (2007-11-01)",
+    "author": "Andreas Kontokanis",
+    "license": "CC BY 2.0",
+    "source_url": "https://www.flickr.com/photos/8022405@N02/1824512615",
+    "verified_at": "2026-11-06",
+    "event": "European Club Cup, Heraklion",
+    "event_date": "2007-11-01",
+    "rights_holder": "Andreas Kontokanis",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/",
+    "sha256": "4f596ff2fdd64f767ab38d9515c6754fbcf64fa61426e7d5c7933cdbffd79236",
+    "derivative_note": "Recorte quadrado de 480×480 px de imagem de torneio. A fotografia derivada mantém a licença da fonte; atribuição ao fotógrafo.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

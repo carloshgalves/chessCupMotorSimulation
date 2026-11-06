@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui tricampeão mundial de blitz e participei da elite do xadrez clássico.",
   "era_label": "2006–2015",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/grischuk.jpg",
+    "alt": "grischuk fotografado em 42nd Chess Olympiad, Baku (2016-09-10)",
+    "author": "Andreas Kontokanis",
+    "license": "CC BY-SA 2.0",
+    "source_url": "https://www.flickr.com/photos/8022405@N02/30754960216",
+    "verified_at": "2026-11-06",
+    "event": "42nd Chess Olympiad, Baku",
+    "event_date": "2016-09-10",
+    "rights_holder": "Andreas Kontokanis",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "sha256": "abc534ed294c6ce3de4fc930bbca9dd901fbece5510ecd4d88214a439dcfb543",
+    "derivative_note": "Recorte quadrado de 480×480 px de imagem de torneio. A fotografia derivada mantém a licença da fonte; atribuição ao fotógrafo.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

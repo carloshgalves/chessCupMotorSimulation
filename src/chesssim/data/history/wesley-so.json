@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Venci o Tata Steel, a Sinquefield Cup e o primeiro Mundial de Fischer Random.",
   "era_label": "2016–2019",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/wesley-so.jpg",
+    "alt": "wesley-so fotografado em 42nd Chess Olympiad, Baku (2016-09)",
+    "author": "Andreas Kontokanis",
+    "license": "CC BY-SA 2.0",
+    "source_url": "https://www.flickr.com/photos/8022405@N02/28955094824",
+    "verified_at": "2026-11-06",
+    "event": "42nd Chess Olympiad, Baku",
+    "event_date": "2016-09",
+    "rights_holder": "Andreas Kontokanis",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "sha256": "7b66b9f498a8501a20518924bfa35036c01de967d099401967648fda1f362380",
+    "derivative_note": "Recorte quadrado de 480×480 px de imagem de torneio. A fotografia derivada mantém a licença da fonte; atribuição ao fotógrafo.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

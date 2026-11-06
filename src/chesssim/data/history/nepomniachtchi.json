@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Venci dois torneios de Candidatos e disputei duas vezes a coroa mundial.",
   "era_label": "2021–2023",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/nepomniachtchi.jpg",
+    "alt": "nepomniachtchi fotografado em 42nd Chess Olympiad, Baku (2016-09)",
+    "author": "Andreas Kontokanis",
+    "license": "CC BY-SA 2.0",
+    "source_url": "https://www.flickr.com/photos/8022405@N02/31118550352",
+    "verified_at": "2026-11-06",
+    "event": "42nd Chess Olympiad, Baku",
+    "event_date": "2016-09",
+    "rights_holder": "Andreas Kontokanis",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "sha256": "1c0479d44494737d16c28c658a2af5da76649905873641cdfbb344d76041df8b",
+    "derivative_note": "Recorte quadrado de 480×480 px de imagem de torneio. A fotografia derivada mantém a licença da fonte; atribuição ao fotógrafo.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

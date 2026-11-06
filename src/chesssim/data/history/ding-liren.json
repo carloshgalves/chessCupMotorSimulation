@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui o primeiro enxadrista chinês a conquistar o Campeonato Mundial clássico.",
   "era_label": "2023–2024 (campeão mundial)",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/ding-liren.jpg",
+    "alt": "ding-liren fotografado em 42nd Chess Olympiad, Baku (2016-09-02)",
+    "author": "Andreas Kontokanis",
+    "license": "CC BY-SA 2.0",
+    "source_url": "https://www.flickr.com/photos/8022405@N02/30201145173",
+    "verified_at": "2026-11-06",
+    "event": "42nd Chess Olympiad, Baku",
+    "event_date": "2016-09-02",
+    "rights_holder": "Andreas Kontokanis",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "sha256": "22e4c2fb8d2869f1768461c1094b31ddcbb0e31d5cb6aaa6c9ab619ecc2a5a63",
+    "derivative_note": "Recorte quadrado de 480×480 px de imagem de torneio. A fotografia derivada mantém a licença da fonte; atribuição ao fotógrafo.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão mundial de rápidas e blitz e desafiante de Magnus Carlsen.",
   "era_label": "2012–2016",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/karjakin.jpg",
+    "alt": "karjakin fotografado em 42nd Chess Olympiad, Baku (2016-09-10)",
+    "author": "Andreas Kontokanis",
+    "license": "CC BY-SA 2.0",
+    "source_url": "https://www.flickr.com/photos/8022405@N02/30073009080",
+    "verified_at": "2026-11-06",
+    "event": "42nd Chess Olympiad, Baku",
+    "event_date": "2016-09-10",
+    "rights_holder": "Andreas Kontokanis",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "sha256": "551d34551b8068f161ab273a8f467f9e93ced0685ce961fca533ce4d03de728a",
+    "derivative_note": "Recorte quadrado de 480×480 px de imagem de torneio. A fotografia derivada mantém a licença da fonte; atribuição ao fotógrafo.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",
