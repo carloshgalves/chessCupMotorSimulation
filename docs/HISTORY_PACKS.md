@@ -86,3 +86,9 @@ A cronologia foi conferida antes da publicação: campeão brasileiro aos **13 a
 - **Mequinho:** brasileiro absoluto de **1965** confirmado por tabela de evento (BrasilBase), título de GM conquistado aos **19 anos** em 13/01/1972, com reconhecimento FIDE posterior (Folha). O Chess.com menciona 1966/1967, registro conflitante que **não** elimina o campeonato de 1965.
 
 A presença de `review_status=reviewed` representa revisão de coerência de fontes e dados históricos do pack, **não** afirma autenticação de voz, endosso do atleta ou fidelidade da personalidade de motor. A trilha documental adicional está em `docs/HISTORY_FACT_CHECK.md`.
+
+## Fotografias com licenças livres
+
+O primeiro lote seleciona sete fotos feitas em competições oficiais, cada uma sob CC0 1.0 ou CC BY-SA 3.0. Fontes, fotógrafos, licenças e condições de crédito constam em `docs/PHOTO_LICENSES.md`. A materialização ocorre em passo explícito, com verificação da licença e hash local; as fotos não são baixadas pelo ChessSim durante a execução. Os demais perfis permanecem com `portrait=null`.
+
+Endpoint para o carrossel futuro: `GET /api/history/portraits/{slug}.jpg`, apenas para arquivo local validado.
