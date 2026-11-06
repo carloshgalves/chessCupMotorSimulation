@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "svidler",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui oito vezes campeão russo e conquistei a Copa do Mundo.",
   "era_label": "1994–2017",
@@ -12,7 +12,8 @@
       "year": 1994,
       "text": "Conquistei meu primeiro Campeonato Russo.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 2011,
       "text": "Venci a Copa do Mundo de Xadrez.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -28,7 +30,8 @@
       "year": 2017,
       "text": "Conquistei meu oitavo Campeonato Russo de Xadrez.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -38,7 +41,8 @@
       "title": "Primeiro campeonato russo",
       "summary": "Conquistei meu primeiro Campeonato Russo.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -46,7 +50,8 @@
       "title": "Copa do Mundo",
       "summary": "Venci a Copa do Mundo de Xadrez.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -54,7 +59,8 @@
       "title": "Oitavo título nacional",
       "summary": "Conquistei meu oitavo Campeonato Russo de Xadrez.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -64,6 +70,20 @@
       "title": "Chess.com — perfil e conquistas de svidler",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/peter-svidler",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Chess.com — campeonato russo de 1994 e oitavo em 2017",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/peter-svidler",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "US Chess — Copa do Mundo 2011",
+      "publisher": "US Chess",
+      "url": "https://www.uschess.org/index.php/September/Peter-Svidler-World-Cup-Champion.html",
       "accessed_at": "2026-11-06"
     }
   ]

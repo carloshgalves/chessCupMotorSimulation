@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "gligoric",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Venci torneios internacionais e ajudei a desenvolver a teoria das aberturas.",
   "era_label": "1950–1979",
@@ -12,7 +12,8 @@
       "year": 1950,
       "text": "Venci o torneio internacional de Mar del Plata.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 1968,
       "text": "Dividi a segunda colocação no torneio internacional de Manila em 1968.",
       "source_ids": [
-        "source-2"
+        "source-2",
+        "audit-3"
       ]
     }
   ],
@@ -30,7 +32,8 @@
       "title": "Mar del Plata",
       "summary": "Venci o torneio internacional de Mar del Plata.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -38,7 +41,8 @@
       "title": "Torneio de Manila",
       "summary": "Dividi a segunda colocação no torneio internacional de Manila em 1968.",
       "source_ids": [
-        "source-2"
+        "source-2",
+        "audit-3"
       ]
     }
   ],
@@ -53,6 +57,20 @@
     {
       "id": "source-2",
       "title": "Manila 1968 — classificação final",
+      "publisher": "365Chess",
+      "url": "https://www.365chess.com/tournaments/Manila_1968/26559",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Chess.com — vitória Mar del Plata 1950",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/svetozar-gligoric",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "365Chess — crosstable Manila 1968, segundo compartilhado; corrige biografia genérica",
       "publisher": "365Chess",
       "url": "https://www.365chess.com/tournaments/Manila_1968/26559",
       "accessed_at": "2026-11-06"

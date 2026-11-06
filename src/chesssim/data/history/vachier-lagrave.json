@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "vachier-lagrave",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Alcancei o grupo dos jogadores mais fortes do mundo e venci o Mundial de Blitz.",
   "era_label": "2016–2021",
@@ -12,7 +12,8 @@
       "year": 2016,
       "text": "Alcancei o rating clássico de 2819 pontos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 2021,
       "text": "Terminei em segundo lugar no Torneio de Candidatos de 2020–2021.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -28,7 +30,8 @@
       "year": 2021,
       "text": "Conquistei o Campeonato Mundial de Blitz após o desempate.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-4"
       ]
     }
   ],
@@ -38,7 +41,8 @@
       "title": "Marca no ranking",
       "summary": "Alcancei o rating clássico de 2819 pontos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -46,7 +50,8 @@
       "title": "Torneio de Candidatos",
       "summary": "Terminei em segundo lugar no Torneio de Candidatos de 2020–2021.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -54,7 +59,8 @@
       "title": "Mundial de blitz",
       "summary": "Conquistei o Campeonato Mundial de Blitz após o desempate.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-4"
       ]
     }
   ],
@@ -64,6 +70,27 @@
       "title": "Referência histórica de vachier-lagrave",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/maxime-vachier-lagrave",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE — auge de 2819 pontos em agosto 2016",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/introducing-candidates-maxime-vachier-lagrave/",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "Chess.com — segundo lugar Candidatos 2020/21",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/maxime-vachier-lagrave",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-4",
+      "title": "FIDE — vitória mundial Blitz 2021",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/vachier-lagrave-and-assaubayeva-are-the-new-world-blitz-champions/",
       "accessed_at": "2026-11-06"
     }
   ]

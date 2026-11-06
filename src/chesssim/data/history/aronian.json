@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "aronian",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui vencedor de duas Copas do Mundo e destaque da elite internacional.",
   "era_label": "2005–2017",
@@ -12,7 +12,8 @@
       "year": 2005,
       "text": "Venci a Copa do Mundo de Xadrez.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 2010,
       "text": "Conquistei o Campeonato Mundial de Blitz.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -28,7 +30,8 @@
       "year": 2017,
       "text": "Conquistei novamente a Copa do Mundo de Xadrez.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-4"
       ]
     }
   ],
@@ -38,7 +41,8 @@
       "title": "Copa do Mundo",
       "summary": "Venci a Copa do Mundo de Xadrez.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -46,7 +50,8 @@
       "title": "Mundial de blitz",
       "summary": "Conquistei o Campeonato Mundial de Blitz.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -54,7 +59,8 @@
       "title": "Segunda Copa do Mundo",
       "summary": "Conquistei novamente a Copa do Mundo de Xadrez.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-4"
       ]
     }
   ],
@@ -64,6 +70,27 @@
       "title": "Chess.com — perfil e conquistas de aronian",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/Levon-Aronian",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Chess.com — Copa do Mundo 2005",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/Levon-Aronian",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "Chess.com — mundial blitz 2010",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/world-rapid-and-blitz-chess-champions",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-4",
+      "title": "FIDE — Copa do Mundo Tbilisi 2017",
+      "publisher": "FIDE",
+      "url": "https://old.fide.com/component/fidecalendar/?aid=1221&view=fcalview",
       "accessed_at": "2026-11-06"
     }
   ]

@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "leko",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui recordista de precocidade no título de grande mestre e empatei um match mundial.",
   "era_label": "1994–2004",
@@ -12,7 +12,8 @@
       "year": 1994,
       "text": "Tornei-me o mais jovem grande mestre do mundo até então.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 2004,
       "text": "Empatei em 7–7 o match pelo título clássico contra Vladimir Kramnik, que manteve a coroa pelo regulamento.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     }
   ],
@@ -30,7 +32,8 @@
       "title": "Grande mestre precoce",
       "summary": "Tornei-me o mais jovem grande mestre do mundo até então.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -38,7 +41,8 @@
       "title": "Match mundial clássico",
       "summary": "Empatei em 7–7 o match pelo título clássico contra Vladimir Kramnik, que manteve a coroa pelo regulamento.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     }
   ],
@@ -48,6 +52,20 @@
       "title": "Chess.com — perfil e conquistas de leko",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/peter-leko",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Deseret News — recorde de GM de Peter Leko em 1994",
+      "publisher": "Deseret News",
+      "url": "https://www.deseret.com/1994/2/4/19090211/hungarian-is-youngest-grandmaster-at-14/",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "The Chess Drum — 7–7 em 2004 e retenção da coroa por Kramnik",
+      "publisher": "The Chess Drum",
+      "url": "https://www.thechessdrum.net/newsbriefs/2004/NB_KramnikLeko.html",
       "accessed_at": "2026-11-06"
     }
   ]

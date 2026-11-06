@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "nakamura",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui pentacampeão dos Estados Unidos e vencedor do torneio de elite de Wijk aan Zee.",
   "era_label": "2005–2019",
@@ -12,7 +12,8 @@
       "year": 2005,
       "text": "Conquistei meu primeiro Campeonato dos Estados Unidos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 2011,
       "text": "Venci o torneio principal do Tata Steel Chess em Wijk aan Zee.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -28,7 +30,8 @@
       "year": 2019,
       "text": "Conquistei meu quinto Campeonato dos Estados Unidos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -38,7 +41,8 @@
       "title": "Primeiro título americano",
       "summary": "Conquistei meu primeiro Campeonato dos Estados Unidos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -46,7 +50,8 @@
       "title": "Tata Steel",
       "summary": "Venci o torneio principal do Tata Steel Chess em Wijk aan Zee.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -54,7 +59,8 @@
       "title": "Quinto título americano",
       "summary": "Conquistei meu quinto Campeonato dos Estados Unidos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -64,6 +70,20 @@
       "title": "Chess.com — perfil e conquistas de nakamura",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/hikaru-nakamura",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "US Chess — títulos nacionais de 2005 e 2019",
+      "publisher": "US Chess",
+      "url": "https://uschess.org/index.php/Players-Ratings/U.S.-Champions.html",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "Organizador Tata Steel — edição de 2011",
+      "publisher": "Tata Steel Chess",
+      "url": "https://tatasteelchess.com/en/former-champions",
       "accessed_at": "2026-11-06"
     }
   ]
