@@ -19,14 +19,20 @@ jobs:
           from urllib.error import HTTPError, URLError
           urls = {
             "flickr-original-photographer": "https://www.flickr.com/photos/8022405@N02/1824512615/",
-            "library-of-congress-search": "https://www.loc.gov/photos/?fo=json&q=Emanuel%20Lasker&c=5",
-            "smithsonian-open-access": "https://api.si.edu/openaccess/api/v1.0/search?q=chess",
+            "congress-history-source": "https://www.loc.gov/photos/?fo=json&q=chess%20tournament&c=10",
           }
           for name, url in urls.items():
               try:
                   with urlopen(Request(url, headers={"User-Agent":"ChessSimulationResearch/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)","Accept":"text/html,image/jpeg,image/png,*/*"}),timeout=12) as res:
                       chunk=res.read(120000)
                       print(name, "STATUS",res.status,"TYPE",res.headers.get("Content-Type"),"SIZE_READ",len(chunk),"END_URL",res.url[:170],flush=True)
+                      if name == "flickr-original-photographer":
+                          txt=chunk.decode("utf-8","ignore")
+                          for pat in ('og:image','twitter:image','staticflickr','license','Creative Commons','1824512615','karpidis'):
+                              matches=list(re.finditer(re.escape(pat),txt,re.I))
+                              print("FLICKR_FIELD",pat,"hits",len(matches),"samples",[txt[max(0,m.start()-90):m.end()+270].replace(chr(10),' ') for m in matches[:2]],flush=True)
+                      if name == "congress-history-source":
+                          print("LOC_JSON_HEAD",chunk.decode("utf-8","ignore")[:1600],flush=True)
                       if b"<html" in chunk[:2000].lower():
                           txt=chunk.decode("utf-8","ignore")
                           if name == "gelfand-holland":
