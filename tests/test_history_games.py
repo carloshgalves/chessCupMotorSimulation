@@ -275,3 +275,34 @@ def test_http_get_only_and_replay_by_closed_id(tmp_path):
         server.server_close()
         server.arena_manager.shutdown()
         thread.join(timeout=2)
+
+
+def test_incomplete_final_pgn_accepted_without_declaring_winner(tmp_path):
+    folder = write_simulation(tmp_path, status="INCOMPLETE", incomplete=True)
+    (folder / "jogo_1.partial.pgn").rename(folder / "jogo_1.pgn")
+    record = history_games.list_games(tmp_path, "fischer")["games"][0]
+    assert record["status"] == "INCOMPLETE"
+    assert record["result"] is None
+    assert len(history_games.replay(tmp_path, record["game_id"])["states"]) == 3
+
+
+def test_semantically_same_game_in_differently_formatted_pgn_is_deduplicated(tmp_path):
+    records = write_historical(tmp_path, 2)
+    first = tmp_path / "history-games/games/h-fixture-000.pgn"
+    second = tmp_path / "history-games/games/h-fixture-001.pgn"
+    raw = first.read_bytes()
+    # Same headers, position and moves, different byte content / SHA.
+    changed = raw.replace(b"1. f3", b"\n1. f3", 1)
+    assert changed != raw
+    second.write_bytes(changed)
+    records[1]["sha256"] = sha256(changed).hexdigest()
+    (tmp_path / "history-games/manifest.json").write_text(json.dumps({
+        "schema": history_games.MANIFEST_SCHEMA, "games": records,
+    }))
+    assert history_games.list_games(tmp_path, "fischer")["count"] == 1
+
+
+def test_distinct_dated_games_with_same_moves_are_not_conflated(tmp_path):
+    records = write_historical(tmp_path, 2)
+    assert records[0]["sha256"] != records[1]["sha256"]
+    assert history_games.list_games(tmp_path, "fischer")["count"] == 2
