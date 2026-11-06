@@ -2,9 +2,9 @@
 
 ## Estado consolidado em 06/11/2026 — PR #55
 
-**64 perfis · 58 arquivos JPEG incorporados · 6 perfis sem imagem.** Dos 58, 27 têm CC0, 3 CC BY-SA 3.0, 15 CC BY-SA 2.0, 1 CC BY 2.0 e 12 Public Domain Mark 1.0. O inventário de seis ausências, com nomes e barreiras reais, está em [HISTORY_PORTRAIT_BACKLOG.md](HISTORY_PORTRAIT_BACKLOG.md).
+**64 perfis · 64 arquivos JPEG incorporados · nenhum perfil sem imagem.** Dos 64, 28 têm CC0 1.0, 3 CC BY-SA 3.0, 15 CC BY-SA 2.0, 1 CC BY 2.0, 1 CC BY-SA 4.0 e 16 Public Domain Mark 1.0. O detalhamento das seis incorporações finais, com imagens e direitos, está em [HISTORY_PORTRAIT_BACKLOG.md](HISTORY_PORTRAIT_BACKLOG.md).
 
-Os 58 ativos são identificados nos respectivos JSONs em `src/chesssim/data/history` por `portrait.local_asset`, `source_url`, `author`, `license`, `license_url`, `event`, `derivative_note` e `sha256`. O empacotamento confere os hashes e recusa fotografias sem registro. O rótulo **Public Domain Mark** descreve o estado declarado pela fonte, não é licença Creative Commons CC0 nem resolve automaticamente direitos em todos os países. Philidor possui uma gravura, não fotografia. A interface deve exibir essa distinção e manter links de fontes.
+Os 64 ativos são identificados nos respectivos JSONs em `src/chesssim/data/history` por `portrait.local_asset`, `source_url`, `author`, `license`, `license_url`, `event`, `derivative_note` e `sha256`. O empacotamento confere os hashes e recusa fotografias sem registro. O rótulo **Public Domain Mark** descreve o estado declarado pela fonte, não é licença Creative Commons CC0 nem resolve automaticamente direitos em todos os países. Philidor possui uma gravura, não fotografia. A interface deve exibir essa distinção e manter links de fontes.
 
 **Nota de histórico:** as seções abaixo registram o processo incremental de lotes anteriores. Quando citarem 7/13 retratos, 22/24 candidatos ou 51 pendências, referem-se a uma etapa passada, **não ao estado atual**. O estado atual é sempre o cabeçalho acima e o backlog consolidado.
 
