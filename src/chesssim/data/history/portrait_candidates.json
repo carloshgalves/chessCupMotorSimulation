@@ -274,62 +274,62 @@
     },
     {
       "slug": "nakamura",
-      "file": "HikaruNakamura13b.jpg",
-      "event": "Tata Steel Chess Tournament",
-      "event_date": "2013-01",
-      "author": "Stefan64",
-      "rights_holder": "Stefan64",
-      "license": "CC BY-SA 3.0",
-      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
-      "source_url": "https://commons.wikimedia.org/wiki/File:HikaruNakamura13b.jpg",
+      "file": "29608320206.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-06",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/29608320206",
       "centering": [
         0.5,
-        0.4
+        0.45
       ]
     },
     {
       "slug": "caruana",
-      "file": "FabianoCaruana13.jpg",
-      "event": "Tata Steel Chess Tournament",
-      "event_date": "2013-01",
-      "author": "Stefan64",
-      "rights_holder": "Stefan64",
-      "license": "CC BY-SA 3.0",
-      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
-      "source_url": "https://commons.wikimedia.org/wiki/File:FabianoCaruana13.jpg",
+      "file": "30218058631.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-10",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/30218058631",
       "centering": [
-        0.5,
-        0.4
+        0.52,
+        0.44
       ]
     },
     {
       "slug": "hou-yifan",
-      "file": "HouYifan13b.jpg",
-      "event": "Tata Steel Chess Tournament",
-      "event_date": "2013-01",
-      "author": "Stefan64",
-      "rights_holder": "Stefan64",
-      "license": "CC BY-SA 3.0",
-      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
-      "source_url": "https://commons.wikimedia.org/wiki/File:HouYifan13b.jpg",
+      "file": "29762728494.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-13",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/29762728494",
       "centering": [
         0.5,
-        0.4
+        0.45
       ]
     },
     {
       "slug": "ding-liren",
-      "file": "Ding Liren 2018 Candidates.jpg",
-      "event": "Candidates Tournament 2018",
-      "event_date": "2018-02-24",
-      "author": "Vladimir Barskij / Chess Federation of Russia",
-      "rights_holder": "Vladimir Barskij / Chess Federation of Russia",
-      "license": "CC BY-SA 3.0",
-      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
-      "source_url": "https://commons.wikimedia.org/wiki/File:Ding_Liren_2018_Candidates.jpg",
+      "file": "30201145173.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-02",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/30201145173",
       "centering": [
         0.5,
-        0.45
+        0.46
       ]
     },
     {
@@ -494,6 +494,141 @@
       "source_url": "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/bca2a308-2829-b594-5fc7-7946ed2c642f",
       "centering": [
         0.27,
+        0.45
+      ]
+    },
+    {
+      "slug": "ivanchuk",
+      "file": "1824512615.jpg",
+      "event": "European Club Cup, Heraklion",
+      "event_date": "2007-11-01",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY 2.0",
+      "license_url": "https://creativecommons.org/licenses/by/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/1824512615",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "kramnik",
+      "file": "29490544661.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-05",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/29490544661",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "mamedyarov",
+      "file": "30680155211.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-09",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/30680155211",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "grischuk",
+      "file": "30754960216.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-10",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/30754960216",
+      "centering": [
+        0.5,
+        0.44
+      ]
+    },
+    {
+      "slug": "karjakin",
+      "file": "30073009080.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-10",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/30073009080",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "nepomniachtchi",
+      "file": "31118550352.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/31118550352",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "wesley-so",
+      "file": "28955094824.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/28955094824",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "vachier-lagrave",
+      "file": "29525938546.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-05",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/29525938546",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "aronian",
+      "file": "6319418131.jpg",
+      "event": "European Team Chess Championship, Porto Carras",
+      "event_date": "2011-11-06",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/6319418131",
+      "centering": [
+        0.5,
         0.45
       ]
     }

@@ -20,6 +20,8 @@ USER_AGENT = "ChessSimHistory/1.0 (github.com/carloshgalves/chessCupMotorSimulat
 LICENSES = {
     "CC0 1.0": "https://creativecommons.org/publicdomain/zero/1.0/",
     "CC BY-SA 3.0": "https://creativecommons.org/licenses/by-sa/3.0/",
+    "CC BY-SA 2.0": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "CC BY 2.0": "https://creativecommons.org/licenses/by/2.0/",
 }
 
 
@@ -78,7 +80,9 @@ def manifest_rows() -> list[dict]:
         holland_archive = (url.hostname == "noord-hollandsarchief.nl" and
                            re.fullmatch(r"/beelden/beeldbankdeboer/detail/[0-9a-f-]{36}", url.path))
         commons = url.hostname == "commons.wikimedia.org" and url.path.startswith("/wiki/File:")
-        if url.scheme != "https" or not (commons or approved_archive or holland_archive):
+        flickr = (url.hostname == "www.flickr.com" and
+                  re.fullmatch(r"/photos/(?:8022405@N02|karpidis)/[0-9]{8,20}/?", url.path))
+        if url.scheme != "https" or not (commons or approved_archive or holland_archive or flickr):
             raise ValueError("Unexpected or unapproved photo source")
         if not all(isinstance(row[k], str) and row[k].strip()
                    for k in ("event", "event_date", "author", "rights_holder")):

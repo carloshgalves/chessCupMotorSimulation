@@ -34,7 +34,7 @@ def test_all_64_are_accessible_and_have_historical_packs():
         if pack["portrait"] is not None:
             assert pack["portrait"]["approval_status"] == "approved"
             assert pack["portrait"]["local_asset"] == f"history/portraits/{player.slug}.jpg"
-            assert pack["portrait"]["source_url"].startswith(("https://commons.wikimedia.org/wiki/File:", "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/", "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/"))
+            assert pack["portrait"]["source_url"].startswith(("https://commons.wikimedia.org/wiki/File:", "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/", "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/", "https://www.flickr.com/photos/8022405@N02/"))
         if pack["has_historical_pack"]:
             assert pack["schema"] == SCHEMA
             assert pack["narrative_voice"] == "first_person_editorial"
@@ -180,7 +180,7 @@ def test_tournament_photo_candidates_are_offline_and_license_checked():
     names = {r["slug"] for r in rows}
     assert {"mequinho", "larsen", "spassky", "petrosian",
             "karpov", "anand", "topalov"}.issubset(names)
-    assert all(r["license"] in ("CC0 1.0", "CC BY-SA 3.0") for r in rows)
+    assert all(r["license"] in ("CC0 1.0", "CC BY-SA 3.0", "CC BY-SA 2.0", "CC BY 2.0") for r in rows)
     assert all(r["event"] and r["author"] and r["rights_holder"] for r in rows)
     # Additional photos are acquired in independently reviewable batches.
     for row in rows:
@@ -285,3 +285,18 @@ def test_original_archive_candidates_are_cc0_only_and_have_authorized_hosts():
     archive_rows = [row for row in data["candidates"] if row["source_url"].startswith(("https://www.nationaalarchief.nl/", "https://noord-hollandsarchief.nl/"))]
     assert {r["slug"] for r in archive_rows} == {"kasparov", "keres", "portisch", "geller", "botvinnik", "gligoric", "judit-polgar"}
     assert all(row["license"] == "CC0 1.0" and row["rights_holder"] and row["author"] for row in archive_rows)
+
+
+def test_original_flickr_photographer_manifest_is_licensed():
+    from pathlib import Path
+    import json
+
+    file = Path(__file__).resolve().parents[1] / "src/chesssim/data/history/portrait_candidates.json"
+    manifest = json.loads(file.read_text(encoding="utf-8"))
+    photos = [row for row in manifest["candidates"] if
+              row["source_url"].startswith("https://www.flickr.com/photos/8022405@N02/")]
+    assert len(photos) >= 13
+    assert len({row["slug"] for row in photos}) == len(photos)
+    assert all(row["license"] in ("CC BY-SA 2.0", "CC BY 2.0") for row in photos)
+    assert all(row["author"] == "Andreas Kontokanis" for row in photos)
+    assert all(row["event"] and row["event_date"] and row["source_url"] for row in photos)

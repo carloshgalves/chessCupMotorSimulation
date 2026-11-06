@@ -74,7 +74,9 @@ def validate_history_pack(data: object, *, slug: str) -> dict:
         if path != f"history/portraits/{slug}.jpg":
             raise ValueError("Caminho de retrato não corresponde ao jogador")
         allowed = {"CC0 1.0": "https://creativecommons.org/publicdomain/zero/1.0/",
-                   "CC BY-SA 3.0": "https://creativecommons.org/licenses/by-sa/3.0/"}
+                   "CC BY-SA 3.0": "https://creativecommons.org/licenses/by-sa/3.0/",
+                   "CC BY-SA 2.0": "https://creativecommons.org/licenses/by-sa/2.0/",
+                   "CC BY 2.0": "https://creativecommons.org/licenses/by/2.0/"}
         if (portrait["license"] not in allowed or
                 portrait["license_url"] != allowed[portrait["license"]]):
             raise ValueError("Licença incompatível")
@@ -91,7 +93,9 @@ def validate_history_pack(data: object, *, slug: str) -> dict:
                    re.fullmatch(r"/beelden/beeldbankdeboer/detail/[0-9a-f-]{36}", parsed.path))
         commons = (parsed.hostname == "commons.wikimedia.org" and
                    parsed.path.startswith("/wiki/File:"))
-        if not (archive or holland or commons):
+        flickr = (parsed.hostname == "www.flickr.com" and
+                  re.fullmatch(r"/photos/(?:8022405@N02|karpidis)/[0-9]{8,20}/?", parsed.path))
+        if not (archive or holland or commons or flickr):
             raise ValueError("Origem do retrato não pertence a acervo auditado")
         digest = _text(portrait["sha256"], "portrait.sha256", max_len=64)
         if not re.fullmatch(r"[a-f0-9]{64}", digest):
