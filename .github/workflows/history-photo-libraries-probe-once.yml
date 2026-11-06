@@ -1,4 +1,4 @@
-name: History permissions and official-media endpoint diagnostic
+name: History Nationaal Archief original image endpoint one-time check
 on:
   push:
     branches: [feat/history-remaining-players-47]
@@ -7,36 +7,29 @@ permissions: {contents: read}
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 5
     steps:
-      - name: Inspect 3 library rights records and 3 official Fischer photo pages
+      - name: Test official alternative file endpoint, one request per path
         shell: bash
         run: |
           python - <<'PY'
-          from urllib.request import Request, urlopen
+          from urllib.request import Request,urlopen
           from urllib.error import HTTPError
-          from html import unescape
-          import json,re
-          hosts_blocked=set()
-          for slug,id in [("nimzowitsch",75),("marshall_reti",108)]:
-            url=f"https://cplorg.contentdm.oclc.org/digital/api/singleitem/collection/p4014coll20/id/{id}"
+          urls={
+            "fischer-1971-original":"https://service.archief.nl/gaf/api/file/v1/original/9f9027bd-37bf-4d40-a958-b9dab67146ef",
+            "fischer-1972-original":"https://service.archief.nl/gaf/api/file/v1/original/f0bfb12b-052e-45cf-8b85-8bb031712db7",
+            "fischer-1972b-original":"https://service.archief.nl/gaf/api/file/v1/original/652a5f33-b2fb-4187-b394-7616507be504",
+          }
+          block=False
+          for name,url in urls.items():
+            if block: break
             try:
-              with urlopen(Request(url,headers={"User-Agent":"ChessSimulation/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)"}),timeout=12) as rsp:
-                obj=json.loads(rsp.read(40000))
-                print("CLEVELAND",slug,[(e["key"],str(e.get("value"))[:900]) for e in obj.get("fields",[]) if e["key"] in ("title","date","rights","rightsl","standa","rightsn","creato","origin")],flush=True)
+              with urlopen(Request(url,headers={"User-Agent":"ChessSimulation/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)","Accept":"image/jpeg"}),timeout=13) as r:
+                d=r.read(10000)
+                print("OFFICIAL",name,r.status,r.headers.get("Content-Type"),repr(d[:20]),flush=True)
             except HTTPError as e:
-              print("DENY_CLEVELAND",e.code,flush=True)
-              if e.code in (401,403,429,451):break
-          for slug,url in [
-            ("fischer-1971","https://www.nationaalarchief.nl/onderzoeken/fotocollectie/abc6ac60-d0b4-102d-bcf8-003048976d84"),
-            ("fischer-1972","https://www.nationaalarchief.nl/onderzoeken/fotocollectie/abdf9752-d0b4-102d-bcf8-003048976d84"),
-            ("fischer-1972b","https://www.nationaalarchief.nl/onderzoeken/fotocollectie/abdf9680-d0b4-102d-bcf8-003048976d84")]:
-            try:
-              with urlopen(Request(url,headers={"User-Agent":"ChessSimulation/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)"}),timeout=12) as rsp:
-                page=unescape(rsp.read(300000).decode("utf-8","replace"))
-              for _ in range(4):page=page.replace("\\/","/")
-              print("NATION",slug,"CC0",("Nationaal Archief, CC0" in page),"DATES",[v in page for v in ("1971-07-15","1972-01-31")],"IDS",re.findall(r"/gaf/api/file/v1/(?:original|default)/([0-9a-f-]{36})",page)[:3],flush=True)
-            except HTTPError as e:
-              print("NATION_DENIED",slug,e.code,flush=True)
-              if e.code in (401,403,429,451):break
+              print("OFFICIAL_ERROR",name,e.code,flush=True)
+              if e.code in (401,403,429,451):block=True
+            except Exception as e:
+              print("OFFICIAL_ERROR",name,type(e).__name__,str(e)[:140],flush=True)
           PY
