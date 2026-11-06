@@ -228,3 +228,20 @@ def test_history_credits_are_local_and_frontend_assets_packaged():
     assert "/api/history/players" in js and "/api/history/portraits/" in js
     assert "innerHTML" not in js and "X-Chesssim-Token" not in js
     assert "@media" in css and "prefers-reduced-motion" in css
+
+
+@pytest.mark.skipif(__import__("shutil").which("node") is None,
+                    reason="Node.js is required for the browser DOM contract test")
+def test_history_browser_navigation_sources_credits_and_syntax():
+    import subprocess
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    script = root / "src/chesssim/data/history.js"
+    harness = root / "tests/assets/history_browser_harness.cjs"
+    syntax = subprocess.run(["node", "--check", str(script)],
+                            capture_output=True, text=True, timeout=8, check=False)
+    assert syntax.returncode == 0, syntax.stdout + syntax.stderr
+    test = subprocess.run(["node", str(harness), str(script)],
+                          capture_output=True, text=True, timeout=12, check=False)
+    assert test.returncode == 0, test.stdout + test.stderr
+    assert "photo credits: PASS" in test.stdout
