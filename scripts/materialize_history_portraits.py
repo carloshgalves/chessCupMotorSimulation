@@ -23,6 +23,10 @@ LICENSES = {
 }
 
 
+class RobotPolicyStop(RuntimeError):
+    """The provider explicitly declined automated access; do not retry."""
+
+
 def get_bytes(url: str, *, limit: int) -> bytes:
     # Wikimedia may rate-limit shared GitHub Actions IPs. Honor backoff, no
     # unlimited retries, and avoid treating upstream 429 as license failure.
@@ -35,6 +39,10 @@ def get_bytes(url: str, *, limit: int) -> bytes:
                 raise ValueError("Exceeded download size limit")
             return data
         except HTTPError as exc:
+            if exc.code == 429:
+                detail = exc.read(1200).decode("utf-8", "replace").lower()
+                if "robot policy" in detail:
+                    raise RobotPolicyStop("Commons robot policy blocked this runner") from exc
             if exc.code != 429 or attempt == 2:
                 raise
             sleep(3 * (attempt + 1))
@@ -163,6 +171,10 @@ def apply_photos(rows: list[dict]) -> None:
     for row in todo:
         try:
             staged.append((row, acquire(row)))
+        except RobotPolicyStop as exc:
+            unavailable.append((row["slug"], str(exc)))
+            print(f"ROBOT_POLICY_STOP: {exc}; remaining requests skipped", flush=True)
+            break
         except (OSError, ValueError) as exc:
             unavailable.append((row["slug"], str(exc)))
             print(f"NOT_IMPORTED {row['slug']}: {type(exc).__name__}: {exc}",
