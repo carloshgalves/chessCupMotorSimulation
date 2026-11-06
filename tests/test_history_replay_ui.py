@@ -80,6 +80,10 @@ def _serve(server):
 
 
 def test_history_replay_assets_same_origin_with_csp_and_no_post(tmp_path):
+    # watch requires a real saved duel or tournament, even for static assets.
+    (tmp_path / "summary.json").write_text(
+        '{"status":"RUNNING","games":[]}', encoding="utf-8",
+    )
     arenas = [
         arena.create_server(tmp_path, tmp_path / "sessions", port=0),
         live_board.create_server(tmp_path, port=0),
