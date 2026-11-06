@@ -18,14 +18,9 @@ jobs:
           from urllib.request import Request, urlopen
           from urllib.error import HTTPError, URLError
           urls = {
-            "national-archive": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ad6aaa12-d0b4-102d-bcf8-003048976d84?tab=files",
-            "north-holland": "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/a17d9a6f-d4af-cfff-84da-19917979bd71",
-            "gallica-bnf": "https://gallica.bnf.fr/iiif/ark:/12148/btv1b9024663p/f1/full/480,/0/native.jpg",
-            "gallica-thumbnail": "https://gallica.bnf.fr/ark:/12148/btv1b9024663p/thumbnail",
-            "national-image-download": "https://service.archief.nl/gaf/api/file/v1/default/7d9cc6b8-9061-4ffa-91d6-3583c339eb4a",
-            "holland-image-thumb": "https://images.memorix.nl/ranh/thumb/640x480/bd5c6593-f6ea-00d6-a2af-54aa6b184ee3.jpg",
-            "gelfand-holland": "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/bca2a308-2829-b594-5fc7-7946ed2c642f",
-            "picryl-public-domain": "https://picryl.com/media/tournoi-dechecs-alekhine-contre-colle-champion-de-belgique-photographie-de-513146",
+            "flickr-original-photographer": "https://www.flickr.com/photos/8022405@N02/1824512615/",
+            "library-of-congress-search": "https://www.loc.gov/photos/?fo=json&q=Emanuel%20Lasker&c=5",
+            "smithsonian-open-access": "https://api.si.edu/openaccess/api/v1.0/search?q=chess",
           }
           for name, url in urls.items():
               try:
