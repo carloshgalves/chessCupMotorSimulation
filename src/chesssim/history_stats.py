@@ -40,6 +40,10 @@ RESULTS = frozenset({"1-0", "0-1", "1/2-1/2"})
 COUNTERS = ("games", "completed", "wins", "draws", "losses", "incomplete")
 
 
+class StatisticsCapacityExceeded(InvalidCatalogue):
+    """A bounded scan was exceeded; never return misleading partial totals."""
+
+
 def _json_bytes(raw: bytes) -> dict:
     """Strictly parse exactly the bytes covered by a tournament SHA-256."""
     def unique_pairs(pairs):
@@ -232,8 +236,12 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
                             coverage["rejected_games"] += 1
                     for game_record in verified:
                         _record(game_record, seen, records, coverage)
+                except StatisticsCapacityExceeded:
+                    raise
                 except (InvalidCatalogue, ValueError, KeyError, TypeError, OSError):
                     _mark(coverage, "arena_summary")
+        except StatisticsCapacityExceeded:
+            raise
         except (InvalidCatalogue, ValueError, KeyError, TypeError, OSError):
             _mark(coverage, "arena_manifest")
 
@@ -430,7 +438,7 @@ def _tournament_games(root: Path, names: dict[str, str], slug: str,
                         attempt_root.glob("*/summary.json"), remaining + 1))
                     physical_count += len(physical)
                     if physical_count > MAX_SUMMARIES:
-                        raise InvalidCatalogue("Limite de tentativas físicas excedido")
+                        raise StatisticsCapacityExceeded("Limite de tentativas físicas excedido")
                     declared = set(grouped)
                     excluded = match.get("excluded_attempts", [])
                     if not isinstance(excluded, list) or len(excluded) > MAX_SUMMARIES:
@@ -463,10 +471,14 @@ def _tournament_games(root: Path, names: dict[str, str], slug: str,
                             )
                             for record in game_records:
                                 _record(record, seen, records, coverage)
+                        except StatisticsCapacityExceeded:
+                            raise
                         except (InvalidCatalogue, OSError, ValueError, TypeError,
                                 KeyError, IndexError, AttributeError):
                             coverage["rejected_games"] += 2
                             _mark(coverage, "tournament_attempt")
+        except StatisticsCapacityExceeded:
+            raise
         except (InvalidCatalogue, OSError, ValueError, TypeError, KeyError,
                 IndexError, AttributeError):
             _mark(coverage, "tournament_manifest")
@@ -478,7 +490,7 @@ def _record(game: dict, seen: set[str], records: list[dict],
         coverage["duplicate_records"] += 1
         return
     if len(seen) >= MAX_GAMES:
-        raise InvalidCatalogue("Limite de partidas excedido")
+        raise StatisticsCapacityExceeded("Limite de partidas excedido")
     seen.add(game["id"])
     records.append(game)
     coverage["verified_games"] += 1
