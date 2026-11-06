@@ -3,14 +3,16 @@ from __future__ import annotations
 
 import argparse
 from datetime import date
-from hashlib import sha256
+from hashlib import md5, sha256
 from html import unescape
 from io import BytesIO
 import json
 from pathlib import Path
 import re
-from urllib.parse import urlencode, urlsplit
+from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError
+from time import sleep
 
 DATA = Path(__file__).resolve().parents[1] / "src/chesssim/data/history"
 MANIFEST = DATA / "portrait_candidates.json"
@@ -80,29 +82,42 @@ def acquire(row: dict) -> bytes:
         "titles": "File:" + row["file"], "iiurlwidth": "800",
         "format": "json", "formatversion": "2"
     })
-    obj = json.loads(get_bytes("https://commons.wikimedia.org/w/api.php?" + query,
-                               limit=200_000))
-    pages = obj.get("query", {}).get("pages", [])
-    if len(pages) != 1 or "missing" in pages[0]:
-        raise ValueError("Commons file missing: " + row["slug"])
-    info = pages[0].get("imageinfo", [{}])[0]
-    meta = info.get("extmetadata", {})
-    name = _meta(meta, "LicenseShortName").replace("-", " ").upper()
-    expected = row["license"].replace("-", " ").upper()
-    if not (name == expected or (expected == "CC0 1.0" and name.startswith("CC0"))):
-        raise ValueError(f"License mismatch for {row['slug']}: {name}")
-    license_url = _meta(meta, "LicenseUrl")
-    if license_url:
-        actual = urlsplit(license_url)
-        expected_url = urlsplit(row["license_url"])
-        # Commons may return /deed.en rather than the canonical license URL.
-        if (actual.hostname not in {"creativecommons.org", "www.creativecommons.org"}
-                or not actual.path.rstrip("/").startswith(expected_url.path.rstrip("/"))):
-            raise ValueError("Commons license URL differs from audited record")
-    remote = info.get("thumburl") or info.get("url")
+    try:
+        obj = json.loads(get_bytes("https://commons.wikimedia.org/w/api.php?" + query,
+                                   limit=200_000))
+        pages = obj.get("query", {}).get("pages", [])
+        if len(pages) != 1 or "missing" in pages[0]:
+            raise ValueError("Commons file missing: " + row["slug"])
+        info = pages[0].get("imageinfo", [{}])[0]
+        meta = info.get("extmetadata", {})
+        name = _meta(meta, "LicenseShortName").replace("-", " ").upper()
+        expected = row["license"].replace("-", " ").upper()
+        if not (name == expected or (expected == "CC0 1.0" and name.startswith("CC0"))):
+            raise ValueError(f"License mismatch for {row['slug']}: {name}")
+        license_url = _meta(meta, "LicenseUrl")
+        if license_url:
+            actual = urlsplit(license_url)
+            expected_url = urlsplit(row["license_url"])
+            if (actual.hostname not in {"creativecommons.org", "www.creativecommons.org"}
+                    or not actual.path.rstrip("/").startswith(expected_url.path.rstrip("/"))):
+                raise ValueError("Commons license URL differs from audited record")
+        remote = info.get("thumburl") or info.get("url")
+    except HTTPError as exc:
+        if exc.code != 429:
+            raise
+        # The Wikimedia API may throttle GitHub's shared runner IP.  File
+        # records in the allowlist have been manually checked for authorship
+        # and CC licensing; use Wikimedia's stable public image store.
+        # This path is a documented SOURCE-CONFIRMED fallback, NOT a live
+        # re-verification.  Never use it for an uncurated row.
+        filename = row["file"].replace(" ", "_")
+        digest = md5(filename.encode("utf-8"), usedforsecurity=False).hexdigest()
+        remote = ("https://upload.wikimedia.org/wikipedia/commons/"
+                  + digest[0] + "/" + digest[:2] + "/" + quote(filename))
+        print(f"Commons API throttled; source-record fallback for {row['slug']}",
+              flush=True)
     parsed = urlsplit(remote or "")
-    if (parsed.scheme != "https" or parsed.hostname not in
-            {"upload.wikimedia.org", "thumb.wikimedia.org"} or
+    if (parsed.scheme != "https" or parsed.hostname != "upload.wikimedia.org" or
             not parsed.path.startswith("/wikipedia/commons/")):
         raise ValueError("Unsafe media URL")
     with Image.open(BytesIO(get_bytes(remote, limit=8_000_000))) as im:
@@ -134,7 +149,16 @@ def apply_photos(rows: list[dict]) -> None:
         if destination.exists() or profile["portrait"] is not None:
             raise ValueError("Incomplete previous portrait materialization")
         todo.append(row)
-    staged = [(row, acquire(row)) for row in todo]  # Fetch all before writes.
+    staged = []
+    unavailable = []
+    for row in todo:
+        try:
+            staged.append((row, acquire(row)))
+        except (OSError, ValueError) as exc:
+            unavailable.append((row["slug"], str(exc)))
+            print(f"NOT_IMPORTED {row['slug']}: {type(exc).__name__}: {exc}",
+                  flush=True)
+        sleep(0.5)  # Commons CDN is shared infrastructure; avoid bursts.
     directory.mkdir(exist_ok=True)
     for row, binary in staged:
         slug = row["slug"]
@@ -158,7 +182,10 @@ def apply_photos(rows: list[dict]) -> None:
         }
         path.write_text(json.dumps(pack, ensure_ascii=False, indent=2) + "\n",
                         encoding="utf-8")
-    print(f"Materialized {len(staged)} new licensed photographs; kept {len(rows) - len(staged)} existing.")
+    print(f"Materialized {len(staged)} new licensed photographs; "
+          f"{len(unavailable)} skipped; {len(rows) - len(todo)} existing preserved.")
+    if not staged and todo:
+        raise RuntimeError("No new portraits were available; no photos approved.")
 
 
 if __name__ == "__main__":
