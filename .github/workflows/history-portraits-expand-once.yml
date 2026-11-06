@@ -29,5 +29,7 @@ jobs:
           git add src/chesssim/data/history/*.json src/chesssim/data/history/portraits/
           if ! git diff --cached --quiet; then
             git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'assets(history): import additional verified tournament portraits'
+            git fetch origin feat/history-remaining-players-47
+            git rebase origin/feat/history-remaining-players-47
             git push origin HEAD:feat/history-remaining-players-47
           fi
