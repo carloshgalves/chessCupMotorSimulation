@@ -288,15 +288,20 @@ def _selection(workspace: Path) -> dict[str, list[_Entry]]:
     selected: dict[str, list[_Entry]] = {slug: [] for slug in names}
     seen_ids: set[str] = set()
     seen_hashes: set[str] = set()
-    seen_signatures: set[str] = set()
+    seen_signatures: dict[str, _Entry] = {}
     for entry in historic + simulated:
         if entry.game_id in seen_ids:
             raise InvalidCatalogue("IDs duplicados no catálogo")
         seen_ids.add(entry.game_id)
-        if entry.sha256 in seen_hashes or entry.signature in seen_signatures:
+        previous = seen_signatures.get(entry.signature)
+        if previous is not None:
+            if (previous.status, previous.result) != (entry.status, entry.result):
+                raise InvalidCatalogue("Resultados conflitantes para mesma partida")
+            continue
+        if entry.sha256 in seen_hashes:
             continue
         seen_hashes.add(entry.sha256)
-        seen_signatures.add(entry.signature)
+        seen_signatures[entry.signature] = entry
         for slug in {entry.white_slug, entry.black_slug}:
             if len(selected[slug]) < MAX_VISIBLE:
                 selected[slug].append(entry)
