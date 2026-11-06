@@ -101,7 +101,7 @@ def source_download(row: dict) -> tuple[str, str]:
         return ("https://service.archief.nl/gaf/api/file/v1/default/" +
                 match.group(1)), "Nationaal Archief CC0 download"
     if origin == "noord-hollandsarchief.nl":
-        if "kosteloos gebruiken" not in page.lower() or "1998" not in page:
+        if "kosteloos gebruiken" not in page.lower() or row["event_date"][:4] not in page:
             raise ValueError("North Holland Archive has not confirmed unrestricted reuse/event")
         match = re.search(
             r'<meta\s+property="og:image"\s+content="(https://images\.memorix\.nl/ranh/thumb/640x480/[a-f0-9-]+\.jpg)"',
