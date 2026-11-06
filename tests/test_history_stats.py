@@ -75,7 +75,8 @@ def arena_session(workspace: Path, *, session=SESSION, specs=None,
         (folder/filename).write_text(str(pgn)+"\n",encoding="utf-8")
         records.append(record)
     (folder/"summary.json").write_text(json.dumps({
-        "status":"INCOMPLETE" if any(row["status"]=="INCOMPLETE" for row in records)
+        "status":"INCOMPLETE" if (any(row["status"]=="INCOMPLETE" for row in records)
+        or len(records)!=(2 if reverse else 1))
         else "COMPLETED","players":["fischer","tal"],"games":records
     }),encoding="utf-8")
     return folder
@@ -348,7 +349,8 @@ def test_unproven_declared_result_does_not_count_as_win(tmp_path):
 
 
 def test_verified_time_forfeit_counts_only_actual_losing_side(tmp_path):
-    folder=arena_session(tmp_path,specs=[("fischer","tal","0-1",False)])
+    folder=arena_session(tmp_path,specs=[("fischer","tal","0-1",False)],
+                         reverse=False)
     pgn,meta=game("fischer","tal",result="0-1",incomplete=True)
     pgn.headers["Result"]="0-1"
     pgn.headers["Termination"]="TimeForfeit"
