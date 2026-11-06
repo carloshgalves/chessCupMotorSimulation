@@ -56,10 +56,19 @@ const fetch=async(url,options)=>{
   calls.push({url,options});
   if(url==="/api/history/players") return {ok:true,json:async()=>({players:index})};
   if(url==="/api/history/players/anand") return {ok:true,json:async()=>profile};
+  if(url==="/api/history/players/anand/games") return {
+    ok:true,json:async()=>({
+      schema:"chesssim-history-games-v1",slug:"anand",count:0,limit:5,games:[]
+    })
+  };
   throw new Error("Unexpected request "+url);
 };
-const ctx=vm.createContext({document,fetch,console,Array,String,Math});
+const ctx=vm.createContext({document,fetch,console,Array,String,Math,window:{},URL});
 const source=fs.readFileSync(process.argv[2],"utf8");
+vm.runInContext(fs.readFileSync(process.argv[3],"utf8"),ctx,
+                {filename:"chess_board.js",timeout:3000});
+vm.runInContext(fs.readFileSync(process.argv[4],"utf8"),ctx,
+                {filename:"history_replay.js",timeout:3000});
 vm.runInContext(source,ctx,{filename:"history.js",timeout:3000});
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function descendants(node) {
@@ -95,12 +104,15 @@ function descendants(node) {
   assert.equal($("history-profile-name").textContent,"Viswanathan Anand");
   assert(descendants($("history-profile-body")).some(x=>x.tagName==="A"&&x.href===profile.sources[0].url));
   assert(descendants($("history-profile-body")).some(x=>x.tagName==="A"&&x.href===photo.license_url));
+  await tick();
+  assert.equal($("history-games-section").hidden,false);
+  assert($("history-games-status").textContent.includes("Nenhuma partida"));
   $("history-back").events.click();
   assert.equal($("history-position").textContent.includes("1 de 3"),true);
   $("tab-arena").events.click();
   assert.equal($("arena-view").hidden,false);
   assert.equal($("history-view").hidden,true);
-  assert.equal(calls.length,2);
+  assert.equal(calls.length,3);
   assert(calls.every(call=>!call.url.includes("token") && call.options.cache==="no-store"));
   console.log("History navigation, first-person facts, safe source links and photo credits: PASS");
 })().catch(err=>{console.error(err);process.exitCode=1;});
