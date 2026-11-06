@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão húngaro diversas vezes e alcancei as semifinais dos Candidatos.",
   "era_label": "1958–1981",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/portisch.jpg",
+    "alt": "portisch em Hoogovens Chess Tournament, Beverwijk (1964-01-08)",
+    "author": "Jack de Nijs / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/aa5521d6-d0b4-102d-bcf8-003048976d84",
+    "verified_at": "2026-11-06",
+    "event": "Hoogovens Chess Tournament, Beverwijk",
+    "event_date": "1964-01-08",
+    "rights_holder": "Nationaal Archief",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "0598ebc81b5d9adbcf5f8af84f16757ebff187ce63ed44a6e221a7eb02496035",
+    "derivative_note": "Recorte quadrado e redução para 480×480 px a partir de fotografia oficial de torneio.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

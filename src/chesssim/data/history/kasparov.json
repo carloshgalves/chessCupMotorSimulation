@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão mundial em uma longa era de rivalidade com Anatoly Karpov.",
   "era_label": "1985–2000",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/kasparov.jpg",
+    "alt": "kasparov em Optiebeurs Chess Tournament, Amsterdam (1988-05-19)",
+    "author": "Rob Croes / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ad6aaa12-d0b4-102d-bcf8-003048976d84",
+    "verified_at": "2026-11-06",
+    "event": "Optiebeurs Chess Tournament, Amsterdam",
+    "event_date": "1988-05-19",
+    "rights_holder": "Nationaal Archief",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "5f4b5cd3f39676b379201c4ce885fd8fab3843cdc09e722aa9aeb69e8945c08f",
+    "derivative_note": "Recorte quadrado e redução para 480×480 px a partir de fotografia oficial de torneio.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

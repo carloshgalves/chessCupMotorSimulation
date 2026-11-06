@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Venci o AVRO e fiquei repetidas vezes próximo de desafiar o campeão mundial.",
   "era_label": "1938–1962",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/keres.jpg",
+    "alt": "keres em Hoogovens Chess Tournament, Beverwijk (1964-01-08)",
+    "author": "Jack de Nijs / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/aa551e48-d0b4-102d-bcf8-003048976d84",
+    "verified_at": "2026-11-06",
+    "event": "Hoogovens Chess Tournament, Beverwijk",
+    "event_date": "1964-01-08",
+    "rights_holder": "Nationaal Archief",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "91e8d209da57dbfe2d2541c5d8d438765b1a45a028b616c3af414dcc366a2c64",
+    "derivative_note": "Recorte quadrado e redução para 480×480 px a partir de fotografia oficial de torneio.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",
