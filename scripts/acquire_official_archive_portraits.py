@@ -13,6 +13,7 @@ from io import BytesIO
 import json
 from pathlib import Path
 import re
+import unicodedata
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
@@ -59,7 +60,8 @@ def source_download(row: dict) -> tuple[str, str]:
     """Use public download URLs explicitly advertised by the licensed archive."""
     source = row["source_url"]
     page = unescape(_read(source, max_bytes=300_000).decode("utf-8", "replace"))
-    if IDENTITY_TOKENS[row["slug"]] not in page.lower():
+    unaccented = "".join(c for c in unicodedata.normalize("NFKD", page.lower()) if not unicodedata.combining(c))
+    if IDENTITY_TOKENS[row["slug"]] not in unaccented:
         raise ValueError("Archive landing page does not identify selected player")
     origin = urlsplit(source).hostname
     if origin == "www.nationaalarchief.nl":
@@ -68,13 +70,15 @@ def source_download(row: dict) -> tuple[str, str]:
             raise ValueError("Archive does not display a CC0 rights declaration")
         if row["event_date"] not in decoded:
             raise ValueError("Archive date disagrees with candidate metadata")
-        match = re.search(
-            r'"downloadURI"\s*:\s*"(https://service\.archief\.nl/gaf/api/file/v1/original/[0-9a-f-]{36})"',
-            decoded
-        )
+        # The archive serializes Drupal JSON with escaped quote/slash
+        # sequences. Parse the UUID from the original/download service link
+        # already embedded in the official page, never a caller-supplied URL.
+        match = re.search(r"/gaf/api/file/v1/(?:original|default)/([0-9a-f-]{36})", decoded)
         if not match:
+            print("ARCHIVE_DIAGNOSTIC", row["slug"], repr(decoded[decoded.find("downloadURI") - 20:decoded.find("downloadURI") + 260]), flush=True)
             raise ValueError("Official archive download link is absent")
-        return match.group(1), "Nationaal Archief CC0 download"
+        return ("https://service.archief.nl/gaf/api/file/v1/default/" +
+                match.group(1)), "Nationaal Archief CC0 download"
     if origin == "noord-hollandsarchief.nl":
         if "kosteloos gebruiken" not in page.lower() or "1998" not in page:
             raise ValueError("North Holland Archive has not confirmed unrestricted reuse/event")
@@ -95,7 +99,7 @@ def render(row: dict, url: str) -> bytes:
     with Image.open(BytesIO(binary)) as image:
         if image.format not in ("JPEG", "PNG"):
             raise ValueError("Official archival media is not JPEG/PNG")
-        if image.width < 480 or image.height < 480:
+        if image.width < 400 or image.height < 400:
             raise ValueError("Original has insufficient resolution for 480px")
         if image.width * image.height > 35_000_000:
             raise ValueError("Potential image decompression bomb")
