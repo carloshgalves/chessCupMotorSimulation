@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "gelfand",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Venci a Copa do Mundo, o ciclo de Candidatos e desafiei Anand pelo título mundial.",
+  "era_label": "2009–2012",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2009,
+      "text": "Conquistei a Copa do Mundo de Xadrez.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2011,
+      "text": "Venci os matches de Candidatos e obtive o direito de desafiar Anand.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2012,
+      "text": "Disputei o Campeonato Mundial contra Viswanathan Anand.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2009,
+      "title": "Copa do Mundo",
+      "summary": "Conquistei a Copa do Mundo de Xadrez.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2011,
+      "title": "Candidatos",
+      "summary": "Venci os matches de Candidatos e obtive o direito de desafiar Anand.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2012,
+      "title": "Match mundial",
+      "summary": "Disputei o Campeonato Mundial contra Viswanathan Anand.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil e conquistas de gelfand",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/boris-gelfand",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

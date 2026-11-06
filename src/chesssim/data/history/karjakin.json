@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "karjakin",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão mundial de rápidas e blitz e desafiante de Magnus Carlsen.",
+  "era_label": "2012–2016",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2012,
+      "text": "Conquistei o Campeonato Mundial de Xadrez Rápido.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2016,
+      "text": "Venci o Torneio de Candidatos e ganhei o direito de desafiar Magnus Carlsen.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2016,
+      "text": "Conquistei o Campeonato Mundial de Blitz.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2012,
+      "title": "Mundial de rápidas",
+      "summary": "Conquistei o Campeonato Mundial de Xadrez Rápido.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2016,
+      "title": "Candidatos",
+      "summary": "Venci o Torneio de Candidatos e ganhei o direito de desafiar Magnus Carlsen.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2016,
+      "title": "Mundial de blitz",
+      "summary": "Conquistei o Campeonato Mundial de Blitz.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil e conquistas de karjakin",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/sergey-karjakin",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

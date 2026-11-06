@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "caruana",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui vencedor da Sinquefield Cup e desafiante de Magnus Carlsen pelo título mundial.",
+  "era_label": "2014–2018",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2014,
+      "text": "Venci a Sinquefield Cup com sete vitórias consecutivas nas sete primeiras rodadas.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2018,
+      "text": "Conquistei o Torneio de Candidatos e o direito de desafiar Magnus Carlsen.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2018,
+      "text": "Disputei o Campeonato Mundial contra Magnus Carlsen.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2014,
+      "title": "Sinquefield Cup",
+      "summary": "Venci a Sinquefield Cup com sete vitórias consecutivas nas sete primeiras rodadas.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2018,
+      "title": "Torneio de Candidatos",
+      "summary": "Conquistei o Torneio de Candidatos e o direito de desafiar Magnus Carlsen.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2018,
+      "title": "Match pelo título",
+      "summary": "Disputei o Campeonato Mundial contra Magnus Carlsen.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil e conquistas de caruana",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/fabiano-caruana",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

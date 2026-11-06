@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "aronian",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui vencedor de duas Copas do Mundo e destaque da elite internacional.",
+  "era_label": "2005–2017",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2005,
+      "text": "Venci a Copa do Mundo de Xadrez.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2010,
+      "text": "Conquistei o Campeonato Mundial de Blitz.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2017,
+      "text": "Conquistei novamente a Copa do Mundo de Xadrez.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2005,
+      "title": "Copa do Mundo",
+      "summary": "Venci a Copa do Mundo de Xadrez.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2010,
+      "title": "Mundial de blitz",
+      "summary": "Conquistei o Campeonato Mundial de Blitz.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2017,
+      "title": "Segunda Copa do Mundo",
+      "summary": "Conquistei novamente a Copa do Mundo de Xadrez.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil e conquistas de aronian",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/Levon-Aronian",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

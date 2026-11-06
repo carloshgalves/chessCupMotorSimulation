@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "wesley-so",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Venci o Tata Steel, a Sinquefield Cup e o primeiro Mundial de Fischer Random.",
+  "era_label": "2016–2019",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2016,
+      "text": "Conquistei a Sinquefield Cup em Saint Louis.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2017,
+      "text": "Venci o torneio principal do Tata Steel Chess.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2019,
+      "text": "Derrotei Magnus Carlsen e conquistei o primeiro Campeonato Mundial FIDE de Fischer Random.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2016,
+      "title": "Sinquefield Cup",
+      "summary": "Conquistei a Sinquefield Cup em Saint Louis.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2017,
+      "title": "Tata Steel",
+      "summary": "Venci o torneio principal do Tata Steel Chess.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2019,
+      "title": "Fischer Random",
+      "summary": "Derrotei Magnus Carlsen e conquistei o primeiro Campeonato Mundial FIDE de Fischer Random.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil e conquistas de wesley-so",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/wesley-so",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

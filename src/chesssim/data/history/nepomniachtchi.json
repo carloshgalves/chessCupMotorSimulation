@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "nepomniachtchi",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Venci dois torneios de Candidatos e disputei duas vezes a coroa mundial.",
+  "era_label": "2021–2023",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2021,
+      "text": "Venci o Torneio de Candidatos de 2020–2021.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2022,
+      "text": "Conquistei novamente o Torneio de Candidatos.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2023,
+      "text": "Disputei o Campeonato Mundial contra Ding Liren.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2021,
+      "title": "Candidatos 2020–2021",
+      "summary": "Venci o Torneio de Candidatos de 2020–2021.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2022,
+      "title": "Candidatos de Madri",
+      "summary": "Conquistei novamente o Torneio de Candidatos.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2023,
+      "title": "Match mundial",
+      "summary": "Disputei o Campeonato Mundial contra Ding Liren.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil e conquistas de nepomniachtchi",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/meet-the-candidates-2022",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

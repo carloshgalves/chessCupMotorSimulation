@@ -1,0 +1,54 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "chiburdanidze",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeã mundial feminina aos 17 anos e depois recebi o título de grande mestre absoluto.",
+  "era_label": "1978–1991 (campeã mundial feminina)",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1978,
+      "text": "Derrotei Nona Gaprindashvili e me tornei campeã mundial feminina aos 17 anos.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1984,
+      "text": "Tornei-me a segunda mulher da história a receber o título absoluto de grande mestre.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1978,
+      "title": "Título mundial aos 17",
+      "summary": "Derrotei Nona Gaprindashvili e me tornei campeã mundial feminina aos 17 anos.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1984,
+      "title": "Grande mestre absoluto",
+      "summary": "Tornei-me a segunda mulher da história a receber o título absoluto de grande mestre.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "FIDE — perfil e conquistas de chiburdanidze",
+      "publisher": "FIDE",
+      "url": "https://wom.fide.com/maia-chiburdanidze/",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

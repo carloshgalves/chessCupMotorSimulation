@@ -1,0 +1,54 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "leko",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui recordista de precocidade no título de grande mestre e empatei um match mundial.",
+  "era_label": "1994–2004",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1994,
+      "text": "Tornei-me o mais jovem grande mestre do mundo até então.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2004,
+      "text": "Empatei em 7–7 o match pelo título clássico contra Vladimir Kramnik, que manteve a coroa pelo regulamento.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1994,
+      "title": "Grande mestre precoce",
+      "summary": "Tornei-me o mais jovem grande mestre do mundo até então.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2004,
+      "title": "Match mundial clássico",
+      "summary": "Empatei em 7–7 o match pelo título clássico contra Vladimir Kramnik, que manteve a coroa pelo regulamento.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil e conquistas de leko",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/peter-leko",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

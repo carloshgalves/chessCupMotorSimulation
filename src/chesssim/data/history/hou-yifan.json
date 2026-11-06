@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "hou-yifan",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui a mais jovem campeã mundial feminina e conquistei a coroa quatro vezes.",
+  "era_label": "2010–2016 (campeã mundial feminina em quatro ocasiões)",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2008,
+      "text": "Tornei-me grande mestre absoluto aos 14 anos.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2010,
+      "text": "Conquistei o Campeonato Mundial Feminino aos 16 anos.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2016,
+      "text": "Conquistei meu quarto título mundial feminino.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2008,
+      "title": "Grande mestre",
+      "summary": "Tornei-me grande mestre absoluto aos 14 anos.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2010,
+      "title": "Título mundial aos 16",
+      "summary": "Conquistei o Campeonato Mundial Feminino aos 16 anos.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2016,
+      "title": "Quarta conquista mundial",
+      "summary": "Conquistei meu quarto título mundial feminino.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "FIDE — perfil e conquistas de hou-yifan",
+      "publisher": "FIDE",
+      "url": "https://wom.fide.com/hou-yifan/",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}
