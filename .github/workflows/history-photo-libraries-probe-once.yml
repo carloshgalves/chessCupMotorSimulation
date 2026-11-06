@@ -1,0 +1,51 @@
+name: History photo archives - probe Cleveland and Library of Congress
+on:
+  push:
+    branches: [feat/history-remaining-players-47]
+    paths: [.github/workflows/history-photo-libraries-probe-once.yml]
+permissions:
+  contents: read
+jobs:
+  source-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check authorized public archive APIs once
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from urllib.request import Request,urlopen
+          from urllib.error import HTTPError,URLError
+          from urllib.parse import quote
+          urls = {
+            "cleveland-steinitz-json":"https://cplorg.contentdm.oclc.org/digital/api/singleitem/collection/p4014coll20/id/212",
+            "cleveland-morphy-json":"https://cplorg.contentdm.oclc.org/digital/api/singleitem/collection/p4014coll20/id/11",
+            "cleveland-photo-image":"https://cplorg.contentdm.oclc.org/digital/api/singleitem/collection/p4014coll20/id/212/thumbnail",
+            "loc-morphy-json":"https://www.loc.gov/item/2007675802/?fo=json",
+            "loc-capablanca-json":"https://www.loc.gov/item/2016866175/?fo=json",
+            "loc-morphy-jpg":"https://cdn.loc.gov/service/pnp/cph/3a10000/3a10000/3a10900/3a10917r.jpg",
+          }
+          denied=set()
+          for title,url in urls.items():
+            host=url.split('/')[2]
+            if host in denied: continue
+            try:
+              with urlopen(Request(url,headers={"User-Agent":"ChessSimulationArchiveCurator/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)","Accept":"application/json,text/html,image/jpeg"}),timeout=16) as response:
+                data=response.read(160000)
+                print("SOURCE",title,"STATUS",response.status,"TYPE",response.headers.get("Content-Type"),"BYTES",len(data),flush=True)
+                if "json" in str(response.headers.get("Content-Type")).lower():
+                  obj=json.loads(data)
+                  if "cleveland" in title:
+                    print("META",title,str(obj)[:3300],flush=True)
+                  else:
+                    it=obj.get("item",{})
+                    print("META",title,json.dumps({k:it.get(k) for k in ("title","rights","rights_advisory","date","image_url","item_id","creator","created_published","source_collection")})[:3300],flush=True)
+                elif "text/" in str(response.headers.get("Content-Type")):
+                  print("HTML",title,repr(data[:160]),flush=True)
+            except HTTPError as exc:
+              print("ACCESS",title,exc.code,flush=True)
+              if exc.code in (401,403,429,451):denied.add(host)
+            except (ValueError,URLError,TimeoutError,OSError) as exc:
+              print("ERROR",title,type(exc).__name__,str(exc)[:140],flush=True)
+          PY
