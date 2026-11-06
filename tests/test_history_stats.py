@@ -320,3 +320,105 @@ def test_http_get_stats_status_errors_and_post_forbidden(tmp_path):
             urlopen(Request(base+"/api/history/players/fischer/stats",
                             data=b"{}",method="POST"))
         assert err.value.code==404
+
+
+def test_running_duel_with_no_completed_game_does_not_look_corrupt(tmp_path):
+    folder=arena_session(tmp_path,specs=[])
+    summary={"status":"RUNNING","players":["fischer","tal"],"games":[]}
+    (folder/"summary.json").write_text(json.dumps(summary),encoding="utf-8")
+    result=history_stats.list_stats(tmp_path,"fischer")
+    assert result["run_count"]==1
+    assert result["completed_games"]==result["duels_count"]==0
+    assert result["coverage"]["complete"] is True
+
+
+def test_unproven_declared_result_does_not_count_as_win(tmp_path):
+    folder=arena_session(tmp_path,specs=[("fischer","tal","1/2-1/2",False)])
+    info=json.loads((folder/"summary.json").read_text())
+    pgn,record=game("fischer","tal",result="0-1",incomplete=True)
+    pgn.headers["Result"]="1-0"
+    pgn.headers["Termination"]="Normal"
+    record.update(result="1-0",status="COMPLETED",termination="Normal")
+    (folder/"jogo_1.pgn").write_text(str(pgn)+"\n",encoding="utf-8")
+    info["games"]=[record]
+    (folder/"summary.json").write_text(json.dumps(info))
+    result=history_stats.list_stats(tmp_path,"fischer")
+    assert result["wins"]==result["completed_games"]==0
+    assert result["coverage"]["reasons"]["INVALID_ARENA_ATTEMPT"]==1
+
+
+def test_verified_time_forfeit_counts_only_actual_losing_side(tmp_path):
+    folder=arena_session(tmp_path,specs=[("fischer","tal","0-1",False)])
+    pgn,meta=game("fischer","tal",result="0-1",incomplete=True)
+    pgn.headers["Result"]="0-1"
+    pgn.headers["Termination"]="TimeForfeit"
+    meta.update(result="0-1",status="COMPLETED",termination="TimeForfeit",
+                clock_left=[-0.25,600])
+    (folder/"jogo_1.pgn").write_text(str(pgn)+"\n",encoding="utf-8")
+    (folder/"summary.json").write_text(json.dumps({
+        "status":"COMPLETED","players":["fischer","tal"],"games":[meta]
+    }))
+    stats=history_stats.list_stats(tmp_path,"fischer")
+    assert stats["losses"]==stats["completed_games"]==1
+    assert stats["coverage"]["complete"] is True
+    meta["clock_left"]=[600,-0.25]  # the wrong side allegedly lost on time
+    (folder/"summary.json").write_text(json.dumps({
+        "status":"COMPLETED","players":["fischer","tal"],"games":[meta]
+    }))
+    rejected=history_stats.list_stats(tmp_path,"fischer")
+    assert rejected["completed_games"]==0
+    assert not rejected["coverage"]["complete"]
+
+
+def test_unregistered_tournament_attempt_never_counted_and_is_reported(tmp_path):
+    root,state,match=tournament_run(tmp_path)
+    folder,_=register_tournament(root,state,match)
+    match["attempts"].clear()
+    (root/"tournament.json").write_text(json.dumps(state))
+    result=history_stats.list_stats(tmp_path,match["players"][0])
+    assert result["tournaments_participated"]==1
+    assert result["duels_count"]==result["completed_games"]==0
+    assert result["coverage"]["reasons"]["UNREGISTERED_TOURNAMENT_ATTEMPT"]==1
+    match["excluded_attempts"]=[{"folder":str(folder.relative_to(root)),
+                                  "reason":"NOT_COMPLETED"}]
+    (root/"tournament.json").write_text(json.dumps(state))
+    excluded=history_stats.list_stats(tmp_path,match["players"][0])
+    assert excluded["coverage"]["reasons"]["EXCLUDED_TOURNAMENT_ATTEMPT"]==1
+    assert excluded["completed_games"]==0
+
+
+def test_freezing_tournament_engines_profiles_prevents_forged_results(tmp_path):
+    root,state,match=tournament_run(tmp_path)
+    folder,entry=register_tournament(root,state,match)
+    # A forged PGN is re-hashed to bypass a SHA-only check. Frozen engine
+    # identity in the tournament still must reject it.
+    raw=(folder/"duelo.pgn").read_text(encoding="utf-8")
+    raw=raw.replace('EngineSHA256 "eeeeeeee', 'EngineSHA256 "ffffffff',1)
+    (folder/"duelo.pgn").write_text(raw,encoding="utf-8")
+    entry["pgn_sha256"]=sha256((folder/"duelo.pgn").read_bytes()).hexdigest()
+    (root/"tournament.json").write_text(json.dumps(state))
+    report=history_stats.list_stats(tmp_path,match["players"][0])
+    assert report["completed_games"]==0
+    assert report["coverage"]["reasons"]["INVALID_TOURNAMENT_ATTEMPT"]==1
+
+
+def test_nested_tournament_scope_is_opt_in_under_workspace(tmp_path):
+    nested=tmp_path/"tournaments"
+    nested.mkdir()
+    root,state,match=tournament_run(nested)
+    register_tournament(root,state,match)
+    report=history_stats.list_stats(tmp_path,match["players"][0])
+    assert report["tournaments_participated"]==1
+    assert report["completed_games"]==2
+    assert report["coverage"]["complete"] is True
+
+
+def test_duplicate_json_keys_rejected_with_coverage_warning(tmp_path):
+    folder=arena_session(tmp_path)
+    summary=(folder/"summary.json").read_text(encoding="utf-8")
+    (folder/"summary.json").write_text('{"players":[],"players":[],"games":[]}',
+                                       encoding="utf-8")
+    assert summary
+    data=history_stats.list_stats(tmp_path,"fischer")
+    assert data["completed_games"]==0
+    assert data["coverage"]["complete"] is False
