@@ -20,6 +20,7 @@ USER_AGENT = "ChessSimHistory/1.0 (github.com/carloshgalves/chessCupMotorSimulat
 LICENSES = {
     "CC0 1.0": "https://creativecommons.org/publicdomain/zero/1.0/",
     "CC BY-SA 3.0": "https://creativecommons.org/licenses/by-sa/3.0/",
+    "CC BY-SA 4.0": "https://creativecommons.org/licenses/by-sa/4.0/",
     "CC BY-SA 2.0": "https://creativecommons.org/licenses/by-sa/2.0/",
     "CC BY 2.0": "https://creativecommons.org/licenses/by/2.0/",
     "Public Domain Mark 1.0": "https://creativecommons.org/publicdomain/mark/1.0/",
@@ -71,7 +72,7 @@ def manifest_rows() -> list[dict]:
         if not isinstance(slug, str) or not re.fullmatch(r"[a-z0-9-]{2,48}", slug) or slug in seen:
             raise ValueError("Invalid or duplicate portrait slug")
         seen.add(slug)
-        if not isinstance(row["file"], str) or not row["file"].endswith(".jpg"):
+        if not isinstance(row["file"], str) or not row["file"].lower().endswith((".jpg", ".jpeg")):
             raise ValueError("Unexpected image extension")
         if row["license"] not in LICENSES or row["license_url"] != LICENSES[row["license"]]:
             raise ValueError("Image license not on approved allowlist")
