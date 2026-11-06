@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui a primeira campeã mundial feminina e defendi a coroa em sucessivos torneios.",
   "era_label": "1927–1944 (campeã mundial feminina)",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/menchik.jpg",
+    "alt": "Retrato de Vera Menchik, vencedora do torneio feminino; fotografia publicada no British Chess Magazine de fevereiro de 1926",
+    "author": "Fotógrafo desconhecido; British Chess Magazine (1926)",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://www.chesshistory.com/winter/extra/menchikclub.html",
+    "verified_at": "2026-11-06",
+    "event": "British Chess Magazine, torneio juvenil feminino, fevereiro de 1926",
+    "event_date": "1926-02",
+    "rights_holder": "Imagem histórica publicada em periódico de 1926; domínio público por antiguidade de publicação",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "9ad804838fbba9fac03a11e103c5fd88221f0d77b9302296fd8014da349577e4",
+    "derivative_note": "Recorte da fotografia no oval superior esquerdo do frontispício de fevereiro de 1926; reprodução histórica, não licença CC0. Fonte editorial: Edward Winter / British Chess Magazine.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",
