@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui pioneiro da estratégia dos peões e autor de um influente tratado de xadrez.",
   "era_label": "1747–1783",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/philidor.jpg",
+    "alt": "Gravura de François-André Danican Philidor, feita em 1772 por Augustin de Saint-Aubin após Cochin II; não é fotografia",
+    "author": "Augustin de Saint-Aubin (após Charles-Nicolas Cochin II)",
+    "license": "CC0 1.0",
+    "source_url": "https://www.metmuseum.org/art/collection/search/423124",
+    "verified_at": "2026-11-06",
+    "event": "Retrato gravado de Philidor (representação artística, não fotografia)",
+    "event_date": "1772",
+    "rights_holder": "Metropolitan Museum of Art — Open Access",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "49a0a5496a1a7311cc639f02f3e1545eaefbf845ea787a5e436422545928a668",
+    "derivative_note": "Recorte JPEG 480×480 px de gravura de 1772, domínio público (The Met Open Access); arte histórica, não fotografia do jogador.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",
