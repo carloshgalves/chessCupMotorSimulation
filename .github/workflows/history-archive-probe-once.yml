@@ -18,8 +18,9 @@ jobs:
           from urllib.request import Request, urlopen
           from urllib.error import HTTPError, URLError
           urls = {
-            "flickr-original-photographer": "https://www.flickr.com/photos/8022405@N02/1824512615/",
-            "congress-history-source": "https://www.loc.gov/photos/?fo=json&q=chess%20tournament&c=10",
+            "shirov-karpidis": "https://www.flickr.com/photos/8022405@N02/6352157086/",
+            "svidler-karpidis": "https://www.flickr.com/photos/8022405@N02/6312101622/",
+            "leko-peeters": "https://www.flickr.com/photos/suspeeters/54275360618/",
           }
           for name, url in urls.items():
               try:
@@ -33,6 +34,11 @@ jobs:
                               print("FLICKR_FIELD",pat,"hits",len(matches),"samples",[txt[max(0,m.start()-90):m.end()+270].replace(chr(10),' ') for m in matches[:2]],flush=True)
                       if name == "congress-history-source":
                           print("LOC_JSON_HEAD",chunk.decode("utf-8","ignore")[:1600],flush=True)
+                      if name in ("shirov-karpidis","svidler-karpidis","leko-peeters"):
+                          txt=chunk.decode("utf-8","replace")
+                          for pat in ("contentUrl","creativecommons.org/licenses/","og:title","og:description","og:image","Andreas Kontokanis","Frans Peeters"):
+                              matches=list(re.finditer(re.escape(pat),txt,re.I))
+                              print("PHOTO_METADATA",name,pat,"count",len(matches),"samples",[txt[max(0,m.start()-85):m.end()+300].replace(chr(10),' ') for m in matches[:2]],flush=True)
                       if b"<html" in chunk[:2000].lower():
                           txt=chunk.decode("utf-8","ignore")
                           if name == "gelfand-holland":
