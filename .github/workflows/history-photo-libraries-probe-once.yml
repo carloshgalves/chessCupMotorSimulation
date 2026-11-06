@@ -1,38 +1,42 @@
-name: History Cleveland portrait metadata audit
+name: History permissions and official-media endpoint diagnostic
 on:
   push:
     branches: [feat/history-remaining-players-47]
     paths: [.github/workflows/history-photo-libraries-probe-once.yml]
 permissions: {contents: read}
 jobs:
-  metadata:
+  check:
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 6
     steps:
-      - name: Examine only named archival items and photo rights statements
+      - name: Inspect 3 library rights records and 3 official Fischer photo pages
         shell: bash
         run: |
           python - <<'PY'
-          import json,time
-          from urllib.request import Request,urlopen
+          from urllib.request import Request, urlopen
           from urllib.error import HTTPError
-          ids={"steinitz":212,"lasker":115,"capablanca":6,"philidor":4034,
-               "staunton":2595,"anderssen":2532,"morphy":11,"zukertort":2599,
-               "chigorin":3048,"pillsbury":76,"tarrasch":37,"marshall":108,
-               "rubinstein":77,"nimzowitsch":75,"reti":108,"fischer":74,
-               "staunton_alt":2594,"philidor_alt":4031,"lasker_alt":57,
-               "capablanca_alt":0}
-          for slug,id in ids.items():
+          from html import unescape
+          import json,re
+          hosts_blocked=set()
+          for slug,id in [("nimzowitsch",75),("marshall_reti",108)]:
+            url=f"https://cplorg.contentdm.oclc.org/digital/api/singleitem/collection/p4014coll20/id/{id}"
             try:
-              url=f"https://cplorg.contentdm.oclc.org/digital/api/singleitem/collection/p4014coll20/id/{id}"
-              with urlopen(Request(url,headers={"User-Agent":"ChessSimulationCurator/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)"}),timeout=15) as h:
-                j=json.loads(h.read(12000))
-                fields={x["key"]:x["value"] for x in j.get("fields",[])}
-                print("PHOTO",slug,id,json.dumps({k:fields.get(k) for k in ("title","creato","date","format","origin","standa","rightsl","rights","rightsn","descri")},ensure_ascii=False)[:1100],"CONTENT",j.get("contentType"),flush=True)
+              with urlopen(Request(url,headers={"User-Agent":"ChessSimulation/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)"}),timeout=12) as rsp:
+                obj=json.loads(rsp.read(40000))
+                print("CLEVELAND",slug,[(e["key"],str(e.get("value"))[:900]) for e in obj.get("fields",[]) if e["key"] in ("title","date","rights","rightsl","standa","rightsn","creato","origin")],flush=True)
             except HTTPError as e:
-              print("BLOCK",slug,e.code,flush=True)
+              print("DENY_CLEVELAND",e.code,flush=True)
               if e.code in (401,403,429,451):break
-            except Exception as e:
-              print("ERROR",slug,type(e).__name__,str(e)[:150],flush=True)
-            time.sleep(.22)
+          for slug,url in [
+            ("fischer-1971","https://www.nationaalarchief.nl/onderzoeken/fotocollectie/abc6ac60-d0b4-102d-bcf8-003048976d84"),
+            ("fischer-1972","https://www.nationaalarchief.nl/onderzoeken/fotocollectie/abdf9752-d0b4-102d-bcf8-003048976d84"),
+            ("fischer-1972b","https://www.nationaalarchief.nl/onderzoeken/fotocollectie/abdf9680-d0b4-102d-bcf8-003048976d84")]:
+            try:
+              with urlopen(Request(url,headers={"User-Agent":"ChessSimulation/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)"}),timeout=12) as rsp:
+                page=unescape(rsp.read(300000).decode("utf-8","replace"))
+              for _ in range(4):page=page.replace("\\/","/")
+              print("NATION",slug,"CC0",("Nationaal Archief, CC0" in page),"DATES",[v in page for v in ("1971-07-15","1972-01-31")],"IDS",re.findall(r"/gaf/api/file/v1/(?:original|default)/([0-9a-f-]{36})",page)[:3],flush=True)
+            except HTTPError as e:
+              print("NATION_DENIED",slug,e.code,flush=True)
+              if e.code in (401,403,429,451):break
           PY
