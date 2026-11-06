@@ -22,16 +22,8 @@ p{margin:.4rem 0;line-height:1.5}.topbar p{color:var(--muted);font-size:.85rem}
 .clock.active{background:#33515a;box-shadow:inset 0 0 0 2px #79a79c}.clock.low{color:#ff9e91}
 .board-shell{padding:6px;border:2px solid #47616a;border-radius:9px;background:#0c1c20;box-shadow:0 18px 55px #0005;max-width:calc(100vh - 260px);margin:auto}
 /* Both axes have eight independent tracks: a rank with no pieces never collapses. */
-.board{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));aspect-ratio:1 / 1;width:100%;min-width:0;min-height:0;container-type:inline-size;overflow:hidden;border-radius:4px}
-.square{position:relative;display:grid;place-items:center;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;user-select:none}
  /* Size against the board, not the outer viewport (important inside the Arena iframe). */
-.square .piece-glyph{display:grid;place-items:center;width:100%;height:100%;font-family:"DejaVu Sans","Noto Sans Symbols 2","Segoe UI Symbol",sans-serif;font-size:clamp(16px,9.4cqw,68px);line-height:1}
-.square.light{background:#e5e4d1;color:#1c2b30}.square.dark{background:#72989d;color:#162933}
-.square.last{box-shadow:inset 0 0 0 5px #e2b859}
 /* Same filled silhouettes for both sides, with contrasting fills AND contours. */
-.square.whitepiece .piece-glyph{color:#faf7eb;-webkit-text-stroke:1.15px #192933;text-shadow:0 2px 1px #12262dcc,1px 0 1px #12262dcc}
-.square.blackpiece .piece-glyph{color:#15232b;-webkit-text-stroke:1.15px #f7efdf;text-shadow:0 2px 1px #0d1a20cc,0 0 1px #f7efdf}
-.square.coordinate::after{content:attr(data-coordinate);position:absolute;bottom:3px;right:4px;font:600 9px system-ui;color:#192e35a6}
 .clock-note{text-align:center;color:var(--muted);font-size:.72rem;margin:8px}
 .sidebar{display:flex;flex-direction:column;gap:13px}
 .panel{background:var(--panel);border:1px solid var(--border);padding:19px;border-radius:13px;box-shadow:0 7px 22px #0002}
