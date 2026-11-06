@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "carlsen",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão mundial clássico em cinco ocasiões e também conquistei títulos em rápidas e blitz.",
   "era_label": "2013–2023 (campeão mundial)",
@@ -26,7 +26,8 @@
       "year": 2013,
       "text": "Derrotei Viswanathan Anand em Chennai e me tornei campeão mundial.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -34,7 +35,8 @@
       "year": 2018,
       "text": "Defendi o título contra Fabiano Caruana, vencendo no desempate rápido.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -42,7 +44,8 @@
       "year": 2021,
       "text": "Venci o match pelo título mundial contra Ian Nepomniachtchi.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -52,7 +55,8 @@
       "title": "Conquista mundial",
       "summary": "Derrotei Viswanathan Anand em Chennai e me tornei campeão mundial.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -60,7 +64,8 @@
       "title": "Defesa do título",
       "summary": "Defendi o título contra Fabiano Caruana, vencendo no desempate rápido.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -68,7 +73,8 @@
       "title": "Quinta conquista",
       "summary": "Venci o match pelo título mundial contra Ian Nepomniachtchi.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -78,6 +84,13 @@
       "title": "Referência histórica de carlsen",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/article/view/world-chess-champions",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Museu FIDE — matches de 2013, 2018 e 2021",
+      "publisher": "FIDE",
+      "url": "https://museum.fide.com/champions/magnus-carlsen",
       "accessed_at": "2026-11-06"
     }
   ]

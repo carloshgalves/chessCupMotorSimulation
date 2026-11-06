@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "smyslov",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão mundial e fiquei conhecido pela precisão técnica nos finais.",
   "era_label": "1953–1984",
@@ -26,7 +26,8 @@
       "year": 1953,
       "text": "Venci o Torneio de Candidatos de Zurique.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -34,7 +35,8 @@
       "year": 1957,
       "text": "Derrotei Mikhail Botvinnik e conquistei o Campeonato Mundial.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -43,7 +45,8 @@
       "text": "Alcancei a final dos matches de Candidatos, enfrentando Garry Kasparov.",
       "source_ids": [
         "source-1",
-        "source-2"
+        "source-2",
+        "audit-2"
       ]
     }
   ],
@@ -53,7 +56,8 @@
       "title": "Candidatos",
       "summary": "Venci o Torneio de Candidatos de Zurique.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -61,7 +65,8 @@
       "title": "Título mundial",
       "summary": "Derrotei Mikhail Botvinnik e conquistei o Campeonato Mundial.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -70,7 +75,8 @@
       "summary": "Alcancei a final dos matches de Candidatos, enfrentando Garry Kasparov.",
       "source_ids": [
         "source-1",
-        "source-2"
+        "source-2",
+        "audit-2"
       ]
     }
   ],
@@ -85,6 +91,13 @@
     {
       "id": "source-2",
       "title": "FIDE Open Chess Museum — Vasily Smyslov",
+      "publisher": "FIDE",
+      "url": "https://museum.fide.com/champions/vasily-smyslov",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Museu FIDE — 1953, 1957 e final de Candidatos em 1984",
       "publisher": "FIDE",
       "url": "https://museum.fide.com/champions/vasily-smyslov",
       "accessed_at": "2026-11-06"

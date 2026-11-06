@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "menchik",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui a primeira campeã mundial feminina e defendi a coroa em sucessivos torneios.",
   "era_label": "1927–1944 (campeã mundial feminina)",
@@ -12,7 +12,8 @@
       "year": 1927,
       "text": "Conquistei o primeiro Campeonato Mundial Feminino de Xadrez.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 1939,
       "text": "Venci novamente o Campeonato Mundial Feminino, permanecendo campeã até 1944.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -30,7 +32,8 @@
       "title": "Primeiro mundial feminino",
       "summary": "Conquistei o primeiro Campeonato Mundial Feminino de Xadrez.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -38,7 +41,8 @@
       "title": "Última defesa",
       "summary": "Venci novamente o Campeonato Mundial Feminino, permanecendo campeã até 1944.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -48,6 +52,13 @@
       "title": "Chess.com — perfil e conquistas de menchik",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/vera-menchik",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE — Menchik, primeira campeã e últimas defesas",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/how-womens-world-champions-shaped-chess/",
       "accessed_at": "2026-11-06"
     }
   ]

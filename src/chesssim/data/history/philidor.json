@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "philidor",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui pioneiro da estratégia dos peões e autor de um influente tratado de xadrez.",
   "era_label": "1747–1783",
@@ -12,7 +12,8 @@
       "year": 1747,
       "text": "Derrotei Philip Stamma em um match disputado na Inglaterra.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 1749,
       "text": "Publiquei a primeira edição de L'Analyse du jeu des Échecs.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -28,7 +30,8 @@
       "year": 1783,
       "text": "Disputei três partidas simultâneas às cegas em Londres.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -38,7 +41,8 @@
       "title": "Match com Stamma",
       "summary": "Derrotei Philip Stamma em um match disputado na Inglaterra.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -46,7 +50,8 @@
       "title": "Tratado de xadrez",
       "summary": "Publiquei a primeira edição de L'Analyse du jeu des Échecs.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -54,7 +59,8 @@
       "title": "Simultâneas às cegas",
       "summary": "Disputei três partidas simultâneas às cegas em Londres.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -64,6 +70,20 @@
       "title": "Referência histórica de philidor",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/francois-philidor",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Chess.com — match de 1747 e partidas às cegas",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/francois-philidor",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "Museu FIDE — edição de 1749 do tratado",
+      "publisher": "FIDE",
+      "url": "https://museum.fide.com/exhibits/lanalyse-des-echecs",
       "accessed_at": "2026-11-06"
     }
   ]

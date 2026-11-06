@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "gaprindashvili",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeã mundial por dezesseis anos e a primeira mulher a receber o título absoluto de grande mestre.",
   "era_label": "1962–1978 (campeã mundial feminina)",
@@ -12,7 +12,8 @@
       "year": 1962,
       "text": "Derrotei Elisaveta Bykova e me tornei campeã mundial feminina.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 1978,
       "text": "Tornei-me a primeira mulher a receber o título absoluto de grande mestre.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -30,7 +32,8 @@
       "title": "Campeonato mundial",
       "summary": "Derrotei Elisaveta Bykova e me tornei campeã mundial feminina.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -38,7 +41,8 @@
       "title": "Grande mestre",
       "summary": "Tornei-me a primeira mulher a receber o título absoluto de grande mestre.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -48,6 +52,13 @@
       "title": "Chess.com — perfil e conquistas de gaprindashvili",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/nona-gaprindashvili",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE Mulheres — título de 1962 e GM de 1978",
+      "publisher": "FIDE",
+      "url": "https://wom.fide.com/nona-gaprindashvili/",
       "accessed_at": "2026-11-06"
     }
   ]

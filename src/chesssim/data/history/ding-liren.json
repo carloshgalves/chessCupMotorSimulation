@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "ding-liren",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui o primeiro enxadrista chinês a conquistar o Campeonato Mundial clássico.",
   "era_label": "2023–2024 (campeão mundial)",
@@ -12,7 +12,8 @@
       "year": 2009,
       "text": "Conquistei o Campeonato Chinês de xadrez aos 16 anos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 2017,
       "text": "Alcancei a final da Copa do Mundo de xadrez.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -28,7 +30,8 @@
       "year": 2023,
       "text": "Derrotei Ian Nepomniachtchi no desempate e conquistei a coroa mundial.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     }
   ],
@@ -38,7 +41,8 @@
       "title": "Título chinês",
       "summary": "Conquistei o Campeonato Chinês de xadrez aos 16 anos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -46,7 +50,8 @@
       "title": "Copa do Mundo",
       "summary": "Alcancei a final da Copa do Mundo de xadrez.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -54,7 +59,8 @@
       "title": "Campeonato mundial",
       "summary": "Derrotei Ian Nepomniachtchi no desempate e conquistei a coroa mundial.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     }
   ],
@@ -64,6 +70,20 @@
       "title": "Referência histórica de ding-liren",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/ding-liren",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Museu FIDE — títulos chineses e Copa do Mundo 2017",
+      "publisher": "FIDE",
+      "url": "https://museum.fide.com/champions/ding-liren",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "FIDE — título mundial 2023",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/ding-liren-makes-history-becoming-world-champion/",
       "accessed_at": "2026-11-06"
     }
   ]

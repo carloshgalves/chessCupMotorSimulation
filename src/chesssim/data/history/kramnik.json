@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "kramnik",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão clássico ao derrotar Kasparov e posteriormente reunifiquei a coroa mundial.",
   "era_label": "2000–2007 (campeão clássico e unificado)",
@@ -12,7 +12,8 @@
       "year": 2000,
       "text": "Derrotei Garry Kasparov e conquistei o título mundial clássico.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 2006,
       "text": "Venci Veselin Topalov no match de reunificação dos títulos mundiais.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -30,7 +32,8 @@
       "title": "Match com Kasparov",
       "summary": "Derrotei Garry Kasparov e conquistei o título mundial clássico.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -38,7 +41,8 @@
       "title": "Reunificação mundial",
       "summary": "Venci Veselin Topalov no match de reunificação dos títulos mundiais.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -48,6 +52,13 @@
       "title": "Referência histórica de kramnik",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/vladimir-kramnik",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE — título clássico em 2000 e reunificação de 2006",
+      "publisher": "FIDE",
+      "url": "https://worldchesschampionship2023.fide.com/chess-champions",
       "accessed_at": "2026-11-06"
     }
   ]
