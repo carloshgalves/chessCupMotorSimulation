@@ -219,8 +219,9 @@ def test_static_assets_use_safe_text_updates_and_no_external_content(tmp_path):
 def test_board_css_has_fixed_8x8_geometry_and_pieces_visible_on_both_colors():
     # Regression for the compressed empty ranks seen in the Arena iframe.
     assets = Path(__file__).resolve().parents[1] / "src" / "chesssim" / "data"
-    css = (assets / "monitor.css").read_text(encoding="utf-8")
-    script = (assets / "monitor.js").read_text(encoding="utf-8")
+    css = (assets / "chess_board.css").read_text(encoding="utf-8")
+    script = (assets / "chess_board.js").read_text(encoding="utf-8")
+    viewer_script = (assets / "monitor.js").read_text(encoding="utf-8")
 
     assert "grid-template-columns:repeat(8,minmax(0,1fr))" in css
     assert "grid-template-rows:repeat(8,minmax(0,1fr))" in css
@@ -237,10 +238,13 @@ def test_board_css_has_fixed_8x8_geometry_and_pieces_visible_on_both_colors():
     assert ".square.blackpiece .piece-glyph{color:#15232b" in css
     assert "-webkit-text-stroke:1.15px #f7efdf" in css
     assert "label.className = \"piece-glyph\"" in script
+    assert "ChessSimBoard.paint" in viewer_script
     assert 'label.setAttribute("aria-hidden", "true")' in script
 
     # Both standalone watch and Arena's embedded viewer load this asset.
     assert 'href="/app.css"' in (assets / "monitor.html").read_text(encoding="utf-8")
+    assert 'href="/chess-board.css"' in (assets / "monitor.html").read_text(encoding="utf-8")
+    assert 'src="/chess-board.js"' in (assets / "monitor.html").read_text(encoding="utf-8")
     arena = (assets / "arena.html").read_text(encoding="utf-8")
     assert 'src="/viewer"' in arena
 
@@ -463,7 +467,8 @@ def test_bracket_browser_interaction_contract():
     root = Path(__file__).resolve().parents[1]
     harness = root / "tests" / "assets" / "monitor_browser_harness.cjs"
     javascript = root / "src" / "chesssim" / "data" / "monitor.js"
-    result = subprocess.run(["node", str(harness), str(javascript)],
+    board = root / "src" / "chesssim" / "data" / "chess_board.js"
+    result = subprocess.run(["node", str(harness), str(javascript), str(board)],
                             capture_output=True, text=True, timeout=15, check=False)
     assert result.returncode == 0, result.stdout + result.stderr
     assert "smoke: PASS" in result.stdout
