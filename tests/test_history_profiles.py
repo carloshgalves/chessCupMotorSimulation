@@ -212,3 +212,19 @@ def test_all_64_biographies_are_sourced_first_person_and_ordered():
         assert all(item["source_ids"] for item in pack["highlights"])
         assert all(source["url"].startswith("https://") for source in pack["sources"])
     assert load_history_profile("philidor")["highlights"][1]["year"] == 1749
+
+
+
+def test_history_credits_are_local_and_frontend_assets_packaged():
+    from importlib.resources import files
+    data = files("chesssim.data")
+    html = data.joinpath("arena.html").read_text(encoding="utf-8")
+    js = data.joinpath("history.js").read_text(encoding="utf-8")
+    css = data.joinpath("history.css").read_text(encoding="utf-8")
+    assert 'id="tab-history"' in html and 'id="history-view"' in html
+    assert "/history.js" in html and "/history.css" in html
+    assert 'info.license_url' in js and 'info.source_url' in js
+    assert 'info.derivative_note' in js and 'info.author' in js
+    assert "/api/history/players" in js and "/api/history/portraits/" in js
+    assert "innerHTML" not in js and "X-Chesssim-Token" not in js
+    assert "@media" in css and "prefers-reduced-motion" in css
