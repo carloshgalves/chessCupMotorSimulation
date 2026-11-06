@@ -216,6 +216,35 @@ def test_static_assets_use_safe_text_updates_and_no_external_content(tmp_path):
     assert 'id="white-clock"' in html and 'id="black-clock"' in html
 
 
+def test_board_css_has_fixed_8x8_geometry_and_pieces_visible_on_both_colors():
+    # Regression for the compressed empty ranks seen in the Arena iframe.
+    assets = Path(__file__).resolve().parents[1] / "src" / "chesssim" / "data"
+    css = (assets / "monitor.css").read_text(encoding="utf-8")
+    script = (assets / "monitor.js").read_text(encoding="utf-8")
+
+    assert "grid-template-columns:repeat(8,minmax(0,1fr))" in css
+    assert "grid-template-rows:repeat(8,minmax(0,1fr))" in css
+    assert "aspect-ratio:1 / 1" in css
+    assert "min-width:0;min-height:0;container-type:inline-size" in css
+    assert ".square{position:relative;display:grid;place-items:center" in css
+    assert "width:100%;height:100%;min-width:0;min-height:0;overflow:hidden" in css
+    assert ".square .piece-glyph" in css and "9.4cqw" in css
+
+    # Foreground AND outline are side-specific, so neither the white or
+    # black pieces disappear on the light beige or dark teal board squares.
+    assert ".square.whitepiece .piece-glyph{color:#faf7eb" in css
+    assert "-webkit-text-stroke:1.15px #192933" in css
+    assert ".square.blackpiece .piece-glyph{color:#15232b" in css
+    assert "-webkit-text-stroke:1.15px #f7efdf" in css
+    assert "label.className = \"piece-glyph\"" in script
+    assert 'label.setAttribute("aria-hidden", "true")' in script
+
+    # Both standalone watch and Arena's embedded viewer load this asset.
+    assert 'href="/app.css"' in (assets / "monitor.html").read_text(encoding="utf-8")
+    arena = (assets / "arena.html").read_text(encoding="utf-8")
+    assert 'src="/viewer"' in arena
+
+
 def test_cli_watch_appears_in_help(capsys):
     # argparse's built-in help exits cleanly instead of returning to main.
     with pytest.raises(SystemExit) as exited:

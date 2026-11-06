@@ -1,9 +1,16 @@
 "use strict";
 /* No chess engine and no state-changing endpoint: this is a read-only viewer. */
 const $ = (id) => document.getElementById(id);
+// Filled silhouettes for both colors; the contrast is supplied by CSS.
 const glyph = {
-  K:"♔", Q:"♕", R:"♖", B:"♗", N:"♘", P:"♙",
+  K:"♚", Q:"♛", R:"♜", B:"♝", N:"♞", P:"♟",
   k:"♚", q:"♛", r:"♜", b:"♝", n:"♞", p:"♟"
+};
+const pieceName = {
+  K:"rei branco", Q:"dama branca", R:"torre branca",
+  B:"bispo branco", N:"cavalo branco", P:"peão branco",
+  k:"rei preto", q:"dama preta", r:"torre preta",
+  b:"bispo preto", n:"cavalo preto", p:"peão preto"
 };
 const initialFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 let feed = null;
@@ -130,10 +137,14 @@ function paintBoard(state) {
         square.classList.add("coordinate");
         square.dataset.coordinate = squareName[0];
       }
-      const label = document.createElement("span");
-      label.textContent = glyph[piece] || "";
-      square.appendChild(label);
-      square.setAttribute("aria-label", squareName + " " + (piece || "vazio"));
+      if (piece) {
+        const label = document.createElement("span");
+        label.className = "piece-glyph";
+        label.textContent = glyph[piece] || "";
+        label.setAttribute("aria-hidden", "true");
+        square.appendChild(label);
+      }
+      square.setAttribute("aria-label", squareName + " " + (pieceName[piece] || "vazio"));
       fragment.appendChild(square);
     }
   }
