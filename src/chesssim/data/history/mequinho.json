@@ -1,0 +1,118 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "mequinho",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão brasileiro aos 13 anos, tornei-me o primeiro grande mestre do país e conquistei duas vitórias em Interzonais.",
+  "era_label": "1965–1977",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1965,
+      "text": "Conquistei o Campeonato Brasileiro absoluto de xadrez aos 13 anos.",
+      "source_ids": [
+        "source-1",
+        "source-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1972,
+      "text": "Tornei-me o primeiro grande mestre internacional do Brasil aos 20 anos.",
+      "source_ids": [
+        "source-2"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1973,
+      "text": "Venci o Interzonal de Petrópolis aos 21 anos e garanti uma vaga no ciclo de Candidatos.",
+      "source_ids": [
+        "source-3"
+      ]
+    },
+    {
+      "id": "achievement-4",
+      "year": 1974,
+      "text": "Disputei o match de Candidatos contra Viktor Korchnoi aos 22 anos.",
+      "source_ids": [
+        "source-3"
+      ]
+    },
+    {
+      "id": "achievement-5",
+      "year": 1976,
+      "text": "Venci o Interzonal de Manila e conquistei nova classificação ao Torneio de Candidatos.",
+      "source_ids": [
+        "source-3"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Henrique Mecking — acervo e biografia",
+      "publisher": "CEX",
+      "url": "https://www.cex.org.br/mestres/mecking",
+      "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-2",
+      "title": "Grandes Mestres Brasileiros",
+      "publisher": "Xadrez M.A.T.",
+      "url": "https://xadrezmat.com/gmsbrasileiros/",
+      "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-3",
+      "title": "Henrique Mecking — perfil e trajetória",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/henrique-mecking",
+      "accessed_at": "2026-11-05"
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1965,
+      "title": "Campeão brasileiro",
+      "summary": "Conquistei o Campeonato Brasileiro absoluto de xadrez aos 13 anos.",
+      "source_ids": [
+        "source-1",
+        "source-2"
+      ]
+    },
+    {
+      "year": 1972,
+      "title": "Título de grande mestre",
+      "summary": "Tornei-me o primeiro grande mestre internacional do Brasil aos 20 anos.",
+      "source_ids": [
+        "source-2"
+      ]
+    },
+    {
+      "year": 1973,
+      "title": "Interzonal de Petrópolis",
+      "summary": "Venci o Interzonal de Petrópolis aos 21 anos e garanti uma vaga no ciclo de Candidatos.",
+      "source_ids": [
+        "source-3"
+      ]
+    },
+    {
+      "year": 1974,
+      "title": "Torneio de Candidatos",
+      "summary": "Disputei o match de Candidatos contra Viktor Korchnoi aos 22 anos.",
+      "source_ids": [
+        "source-3"
+      ]
+    },
+    {
+      "year": 1976,
+      "title": "Interzonal de Manila",
+      "summary": "Venci o Interzonal de Manila e conquistei nova classificação ao Torneio de Candidatos.",
+      "source_ids": [
+        "source-3"
+      ]
+    }
+  ]
+}

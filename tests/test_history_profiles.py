@@ -16,15 +16,15 @@ from chesssim.history_profiles import (
 )
 
 
-def test_all_64_are_accessible_but_only_21_are_curated():
+def test_all_64_are_accessible_and_22_have_documented_packs():
     roster = load_roster()
     index = list_history_players()
     assert index["schema"] == "history-index-v1"
     assert len(index["players"]) == 64
     assert [p["slug"] for p in index["players"]] == [p.slug for p in roster]
-    assert sum(p["has_historical_pack"] for p in index["players"]) == 21
+    assert sum(p["has_historical_pack"] for p in index["players"]) == 22
     assert {p["slug"] for p in index["players"] if p["has_historical_pack"]} == {
-        p.slug for p in roster if p.rodent_alias is not None
+        p.slug for p in roster if p.rodent_alias is not None or p.slug == "mequinho"
     }
     for player in roster:
         pack = load_history_profile(player.slug)
@@ -47,6 +47,16 @@ def test_all_64_are_accessible_but_only_21_are_curated():
             assert pack["review_status"] == "pending"
             assert not pack["highlights"] and not pack["sources"]
             assert pack["short_bio"] is None
+
+
+def test_mequinho_career_dates_are_not_inflated():
+    profile = load_history_profile("mequinho")
+    assert profile["has_historical_pack"] and profile["historically_validated_model"] is False
+    assert [x["year"] for x in profile["highlights"]] == [1965, 1972, 1973, 1974, 1976]
+    assert "13 anos" in profile["highlights"][0]["text"]
+    assert "20 anos" in profile["highlights"][1]["text"]
+    assert "21 anos" in profile["highlights"][2]["text"]
+    assert "22 anos" in profile["highlights"][3]["text"]
 
 
 @pytest.mark.parametrize("bad", [
@@ -95,6 +105,10 @@ def test_history_http_endpoint_is_get_only_and_has_no_path_access(tmp_path):
             assert profile["has_historical_pack"]
             assert profile["historically_validated_model"] is False
         with urlopen(base + "/api/history/players/mequinho") as response:
+            profile = json.load(response)
+            assert profile["has_historical_pack"]
+            assert profile["historically_validated_model"] is False
+        with urlopen(base + "/api/history/players/capablanca") as response:
             profile = json.load(response)
             assert not profile["has_historical_pack"]
         for endpoint in (

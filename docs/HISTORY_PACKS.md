@@ -4,7 +4,7 @@
 
 Uma biografia por jogador do elenco, editada como dados e acessada por um **slug canônico**. O código do carregador é único; acrescentar um jogador consiste em criar `src/chesssim/data/history/<slug>.json` e preencher os mesmos campos. O nome e o grupo **não** são copiados: vêm de `roster.json`.
 
-Nesta primeira entrega existem **21 packs para as personalidades históricas com alias oficial do Rodent IV**. Os demais **43** integrantes do elenco retornam um registro completo e pesquisável com `has_historical_pack=false`, `review_status=pending`, nenhuma conquista e foto ausente. Um jogador sem motor instalado continua pesquisável e pode receber um pack no futuro. O jogador `mequinho` permanece no elenco e pode ganhar um pack independente quando houver curadoria específica.
+Nesta primeira entrega existem **22 packs: 21 personalidades com alias oficial do Rodent IV e Mequinho, cujo perfil experimental é tratado separadamente**. Os demais **42** integrantes do elenco retornam um registro completo e pesquisável com `has_historical_pack=false`, `review_status=pending`, nenhuma conquista e foto ausente. Um jogador sem motor instalado continua pesquisável e pode receber um pack no futuro. Mequinho possui um pack próprio por sua importância no projeto, **sem** que isso o transforme em uma das 21 personalidades oficiais do Rodent IV ou valide o estilo do modelo.
 
 ## Voz narrativa
 
@@ -69,3 +69,8 @@ O retrato fica `null` até haver licença válida. Quando aprovado, usar `local_
 O contrato exige metadados e referências para cada feito, cronologia ordenada, esquema conhecido e URLs HTTPS. Testes verificam os 64 slugs, 21 packs preenchidos e o fallback dos demais, segurança de dados, primeira pessoa e os endpoints. Preservar `historically_validated_model=false` independente de relatos sobre a carreira real.
 
 Para inserir novo personagem: criar JSON no padrão, manter `slug` no elenco, preencher fontes verificáveis, validar com `pytest tests/test_history_profiles.py`, e submeter à revisão. Nenhum retrato pode ser incorporado antes da auditoria de licença.
+
+
+## Nota de verificação — Henrique Mecking
+
+A cronologia foi conferida antes da publicação: campeão brasileiro aos **13 anos** (1965), grande mestre aos **20** (1972), vencedor do Interzonal de Petrópolis aos **21** (1973) e participante dos Candidatos aos **22** (1974); venceu também Manila em 1976. A narrativa não usa 15/16/21 para os três primeiros marcos, pois essas idades misturariam eventos distintos. O pack referencia CEX, Xadrez M.A.T. e Chess.com; a voz permanece editorial.
