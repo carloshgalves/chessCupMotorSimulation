@@ -65,6 +65,28 @@ jobs:
           with ZipFile(wheels[0]) as archive:
               names = set(archive.namelist())
               assert "chesssim/data/roster.json" in names, "Packaged roster is missing"
+              import hashlib
+              import json
+              root = "chesssim/data/history/"
+              history_packs = sorted(name for name in names
+                                     if name.startswith(root) and name.endswith(".json")
+                                     and name != root + "portrait_candidates.json")
+              assert len(history_packs) == 22, f"Expected 22 biographies, got {len(history_packs)}"
+              assert root + "portrait_candidates.json" in names
+              photo_slugs = ("anand", "karpov", "larsen", "mequinho",
+                             "petrosian", "spassky", "topalov")
+              for slug in photo_slugs:
+                  photograph = root + f"portraits/{slug}.jpg"
+                  biography = root + f"{slug}.json"
+                  assert photograph in names and biography in names, (
+                      f"Packaged portrait or biography missing: {slug}"
+                  )
+                  portrait = json.loads(archive.read(biography))["portrait"]
+                  assert portrait is not None, f"No credited portrait in {biography}"
+                  assert portrait["approval_status"] == "approved"
+                  assert portrait["local_asset"] == f"history/portraits/{slug}.jpg"
+                  assert hashlib.sha256(archive.read(photograph)).hexdigest() == portrait["sha256"]
+                  assert portrait["license"] in ("CC0 1.0", "CC BY-SA 3.0")
               for asset in ("monitor.html", "monitor.css", "monitor.js",
                             "arena.html", "arena.css", "arena.js"):
                   assert f"chesssim/data/{asset}" in names, f"Live-board asset missing: {asset}"
