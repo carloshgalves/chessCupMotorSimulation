@@ -92,8 +92,13 @@ def acquire(row: dict) -> bytes:
     if not (name == expected or (expected == "CC0 1.0" and name.startswith("CC0"))):
         raise ValueError(f"License mismatch for {row['slug']}: {name}")
     license_url = _meta(meta, "LicenseUrl")
-    if license_url and license_url.rstrip("/") != row["license_url"].rstrip("/"):
-        raise ValueError("Commons license URL differs from audited record")
+    if license_url:
+        actual = urlsplit(license_url)
+        expected_url = urlsplit(row["license_url"])
+        # Commons may return /deed.en rather than the canonical license URL.
+        if (actual.hostname not in {"creativecommons.org", "www.creativecommons.org"}
+                or not actual.path.rstrip("/").startswith(expected_url.path.rstrip("/"))):
+            raise ValueError("Commons license URL differs from audited record")
     remote = info.get("thumburl") or info.get("url")
     parsed = urlsplit(remote or "")
     if (parsed.scheme != "https" or parsed.hostname not in
