@@ -34,7 +34,7 @@ def manifest_rows() -> list[dict]:
     if obj.get("schema") != "history-portrait-candidates-v1":
         raise ValueError("Unknown portrait manifest schema")
     rows = obj.get("candidates")
-    if not isinstance(rows, list) or not 1 <= len(rows) <= 22:
+    if not isinstance(rows, list) or not 1 <= len(rows) <= 64:
         raise ValueError("Invalid portrait candidate count")
     seen = set()
     expected_keys = {
