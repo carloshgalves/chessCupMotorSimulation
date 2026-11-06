@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from hashlib import sha256
 from io import StringIO
 from pathlib import Path
+import json
 import re
 import math
 
@@ -19,7 +20,7 @@ import chess.pgn
 
 from .catalog import load_roster
 from .history_games import (
-    MAX_MANIFEST_BYTES, MAX_PGN_BYTES, InvalidCatalogue, _game, _json,
+    MAX_MANIFEST_BYTES, MAX_PGN_BYTES, MAX_PLIES, InvalidCatalogue, _game, _json,
     _read, _validate_game,
 )
 from .matches import mainline_identity
@@ -78,7 +79,7 @@ def _duel_summaries(workspace: Path, session: Path) -> list[Path]:
 
 
 def _games(workspace: Path, folder: Path, summary: dict, names: dict[str, str],
-           *, tournament: bool) -> list[tuple[str, str, str, str]]:
+           *, tournament: bool, combined_raw: bytes | None = None) -> list[tuple[str, str, str, str]]:
     """Validate an entire attempt atomically; a corrupt game rejects the attempt.
 
     Returns (white_slug, black_slug, status, result) for each verified game.
@@ -97,17 +98,7 @@ def _games(workspace: Path, folder: Path, summary: dict, names: dict[str, str],
     if tournament and (summary["status"] != "COMPLETED" or len(records) != 2):
         raise InvalidStats("Tentativa de torneio não concluída")
     verified = []
-    combined_games = None
-    if tournament:
-        raw = _read(workspace, folder / "duelo.pgn", 2 * MAX_PGN_BYTES)
-        try:
-            stream = StringIO(raw.decode("utf-8-sig"))
-            combined_games = [chess.pgn.read_game(stream) for _ in range(2)]
-            if (any(g is None or g.errors for g in combined_games) or
-                    chess.pgn.read_game(stream) is not None):
-                raise InvalidStats("PGN do confronto não contém exatamente dois jogos válidos")
-        except (UnicodeError, ValueError, RecursionError, OverflowError) as exc:
-            raise InvalidStats("PGN de confronto inválido") from exc
+    combined_games = _read_combined(combined_raw) if tournament else None
     for i, entry in enumerate(records, 1):
         if not isinstance(entry, dict):
             raise InvalidStats("Registro de partida inválido")
@@ -190,10 +181,11 @@ def _tournament_attempt(workspace: Path, path: Path, state: dict, match: dict,
     if (entry.get("summary_sha256") != sha256(summary_bytes).hexdigest() or
             entry.get("pgn_sha256") != sha256(pgn_bytes).hexdigest()):
         raise InvalidStats("Confronto alterado após checkpoint")
-    summary = _json(workspace, rel / "summary.json", MAX_MANIFEST_BYTES)
+    summary = _strict_json(summary_bytes)
     if summary.get("players") != [a, b]:
         raise InvalidStats("Confronto do torneio com participantes errados")
-    verified = _games(workspace, rel, summary, names, tournament=True)
+    verified = _games(workspace, rel, summary, names, tournament=True,
+                      combined_raw=pgn_bytes)
     if (len(verified) != 2 or entry.get("results") != [g[3] for g in verified]):
         raise InvalidStats("Resultados diferentes do manifesto")
     if (entry.get("mainline_sha256") is not None and
@@ -205,12 +197,43 @@ def _tournament_attempt(workspace: Path, path: Path, state: dict, match: dict,
     return verified
 
 
-def _read_combined(raw: bytes) -> list[chess.pgn.Game]:
-    stream = StringIO(raw.decode("utf-8-sig"))
-    games = [chess.pgn.read_game(stream), chess.pgn.read_game(stream)]
-    if any(g is None or g.errors for g in games) or chess.pgn.read_game(stream) is not None:
-        raise InvalidStats("PGN consolidado inválido")
-    return games
+def _strict_json(raw: bytes) -> dict:
+    def pairs(items):
+        data = {}
+        for key, value in items:
+            if key in data:
+                raise InvalidStats("JSON contém chaves duplicadas")
+            data[key] = value
+        return data
+
+    def reject_constant(value):
+        raise InvalidStats("JSON contém constante não finita: " + value)
+
+    try:
+        result = json.loads(raw.decode("utf-8"), object_pairs_hook=pairs,
+                            parse_constant=reject_constant)
+    except (UnicodeError, ValueError, RecursionError) as exc:
+        raise InvalidStats("JSON de partida inválido") from exc
+    if not isinstance(result, dict):
+        raise InvalidStats("Resumo não é um objeto")
+    return result
+
+
+def _read_combined(raw: bytes | None) -> list[chess.pgn.Game]:
+    if raw is None:
+        raise InvalidStats("PGN consolidado ausente")
+    try:
+        stream = StringIO(raw.decode("utf-8-sig"))
+        games = [chess.pgn.read_game(stream), chess.pgn.read_game(stream)]
+        if (any(g is None or g.errors or
+                g.headers.get("Variant", "Standard") not in ("Standard", "") or
+                not g.board().is_valid() or
+                sum(1 for _ in g.mainline_moves()) > MAX_PLIES for g in games) or
+                chess.pgn.read_game(stream) is not None):
+            raise InvalidStats("PGN consolidado inválido")
+        return games
+    except (UnicodeError, ValueError, RecursionError, OverflowError) as exc:
+        raise InvalidStats("PGN de confronto inválido") from exc
 
 
 def _counter() -> dict[str, int]:
