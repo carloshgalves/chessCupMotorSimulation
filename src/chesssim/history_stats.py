@@ -76,7 +76,8 @@ def _duel_summaries(workspace: Path, session: Path) -> list[Path]:
 
 
 def _games(workspace: Path, folder: Path, summary: dict, names: dict[str, str],
-           *, tournament: bool, combined_raw: bytes | None = None) -> list[tuple[str, str, str, str]]:
+           *, tournament: bool, combined_raw: bytes | None = None,
+           lineups: list[tuple[str, str]] | None = None) -> list[tuple[str, str, str, str]]:
     """Validate an entire attempt atomically; a corrupt game rejects the attempt.
 
     Returns (white_slug, black_slug, status, result) for each verified game.
@@ -94,6 +95,10 @@ def _games(workspace: Path, folder: Path, summary: dict, names: dict[str, str],
         raise InvalidStats("Confronto final com jogos não concluídos")
     if tournament and (summary["status"] != "COMPLETED" or len(records) != 2):
         raise InvalidStats("Tentativa de torneio não concluída")
+    if lineups is not None:
+        if (not 1 <= len(lineups) <= 2 or len(records) > len(lineups) or
+                summary["status"] == "COMPLETED" and len(records) != len(lineups)):
+            raise InvalidStats("Resumo contradiz número de cores configurado")
     verified = []
     combined_games = _read_combined(combined_raw) if tournament else None
     for i, entry in enumerate(records, 1):
@@ -129,7 +134,8 @@ def _games(workspace: Path, folder: Path, summary: dict, names: dict[str, str],
                 black = next((p for p in players if names[p] == game.headers.get("Black")), None)
         if (white not in players or black not in players or white == black or
                 tournament and [white, black] !=
-                (players if i == 1 else players[::-1])):
+                (players if i == 1 else players[::-1]) or
+                lineups is not None and (white, black) != lineups[i - 1]):
             raise InvalidStats("Cores ou jogadores inconsistentes")
         outcome = entry.get("result") if status == "COMPLETED" else None
         if status == "INCOMPLETE" and game.headers.get("Result") != "*":
@@ -358,7 +364,8 @@ def list_stats(workspace: Path, slug: str) -> dict:
                     type(meta["config"].get("white")) is not str or
                     type(meta["config"].get("black")) is not str or
                     meta["config"]["white"] == meta["config"]["black"] or
-                    any(meta["config"][k] not in names for k in ("white", "black"))):
+                    any(meta["config"][k] not in names for k in ("white", "black")) or
+                    type(meta["config"].get("reverse")) is not bool):
                 raise InvalidStats("Sessão da Arena inválida")
             if slug in (meta["config"]["white"], meta["config"]["black"]):
                 runs.add(run_id)
@@ -383,7 +390,13 @@ def list_stats(workspace: Path, slug: str) -> dict:
                     meta["config"]["white"], meta["config"]["black"]
                 ]:
                     raise InvalidStats("Participantes divergentes")
-                records = _games(workspace, path, summary, names, tournament=False)
+                white = meta["config"]["white"]
+                black = meta["config"]["black"]
+                colors = [(white, black)]
+                if meta["config"]["reverse"]:
+                    colors.append((black, white))
+                records = _games(workspace, path, summary, names, tournament=False,
+                                 lineups=colors)
             except (InvalidCatalogue, InvalidStats, OSError, ValueError,
                     KeyError, TypeError, RecursionError):
                 reject("INVALID_ARENA_ATTEMPT", 1)
