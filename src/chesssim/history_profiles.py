@@ -1,0 +1,172 @@
+"""Biographical packs for the local History tab; never an engine-style endorsement."""
+from __future__ import annotations
+
+from importlib.resources import files
+import json
+import re
+from urllib.parse import urlsplit
+
+from .catalog import load_roster
+
+SCHEMA = "history-profile-v1"
+INDEX_SCHEMA = "history-index-v1"
+VOICE = "first_person_editorial"
+_REQUIRED = {
+    "schema", "slug", "review_status", "narrative_voice", "short_bio",
+    "era_label", "portrait", "highlights", "timeline", "sources",
+}
+_FIRST_PERSON = (
+    "Fui ", "Venci ", "Conquistei ", "Derrotei ", "Defendi ",
+    "Mantive ", "Disputei ", "Publiquei ", "Tornei-me ",
+    "Alcancei ", "Recebi ", "Recuperei ", "Voltei ",
+    "Joguei ", "Desenvolvi ", "Ajudei ",
+)
+
+
+def _text(value: object, name: str, *, max_len: int = 1200) -> str:
+    if not isinstance(value, str) or not value.strip() or len(value) > max_len:
+        raise ValueError(f"Campo biográfico inválido: {name}")
+    if any(ord(char) < 32 and char not in "\n\t" for char in value):
+        raise ValueError(f"Caracteres inválidos: {name}")
+    return value
+
+
+def _url(value: object, name: str) -> str:
+    s = _text(value, name, max_len=1000)
+    parsed = urlsplit(s)
+    if (parsed.scheme != "https" or not parsed.hostname or
+            parsed.username or parsed.password or parsed.fragment or
+            not s.startswith("https://")):
+        raise ValueError(f"Fonte HTTPS inválida: {name}")
+    return s
+
+
+def _assert_year(value: object) -> None:
+    if type(value) is not int or not 1800 <= value <= 2026:
+        raise ValueError("Ano histórico inválido")
+
+
+def validate_history_pack(data: object, *, slug: str) -> dict:
+    """Validate self-contained history content before making it available over HTTP."""
+    if not isinstance(data, dict) or set(data) != _REQUIRED:
+        raise ValueError("Schema de história incompleto ou desconhecido")
+    if data["schema"] != SCHEMA or data["slug"] != slug:
+        raise ValueError("Pacote incompatível com o catálogo")
+    if data["review_status"] not in {"pending", "reviewed"} or data["narrative_voice"] != VOICE:
+        raise ValueError("Estado editorial ou voz narrativa inválidos")
+    for field in ("short_bio", "era_label"):
+        if data[field] is not None:
+            _text(data[field], field, max_len=1500 if field == "short_bio" else 100)
+    if data["short_bio"] and not data["short_bio"].startswith(_FIRST_PERSON):
+        raise ValueError("Biografia deve ser escrita em primeira pessoa")
+    portrait = data["portrait"]
+    if portrait is not None:
+        keys = {"local_asset", "alt", "author", "license", "source_url", "verified_at"}
+        if not isinstance(portrait, dict) or set(portrait) != keys:
+            raise ValueError("Retrato precisa de proveniência e direitos")
+        if not re.fullmatch(r"history/portraits/[A-Za-z0-9_-]+\.(?:png|jpg|jpeg|webp)",
+                            _text(portrait["local_asset"], "portrait.local_asset")):
+            raise ValueError("Caminho de retrato inválido")
+        for key in ("alt", "author", "license", "verified_at"):
+            _text(portrait[key], f"portrait.{key}")
+        _url(portrait["source_url"], "portrait.source_url")
+    sources = data["sources"]
+    if not isinstance(sources, list) or len(sources) > 32:
+        raise ValueError("Fontes inválidas")
+    source_ids = set()
+    for src in sources:
+        if not isinstance(src, dict) or set(src) != {
+                "id", "title", "publisher", "url", "accessed_at"}:
+            raise ValueError("Fonte sem metadados obrigatórios")
+        source_id = _text(src["id"], "source.id", max_len=60)
+        if source_id in source_ids:
+            raise ValueError("Fonte duplicada")
+        source_ids.add(source_id)
+        for name in ("title", "publisher", "accessed_at"):
+            _text(src[name], f"source.{name}")
+        _url(src["url"], "source.url")
+    highlights = data["highlights"]
+    timeline = data["timeline"]
+    if not isinstance(highlights, list) or len(highlights) > 16:
+        raise ValueError("Maiores feitos inválidos")
+    if not isinstance(timeline, list) or len(timeline) > 32:
+        raise ValueError("Cronologia inválida")
+    ids = set()
+    for idx, record in enumerate(highlights):
+        if not isinstance(record, dict) or set(record) != {"id", "year", "text", "source_ids"}:
+            raise ValueError("Feito com schema inválido")
+        event_id = _text(record["id"], "highlight.id", max_len=80)
+        if event_id in ids:
+            raise ValueError("Feito repetido")
+        ids.add(event_id)
+        _assert_year(record["year"])
+        if not _text(record["text"], f"highlight[{idx}].text").startswith(_FIRST_PERSON):
+            raise ValueError("Feito deve usar primeira pessoa")
+        _check_sources(record["source_ids"], source_ids)
+    last_year = 1800
+    for record in timeline:
+        if not isinstance(record, dict) or set(record) != {
+                "year", "title", "summary", "source_ids"}:
+            raise ValueError("Marco cronológico inválido")
+        _assert_year(record["year"])
+        if record["year"] < last_year:
+            raise ValueError("Cronologia não ordenada")
+        last_year = record["year"]
+        _text(record["title"], "timeline.title")
+        if not _text(record["summary"], "timeline.summary").startswith(_FIRST_PERSON):
+            raise ValueError("Cronologia deve usar primeira pessoa")
+        _check_sources(record["source_ids"], source_ids)
+    if data["review_status"] == "reviewed" and (not highlights or not sources):
+        raise ValueError("Pack revisado requer feitos com fontes")
+    return data
+
+
+def _check_sources(ids: object, valid_ids: set[str]) -> None:
+    if (not isinstance(ids, list) or not ids or
+            any(not isinstance(i, str) for i in ids) or
+            len(set(ids)) != len(ids) or not set(ids).issubset(valid_ids)):
+        raise ValueError("Referência de fonte inexistente ou repetida")
+
+
+def _player(slug: str):
+    if not isinstance(slug, str) or not re.fullmatch(r"[a-z0-9-]{2,48}", slug):
+        raise ValueError("Slug inválido")
+    player = next((p for p in load_roster() if p.slug == slug), None)
+    if player is None:
+        raise ValueError("Jogador fora do elenco")
+    return player
+
+
+def load_history_profile(slug: str) -> dict:
+    """Return a sourced biography or an explicit pending placeholder for any roster member."""
+    player = _player(slug)
+    resource = files("chesssim.data").joinpath("history", f"{slug}.json")
+    if resource.is_file():
+        raw = json.loads(resource.read_text(encoding="utf-8"))
+        profile = validate_history_pack(raw, slug=slug)
+        has_pack = True
+    else:
+        profile = {
+            "schema": SCHEMA, "slug": slug, "review_status": "pending",
+            "narrative_voice": VOICE, "short_bio": None, "era_label": None,
+            "portrait": None, "highlights": [], "timeline": [], "sources": [],
+        }
+        has_pack = False
+    return {**profile, "name": player.name, "group": player.group,
+            "has_historical_pack": has_pack, "historically_validated_model": False}
+
+
+def list_history_players() -> dict:
+    """Read-only 64-player projection; biography existence does not depend on Rodent installation."""
+    players = []
+    for player in load_roster():
+        profile = load_history_profile(player.slug)
+        players.append({
+            "slug": player.slug, "name": player.name, "group": player.group,
+            "has_historical_pack": profile["has_historical_pack"],
+            "review_status": profile["review_status"],
+            "era_label": profile["era_label"], "short_bio": profile["short_bio"],
+            "portrait": profile["portrait"],
+            "highlight_count": len(profile["highlights"]),
+        })
+    return {"schema": INDEX_SCHEMA, "players": players}

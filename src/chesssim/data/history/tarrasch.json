@@ -1,0 +1,54 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "tarrasch",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui um importante competidor e professor de xadrez, com contribuições duradouras à teoria das aberturas.",
+  "era_label": "1889–1908",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1894,
+      "text": "Concluí uma sequência de quatro vitórias em grandes torneios no período de 1889 a 1894.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1908,
+      "text": "Disputei o campeonato mundial contra Emanuel Lasker.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1894,
+      "title": "Marco de 1894",
+      "summary": "Concluí uma sequência de quatro vitórias em grandes torneios no período de 1889 a 1894.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1908,
+      "title": "Marco de 1908",
+      "summary": "Disputei o campeonato mundial contra Emanuel Lasker.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil de tarrasch",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/siegbert-tarrasch",
+      "accessed_at": "2026-11-05"
+    }
+  ]
+}

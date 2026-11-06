@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "spassky",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão mundial e desenvolvi um jogo versátil, capaz de se adaptar a posições muito diferentes.",
+  "era_label": "1955–1972",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1955,
+      "text": "Venci o Campeonato Mundial Júnior de xadrez.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1969,
+      "text": "Derrotei Tigran Petrosian e conquistei o título mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1972,
+      "text": "Disputei a defesa do título mundial contra Bobby Fischer em Reykjavík.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1955,
+      "title": "Marco de 1955",
+      "summary": "Venci o Campeonato Mundial Júnior de xadrez.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1969,
+      "title": "Marco de 1969",
+      "summary": "Derrotei Tigran Petrosian e conquistei o título mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1972,
+      "title": "Marco de 1972",
+      "summary": "Disputei a defesa do título mundial contra Bobby Fischer em Reykjavík.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil de spassky",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/boris-spassky",
+      "accessed_at": "2026-11-05"
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "fischer",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão dos Estados Unidos ainda adolescente e, depois, conquistei a coroa mundial.",
+  "era_label": "1957–1972",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1957,
+      "text": "Venci o Campeonato dos Estados Unidos iniciado em 1957, aos 14 anos.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1958,
+      "text": "Tornei-me grande mestre e me classifiquei para o ciclo de Candidatos aos 15 anos.",
+      "source_ids": [
+        "source-2"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1972,
+      "text": "Derrotei Boris Spassky e me tornei campeão mundial.",
+      "source_ids": [
+        "source-3"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1957,
+      "title": "Marco de 1957",
+      "summary": "Venci o Campeonato dos Estados Unidos iniciado em 1957, aos 14 anos.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1958,
+      "title": "Marco de 1958",
+      "summary": "Tornei-me grande mestre e me classifiquei para o ciclo de Candidatos aos 15 anos.",
+      "source_ids": [
+        "source-2"
+      ]
+    },
+    {
+      "year": 1972,
+      "title": "Marco de 1972",
+      "summary": "Derrotei Boris Spassky e me tornei campeão mundial.",
+      "source_ids": [
+        "source-3"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — histórico e resultados",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/records-in-chess",
+      "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-2",
+      "title": "Chess.com — histórico e resultados",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/biography-of-bobby-fischer",
+      "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-3",
+      "title": "Chess.com — histórico e resultados",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/world-chess-champions",
+      "accessed_at": "2026-11-05"
+    }
+  ]
+}

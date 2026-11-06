@@ -17,6 +17,7 @@ import uuid
 from urllib.parse import urlsplit
 
 from .catalog import load_roster, find_player
+from .history_profiles import list_history_players, load_history_profile
 from .live_board import SCHEMA, make_handler, snapshot
 from .matches import _atomic_text, official_book_hashes, play_duel, validate
 from .peak_windows import CLOCK_PRESETS, PROVISIONAL_PEAKS
@@ -421,7 +422,26 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 self._reply(403, b"Forbidden", "text/plain; charset=utf-8")
                 return
             url = urlsplit(self.path)
-            if url.path == "/api/arena":
+            if url.path == "/api/history/players" and not url.query:
+                try:
+                    self._json(200, list_history_players())
+                except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+                    self._json(503, {"error": "Catálogo histórico indisponível"})
+            elif url.path.startswith("/api/history/players/"):
+                slug = url.path.removeprefix("/api/history/players/")
+                if url.query or not slug or "/" in slug:
+                    self._json(404, {"error": "Jogador não encontrado"})
+                    return
+                try:
+                    self._json(200, load_history_profile(slug))
+                except ValueError as exc:
+                    if str(exc) in {"Slug inválido", "Jogador fora do elenco"}:
+                        self._json(404, {"error": "Jogador não encontrado"})
+                    else:
+                        self._json(503, {"error": "Perfil histórico indisponível"})
+                except (OSError, KeyError, TypeError, json.JSONDecodeError):
+                    self._json(503, {"error": "Perfil histórico indisponível"})
+            elif url.path == "/api/arena":
                 try:
                     self._json(200, manager.status())
                 except (ValueError, OSError, KeyError, TypeError,

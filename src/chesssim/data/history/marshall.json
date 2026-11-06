@@ -1,0 +1,54 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "marshall",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão norte-americano e construí uma reputação pelo jogo de ataque.",
+  "era_label": "1904–1936",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1904,
+      "text": "Venci o torneio de Cambridge Springs sem perder nenhuma partida.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1909,
+      "text": "Conquistei o título norte-americano, que mantive até 1936.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1904,
+      "title": "Marco de 1904",
+      "summary": "Venci o torneio de Cambridge Springs sem perder nenhuma partida.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1909,
+      "title": "Marco de 1909",
+      "summary": "Conquistei o título norte-americano, que mantive até 1936.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil de marshall",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/frank-marshall",
+      "accessed_at": "2026-11-05"
+    }
+  ]
+}

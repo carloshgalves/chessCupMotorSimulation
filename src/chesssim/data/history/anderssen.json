@@ -1,0 +1,77 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "anderssen",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Venci o grande torneio de Londres e fui protagonista de partidas clássicas da era romântica.",
+  "era_label": "1851–1866",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1851,
+      "text": "Venci o torneio internacional de Londres, um marco do xadrez do século XIX.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1851,
+      "text": "Venci Lionel Kieseritzky na partida que ficou conhecida como Partida Imortal.",
+      "source_ids": [
+        "source-2"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1852,
+      "text": "Joguei contra Jean Dufresne a célebre Partida Sempre-Viva.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1851,
+      "title": "Marco de 1851",
+      "summary": "Venci o torneio internacional de Londres, um marco do xadrez do século XIX.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1851,
+      "title": "Marco de 1851",
+      "summary": "Venci Lionel Kieseritzky na partida que ficou conhecida como Partida Imortal.",
+      "source_ids": [
+        "source-2"
+      ]
+    },
+    {
+      "year": 1852,
+      "title": "Marco de 1852",
+      "summary": "Joguei contra Jean Dufresne a célebre Partida Sempre-Viva.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil de anderssen",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/adolf-anderssen",
+      "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-2",
+      "title": "Chess.com — histórico e resultados",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/terms/immortal-game-chess",
+      "accessed_at": "2026-11-05"
+    }
+  ]
+}

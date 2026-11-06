@@ -1,0 +1,84 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "botvinnik",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão mundial em três períodos e me dediquei à preparação sistemática no xadrez.",
+  "era_label": "1948–1963",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1948,
+      "text": "Venci o torneio organizado para definir o novo campeão mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1958,
+      "text": "Recuperei o título mundial em uma revanche contra Vasily Smyslov.",
+      "source_ids": [
+        "source-2"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1961,
+      "text": "Recuperei novamente o título mundial ao enfrentar Mikhail Tal.",
+      "source_ids": [
+        "source-3"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1948,
+      "title": "Marco de 1948",
+      "summary": "Venci o torneio organizado para definir o novo campeão mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1958,
+      "title": "Marco de 1958",
+      "summary": "Recuperei o título mundial em uma revanche contra Vasily Smyslov.",
+      "source_ids": [
+        "source-2"
+      ]
+    },
+    {
+      "year": 1961,
+      "title": "Marco de 1961",
+      "summary": "Recuperei novamente o título mundial ao enfrentar Mikhail Tal.",
+      "source_ids": [
+        "source-3"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil de botvinnik",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/mikhail-botvinnik",
+      "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-2",
+      "title": "FIDE — cronologia dos campeões mundiais",
+      "publisher": "FIDE",
+      "url": "https://worldchesschampionship2023.fide.com/chess-champions",
+      "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-3",
+      "title": "Chess.com — histórico e resultados",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/world-chess-champions",
+      "accessed_at": "2026-11-05"
+    }
+  ]
+}
