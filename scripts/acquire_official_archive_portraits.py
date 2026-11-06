@@ -32,6 +32,10 @@ IDENTITY_TOKENS = {
     "chiburdanidze": "chiburdanidze",
     "gaprindashvili": "gaprinda",
     "tal": "tal",
+    "korchnoi": "kortsjnoj",
+    "taimanov": "taimanov",
+    "reshevsky": "reshevsky",
+    "polugaevsky": "poloegajevski",
 }
 USER_AGENT = "ChessSimulationCurator/1.0 (https://github.com/carloshgalves/chessCupMotorSimulation)"
 
