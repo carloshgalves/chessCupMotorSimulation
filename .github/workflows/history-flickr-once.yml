@@ -2,7 +2,7 @@ name: History Flickr photographer - licensed tournament batch
 on:
   push:
     branches: [feat/history-remaining-players-47]
-    paths: [.github/workflows/history-flickr-once.yml]
+    paths: [.github/workflows/history-flickr-once.yml, scripts/acquire_flickr_history_portraits.py]
 permissions:
   contents: write
 jobs:
