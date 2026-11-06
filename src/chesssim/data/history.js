@@ -37,7 +37,8 @@
     });
     figure.append(picture);
     const caption = make("figcaption", null, "history-credit");
-    caption.append(make("span", "Foto: " + info.author + " · " + info.event +
+    const medium = /(busto|desenho|gravura|ilustraç)/i.test(info.alt) ? "Representação: " : "Foto: ";
+    caption.append(make("span", medium + info.author + " · " + info.event +
       " (" + info.event_date + ")"));
     caption.append(link("Origem", info.source_url));
     caption.append(link("Licença " + info.license, info.license_url));

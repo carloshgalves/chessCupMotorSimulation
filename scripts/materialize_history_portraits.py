@@ -22,6 +22,7 @@ LICENSES = {
     "CC BY-SA 3.0": "https://creativecommons.org/licenses/by-sa/3.0/",
     "CC BY-SA 2.0": "https://creativecommons.org/licenses/by-sa/2.0/",
     "CC BY 2.0": "https://creativecommons.org/licenses/by/2.0/",
+    "Public Domain Mark 1.0": "https://creativecommons.org/publicdomain/mark/1.0/",
 }
 
 
@@ -82,7 +83,9 @@ def manifest_rows() -> list[dict]:
         commons = url.hostname == "commons.wikimedia.org" and url.path.startswith("/wiki/File:")
         flickr = (url.hostname == "www.flickr.com" and
                   re.fullmatch(r"/photos/(?:8022405@N02|karpidis|suspeeters)/[0-9]{8,20}/?", url.path))
-        if url.scheme != "https" or not (commons or approved_archive or holland_archive or flickr):
+        cleveland = (url.hostname == "cplorg.contentdm.oclc.org" and
+                     re.fullmatch(r"/digital/collection/p4014coll20/id/[0-9]{1,6}/?", url.path))
+        if url.scheme != "https" or not (commons or approved_archive or holland_archive or flickr or cleveland):
             raise ValueError("Unexpected or unapproved photo source")
         if not all(isinstance(row[k], str) and row[k].strip()
                    for k in ("event", "event_date", "author", "rights_holder")):

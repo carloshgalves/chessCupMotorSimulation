@@ -93,7 +93,7 @@ jobs:
                   assert portrait["approval_status"] == "approved"
                   assert portrait["local_asset"] == f"history/portraits/{slug}.jpg"
                   assert hashlib.sha256(archive.read(photograph)).hexdigest() == portrait["sha256"]
-                  assert portrait["license"] in ("CC0 1.0", "CC BY-SA 3.0", "CC BY-SA 2.0", "CC BY 2.0")
+                  assert portrait["license"] in ("CC0 1.0", "CC BY-SA 3.0", "CC BY-SA 2.0", "CC BY 2.0", "Public Domain Mark 1.0")
               assert baseline.issubset(seen_slugs), "Baseline photo biographies missing"
               assert len(referenced_photos) >= len(baseline), "Baseline portraits missing"
               assert {root + f"portraits/{slug}.jpg" for slug in baseline}.issubset(referenced_photos)

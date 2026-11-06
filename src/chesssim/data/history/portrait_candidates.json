@@ -676,6 +676,186 @@
         0.75,
         0.5
       ]
+    },
+    {
+      "slug": "steinitz",
+      "file": "cleveland-212.jpg",
+      "event": "Retrato de gabinete de Wilhelm Steinitz",
+      "event_date": "1883",
+      "author": "Lilienthal (New Orleans)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/212",
+      "centering": [
+        0.5,
+        0.4
+      ]
+    },
+    {
+      "slug": "lasker",
+      "file": "cleveland-115.jpg",
+      "event": "Lasker contra J. S. Ryan no torneio de Nova York",
+      "event_date": "1893",
+      "author": "Hubbard Photograph Co.",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/115",
+      "centering": [
+        0.3,
+        0.47
+      ]
+    },
+    {
+      "slug": "capablanca",
+      "file": "cleveland-6.jpg",
+      "event": "Exibição simultânea de Capablanca no Manhattan Chess Club",
+      "event_date": "1922",
+      "author": "Fotograms (New York)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/6",
+      "centering": [
+        0.38,
+        0.45
+      ]
+    },
+    {
+      "slug": "philidor",
+      "file": "cleveland-4034.jpg",
+      "event": "Registro de busto de Philidor no acervo de Cleveland",
+      "event_date": "sem data",
+      "author": "Artista não identificado (busto histórico)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/4034",
+      "centering": [
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "slug": "staunton",
+      "file": "cleveland-2595.jpg",
+      "event": "Desenho histórico de Howard Staunton (reprodução)",
+      "event_date": "sem data",
+      "author": "Artista não identificado (desenho histórico)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/2595",
+      "centering": [
+        0.5,
+        0.43
+      ]
+    },
+    {
+      "slug": "anderssen",
+      "file": "cleveland-2532.jpg",
+      "event": "Retrato histórico de Adolf Anderssen",
+      "event_date": "século XIX",
+      "author": "Fotógrafo não identificado (acervo Cleveland)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/2532",
+      "centering": [
+        0.5,
+        0.42
+      ]
+    },
+    {
+      "slug": "morphy",
+      "file": "cleveland-11.jpg",
+      "event": "Reprodução fotográfica atribuída a Paul Morphy na Filadélfia",
+      "event_date": "1859",
+      "author": "Autor do original não identificado (reprodução de época)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/11",
+      "centering": [
+        0.5,
+        0.46
+      ]
+    },
+    {
+      "slug": "zukertort",
+      "file": "cleveland-2599.jpg",
+      "event": "Retrato histórico de Johannes Zukertort",
+      "event_date": "século XIX",
+      "author": "Fotógrafo não identificado (acervo Cleveland)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/2599",
+      "centering": [
+        0.5,
+        0.42
+      ]
+    },
+    {
+      "slug": "chigorin",
+      "file": "cleveland-3048.jpg",
+      "event": "Retrato histórico de Mikhail Chigorin",
+      "event_date": "até 1908",
+      "author": "Fotógrafo não identificado (acervo Cleveland)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/3048",
+      "centering": [
+        0.5,
+        0.42
+      ]
+    },
+    {
+      "slug": "pillsbury",
+      "file": "cleveland-76.jpg",
+      "event": "Retrato de Harry Nelson Pillsbury",
+      "event_date": "até 1906",
+      "author": "Fotógrafo não identificado (acervo Cleveland)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/76",
+      "centering": [
+        0.5,
+        0.44
+      ]
+    },
+    {
+      "slug": "tarrasch",
+      "file": "cleveland-37.jpg",
+      "event": "Retrato fotográfico de Siegbert Tarrasch",
+      "event_date": "cerca de 1900",
+      "author": "Julius Klinkhardt (atribuição do catálogo)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/37",
+      "centering": [
+        0.5,
+        0.44
+      ]
+    },
+    {
+      "slug": "rubinstein",
+      "file": "cleveland-77.jpg",
+      "event": "Retrato histórico de Akiba Rubinstein",
+      "event_date": "século XX",
+      "author": "Fotógrafo não identificado (acervo Cleveland)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/77",
+      "centering": [
+        0.5,
+        0.44
+      ]
     }
   ]
 }

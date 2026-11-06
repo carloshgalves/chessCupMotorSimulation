@@ -76,7 +76,8 @@ def validate_history_pack(data: object, *, slug: str) -> dict:
         allowed = {"CC0 1.0": "https://creativecommons.org/publicdomain/zero/1.0/",
                    "CC BY-SA 3.0": "https://creativecommons.org/licenses/by-sa/3.0/",
                    "CC BY-SA 2.0": "https://creativecommons.org/licenses/by-sa/2.0/",
-                   "CC BY 2.0": "https://creativecommons.org/licenses/by/2.0/"}
+                   "CC BY 2.0": "https://creativecommons.org/licenses/by/2.0/",
+                   "Public Domain Mark 1.0": "https://creativecommons.org/publicdomain/mark/1.0/"}
         if (portrait["license"] not in allowed or
                 portrait["license_url"] != allowed[portrait["license"]]):
             raise ValueError("Licença incompatível")
@@ -95,7 +96,9 @@ def validate_history_pack(data: object, *, slug: str) -> dict:
                    parsed.path.startswith("/wiki/File:"))
         flickr = (parsed.hostname == "www.flickr.com" and
                   re.fullmatch(r"/photos/(?:8022405@N02|karpidis|suspeeters)/[0-9]{8,20}/?", parsed.path))
-        if not (archive or holland or commons or flickr):
+        cleveland = (parsed.hostname == "cplorg.contentdm.oclc.org" and
+                     re.fullmatch(r"/digital/collection/p4014coll20/id/[0-9]{1,6}/?", parsed.path))
+        if not (archive or holland or commons or flickr or cleveland):
             raise ValueError("Origem do retrato não pertence a acervo auditado")
         digest = _text(portrait["sha256"], "portrait.sha256", max_len=64)
         if not re.fullmatch(r"[a-f0-9]{64}", digest):
