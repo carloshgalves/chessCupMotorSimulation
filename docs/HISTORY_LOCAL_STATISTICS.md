@@ -72,7 +72,7 @@ O exemplo apresenta **sem dados**, e não uma taxa de vitórias hipotética.
   `losses`. Os resultados são computados pela perspectiva do
   jogador, independentemente da cor; empates recebem uma partida no
   denominador e uma unidade em `draws`.
-- `duels` conta confrontos **com pelo menos um jogo válido**.
+- `duels` conta confrontos **com pelo menos um jogo válido**. O mesmo denominador aparece por adversário, enquanto `games` distingue os jogos individuais.
   Um par com brancas/pretas invertidas = **dois jogos, um confronto**.
   Nova sessão ou tentativa de desempate com arquivos distintos = novo
   confronto. PGN repetido em outra sessão **não** é automaticamente
