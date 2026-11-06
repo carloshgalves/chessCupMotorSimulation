@@ -27,7 +27,7 @@ class HostDenied(Exception):
     """Stop all requests to this host once it denies automation."""
 
 
-def read(url: str, *, limit: int) -> bytes:
+def read(url: str, *, limit: int, head_only: bool = False) -> bytes:
     parsed = urlsplit(url)
     if parsed.scheme != "https" or parsed.hostname not in ALLOWED:
         raise ValueError("Source not on photographer-host whitelist")
@@ -36,13 +36,13 @@ def read(url: str, *, limit: int) -> bytes:
         with urlopen(request, timeout=24) as resp:
             if urlsplit(resp.url).hostname not in ALLOWED:
                 raise ValueError("Unexpected off-host redirect")
-            contents = resp.read(limit + 1)
+            contents = resp.read(limit + (0 if head_only else 1))
     except HTTPError as exc:
         if exc.code in (401, 403, 429, 451):
             raise HostDenied(f"Flickr access rejected: HTTP {exc.code}") from exc
         raise
     if len(contents) > limit:
-        raise ValueError("Source size limit exceeded")
+        raise ValueError("Media size limit exceeded")
     return contents
 
 
@@ -56,7 +56,7 @@ def obtain(row: dict) -> bytes:
     if not match:
         raise ValueError("Unexpected Flickr album/profile")
     photo_id = match.group(1)
-    page = read(url, limit=500_000).decode("utf-8", "replace")
+    page = read(url, limit=200_000, head_only=True).decode("utf-8", "replace")
     # Compare live photographer license and media rather than trusting a
     # third-party index.  Both are present in Flickr's first-party JSON-LD.
     marker = re.search(
