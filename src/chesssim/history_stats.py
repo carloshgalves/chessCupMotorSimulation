@@ -410,6 +410,7 @@ def _record(game: dict, seen: set[str], records: list[dict],
     seen.add(game["id"])
     records.append(game)
     coverage["verified_games"] += 1
+    coverage[game["origin"] + "_verified_games"] += 1
 
 
 def _tally(player: str, records: list[dict], tournaments: set[str]) -> tuple[dict, list[dict]]:
@@ -472,6 +473,8 @@ def player_stats(workspace: Path, slug: str) -> dict:
             "tournaments_seen": coverage["tournament_manifests"],
             "candidate_games": coverage["candidate_games"],
             "verified_games": coverage["verified_games"],
+            "arena_verified_games": coverage["arena_verified_games"],
+            "tournament_verified_games": coverage["tournament_verified_games"],
             "rejected_games": coverage["rejected_games"],
             "rejected_records": coverage["rejected_records"],
             "excluded_attempts": coverage["excluded_attempts"],
