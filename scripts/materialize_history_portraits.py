@@ -85,7 +85,8 @@ def manifest_rows() -> list[dict]:
                   re.fullmatch(r"/photos/(?:8022405@N02|karpidis|suspeeters)/[0-9]{8,20}/?", url.path))
         cleveland = (url.hostname == "cplorg.contentdm.oclc.org" and
                      re.fullmatch(r"/digital/collection/p4014coll20/id/[0-9]{1,6}/?", url.path))
-        if url.scheme != "https" or not (commons or approved_archive or holland_archive or flickr or cleveland):
+        met = url.hostname == "www.metmuseum.org" and url.path == "/art/collection/search/423124"
+        if url.scheme != "https" or not (commons or approved_archive or holland_archive or flickr or cleveland or met):
             raise ValueError("Unexpected or unapproved photo source")
         if not all(isinstance(row[k], str) and row[k].strip()
                    for k in ("event", "event_date", "author", "rights_holder")):

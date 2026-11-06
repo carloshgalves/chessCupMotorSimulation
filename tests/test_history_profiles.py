@@ -314,8 +314,19 @@ def test_cleveland_historic_art_is_not_mislabeled_as_cc0():
     manifest = json.loads((root / "src/chesssim/data/history/portrait_candidates.json").read_text(encoding="utf-8"))
     items = [row for row in manifest["candidates"] if
              row["source_url"].startswith("https://cplorg.contentdm.oclc.org/")]
-    assert len(items) == 12
-    assert len({row["slug"] for row in items}) == 12
+    assert len(items) == 11
+    assert len({row["slug"] for row in items}) == 11
     assert all(row["license"] == "Public Domain Mark 1.0" for row in items)
     assert all(row["license_url"] == "https://creativecommons.org/publicdomain/mark/1.0/" for row in items)
-    assert {row["slug"] for row in items}.issuperset({"philidor", "staunton", "morphy", "steinitz"})
+    assert {row["slug"] for row in items}.issuperset({"staunton", "morphy", "steinitz"})
+
+
+def test_met_open_access_philidor_engraving_not_photography():
+    from pathlib import Path
+    import json
+    path = Path(__file__).resolve().parents[1] / "src/chesssim/data/history/portrait_candidates.json"
+    rows = json.loads(path.read_text(encoding="utf-8"))["candidates"]
+    philidor = next(p for p in rows if p["slug"] == "philidor")
+    assert philidor["source_url"] == "https://www.metmuseum.org/art/collection/search/423124"
+    assert philidor["license"] == "CC0 1.0" and philidor["event_date"] == "1772"
+    assert "gravado" in philidor["event"] and "não fotografia" in philidor["event"]

@@ -724,17 +724,17 @@
     },
     {
       "slug": "philidor",
-      "file": "cleveland-4034.jpg",
-      "event": "Registro de busto de Philidor no acervo de Cleveland",
-      "event_date": "sem data",
-      "author": "Artista não identificado (busto histórico)",
-      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
-      "license": "Public Domain Mark 1.0",
-      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
-      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/4034",
+      "file": "DP828972.jpg",
+      "event": "Retrato gravado de Philidor (representação artística, não fotografia)",
+      "event_date": "1772",
+      "author": "Augustin de Saint-Aubin (após Charles-Nicolas Cochin II)",
+      "rights_holder": "Metropolitan Museum of Art — Open Access",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.metmuseum.org/art/collection/search/423124",
       "centering": [
         0.5,
-        0.5
+        0.48
       ]
     },
     {
