@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão mundial e desenvolvi um jogo versátil, capaz de se adaptar a posições muito diferentes.",
   "era_label": "1955–1972",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/spassky.jpg",
+    "alt": "spassky em Interpolis Chess Tournament, Tilburg (1980-09-23)",
+    "author": "Hans van Dijk / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Interpolis_schaaktoernooi_in_Tilburg,_B_Spassky,_Bestanddeelnr_931-0359.jpg",
+    "verified_at": "2026-11-06",
+    "event": "Interpolis Chess Tournament, Tilburg",
+    "event_date": "1980-09-23",
+    "rights_holder": "Nationaal Archief (Anefo)",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "4022a2edc191bee237b949fd4c7d4b5901d99b4094d86f07bced2a4bc67d5592",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

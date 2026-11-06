@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui grande mestre dinamarquês e defendi repertórios originais contra a elite mundial.",
   "era_label": "1956–1971",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/larsen.jpg",
+    "alt": "larsen em Hoogovens Chess Tournament (1961-01-22)",
+    "author": "Harry Pot / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:BentLarsen.jpg",
+    "verified_at": "2026-11-06",
+    "event": "Hoogovens Chess Tournament",
+    "event_date": "1961-01-22",
+    "rights_holder": "Nationaal Archief (Anefo)",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "8a76737ba625d9f5eb39e04006ecaea6bcc8daebc8d5d953657b3a37f2592d2f",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

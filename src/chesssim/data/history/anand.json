@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Conquistei títulos mundiais em formatos distintos e defendi a coroa em matches de elite.",
   "era_label": "2000–2002 (FIDE); 2007–2013 (campeão unificado)",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/anand.jpg",
+    "alt": "anand em Corus Chess Tournament, Wijk aan Zee (2010-01)",
+    "author": "Stefan64",
+    "license": "CC BY-SA 3.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:VAnand10.jpg",
+    "verified_at": "2026-11-06",
+    "event": "Corus Chess Tournament, Wijk aan Zee",
+    "event_date": "2010-01",
+    "rights_holder": "Stefan64",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+    "sha256": "edb7d986a70704a133767a78b4a5b3fd03df4186c33ddc5300c682070cab2584",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

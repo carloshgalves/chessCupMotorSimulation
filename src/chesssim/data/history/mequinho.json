@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão brasileiro aos 13 anos, alcancei os requisitos para grande mestre aos 19 e venci dois Interzonais.",
   "era_label": "1965–1977",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/mequinho.jpg",
+    "alt": "mequinho em Hoogovens Chess Tournament (1978-01-25)",
+    "author": "Koen Suyk / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Henrique_Mecking_1978.jpg",
+    "verified_at": "2026-11-06",
+    "event": "Hoogovens Chess Tournament",
+    "event_date": "1978-01-25",
+    "rights_holder": "Nationaal Archief (Anefo)",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "7085e53ae15900e6dc469dbf0bcb829d398005653ea84b0fb034c8d6535dd4cc",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

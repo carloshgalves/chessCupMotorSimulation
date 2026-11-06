@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão mundial e defendi a coroa em matches marcantes contra Viktor Korchnoi.",
   "era_label": "1975–1985; 1993–1999 (FIDE)",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/karpov.jpg",
+    "alt": "karpov em OHRA Chess Tournament, Amsterdam (1985-07-16)",
+    "author": "Rob Bogaerts / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Ohra_schaaktoernooi_Karpov,_Bestanddeelnr_933-3781.jpg",
+    "verified_at": "2026-11-06",
+    "event": "OHRA Chess Tournament, Amsterdam",
+    "event_date": "1985-07-16",
+    "rights_holder": "Nationaal Archief (Anefo)",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "314871e0cc645b165f7bc58fd03cb138fd00154993b6e4e10f8bec5894ece505",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",
