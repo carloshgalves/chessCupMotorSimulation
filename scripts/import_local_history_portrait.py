@@ -19,7 +19,7 @@ from materialize_history_portraits import DATA, manifest_rows
 
 def make_portrait(slug: str, input_path: Path, *, source_url: str,
                   confirmed_license: str, confirmed_event: str, apply: bool) -> dict:
-    from PIL import Image, ImageOps, UnidentifiedImageError
+    from PIL import Image, ImageOps
 
     row = next((item for item in manifest_rows() if item["slug"] == slug), None)
     if row is None:
