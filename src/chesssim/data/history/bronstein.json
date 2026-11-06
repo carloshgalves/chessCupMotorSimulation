@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "bronstein",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Venci o Torneio de Candidatos e empatei um match mundial com Botvinnik.",
   "era_label": "1950–1956",
@@ -26,7 +26,8 @@
       "year": 1950,
       "text": "Venci o Torneio de Candidatos e ganhei o direito de desafiar o campeão mundial.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -34,7 +35,8 @@
       "year": 1951,
       "text": "Empatei por 12–12 o match mundial contra Mikhail Botvinnik.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -42,7 +44,8 @@
       "year": 1955,
       "text": "Venci o Interzonal de Gotemburgo e voltei ao ciclo de Candidatos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     }
   ],
@@ -52,7 +55,8 @@
       "title": "Torneio de Candidatos",
       "summary": "Venci o Torneio de Candidatos e ganhei o direito de desafiar o campeão mundial.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -60,7 +64,8 @@
       "title": "Match contra Botvinnik",
       "summary": "Empatei por 12–12 o match mundial contra Mikhail Botvinnik.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -68,7 +73,8 @@
       "title": "Interzonal de Gotemburgo",
       "summary": "Venci o Interzonal de Gotemburgo e voltei ao ciclo de Candidatos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     }
   ],
@@ -78,6 +84,20 @@
       "title": "Chess.com — perfil histórico de bronstein",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/david-bronstein",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE — Candidatos 1950 e match 1951",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/history-of-the-candidates-from-budapest-1950-to-cyprus-2026/",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "OlimpBase — crosstable Interzonal Gotemburgo 1955",
+      "publisher": "OlimpBase",
+      "url": "https://www.olimpbase.org/ind-wcc/wc1957-iz.html",
       "accessed_at": "2026-11-06"
     }
   ]

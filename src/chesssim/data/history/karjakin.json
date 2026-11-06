@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "karjakin",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão mundial de rápidas e blitz e desafiante de Magnus Carlsen.",
   "era_label": "2012–2016",
@@ -12,7 +12,8 @@
       "year": 2012,
       "text": "Conquistei o Campeonato Mundial de Xadrez Rápido.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 2016,
       "text": "Venci o Torneio de Candidatos e ganhei o direito de desafiar Magnus Carlsen.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -28,7 +30,8 @@
       "year": 2016,
       "text": "Conquistei o Campeonato Mundial de Blitz.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-4"
       ]
     }
   ],
@@ -38,7 +41,8 @@
       "title": "Mundial de rápidas",
       "summary": "Conquistei o Campeonato Mundial de Xadrez Rápido.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -46,7 +50,8 @@
       "title": "Candidatos",
       "summary": "Venci o Torneio de Candidatos e ganhei o direito de desafiar Magnus Carlsen.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -54,7 +59,8 @@
       "title": "Mundial de blitz",
       "summary": "Conquistei o Campeonato Mundial de Blitz.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-4"
       ]
     }
   ],
@@ -64,6 +70,27 @@
       "title": "Chess.com — perfil e conquistas de karjakin",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/sergey-karjakin",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE — campeão mundial rápido 2012",
+      "publisher": "FIDE",
+      "url": "https://old.fide.com/component/content/article/1-fide-news/7140-shakhriyar-mamedyarov-became-the-world-rapid-chess-champion.html",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "FIDE — vitória nos Candidatos 2016",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/history-of-the-candidates-from-budapest-1950-to-cyprus-2026/",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-4",
+      "title": "Chess.com — campeão mundial de blitz 2016",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/world-rapid-and-blitz-chess-champions",
       "accessed_at": "2026-11-06"
     }
   ]

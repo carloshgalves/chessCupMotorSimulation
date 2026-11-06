@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "ivanchuk",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui vencedor de torneios clássicos de elite e conquistei mundiais em ritmos rápidos.",
   "era_label": "1989–2016",
@@ -12,7 +12,8 @@
       "year": 1989,
       "text": "Venci o torneio de Linares contra a elite mundial.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 2007,
       "text": "Conquistei o Campeonato Mundial de Blitz.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -28,7 +30,8 @@
       "year": 2016,
       "text": "Venci o Campeonato Mundial de Xadrez Rápido.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-4"
       ]
     }
   ],
@@ -38,7 +41,8 @@
       "title": "Torneio de Linares",
       "summary": "Venci o torneio de Linares contra a elite mundial.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -46,7 +50,8 @@
       "title": "Mundial de blitz",
       "summary": "Conquistei o Campeonato Mundial de Blitz.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -54,7 +59,8 @@
       "title": "Mundial de rápidas",
       "summary": "Venci o Campeonato Mundial de Xadrez Rápido.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-4"
       ]
     }
   ],
@@ -64,6 +70,27 @@
       "title": "Chess.com — perfil histórico de ivanchuk",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/vasyl-ivanchuk",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Chess.com — Linares 1989",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/vasyl-ivanchuk",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "Chess.com — lista campeões de Blitz 2007",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/world-rapid-and-blitz-chess-champions",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-4",
+      "title": "FIDE — campeão de rápidas 2016",
+      "publisher": "FIDE",
+      "url": "https://old.fide.com/component/content/article/1-fide-news/9975-the-winners-of-fide-world-rapid-a-blitz-championships.html",
       "accessed_at": "2026-11-06"
     }
   ]

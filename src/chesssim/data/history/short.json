@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "short",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão britânico e desafiei Garry Kasparov pela coroa mundial.",
   "era_label": "1984–1993",
@@ -12,7 +12,9 @@
       "year": 1984,
       "text": "Conquistei o Campeonato Britânico e me tornei grande mestre.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2",
+        "audit-3"
       ]
     },
     {
@@ -20,7 +22,8 @@
       "year": 1993,
       "text": "Disputei em Londres o match pelo título mundial clássico contra Garry Kasparov.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -30,7 +33,9 @@
       "title": "Campeonato britânico",
       "summary": "Conquistei o Campeonato Britânico e me tornei grande mestre.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2",
+        "audit-3"
       ]
     },
     {
@@ -38,7 +43,8 @@
       "title": "Match pelo título",
       "summary": "Disputei em Londres o match pelo título mundial clássico contra Garry Kasparov.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     }
   ],
@@ -46,6 +52,20 @@
     {
       "id": "source-1",
       "title": "Chess.com — perfil histórico de short",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/nigel-short",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "GOV.UK — GM 1984 e disputa mundial 1993",
+      "publisher": "UK Government",
+      "url": "https://www.gov.uk/government/news/nigel-short-in-el-salvador",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "Chess.com — campeonato britânico 1984",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/nigel-short",
       "accessed_at": "2026-11-06"

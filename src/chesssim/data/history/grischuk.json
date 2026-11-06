@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "grischuk",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui tricampeão mundial de blitz e participei da elite do xadrez clássico.",
   "era_label": "2006–2015",
@@ -12,7 +12,8 @@
       "year": 2006,
       "text": "Conquistei o Campeonato Mundial de Blitz da FIDE.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 2012,
       "text": "Venci o Campeonato Mundial de Blitz novamente.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -28,7 +30,8 @@
       "year": 2015,
       "text": "Conquistei meu terceiro Campeonato Mundial de Blitz.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-4"
       ]
     }
   ],
@@ -38,7 +41,8 @@
       "title": "Primeira coroa de blitz",
       "summary": "Conquistei o Campeonato Mundial de Blitz da FIDE.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -46,7 +50,8 @@
       "title": "Segunda coroa de blitz",
       "summary": "Venci o Campeonato Mundial de Blitz novamente.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -54,7 +59,8 @@
       "title": "Tricampeonato de blitz",
       "summary": "Conquistei meu terceiro Campeonato Mundial de Blitz.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-4"
       ]
     }
   ],
@@ -64,6 +70,27 @@
       "title": "Referência histórica de grischuk",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/alexander-grischuk",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE — mundial blitz 2006",
+      "publisher": "FIDE",
+      "url": "https://old.fide.com/component/content/article/4-tournaments/1999-490-alexander-grischuk-is-the-fide-world-blitz-champion.html",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "FIDE — mundial blitz 2012",
+      "publisher": "FIDE",
+      "url": "https://old.fide.com/component/content/article/1-fide-news/6289-world-blitz-championship-2012-grischuk-wins.html",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-4",
+      "title": "FIDE — mundial blitz 2015",
+      "publisher": "FIDE",
+      "url": "https://old.fide.com/component/content/article/1-fide-news/9116-grischuk-world-blitz-chess-championship-2015.html",
       "accessed_at": "2026-11-06"
     }
   ]

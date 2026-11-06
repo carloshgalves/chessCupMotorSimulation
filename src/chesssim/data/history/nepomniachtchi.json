@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "nepomniachtchi",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Venci dois torneios de Candidatos e disputei duas vezes a coroa mundial.",
   "era_label": "2021–2023",
@@ -12,7 +12,8 @@
       "year": 2021,
       "text": "Venci o Torneio de Candidatos de 2020–2021.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 2022,
       "text": "Conquistei novamente o Torneio de Candidatos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -28,7 +30,8 @@
       "year": 2023,
       "text": "Disputei o Campeonato Mundial contra Ding Liren.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     }
   ],
@@ -38,7 +41,8 @@
       "title": "Candidatos 2020–2021",
       "summary": "Venci o Torneio de Candidatos de 2020–2021.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -46,7 +50,8 @@
       "title": "Candidatos de Madri",
       "summary": "Conquistei novamente o Torneio de Candidatos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -54,7 +59,8 @@
       "title": "Match mundial",
       "summary": "Disputei o Campeonato Mundial contra Ding Liren.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     }
   ],
@@ -64,6 +70,20 @@
       "title": "Chess.com — perfil e conquistas de nepomniachtchi",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/article/view/meet-the-candidates-2022",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE — torneios de Candidatos de 2021 e 2022",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/history-of-the-candidates-from-budapest-1950-to-cyprus-2026/",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "FIDE — match mundial de 2023",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/ding-liren-crowned-world-champion/",
       "accessed_at": "2026-11-06"
     }
   ]

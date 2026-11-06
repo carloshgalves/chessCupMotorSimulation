@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "caruana",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui vencedor da Sinquefield Cup e desafiante de Magnus Carlsen pelo título mundial.",
   "era_label": "2014–2018",
@@ -12,7 +12,8 @@
       "year": 2014,
       "text": "Venci a Sinquefield Cup com sete vitórias consecutivas nas sete primeiras rodadas.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 2018,
       "text": "Conquistei o Torneio de Candidatos e o direito de desafiar Magnus Carlsen.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -28,7 +30,8 @@
       "year": 2018,
       "text": "Disputei o Campeonato Mundial contra Magnus Carlsen.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-4"
       ]
     }
   ],
@@ -38,7 +41,8 @@
       "title": "Sinquefield Cup",
       "summary": "Venci a Sinquefield Cup com sete vitórias consecutivas nas sete primeiras rodadas.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -46,7 +50,8 @@
       "title": "Torneio de Candidatos",
       "summary": "Conquistei o Torneio de Candidatos e o direito de desafiar Magnus Carlsen.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -54,7 +59,8 @@
       "title": "Match pelo título",
       "summary": "Disputei o Campeonato Mundial contra Magnus Carlsen.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-4"
       ]
     }
   ],
@@ -64,6 +70,27 @@
       "title": "Chess.com — perfil e conquistas de caruana",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/fabiano-caruana",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "ChessBase — sequência de 7 vitórias na Sinquefield Cup",
+      "publisher": "ChessBase",
+      "url": "https://en.chessbase.com/post/throwback-thursday-caruana-sinquefield-cup-2014",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "FIDE — Candidatos Berlim 2018",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/history-of-the-candidates-from-budapest-1950-to-cyprus-2026/",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-4",
+      "title": "FIDE — match mundial 2018 contra Carlsen",
+      "publisher": "FIDE",
+      "url": "https://worldchesschampionship2023.fide.com/chess-champions",
       "accessed_at": "2026-11-06"
     }
   ]

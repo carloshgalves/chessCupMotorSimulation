@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "mamedyarov",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui bicampeão mundial juvenil e também campeão mundial de rápidas.",
   "era_label": "2003–2018",
@@ -12,7 +12,8 @@
       "year": 2003,
       "text": "Conquistei o Campeonato Mundial Júnior de xadrez.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 2005,
       "text": "Venci novamente o Campeonato Mundial Júnior.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -28,7 +30,8 @@
       "year": 2013,
       "text": "Conquistei o Campeonato Mundial de Xadrez Rápido.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-4"
       ]
     }
   ],
@@ -38,7 +41,8 @@
       "title": "Mundial júnior",
       "summary": "Conquistei o Campeonato Mundial Júnior de xadrez.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -46,7 +50,8 @@
       "title": "Bicampeonato júnior",
       "summary": "Venci novamente o Campeonato Mundial Júnior.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     },
     {
@@ -54,7 +59,8 @@
       "title": "Mundial de rápidas",
       "summary": "Conquistei o Campeonato Mundial de Xadrez Rápido.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-4"
       ]
     }
   ],
@@ -64,6 +70,27 @@
       "title": "Referência histórica de mamedyarov",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/Shakhriyar-Mamedyarov",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE — título mundial júnior 2003",
+      "publisher": "FIDE",
+      "url": "https://old.fide.com/component/content/article/4-tournaments/2756-1247-mamedyarov-dzagnidze-win-world-juniors-and-girls.html",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "ChessBase — título mundial júnior 2005",
+      "publisher": "ChessBase",
+      "url": "https://en.chessbase.com/post/shakhriyar-mamedyarov-and-elisabeth-phtz-win-world-juniors/19",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-4",
+      "title": "FIDE — título mundial rápido 2013",
+      "publisher": "FIDE",
+      "url": "https://old.fide.com/component/content/article/1-fide-news/7140-shakhriyar-mamedyarov-became-the-world-rapid-chess-champion.html",
       "accessed_at": "2026-11-06"
     }
   ]

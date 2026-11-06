@@ -1,7 +1,7 @@
 {
   "schema": "history-profile-v1",
   "slug": "reshevsky",
-  "review_status": "pending",
+  "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão norte-americano e disputei o torneio pelo título mundial em 1948.",
   "era_label": "1936–1948",
@@ -12,7 +12,8 @@
       "year": 1936,
       "text": "Conquistei o Campeonato dos Estados Unidos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 1948,
       "text": "Disputei o torneio pelo título mundial e dividi a terceira posição com Paul Keres.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     }
   ],
@@ -30,7 +32,8 @@
       "title": "Campeonato dos EUA",
       "summary": "Conquistei o Campeonato dos Estados Unidos.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-2"
       ]
     },
     {
@@ -38,7 +41,8 @@
       "title": "Torneio mundial",
       "summary": "Disputei o torneio pelo título mundial e dividi a terceira posição com Paul Keres.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "audit-3"
       ]
     }
   ],
@@ -48,6 +52,20 @@
       "title": "Chess.com — perfil histórico de reshevsky",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/samuel-reshevsky",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Chess.com — campeonato norte-americano 1936",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/samuel-reshevsky",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "OlimpBase — tabela do mundial de 1948",
+      "publisher": "OlimpBase",
+      "url": "https://www.olimpbase.org/~sennari/ind-wcc/wc1948-wchtourn.html?__r=5.603b757c556cfa330abaa0c121023555",
       "accessed_at": "2026-11-06"
     }
   ]
