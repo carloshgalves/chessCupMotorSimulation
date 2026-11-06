@@ -107,6 +107,8 @@ function browser(initialHash="") {
     HTMLElement:FakeElement,URLSearchParams,fetch,Date,Math,Number,String,
     setInterval(){return 1;},console
   });
+  const shared=fs.readFileSync(process.argv[3],"utf8");
+  vm.runInContext(shared,context,{filename:"chess_board.js",timeout:3000});
   vm.runInContext(source,context,{filename:"monitor.js",timeout:3000});
   return {elements,requests,location,events,context};
 }

@@ -2,16 +2,6 @@
 /* No chess engine and no state-changing endpoint: this is a read-only viewer. */
 const $ = (id) => document.getElementById(id);
 // Filled silhouettes for both colors; the contrast is supplied by CSS.
-const glyph = {
-  K:"♚", Q:"♛", R:"♜", B:"♝", N:"♞", P:"♟",
-  k:"♚", q:"♛", r:"♜", b:"♝", n:"♞", p:"♟"
-};
-const pieceName = {
-  K:"rei branco", Q:"dama branca", R:"torre branca",
-  B:"bispo branco", N:"cavalo branco", P:"peão branco",
-  k:"rei preto", q:"dama preta", r:"torre preta",
-  b:"bispo preto", n:"cavalo preto", p:"peão preto"
-};
 const initialFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 let feed = null;
 let pinned = null;
@@ -102,54 +92,9 @@ function clockText(seconds) {
   const min = Math.floor(rounded / 60);
   return String(min).padStart(2, "0") + ":" + String(rounded % 60).padStart(2, "0");
 }
-function chessSquares(fen) {
-  const ranks = fen.split(" ")[0].split("/");
-  if (ranks.length !== 8) return [];
-  const rows = [];
-  for (const rank of ranks) {
-    const row = [];
-    for (const piece of rank) {
-      if (/^[1-8]$/.test(piece)) {
-        for (let j = 0; j < Number(piece); j++) row.push("");
-      } else row.push(piece);
-    }
-    if (row.length !== 8) return [];
-    rows.push(row);
-  }
-  return rows;
-}
 function paintBoard(state) {
-  const rows = chessSquares(state.fen);
-  if (rows.length !== 8) return;
-  const container = $("board");
-  const fragment = document.createDocumentFragment();
-  for (let rank = 0; rank < 8; rank++) {
-    for (let file = 0; file < 8; file++) {
-      const squareName = String.fromCharCode(97 + file) + String(8 - rank);
-      const piece = rows[rank][file];
-      const square = document.createElement("div");
-      square.className = "square " + ((rank + file) % 2 ? "dark" : "light");
-      if (state.last && state.last.includes(squareName)) square.classList.add("last");
-      if (piece) {
-        square.classList.add(piece === piece.toUpperCase() ? "whitepiece" : "blackpiece");
-      }
-      if (rank === 7) {
-        square.classList.add("coordinate");
-        square.dataset.coordinate = squareName[0];
-      }
-      if (piece) {
-        const label = document.createElement("span");
-        label.className = "piece-glyph";
-        label.textContent = glyph[piece] || "";
-        label.setAttribute("aria-hidden", "true");
-        square.appendChild(label);
-      }
-      square.setAttribute("aria-label", squareName + " " + (pieceName[piece] || "vazio"));
-      fragment.appendChild(square);
-    }
-  }
-  container.replaceChildren(fragment);
-  container.setAttribute("aria-label", "Tabuleiro após " + cursor + " meios-lances");
+  // Geometry, silhouettes and FEN parsing are shared with the History tab.
+  return window.ChessSimBoard.paint($("board"), state, cursor);
 }
 function paintClocks() {
   const game = currentGame();

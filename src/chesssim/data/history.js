@@ -125,10 +125,6 @@
     }
     if (!chronology.children.length) chronology.append(make("li", "Cronologia em curadoria."));
     area.append(chronology);
-    area.append(make("h3", "Partidas para explorar"));
-    area.append(make("p", "Partidas históricas e replay serão incorporados na issue #51."));
-    area.append(make("h3", "No simulador"));
-    area.append(make("p", "Estatísticas locais serão integradas na issue #52. Não representam a carreira real."));
   }
   async function openProfile() {
     if (!state.players.length) return;
@@ -145,6 +141,7 @@
       state.view = "profile";
       byId("history-roster").hidden = true;
       byId("history-profile").hidden = false;
+      window.ChessSimHistoryGames.enter(selected.slug);
       byId("history-status").textContent = "";
       byId("history-back").focus();
     } catch (_) {
@@ -153,6 +150,7 @@
     }
   }
   function backToRoster() {
+    window.ChessSimHistoryGames.leave();
     ++state.seq;
     state.view = "roster";
     byId("history-profile").hidden = true;
@@ -185,13 +183,19 @@
     byId("tab-arena").setAttribute("aria-pressed", String(!toHistory));
     if (toHistory) {
       load();
+      if (state.view === "profile") window.ChessSimHistoryGames.resume();
       byId("history-heading").setAttribute("tabindex", "-1");
       byId("history-heading").focus();
     } else {
       ++state.seq;
+      window.ChessSimHistoryGames.suspend();
       byId("tab-arena").focus();
     }
   }
+  window.ChessSimHistoryPlayerName = slug => {
+    const item = state.players.find(p => p.slug === slug);
+    return item ? item.name : slug;
+  };
   byId("tab-history").addEventListener("click", () => toggle(true));
   byId("tab-arena").addEventListener("click", () => toggle(false));
   byId("history-prev").addEventListener("click", () => move(-1));

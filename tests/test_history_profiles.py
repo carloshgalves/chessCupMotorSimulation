@@ -223,6 +223,8 @@ def test_history_credits_are_local_and_frontend_assets_packaged():
     css = data.joinpath("history.css").read_text(encoding="utf-8")
     assert 'id="tab-history"' in html and 'id="history-view"' in html
     assert "/history.js" in html and "/history.css" in html
+    assert "/history_replay.js" in html and "/chess-board.js" in html
+    assert "/chess-board.css" in html
     assert 'info.license_url' in js and 'info.source_url' in js
     assert 'info.derivative_note' in js and 'info.author' in js
     assert "/api/history/players" in js and "/api/history/portraits/" in js
@@ -241,7 +243,9 @@ def test_history_browser_navigation_sources_credits_and_syntax():
     syntax = subprocess.run(["node", "--check", str(script)],
                             capture_output=True, text=True, timeout=8, check=False)
     assert syntax.returncode == 0, syntax.stdout + syntax.stderr
-    test = subprocess.run(["node", str(harness), str(script)],
+    shared = root / "src/chesssim/data/chess_board.js"
+    replay = root / "src/chesssim/data/history_replay.js"
+    test = subprocess.run(["node", str(harness), str(script), str(shared), str(replay)],
                           capture_output=True, text=True, timeout=12, check=False)
     assert test.returncode == 0, test.stdout + test.stderr
     assert "photo credits: PASS" in test.stdout

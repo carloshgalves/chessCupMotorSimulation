@@ -5,8 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Copa dos Imortais · Arena local</title>
   <link rel="stylesheet" href="/arena.css">
+  <link rel="stylesheet" href="/chess-board.css">
   <link rel="stylesheet" href="/history.css">
   <script src="/arena.js" defer></script>
+  <script src="/chess-board.js" defer></script>
+  <script src="/history_replay.js" defer></script>
   <script src="/history.js" defer></script>
 </head>
 <body>
@@ -156,6 +159,42 @@
         <button id="history-back" type="button">← Todos os jogadores</button>
         <h2 id="history-profile-name"></h2>
         <div id="history-profile-body"></div>
+        <section id="history-games-section" class="history-games" aria-labelledby="history-games-heading" hidden>
+          <h3 id="history-games-heading">Partidas para explorar</h3>
+          <p id="history-games-status" role="status" aria-live="polite"></p>
+          <div id="history-game-list" class="history-game-list" role="group" aria-label="Selecionar partida"></div>
+          <section id="history-game-replay" class="history-game-replay" aria-labelledby="history-replay-heading" hidden>
+            <h4 id="history-replay-heading">Reprodução da partida</h4>
+            <div id="history-replay-meta" class="history-replay-meta"></div>
+            <div class="history-replay-layout">
+              <div class="history-replay-board-shell">
+                <div id="history-replay-board" class="board history-replay-board"
+                     role="img" aria-label="Posição inicial" tabindex="0"></div>
+                <p class="history-replay-note">As posições são reconstruídas do PGN local; nenhuma análise de motor é executada.</p>
+              </div>
+              <div class="history-replay-panel">
+                <p id="history-replay-headline" class="history-replay-headline" role="status" aria-live="polite">Posição inicial</p>
+                <ol id="history-replay-moves" class="history-replay-moves" aria-label="Selecionar lance"></ol>
+                <div class="history-replay-range-label">
+                  <label for="history-replay-seek">Revisão por meio-lance</label>
+                  <span id="history-replay-progress">0 / 0</span>
+                </div>
+                <input type="range" id="history-replay-seek" min="0" max="0" value="0" step="1" aria-label="Navegar pelos lances">
+                <div class="history-replay-buttons" role="group" aria-label="Controles da reprodução">
+                  <button id="history-replay-start" type="button" aria-label="Voltar ao início" title="Início">⏮</button>
+                  <button id="history-replay-prev" type="button" aria-label="Lance anterior" title="Anterior">◀</button>
+                  <button id="history-replay-next" type="button" aria-label="Próximo lance" title="Próximo">▶</button>
+                  <button id="history-replay-end" type="button" aria-label="Ir ao fim" title="Fim">⏭</button>
+                </div>
+                <p class="history-replay-help">Use os botões, o controle deslizante ou as setas com o foco no tabuleiro.</p>
+              </div>
+            </div>
+          </section>
+        </section>
+        <section class="history-stats-placeholder" aria-label="Estatísticas locais">
+          <h3>No simulador</h3>
+          <p>Estatísticas locais serão integradas na issue #52. Não representam a carreira real.</p>
+        </section>
       </section>
       <p class="history-disclaimer">Os resultados de motores são experimentais e não representam partidas ou feitos dos jogadores reais. Fotografias documentais não implicam aprovação deste projeto pelas pessoas retratadas.</p>
     </section>

@@ -37,3 +37,38 @@
 @media(max-width:800px){.history-carousel{grid-template-columns:auto minmax(0,1fr) auto}.history-neighbor{display:none}.history-detail-header{grid-template-columns:1fr}.history-shell{padding:14px}.history-selected{max-width:420px;margin:auto}}
 @media(max-width:650px){.top{flex-wrap:wrap}.main-nav{order:3;width:100%}.main-nav button{flex:1}.history-carousel{gap:4px}.history-carousel>button{min-width:38px;padding:4px}.history-figure{max-width:340px}}
 @media(prefers-reduced-motion:reduce){.history-shell *{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+/* #51 — the profile owns one replay board; geometry and contrast are shared. */
+.history-games{margin:28px 0;border-top:1px solid #3a4b51;padding-top:12px}
+.history-games[hidden],.history-game-replay[hidden]{display:none!important}
+.history-game-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0 18px}
+.history-game-card{display:flex;flex-direction:column;align-items:stretch;gap:5px;min-width:0;padding:13px 15px;border-radius:11px;background:#172930;color:#eff5f5;border:1px solid #557078;text-align:left;cursor:pointer;overflow-wrap:anywhere;font:inherit}
+.history-game-card:hover{background:#25404a;border-color:#a6cad1}
+.history-game-card[aria-pressed="true"]{background:#25493e;border-color:#9bd4b2;box-shadow:inset 0 0 0 1px #9bd4b2}
+.history-game-origin{font-weight:750;font-size:.77rem;color:#f2d597}
+.history-game-details{font-size:.8rem;color:#c5d5d9;line-height:1.55}
+.history-game-replay{margin:15px 0 0;padding:16px;background:#13242b;border:1px solid #536b73;border-radius:12px}
+.history-game-replay h4{font-size:1.1rem;margin:1px 0 11px;color:#f5e5bb}
+.history-replay-meta{font-size:.84rem;color:#d7e3e5;line-height:1.45;overflow-wrap:anywhere}
+.history-replay-meta p{margin:3px 0}
+.history-replay-meta a{color:#f6d993;text-decoration:underline;text-underline-offset:3px}
+.history-replay-origin{color:#f6d993;font-weight:700}
+.history-replay-warning{color:#ffb6a8;font-weight:700}
+.history-replay-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,1fr);align-items:start;gap:clamp(14px,2vw,28px);margin-top:15px}
+.history-replay-board-shell{margin:auto;width:100%;max-width:450px;min-width:0}
+.history-replay-board{background:#24333a;border:2px solid #719096;outline-offset:3px}
+.history-replay-note,.history-replay-help{font-size:.78rem;color:#bccdd2;line-height:1.5;margin:9px 0}
+.history-replay-panel{min-width:0}
+.history-replay-headline{font-size:1.3rem;font-weight:750;color:#efd084;margin:0 0 7px}
+.history-replay-moves{margin:0;padding:9px 4px 9px 32px;max-height:225px;min-height:80px;overflow-y:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 8px;font-variant-numeric:tabular-nums}
+.history-replay-moves li{min-width:0}
+.history-move-button{width:100%;text-align:left;background:#203943;border:1px solid #516e79;border-radius:6px;color:#eaf2f2;padding:6px 9px;font:inherit;cursor:pointer;overflow-wrap:anywhere}
+.history-move-button.selected,.history-move-button[aria-current="step"]{background:#365c4f;color:#fff;border-color:#a8d9b8}
+.history-replay-range-label{display:flex;justify-content:space-between;gap:8px;margin:13px 0 5px;font-size:.82rem;color:#cadadd}
+#history-replay-seek{width:100%;accent-color:#efd084;min-height:32px}
+.history-replay-buttons{display:flex;gap:7px;margin:8px 0 0}
+.history-replay-buttons button{flex:1;min-width:0;min-height:44px;background:#23414b;color:#f6fcfc;border:1px solid #668b98;border-radius:8px;font-size:1rem;cursor:pointer}
+.history-replay-buttons button:disabled{opacity:.45;cursor:not-allowed}
+.history-game-card:focus-visible,.history-move-button:focus-visible,.history-replay-buttons button:focus-visible,#history-replay-seek:focus-visible,.history-replay-board:focus-visible{outline:3px solid #ffe39f;outline-offset:3px}
+@media(max-width:850px){.history-replay-layout{grid-template-columns:1fr}.history-replay-board-shell{max-width:460px}}
+@media(max-width:580px){.history-game-list{grid-template-columns:1fr}.history-game-replay{padding:10px}.history-replay-moves{max-height:190px}.history-replay-buttons{gap:5px}}
