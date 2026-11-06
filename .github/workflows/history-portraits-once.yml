@@ -5,6 +5,7 @@ on:
       - feat/history-biographical-packs-47
     paths:
       - .github/workflows/history-portraits-once.yml
+      - scripts/materialize_history_portraits.py
 permissions:
   contents: write
 jobs:
