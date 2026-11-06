@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui finalista do Campeonato Mundial da FIDE e conquistei nove campeonatos holandeses.",
   "era_label": "1993–1996",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/timman.jpg",
+    "alt": "timman em IBM International Chess Tournament, Amsterdam (1978-07-15)",
+    "author": "Rob Croes / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:IBM_schaaktoernooi_3e_ronde_Timman_aan_zet,_Bestanddeelnr_929-8190.jpg",
+    "verified_at": "2026-11-06",
+    "event": "IBM International Chess Tournament, Amsterdam",
+    "event_date": "1978-07-15",
+    "rights_holder": "Nationaal Archief (Anefo)",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "e62c990e93e8357316c65987fe8d916f02eeff182750915d6de8b3d2b2c92169",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

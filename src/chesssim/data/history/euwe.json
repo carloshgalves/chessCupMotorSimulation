@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão mundial e, mais tarde, presidente da federação internacional de xadrez.",
   "era_label": "1935–1937 (campeão mundial)",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/euwe.jpg",
+    "alt": "euwe em Groningen Chess Tournament (1946-08-12)",
+    "author": "Anefo / Nationaal Archief",
+    "license": "CC0 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Wereldschaaktoernooi._Links_dr._Max_Euwe,_rechts_Michael_Botwinnik,_resp._tweede,_Bestanddeelnr_934-5060.jpg",
+    "verified_at": "2026-11-06",
+    "event": "Groningen Chess Tournament",
+    "event_date": "1946-08-12",
+    "rights_holder": "Nationaal Archief (Anefo)",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "d5b3396fe27e97cefcb9e0dc3c66a41c1d852e15335dcc17f6d79ac6cbfd6d6f",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

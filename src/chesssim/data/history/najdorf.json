@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui um dos principais enxadristas argentinos e me tornei conhecido pelas simultâneas às cegas.",
   "era_label": "1947–1953",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/najdorf.jpg",
+    "alt": "najdorf em World Chess Tournament Amsterdam (1950-12-10)",
+    "author": "Carel L. de Vogel / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Najdorf1950.jpg",
+    "verified_at": "2026-11-06",
+    "event": "World Chess Tournament Amsterdam",
+    "event_date": "1950-12-10",
+    "rights_holder": "Nationaal Archief (Anefo)",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "b02167e55df4faa8480f09cfdab622a3979ed1f19457d078a860300ff11075ea",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",
