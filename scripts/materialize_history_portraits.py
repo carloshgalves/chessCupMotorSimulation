@@ -120,8 +120,21 @@ def acquire(row: dict) -> bytes:
 
 
 def apply_photos(rows: list[dict]) -> None:
-    staged = [(row, acquire(row)) for row in rows]  # Fetch all before writes.
     directory = DATA / "portraits"
+    # Preserve previously licensed files and metadata; fetch only new entries.
+    todo = []
+    for row in rows:
+        destination = directory / (row["slug"] + ".jpg")
+        profile = json.loads((DATA / (row["slug"] + ".json")).read_text(encoding="utf-8"))
+        if destination.is_file() and profile["portrait"] is not None:
+            assert sha256(destination.read_bytes()).hexdigest() == profile["portrait"]["sha256"]
+            if profile["portrait"]["license"] != row["license"]:
+                raise ValueError("Existing asset license differs from manifest")
+            continue
+        if destination.exists() or profile["portrait"] is not None:
+            raise ValueError("Incomplete previous portrait materialization")
+        todo.append(row)
+    staged = [(row, acquire(row)) for row in todo]  # Fetch all before writes.
     directory.mkdir(exist_ok=True)
     for row, binary in staged:
         slug = row["slug"]
@@ -145,7 +158,7 @@ def apply_photos(rows: list[dict]) -> None:
         }
         path.write_text(json.dumps(pack, ensure_ascii=False, indent=2) + "\n",
                         encoding="utf-8")
-    print(f"Materialized {len(staged)} licensed photographs with attribution.")
+    print(f"Materialized {len(staged)} new licensed photographs; kept {len(rows) - len(staged)} existing.")
 
 
 if __name__ == "__main__":
