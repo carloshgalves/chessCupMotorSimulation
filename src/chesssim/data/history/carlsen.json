@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão mundial clássico em cinco ocasiões e também conquistei títulos em rápidas e blitz.",
   "era_label": "2013–2023 (campeão mundial)",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/carlsen.jpg",
+    "alt": "carlsen em Tata Steel Chess Tournament (2013-01)",
+    "author": "Stefan64",
+    "license": "CC BY-SA 3.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:MagnusCarlsen13c.jpg",
+    "verified_at": "2026-11-06",
+    "event": "Tata Steel Chess Tournament",
+    "event_date": "2013-01",
+    "rights_holder": "Stefan64",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+    "sha256": "a87019ef094cec301ecdfd966e9286e1e049a425597b433f375c3d66244d56a0",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

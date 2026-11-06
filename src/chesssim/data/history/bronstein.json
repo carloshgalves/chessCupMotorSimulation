@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Venci o Torneio de Candidatos e empatei um match mundial com Botvinnik.",
   "era_label": "1950–1956",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/bronstein.jpg",
+    "alt": "bronstein em Chess Olympiad Amsterdam (1954-09-25)",
+    "author": "Joop van Bilsen / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:David_Bronstein_in_1954.jpg",
+    "verified_at": "2026-11-06",
+    "event": "Chess Olympiad Amsterdam",
+    "event_date": "1954-09-25",
+    "rights_holder": "Nationaal Archief (Anefo)",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "986cde2db6bb992b59ce85db9981a5f42ad14ed35bc0dd0b3385ebde0b55598d",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",
