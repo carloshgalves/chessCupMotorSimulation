@@ -88,10 +88,20 @@ def acquire(row: dict) -> tuple[bytes, str, str]:
         raise ValueError("Published item date differs from the catalogued date")
     url = (f"https://cplorg.contentdm.oclc.org/digital/iiif/p4014coll20/"
            f"{item_id}/full/960,/0/default.jpg")
-    photo = fetch(url, limit=3_000_000)
+    try:
+        photo = fetch(url, limit=3_000_000)
+    except HTTPError as exc:
+        if exc.code not in {404, 501}:
+            raise
+        # Some CONTENTdm objects are stored as JPEG, not as tiled JP2.
+        # Use the PUBLIC download endpoint advertised by the same collection.
+        # Never retry a source that returned a robot/access denial.
+        download = ("https://cplorg.contentdm.oclc.org/digital/api/collection/"
+                    f"p4014coll20/id/{item_id}/download")
+        photo = fetch(download, limit=12_000_000)
     with Image.open(BytesIO(photo)) as img:
-        if img.format != "JPEG":
-            raise ValueError("Invalid IIIF JPEG data")
+        if img.format not in {"JPEG", "PNG", "JPEG2000"}:
+            raise ValueError("Invalid original-archive image format")
         if min(img.size) < 280 or img.width * img.height > 30_000_000:
             raise ValueError("Invalid IIIF photo dimensions")
         square = ImageOps.fit(
