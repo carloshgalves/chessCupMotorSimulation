@@ -72,3 +72,23 @@
 .history-game-card:focus-visible,.history-move-button:focus-visible,.history-replay-buttons button:focus-visible,#history-replay-seek:focus-visible,.history-replay-board:focus-visible{outline:3px solid #ffe39f;outline-offset:3px}
 @media(max-width:850px){.history-replay-layout{grid-template-columns:1fr}.history-replay-board-shell{max-width:460px}}
 @media(max-width:580px){.history-game-list{grid-template-columns:1fr}.history-game-replay{padding:10px}.history-replay-moves{max-height:190px}.history-replay-buttons{gap:5px}}
+
+/* #52: simulation-only aggregate. Inherits History spacing, not Arena styles. */
+.history-stats-section{margin:30px 0 12px;padding:19px;border:1px solid #4b636c;border-radius:13px;background:#13232b}
+.history-stats-section[hidden]{display:none!important}
+.history-stats-section h3{margin:2px 0 10px}
+.history-stats-section h4{font-size:1rem;margin:22px 0 10px;color:#f3ddb5}
+.history-stats-disclaimer{color:#e3c8a0;font-size:.88rem;line-height:1.55}
+.history-stats-totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}
+.history-stat-card{border:1px solid #54707c;border-radius:10px;padding:12px;background:#1a313b;min-width:0}
+.history-stat-card dt{color:#c7d9df;font-size:.82rem;line-height:1.5}
+.history-stat-card dd{font-size:1.7rem;font-weight:760;color:#f4e7c5;font-variant-numeric:tabular-nums;margin:3px 0 0}
+.history-opponent-list{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.history-opponent-list li{display:flex;flex-direction:column;gap:5px;border:1px solid #47626c;background:#1a3039;padding:12px;border-radius:9px;overflow-wrap:anywhere}
+.history-opponent-list li span{color:#cbdee3;font-size:.84rem}
+.history-stats-scope{font-size:.79rem;color:#bed1d8;line-height:1.65;overflow-wrap:anywhere;margin:13px 0 0}
+.history-stats-warning{font-size:.86rem;color:#ffbaae;border-left:3px solid #f4a397;padding-left:11px;margin:12px 0}
+.history-stats-warning:empty,.history-stats-empty:empty{display:none}
+.history-stats-empty{font-size:.86rem;color:#d7e5e9;margin:12px 0}
+@media(max-width:800px){.history-stats-totals{grid-template-columns:repeat(2,minmax(0,1fr))}.history-opponent-list{grid-template-columns:1fr}}
+@media(max-width:500px){.history-stats-section{padding:12px}.history-stat-card{padding:9px}.history-stat-card dd{font-size:1.4rem}}

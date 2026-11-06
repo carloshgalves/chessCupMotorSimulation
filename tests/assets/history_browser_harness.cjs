@@ -56,6 +56,16 @@ const fetch=async(url,options)=>{
   calls.push({url,options});
   if(url==="/api/history/players") return {ok:true,json:async()=>({players:index})};
   if(url==="/api/history/players/anand") return {ok:true,json:async()=>profile};
+  if(url==="/api/history/players/anand/stats") return {ok:true,json:async()=>({
+    schema:"chesssim-player-stats-v1",slug:"anand",
+    scope:{directory:"runs",sources:["arena_local","tournament_local"],
+           from_utc:null,to_utc:null},
+    totals:{tournaments:0,duels:0,games:0,completed:0,wins:0,draws:0,losses:0,incomplete:0},
+    opponents:[],
+    coverage:{sessions_seen:0,tournaments_seen:0,candidate_games:0,
+              verified_games:0,arena_verified_games:0,tournament_verified_games:0,rejected_games:0,rejected_records:0,
+              excluded_attempts:0,failed_attempts:0,duplicate_records:0,partial:false}
+  })};
   if(url==="/api/history/players/anand/games") return {
     ok:true,json:async()=>({
       schema:"chesssim-history-games-v1",slug:"anand",count:0,limit:5,games:[]
@@ -69,6 +79,8 @@ vm.runInContext(fs.readFileSync(process.argv[3],"utf8"),ctx,
                 {filename:"chess_board.js",timeout:3000});
 vm.runInContext(fs.readFileSync(process.argv[4],"utf8"),ctx,
                 {filename:"history_replay.js",timeout:3000});
+vm.runInContext(fs.readFileSync(process.argv[5],"utf8"),ctx,
+                {filename:"history_stats.js",timeout:3000});
 vm.runInContext(source,ctx,{filename:"history.js",timeout:3000});
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function descendants(node) {
@@ -107,12 +119,14 @@ function descendants(node) {
   await tick();
   assert.equal($("history-games-section").hidden,false);
   assert($("history-games-status").textContent.includes("Nenhuma partida"));
+  assert.equal($("history-stats-section").hidden,false);
+  assert($("history-stats-empty").textContent.includes("Sem partidas"));
   $("history-back").events.click();
   assert.equal($("history-position").textContent.includes("1 de 3"),true);
   $("tab-arena").events.click();
   assert.equal($("arena-view").hidden,false);
   assert.equal($("history-view").hidden,true);
-  assert.equal(calls.length,3);
+  assert.equal(calls.length,4);
   assert(calls.every(call=>!call.url.includes("token") && call.options.cache==="no-store"));
   console.log("History navigation, first-person facts, safe source links and photo credits: PASS");
 })().catch(err=>{console.error(err);process.exitCode=1;});

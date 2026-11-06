@@ -10,6 +10,7 @@
   <script src="/arena.js" defer></script>
   <script src="/chess-board.js" defer></script>
   <script src="/history_replay.js" defer></script>
+  <script src="/history_stats.js" defer></script>
   <script src="/history.js" defer></script>
 </head>
 <body>
@@ -191,9 +192,17 @@
             </div>
           </section>
         </section>
-        <section class="history-stats-placeholder" aria-label="Estatísticas locais">
-          <h3>No simulador</h3>
-          <p>Estatísticas locais serão integradas na issue #52. Não representam a carreira real.</p>
+        <section id="history-stats-section" class="history-stats-section" aria-labelledby="history-stats-heading" hidden>
+          <h3 id="history-stats-heading">No simulador</h3>
+          <p class="history-stats-disclaimer">Resultados computacionais locais. Não representam a carreira do enxadrista, sua força real nem a fidelidade histórica do modelo.</p>
+          <p id="history-stats-status" role="status" aria-live="polite"></p>
+          <dl id="history-stats-totals" class="history-stats-totals" aria-label="Indicadores de competição local"></dl>
+          <p id="history-stats-empty" class="history-stats-empty"></p>
+          <h4>Confrontos por adversário</h4>
+          <div id="history-stats-opponents"></div>
+          <p id="history-stats-scope" class="history-stats-scope"></p>
+          <p id="history-stats-coverage" class="history-stats-scope"></p>
+          <p id="history-stats-warning" class="history-stats-warning" role="status"></p>
         </section>
       </section>
       <p class="history-disclaimer">Os resultados de motores são experimentais e não representam partidas ou feitos dos jogadores reais. Fotografias documentais não implicam aprovação deste projeto pelas pessoas retratadas.</p>

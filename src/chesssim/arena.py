@@ -19,6 +19,7 @@ from urllib.parse import urlsplit
 from .catalog import load_roster, find_player
 from .history_profiles import list_history_players, load_history_profile
 from .history_games import InvalidCatalogue, UnknownGame, list_games, replay
+from .history_stats import player_stats
 from .live_board import SCHEMA, make_handler, snapshot
 from .matches import _atomic_text, official_book_hashes, play_duel, validate
 from .peak_windows import CLOCK_PRESETS, PROVISIONAL_PEAKS
@@ -428,6 +429,20 @@ def make_arena_handler(manager: ArenaManager, token: str):
                     self._json(200, list_history_players())
                 except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "Catálogo histórico indisponível"})
+            elif url.path.startswith("/api/history/players/") and url.path.endswith("/stats"):
+                slug = url.path.removeprefix("/api/history/players/").removesuffix("/stats")
+                if url.query or not slug or "/" in slug:
+                    self._json(404, {"error": "Jogador não encontrado"})
+                    return
+                try:
+                    self._json(200, player_stats(manager.workspace, slug))
+                except ValueError as exc:
+                    if str(exc) in {"Slug inválido", "Jogador fora do elenco"}:
+                        self._json(404, {"error": "Jogador não encontrado"})
+                    else:
+                        self._json(503, {"error": "Estatísticas locais indisponíveis"})
+                except (OSError, KeyError, TypeError, json.JSONDecodeError):
+                    self._json(503, {"error": "Estatísticas locais indisponíveis"})
             elif url.path.startswith("/api/history/players/") and url.path.endswith("/games"):
                 slug = url.path.removeprefix("/api/history/players/").removesuffix("/games")
                 if url.query or not slug or "/" in slug:
@@ -496,10 +511,11 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 except (ValueError, OSError, FileNotFoundError,
                         KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "Estado do duelo indisponível"})
-            elif url.path in ("/", "/arena.js", "/arena.css", "/history.js", "/history_replay.js", "/history.css", "/chess-board.js", "/chess-board.css", "/viewer"):
+            elif url.path in ("/", "/arena.js", "/arena.css", "/history.js", "/history_replay.js", "/history_stats.js", "/history.css", "/chess-board.js", "/chess-board.css", "/viewer"):
                 asset = {"/": "arena.html", "/arena.js": "arena.js",
                          "/arena.css": "arena.css", "/history.js": "history.js",
                          "/history_replay.js": "history_replay.js",
+                         "/history_stats.js": "history_stats.js",
                          "/history.css": "history.css",
                          "/chess-board.js": "chess_board.js",
                          "/chess-board.css": "chess_board.css", "/viewer": "monitor.html"}[url.path]
