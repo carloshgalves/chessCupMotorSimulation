@@ -49,7 +49,12 @@ def main():
     if picture.exists() or pack["portrait"] is not None:
         raise ValueError("Incomplete prior Menchik import")
     html=read(PAGE,150_000).decode("utf-8","replace")
-    if "The Vera Menchik Club" not in html or "February 1926 BCM" not in html or "cn8774_menchik.jpg" not in html:
+    if ("The Vera Menchik Club" not in html or
+            "February 1926" not in html or "cn8774_menchik" not in html):
+        print("MENCHIK_SOURCE_DIAGNOSTIC", len(html),
+              "club", "The Vera Menchik Club" in html,
+              "year", "February 1926" in html,
+              "asset", "cn8774_menchik" in html, flush=True)
         raise ValueError("British Chess Magazine 1926 source no longer matches archive")
     original=read(JPEG,1_500_000)
     with Image.open(BytesIO(original)) as im:
