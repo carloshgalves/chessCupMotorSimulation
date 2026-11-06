@@ -26,7 +26,7 @@ function app(options={}) {
   const response=slug=>{
     const have=options.empty?0:2;
     const wins=options.corrupt?2:1;
-    const records=have?[{opponent_slug:"tal",duels_count:1,
+    const records=have?[{opponent_slug:slug==="tal"?"fischer":"tal",duels_count:1,
       completed_games:2,wins:1,draws:0,losses:1,incomplete_games:0}]:[];
     if(options.corrupt)records[0].wins=1;
     return {
