@@ -37,7 +37,8 @@ function app(options={}) {
       incomplete_games:0,head_to_head:records,
       coverage:{complete:!options.partial,runs_scanned:1,attempts_scanned:1,
         games_accepted:have,games_excluded:options.partial?2:0,
-        sources_rejected:options.partial?1:0},
+        sources_rejected:options.partial?1:0,
+        reasons:options.partial?{INVALID_ARENA_ATTEMPT:1}:{}},
     };
   };
   const fetch=(uri,opts)=>{
@@ -95,6 +96,7 @@ function descendants(node){return [node,...node.children.flatMap(descendants)];}
     const a=app({partial:true});a.window.ChessSimHistoryStats.enter("fischer");
     await flush();
     assert(a.$("history-stats-coverage").textContent.includes("Cobertura parcial"));
+    assert(a.$("history-stats-coverage").textContent.includes("PGN ou resumo de duelo inválido"));
     assert(a.$("history-stats-coverage").className.includes("history-stats-warning"));
   }
   {
