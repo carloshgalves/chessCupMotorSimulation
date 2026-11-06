@@ -22,6 +22,7 @@ LICENSES = {
     "CC BY-SA 3.0": "https://creativecommons.org/licenses/by-sa/3.0/",
     "CC BY-SA 4.0": "https://creativecommons.org/licenses/by-sa/4.0/",
     "CC BY-SA 2.0": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "CC BY-SA 4.0": "https://creativecommons.org/licenses/by-sa/4.0/",
     "CC BY 2.0": "https://creativecommons.org/licenses/by/2.0/",
     "Public Domain Mark 1.0": "https://creativecommons.org/publicdomain/mark/1.0/",
 }
@@ -127,7 +128,9 @@ def acquire(row: dict) -> bytes:
         meta = info.get("extmetadata", {})
         name = _meta(meta, "LicenseShortName").replace("-", " ").upper()
         expected = row["license"].replace("-", " ").upper()
-        if not (name == expected or (expected == "CC0 1.0" and name.startswith("CC0"))):
+        if not (name == expected or
+                (expected == "CC0 1.0" and name.startswith("CC0")) or
+                (expected == "PUBLIC DOMAIN MARK 1.0" and name in {"PUBLIC DOMAIN", "PD-OLD", "PD OLD"})):
             raise ValueError(f"License mismatch for {row['slug']}: {name}")
         license_url = _meta(meta, "LicenseUrl")
         if license_url:
@@ -143,16 +146,13 @@ def acquire(row: dict) -> bytes:
         print(f"Commons API rate-limited: using pre-reviewed file {row['slug']}", flush=True)
     filename = row["file"].replace(" ", "_")
     digest = md5(filename.encode("utf-8"), usedforsecurity=False).hexdigest()
-    width = 500 if row["slug"] in {"hou-yifan", "caruana"} else 960
-    prefix = ("https://upload.wikimedia.org/wikipedia/commons/thumb/"
-              + digest[0] + "/" + digest[:2] + "/" + quote(filename))
-    # Prefer existing Commons thumbnails: Wikimedia explicitly asks clients
-    # not to trigger mass resizing of full-size originals on shared runners.
-    known_thumbnail = prefix + "/" + str(width) + "px-" + quote(filename)
-    candidate = api_thumbnail if api_thumbnail and api_thumbnail == known_thumbnail else known_thumbnail
+    # Original file URLs are the explicit official download endpoints on Commons.
+    # No proxy, rate-limit bypass, parallel downloads or repeated robot-block retries.
+    candidate = ("https://upload.wikimedia.org/wikipedia/commons/" +
+                 digest[0] + "/" + digest[:2] + "/" + quote(filename))
     parsed = urlsplit(candidate)
     if parsed.scheme != "https" or parsed.hostname != "upload.wikimedia.org":
-        raise ValueError("Unsafe thumbnail URL")
+        raise ValueError("Unsafe original image URL")
     with Image.open(BytesIO(get_bytes(candidate, limit=2_000_000))) as im:
         if im.format not in {"JPEG", "PNG"}:
             raise ValueError("Unsupported media type")
