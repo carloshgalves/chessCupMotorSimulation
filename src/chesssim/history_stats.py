@@ -415,6 +415,21 @@ def list_stats(workspace: Path, slug: str) -> dict:
         for rd in state["rounds"]:
             for match in rd["matches"]:
                 entries = match["attempts"]
+                if not isinstance(entries, list):
+                    reject("INVALID_TOURNAMENT_LEDGER")
+                    continue
+                known_folders = {
+                    entry.get("folder") for entry in entries
+                    if isinstance(entry, dict) and isinstance(entry.get("folder"), str)
+                }
+                exclusions = match.get("excluded_attempts", [])
+                if not isinstance(exclusions, list):
+                    reject("INVALID_TOURNAMENT_LEDGER")
+                    exclusions = []
+                excluded_folders = {
+                    item.get("folder") for item in exclusions
+                    if isinstance(item, dict) and isinstance(item.get("folder"), str)
+                }
                 for entry in entries:
                     counted_attempt()
                     try:
@@ -426,8 +441,21 @@ def list_stats(workspace: Path, slug: str) -> dict:
                         reject("INVALID_TOURNAMENT_ATTEMPT", 2)
                         continue
                     include(run_id, f"{run_id}:{entry['folder']}", verified)
-                # Unregistered/failed attempts and byes must not be counted.
-                # No filesystem discovery here: only confirmed ledger entries.
+                # Match reconcilers preserve excluded attempts on disk. Expose
+                # their presence in coverage without treating them as scored
+                # games, even when an interrupted pair has a finished first game.
+                a, b = match["players"]
+                physical = sorted((workspace / root / "matches" / match["id"] /
+                                   "duels" / f"{a}-vs-{b}").glob("*/summary.json"))
+                for summary_path in physical:
+                    rel = summary_path.parent.relative_to(workspace / root).as_posix()
+                    if rel in known_folders:
+                        continue
+                    counted_attempt()
+                    if rel in excluded_folders:
+                        reject("EXCLUDED_TOURNAMENT_ATTEMPT")
+                    else:
+                        reject("UNREGISTERED_TOURNAMENT_ATTEMPT")
     return {
         "schema": SCHEMA,
         "slug": slug,
