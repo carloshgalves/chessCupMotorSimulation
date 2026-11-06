@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui bicampeão soviético e participei de ciclos consecutivos de Candidatos.",
   "era_label": "1967–1980",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/polugaevsky.jpg",
+    "alt": "polugaevsky em IBM International Chess Tournament, Amsterdam (1972-06-13)",
+    "author": "Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/abec6496-d0b4-102d-bcf8-003048976d84",
+    "verified_at": "2026-11-06",
+    "event": "IBM International Chess Tournament, Amsterdam",
+    "event_date": "1972-06-13",
+    "rights_holder": "Nationaal Archief",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "ba55bc999d35ae067a873ae6329e944b363a06f74e965ce7bd74b9672108899b",
+    "derivative_note": "Recorte quadrado e redução para 480×480 px a partir de fotografia oficial de torneio.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

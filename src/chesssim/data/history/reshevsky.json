@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão norte-americano e disputei o torneio pelo título mundial em 1948.",
   "era_label": "1936–1948",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/reshevsky.jpg",
+    "alt": "reshevsky em Chess Candidates Playoff, Amsterdam GAK (1964-06-25)",
+    "author": "Jack de Nijs / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/aa6eab38-d0b4-102d-bcf8-003048976d84",
+    "verified_at": "2026-11-06",
+    "event": "Chess Candidates Playoff, Amsterdam GAK",
+    "event_date": "1964-06-25",
+    "rights_holder": "Nationaal Archief",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "23b7642a2a06eeab00e39c16f458f8890c8674fd6671799f8a46fcb48f3e35c4",
+    "derivative_note": "Recorte quadrado e redução para 480×480 px a partir de fotografia oficial de torneio.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",
