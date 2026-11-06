@@ -73,8 +73,13 @@ def manifest_rows() -> list[dict]:
         if row["license"] not in LICENSES or row["license_url"] != LICENSES[row["license"]]:
             raise ValueError("Image license not on approved allowlist")
         url = urlsplit(row["source_url"])
-        if url.scheme != "https" or url.hostname != "commons.wikimedia.org" or not url.path.startswith("/wiki/File:"):
-            raise ValueError("Unexpected Wikimedia Commons file page")
+        approved_archive = (url.hostname == "www.nationaalarchief.nl" and
+                            re.fullmatch(r"/onderzoeken/fotocollectie/[0-9a-f-]{36}", url.path))
+        holland_archive = (url.hostname == "noord-hollandsarchief.nl" and
+                           re.fullmatch(r"/beelden/beeldbankdeboer/detail/[0-9a-f-]{36}", url.path))
+        commons = url.hostname == "commons.wikimedia.org" and url.path.startswith("/wiki/File:")
+        if url.scheme != "https" or not (commons or approved_archive or holland_archive):
+            raise ValueError("Unexpected or unapproved photo source")
         if not all(isinstance(row[k], str) and row[k].strip()
                    for k in ("event", "event_date", "author", "rights_holder")):
             raise ValueError("Missing author or competition")
@@ -165,6 +170,9 @@ def apply_photos(rows: list[dict]) -> None:
             continue
         if destination.exists() or profile["portrait"] is not None:
             raise ValueError("Incomplete previous portrait materialization")
+        if urlsplit(row["source_url"]).hostname != "commons.wikimedia.org":
+            print(f"Use official archive importer for {row['slug']}", flush=True)
+            continue
         todo.append(row)
     staged = []
     unavailable = []

@@ -169,47 +169,47 @@
     },
     {
       "slug": "portisch",
-      "file": "PortischIBM1969.jpg",
-      "event": "IBM International Chess Tournament, Amsterdam",
-      "event_date": "1969-07-24",
-      "author": "Joost Evers / Anefo",
-      "rights_holder": "Nationaal Archief (Anefo)",
+      "file": "915-9235.jpg",
+      "event": "Hoogovens Chess Tournament, Beverwijk",
+      "event_date": "1964-01-08",
+      "author": "Jack de Nijs / Anefo",
+      "rights_holder": "Nationaal Archief",
       "license": "CC0 1.0",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "source_url": "https://commons.wikimedia.org/wiki/File:PortischIBM1969.jpg",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/aa5521d6-d0b4-102d-bcf8-003048976d84",
       "centering": [
         0.5,
-        0.4
+        0.44
       ]
     },
     {
       "slug": "keres",
-      "file": "Hoogoven Schaaktoernooi Keres, Bestanddeelnr 922-0145.jpg",
-      "event": "Hoogovens Chess Tournament",
-      "event_date": "1969-01-14",
-      "author": "Eric Koch / Anefo",
-      "rights_holder": "Nationaal Archief (Anefo)",
+      "file": "915-9231.jpg",
+      "event": "Hoogovens Chess Tournament, Beverwijk",
+      "event_date": "1964-01-08",
+      "author": "Jack de Nijs / Anefo",
+      "rights_holder": "Nationaal Archief",
       "license": "CC0 1.0",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "source_url": "https://commons.wikimedia.org/wiki/File:Hoogoven_Schaaktoernooi_Keres,_Bestanddeelnr_922-0145.jpg",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/aa551e48-d0b4-102d-bcf8-003048976d84",
       "centering": [
         0.5,
-        0.42
+        0.46
       ]
     },
     {
       "slug": "geller",
-      "file": "Hoogoven Schaaktoernooi Geller (links) en Keres, Bestanddeelnr 922-0477.jpg",
-      "event": "Hoogovens Chess Tournament",
+      "file": "922-0477.jpg",
+      "event": "Hoogovens Chess Tournament, Beverwijk",
       "event_date": "1969-01-28",
       "author": "Jack de Nijs / Anefo",
-      "rights_holder": "Nationaal Archief (Anefo)",
+      "rights_holder": "Nationaal Archief",
       "license": "CC0 1.0",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "source_url": "https://commons.wikimedia.org/wiki/File:Hoogoven_Schaaktoernooi_Geller_(links)_en_Keres,_Bestanddeelnr_922-0477.jpg",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ab5c5428-d0b4-102d-bcf8-003048976d84",
       "centering": [
-        0.26,
-        0.44
+        0.22,
+        0.46
       ]
     },
     {
@@ -334,32 +334,62 @@
     },
     {
       "slug": "judit-polgar",
-      "file": "Judit Polgar.jpg",
-      "event": "Chess Classic Mainz",
-      "event_date": "2008-08-03",
-      "author": "Stefan64",
-      "rights_holder": "Stefan64",
-      "license": "CC BY-SA 3.0",
-      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
-      "source_url": "https://commons.wikimedia.org/wiki/File:Judit_Polgar.jpg",
+      "file": "NL-HlmNHA_1478_45143K00_15.jpg",
+      "event": "Hoogovens Chess Tournament, Wijk aan Zee",
+      "event_date": "1998-01-17",
+      "author": "Fotoburo de Boer",
+      "rights_holder": "Noord-Hollands Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/a17d9a6f-d4af-cfff-84da-19917979bd71",
       "centering": [
         0.5,
-        0.45
+        0.43
       ]
     },
     {
       "slug": "kasparov",
-      "file": "Optiebeurs schaakvierkamp Garri Kasparov tegen Anatoli Karpov (rechts), Bestanddeelnr 934-2524.jpg",
+      "file": "934-2506.jpg",
       "event": "Optiebeurs Chess Tournament, Amsterdam",
       "event_date": "1988-05-19",
       "author": "Rob Croes / Anefo",
-      "rights_holder": "Nationaal Archief (Anefo)",
+      "rights_holder": "Nationaal Archief",
       "license": "CC0 1.0",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "source_url": "https://commons.wikimedia.org/wiki/File:Optiebeurs_schaakvierkamp_Garri_Kasparov_tegen_Anatoli_Karpov_(rechts),_Bestanddeelnr_934-2524.jpg",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ad6aaa12-d0b4-102d-bcf8-003048976d84",
       "centering": [
-        0.25,
-        0.46
+        0.5,
+        0.42
+      ]
+    },
+    {
+      "slug": "botvinnik",
+      "file": "922-0655.jpg",
+      "event": "Hoogovens Chess Tournament, Beverwijk",
+      "event_date": "1969-02-01",
+      "author": "Jack de Nijs / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ab5cfe00-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.24,
+        0.45
+      ]
+    },
+    {
+      "slug": "gligoric",
+      "file": "924-7305.jpg",
+      "event": "IBM International Chess Tournament, Amsterdam",
+      "event_date": "1971-07-13",
+      "author": "Joost Evers / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/abc67a92-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.78,
+        0.45
       ]
     }
   ]

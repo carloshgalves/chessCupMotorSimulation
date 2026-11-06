@@ -34,7 +34,7 @@ def test_all_64_are_accessible_and_have_historical_packs():
         if pack["portrait"] is not None:
             assert pack["portrait"]["approval_status"] == "approved"
             assert pack["portrait"]["local_asset"] == f"history/portraits/{player.slug}.jpg"
-            assert pack["portrait"]["source_url"].startswith("https://commons.wikimedia.org/wiki/File:")
+            assert pack["portrait"]["source_url"].startswith(("https://commons.wikimedia.org/wiki/File:", "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/", "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/"))
         if pack["has_historical_pack"]:
             assert pack["schema"] == SCHEMA
             assert pack["narrative_voice"] == "first_person_editorial"
@@ -275,3 +275,13 @@ def test_history_editorial_discrepancies_do_not_recur():
     polgar = load_history_profile("judit-polgar")
     assert "15 anos" in polgar["highlights"][0]["text"]
     assert "meses" not in polgar["highlights"][0]["text"]
+
+
+def test_original_archive_candidates_are_cc0_only_and_have_authorized_hosts():
+    from pathlib import Path
+    import json
+    root = Path(__file__).resolve().parents[1]
+    data = json.loads((root / "src/chesssim/data/history/portrait_candidates.json").read_text(encoding="utf-8"))
+    archive_rows = [row for row in data["candidates"] if row["source_url"].startswith(("https://www.nationaalarchief.nl/", "https://noord-hollandsarchief.nl/"))]
+    assert {r["slug"] for r in archive_rows} == {"kasparov", "keres", "portisch", "geller", "botvinnik", "gligoric", "judit-polgar"}
+    assert all(row["license"] == "CC0 1.0" and row["rights_holder"] and row["author"] for row in archive_rows)

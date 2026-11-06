@@ -84,8 +84,15 @@ def validate_history_pack(data: object, *, slug: str) -> dict:
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", portrait["verified_at"]):
             raise ValueError("Data de conferência inválida")
         url = _url(portrait["source_url"], "portrait.source_url")
-        if not url.startswith("https://commons.wikimedia.org/wiki/File:"):
-            raise ValueError("Retrato fora do repositório de licenças auditado")
+        parsed = urlsplit(url)
+        archive = (parsed.hostname == "www.nationaalarchief.nl" and
+                   re.fullmatch(r"/onderzoeken/fotocollectie/[0-9a-f-]{36}", parsed.path))
+        holland = (parsed.hostname == "noord-hollandsarchief.nl" and
+                   re.fullmatch(r"/beelden/beeldbankdeboer/detail/[0-9a-f-]{36}", parsed.path))
+        commons = (parsed.hostname == "commons.wikimedia.org" and
+                   parsed.path.startswith("/wiki/File:"))
+        if not (archive or holland or commons):
+            raise ValueError("Origem do retrato não pertence a acervo auditado")
         digest = _text(portrait["sha256"], "portrait.sha256", max_len=64)
         if not re.fullmatch(r"[a-f0-9]{64}", digest):
             raise ValueError("SHA-256 de retrato inválido")
