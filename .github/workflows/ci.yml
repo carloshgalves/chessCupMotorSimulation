@@ -71,22 +71,33 @@ jobs:
               history_packs = sorted(name for name in names
                                      if name.startswith(root) and name.endswith(".json")
                                      and name != root + "portrait_candidates.json")
-              assert len(history_packs) == 22, f"Expected 22 biographies, got {len(history_packs)}"
+              assert len(history_packs) >= 22, f"Expected at least 22 biographies, got {len(history_packs)}"
+              assert len(history_packs) <= 64, "More packs than canonical players"
               assert root + "portrait_candidates.json" in names
-              photo_slugs = ("anand", "karpov", "larsen", "mequinho",
-                             "petrosian", "spassky", "topalov")
-              for slug in photo_slugs:
+              baseline = {"anand", "karpov", "larsen", "mequinho",
+                          "petrosian", "spassky", "topalov"}
+              seen_slugs = set()
+              referenced_photos = set()
+              for biography in history_packs:
+                  pack = json.loads(archive.read(biography))
+                  slug = biography.removeprefix(root).removesuffix(".json")
+                  assert pack["slug"] == slug and slug not in seen_slugs
+                  seen_slugs.add(slug)
+                  portrait = pack["portrait"]
+                  if portrait is None:
+                      continue
                   photograph = root + f"portraits/{slug}.jpg"
-                  biography = root + f"{slug}.json"
-                  assert photograph in names and biography in names, (
-                      f"Packaged portrait or biography missing: {slug}"
-                  )
-                  portrait = json.loads(archive.read(biography))["portrait"]
-                  assert portrait is not None, f"No credited portrait in {biography}"
+                  referenced_photos.add(photograph)
+                  assert photograph in names, f"Packaged portrait missing: {slug}"
                   assert portrait["approval_status"] == "approved"
                   assert portrait["local_asset"] == f"history/portraits/{slug}.jpg"
                   assert hashlib.sha256(archive.read(photograph)).hexdigest() == portrait["sha256"]
                   assert portrait["license"] in ("CC0 1.0", "CC BY-SA 3.0")
+              assert baseline.issubset(seen_slugs), "Baseline photo biographies missing"
+              assert len(referenced_photos) >= len(baseline), "Baseline portraits missing"
+              assert {root + f"portraits/{slug}.jpg" for slug in baseline}.issubset(referenced_photos)
+              actual_photos = {n for n in names if n.startswith(root + "portraits/") and n.endswith(".jpg")}
+              assert actual_photos == referenced_photos, "Orphan portraits or undisclosed photos in wheel"
               for asset in ("monitor.html", "monitor.css", "monitor.js",
                             "arena.html", "arena.css", "arena.js"):
                   assert f"chesssim/data/{asset}" in names, f"Live-board asset missing: {asset}"
