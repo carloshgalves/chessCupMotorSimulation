@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui um dos mais importantes mestres russos da era romântica e desafiei Steinitz.",
   "era_label": "1889–1903",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/chigorin.jpg",
+    "alt": "Retrato histórico de Chigorin, Mikhail Ivanovich , fonte Cleveland Public Library",
+    "author": "Fotógrafo não identificado (acervo Cleveland)",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/3048",
+    "verified_at": "2026-11-06",
+    "event": "Retrato histórico de Mikhail Chigorin",
+    "event_date": "até 1908",
+    "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "e867ae16ab095e8a90ef3f2a0a7186ed29d7c9d40c962ec7c3242c1e9ce1c3a7",
+    "derivative_note": "Recorte e redução para 480×480 px de reprodução histórica; identificado por Cleveland Public Library como PDM 1.0/NoC-US. PDM é uma marcação de domínio público, não licença CC0. Verificar exigências territoriais antes de redistribuir.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui o segundo campeão mundial e mantive a coroa por 27 anos.",
   "era_label": "1894–1921",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/lasker.jpg",
+    "alt": "Retrato histórico de Lasker, Emanuel 1893 (Playing J.S. Ryan), fonte Cleveland Public Library",
+    "author": "Hubbard Photograph Co.",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/115",
+    "verified_at": "2026-11-06",
+    "event": "Lasker contra J. S. Ryan no torneio de Nova York",
+    "event_date": "1893",
+    "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "82cf2ea6e0a375ae641983b0d88560cb07491edc564e2b9dc947a40de8f14eb6",
+    "derivative_note": "Recorte e redução para 480×480 px de reprodução histórica; identificado por Cleveland Public Library como PDM 1.0/NoC-US. PDM é uma marcação de domínio público, não licença CC0. Verificar exigências territoriais antes de redistribuir.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

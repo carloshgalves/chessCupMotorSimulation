@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui o primeiro campeão mundial oficial e ajudei a transformar a compreensão do jogo posicional.",
   "era_label": "1886–1894",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/steinitz.jpg",
+    "alt": "Retrato histórico de Steinitz, Wilhelm 1883, fonte Cleveland Public Library",
+    "author": "Lilienthal (New Orleans)",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/212",
+    "verified_at": "2026-11-06",
+    "event": "Retrato de gabinete de Wilhelm Steinitz",
+    "event_date": "1883",
+    "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "8612444d5be16c78a66ddfd80487925079b055d9270c1421a5896d7300d7c10d",
+    "derivative_note": "Recorte e redução para 480×480 px de reprodução histórica; identificado por Cleveland Public Library como PDM 1.0/NoC-US. PDM é uma marcação de domínio público, não licença CC0. Verificar exigências territoriais antes de redistribuir.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

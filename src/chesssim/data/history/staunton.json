@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui um dos principais mestres ingleses e ajudei a organizar o histórico torneio de Londres.",
   "era_label": "1843–1851",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/staunton.jpg",
+    "alt": "Desenho histórico de Howard Staunton; não é uma fotografia",
+    "author": "Artista não identificado (desenho histórico)",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/2595",
+    "verified_at": "2026-11-06",
+    "event": "Desenho histórico de Howard Staunton (reprodução)",
+    "event_date": "sem data",
+    "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "df636299c8d3cfa40300ab8877b96405ce66a8f16500209ca38ef5657acaaa24",
+    "derivative_note": "Recorte e redução para 480×480 px de reprodução artística; identificado por Cleveland Public Library como PDM 1.0/NoC-US. PDM é uma marcação de domínio público, não licença CC0. Verificar exigências territoriais antes de redistribuir.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",
