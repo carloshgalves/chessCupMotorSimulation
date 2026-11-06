@@ -113,7 +113,8 @@ def test_history_http_endpoint_is_get_only_and_has_no_path_access(tmp_path):
             assert profile["historically_validated_model"] is False
         with urlopen(base + "/api/history/players/capablanca") as response:
             profile = json.load(response)
-            assert not profile["has_historical_pack"]
+            assert profile["has_historical_pack"]
+            assert profile["review_status"] == "pending"
         photo = load_history_profile("mequinho")["portrait"]
         if photo:
             with urlopen(base + "/api/history/portraits/mequinho.jpg") as response:
