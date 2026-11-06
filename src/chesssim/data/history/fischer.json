@@ -9,8 +9,8 @@
   "highlights": [
     {
       "id": "achievement-1",
-      "year": 1957,
-      "text": "Venci o Campeonato dos Estados Unidos iniciado em 1957, aos 14 anos.",
+      "year": 1958,
+      "text": "Venci em janeiro de 1958 o Campeonato dos Estados Unidos de 1957/58, aos 14 anos.",
       "source_ids": [
         "source-1"
       ]
@@ -34,9 +34,9 @@
   ],
   "timeline": [
     {
-      "year": 1957,
-      "title": "Marco de 1957",
-      "summary": "Venci o Campeonato dos Estados Unidos iniciado em 1957, aos 14 anos.",
+      "year": 1958,
+      "title": "Campeonato dos EUA 1957/58",
+      "summary": "Venci em janeiro de 1958 o Campeonato dos Estados Unidos de 1957/58, aos 14 anos.",
       "source_ids": [
         "source-1"
       ]
@@ -61,10 +61,10 @@
   "sources": [
     {
       "id": "source-1",
-      "title": "Chess.com — histórico e resultados",
+      "title": "Biografia de Bobby Fischer — resultado de 10/01/1958",
       "publisher": "Chess.com",
-      "url": "https://www.chess.com/article/view/records-in-chess",
-      "accessed_at": "2026-11-05"
+      "url": "https://www.chess.com/article/view/biography-of-bobby-fischer",
+      "accessed_at": "2026-11-06"
     },
     {
       "id": "source-2",

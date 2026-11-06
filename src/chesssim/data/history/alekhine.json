@@ -4,7 +4,7 @@
   "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão mundial em dois períodos e recuperei a coroa depois de perdê-la.",
-  "era_label": "1927–1946",
+  "era_label": "1927–1935; 1937–1946 (campeão mundial)",
   "portrait": null,
   "highlights": [
     {
@@ -12,7 +12,8 @@
       "year": 1927,
       "text": "Derrotei José Raúl Capablanca e conquistei o campeonato mundial.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "source-3"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 1937,
       "text": "Recuperei o título mundial ao vencer a revanche contra Max Euwe.",
       "source_ids": [
-        "source-2"
+        "source-2",
+        "source-3"
       ]
     }
   ],
@@ -30,7 +32,8 @@
       "title": "Marco de 1927",
       "summary": "Derrotei José Raúl Capablanca e conquistei o campeonato mundial.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "source-3"
       ]
     },
     {
@@ -38,7 +41,8 @@
       "title": "Marco de 1937",
       "summary": "Recuperei o título mundial ao vencer a revanche contra Max Euwe.",
       "source_ids": [
-        "source-2"
+        "source-2",
+        "source-3"
       ]
     }
   ],
@@ -56,6 +60,13 @@
       "publisher": "FIDE",
       "url": "https://worldchesschampionship2023.fide.com/chess-champions",
       "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-3",
+      "title": "FIDE Chess Museum — Alexander Alekhine",
+      "publisher": "FIDE",
+      "url": "https://museum.fide.com/champions/alexander-alekhin",
+      "accessed_at": "2026-11-06"
     }
   ]
 }

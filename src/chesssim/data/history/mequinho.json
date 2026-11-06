@@ -3,7 +3,7 @@
   "slug": "mequinho",
   "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
-  "short_bio": "Fui campeão brasileiro aos 13 anos, tornei-me o primeiro grande mestre do país e conquistei duas vitórias em Interzonais.",
+  "short_bio": "Fui campeão brasileiro aos 13 anos, alcancei os requisitos para grande mestre aos 19 e venci dois Interzonais.",
   "era_label": "1965–1977",
   "portrait": null,
   "highlights": [
@@ -12,15 +12,16 @@
       "year": 1965,
       "text": "Conquistei o Campeonato Brasileiro absoluto de xadrez aos 13 anos.",
       "source_ids": [
-        "source-1",
-        "source-2"
+        "source-5",
+        "source-1"
       ]
     },
     {
       "id": "achievement-2",
       "year": 1972,
-      "text": "Tornei-me o primeiro grande mestre internacional do Brasil aos 20 anos.",
+      "text": "Alcancei os requisitos para o título de grande mestre internacional aos 19 anos, em Hastings, em janeiro de 1972; a FIDE formalizou o título depois.",
       "source_ids": [
+        "source-4",
         "source-2"
       ]
     },
@@ -70,6 +71,20 @@
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/henrique-mecking",
       "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-4",
+      "title": "Folha de S.Paulo — Mequinho e o título de grande mestre em janeiro de 1972",
+      "publisher": "Folha de S.Paulo",
+      "url": "https://www1.folha.uol.com.br/esporte/2022/01/sou-o-profeta-do-apocalipse-diz-1o-brasileiro-grande-mestre-de-xadrez.shtml",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "source-5",
+      "title": "BrasilBase — Campeonato Brasileiro absoluto de 1965 (classificação)",
+      "publisher": "BrasilBase",
+      "url": "https://brasilbase.pro.br/bca1965.htm",
+      "accessed_at": "2026-11-06"
     }
   ],
   "timeline": [
@@ -78,15 +93,16 @@
       "title": "Campeão brasileiro",
       "summary": "Conquistei o Campeonato Brasileiro absoluto de xadrez aos 13 anos.",
       "source_ids": [
-        "source-1",
-        "source-2"
+        "source-5",
+        "source-1"
       ]
     },
     {
       "year": 1972,
       "title": "Título de grande mestre",
-      "summary": "Tornei-me o primeiro grande mestre internacional do Brasil aos 20 anos.",
+      "summary": "Alcancei os requisitos para o título de grande mestre internacional aos 19 anos, em Hastings, em janeiro de 1972; a FIDE formalizou o título depois.",
       "source_ids": [
+        "source-4",
         "source-2"
       ]
     },

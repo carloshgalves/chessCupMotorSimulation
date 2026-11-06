@@ -54,7 +54,7 @@ def test_mequinho_career_dates_are_not_inflated():
     assert profile["has_historical_pack"] and profile["historically_validated_model"] is False
     assert [x["year"] for x in profile["highlights"]] == [1965, 1972, 1973, 1974, 1976]
     assert "13 anos" in profile["highlights"][0]["text"]
-    assert "20 anos" in profile["highlights"][1]["text"]
+    assert "19 anos" in profile["highlights"][1]["text"]
     assert "21 anos" in profile["highlights"][2]["text"]
     assert "22 anos" in profile["highlights"][3]["text"]
 
@@ -125,3 +125,20 @@ def test_history_http_endpoint_is_get_only_and_has_no_path_access(tmp_path):
         server.server_close()
         server.arena_manager.shutdown()
         thread.join(timeout=2)
+
+
+def test_historical_corrections_are_documented():
+    fischer = load_history_profile("fischer")
+    assert fischer["highlights"][0]["year"] == 1958
+    assert "1957/58" in fischer["highlights"][0]["text"]
+    assert "14 anos" in fischer["highlights"][0]["text"]
+    assert load_history_profile("alekhine")["era_label"].startswith("1927–1935; 1937–1946")
+    assert load_history_profile("botvinnik")["era_label"].startswith("1948–1957; 1958–1960; 1961–1963")
+    assert load_history_profile("anand")["era_label"].startswith("2000–2002 (FIDE); 2007–2013")
+    nimz = load_history_profile("nimzowitsch")
+    assert [x["year"] for x in nimz["timeline"]] == [1925, 1927, 1929]
+    assert "fascículos" in nimz["highlights"][0]["text"]
+    assert any("Chess Notes" == s["publisher"] for s in nimz["sources"])
+    mecking = load_history_profile("mequinho")
+    assert any("BrasilBase" == s["publisher"] for s in mecking["sources"])
+    assert any("Folha de S.Paulo" == s["publisher"] for s in mecking["sources"])

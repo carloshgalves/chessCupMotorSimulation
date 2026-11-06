@@ -10,9 +10,17 @@
     {
       "id": "achievement-1",
       "year": 1925,
-      "text": "Publiquei Meu Sistema, livro em que apresentei ideias estratégicas que marcaram o xadrez.",
+      "text": "Comecei a publicar Meu Sistema em fascículos em 1925; o volume completo foi reunido em 1927.",
       "source_ids": [
-        "source-1"
+        "source-2"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1927,
+      "text": "Concluí em 1927 a publicação integral de Meu Sistema, inicialmente divulgada em fascículos desde 1925.",
+      "source_ids": [
+        "source-2"
       ]
     },
     {
@@ -28,9 +36,17 @@
     {
       "year": 1925,
       "title": "Marco de 1925",
-      "summary": "Publiquei Meu Sistema, livro em que apresentei ideias estratégicas que marcaram o xadrez.",
+      "summary": "Comecei a publicar Meu Sistema em fascículos em 1925; o volume completo foi reunido em 1927.",
       "source_ids": [
-        "source-1"
+        "source-2"
+      ]
+    },
+    {
+      "year": 1927,
+      "title": "Edição completa de Meu Sistema",
+      "summary": "Concluí em 1927 a publicação integral de Meu Sistema, inicialmente divulgada em fascículos desde 1925.",
+      "source_ids": [
+        "source-2"
       ]
     },
     {
@@ -49,6 +65,13 @@
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/aron-nimzowitsch",
       "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-2",
+      "title": "Edward Winter — histórico editorial de Mein System (1925–1927)",
+      "publisher": "Chess Notes",
+      "url": "https://www.chesshistory.com/winter/extra/mysystem.html",
+      "accessed_at": "2026-11-06"
     }
   ]
 }

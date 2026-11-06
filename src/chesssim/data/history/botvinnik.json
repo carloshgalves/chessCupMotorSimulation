@@ -4,7 +4,7 @@
   "review_status": "reviewed",
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão mundial em três períodos e me dediquei à preparação sistemática no xadrez.",
-  "era_label": "1948–1963",
+  "era_label": "1948–1957; 1958–1960; 1961–1963 (campeão mundial)",
   "portrait": null,
   "highlights": [
     {
@@ -12,7 +12,8 @@
       "year": 1948,
       "text": "Venci o torneio organizado para definir o novo campeão mundial.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "source-4"
       ]
     },
     {
@@ -20,7 +21,8 @@
       "year": 1958,
       "text": "Recuperei o título mundial em uma revanche contra Vasily Smyslov.",
       "source_ids": [
-        "source-2"
+        "source-2",
+        "source-4"
       ]
     },
     {
@@ -28,7 +30,8 @@
       "year": 1961,
       "text": "Recuperei novamente o título mundial ao enfrentar Mikhail Tal.",
       "source_ids": [
-        "source-3"
+        "source-3",
+        "source-4"
       ]
     }
   ],
@@ -38,7 +41,8 @@
       "title": "Marco de 1948",
       "summary": "Venci o torneio organizado para definir o novo campeão mundial.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "source-4"
       ]
     },
     {
@@ -46,7 +50,8 @@
       "title": "Marco de 1958",
       "summary": "Recuperei o título mundial em uma revanche contra Vasily Smyslov.",
       "source_ids": [
-        "source-2"
+        "source-2",
+        "source-4"
       ]
     },
     {
@@ -54,7 +59,8 @@
       "title": "Marco de 1961",
       "summary": "Recuperei novamente o título mundial ao enfrentar Mikhail Tal.",
       "source_ids": [
-        "source-3"
+        "source-3",
+        "source-4"
       ]
     }
   ],
@@ -79,6 +85,13 @@
       "publisher": "Chess.com",
       "url": "https://www.chess.com/article/view/world-chess-champions",
       "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-4",
+      "title": "FIDE Chess Museum — Mikhail Botvinnik",
+      "publisher": "FIDE",
+      "url": "https://museum.fide.com/champions/michael-botvinnik",
+      "accessed_at": "2026-11-06"
     }
   ]
 }

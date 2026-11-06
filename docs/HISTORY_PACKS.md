@@ -73,4 +73,16 @@ Para inserir novo personagem: criar JSON no padrão, manter `slug` no elenco, pr
 
 ## Nota de verificação — Henrique Mecking
 
-A cronologia foi conferida antes da publicação: campeão brasileiro aos **13 anos** (1965), grande mestre aos **20** (1972), vencedor do Interzonal de Petrópolis aos **21** (1973) e participante dos Candidatos aos **22** (1974); venceu também Manila em 1976. A narrativa não usa 15/16/21 para os três primeiros marcos, pois essas idades misturariam eventos distintos. O pack referencia CEX, Xadrez M.A.T. e Chess.com; a voz permanece editorial.
+A cronologia foi conferida antes da publicação: campeão brasileiro aos **13 anos** (1965), requisitos de grande mestre aos **19** (janeiro de 1972; formalização pela FIDE posteriormente), vencedor do Interzonal de Petrópolis aos **21** (1973) e participante dos Candidatos aos **22** (1974); venceu também Manila em 1976. A narrativa não usa 15/16/21 para os três primeiros marcos, pois essas idades misturariam eventos distintos. O pack referencia CEX, Xadrez M.A.T. e Chess.com; a voz permanece editorial.
+
+
+## Correções documentais da revisão da PR #54
+
+- **Fischer:** o torneio de 1957/58 terminou em **10 de janeiro de 1958** (Fischer aos 14 anos); `year=1958`.
+- **Alekhine:** reinados separados por Euwe: **1927–1935 e 1937–1946** (FIDE Chess Museum).
+- **Botvinnik:** reinados **1948–1957, 1958–1960, 1961–1963** (FIDE Chess Museum).
+- **Anand:** distinguir campeão mundial FIDE **2000–2002** do título unificado **2007–2013**.
+- **Nimzowitsch:** *Mein System* teve fascículos em **1925–1926** e edição reunida em **1927** (Edward Winter/Chess Notes).
+- **Mequinho:** brasileiro absoluto de **1965** confirmado por tabela de evento (BrasilBase), título de GM conquistado aos **19 anos** em 13/01/1972, com reconhecimento FIDE posterior (Folha). O Chess.com menciona 1966/1967, registro conflitante que **não** elimina o campeonato de 1965.
+
+A presença de `review_status=reviewed` representa revisão de coerência de fontes e dados históricos do pack, **não** afirma autenticação de voz, endosso do atleta ou fidelidade da personalidade de motor. A trilha documental adicional está em `docs/HISTORY_FACT_CHECK.md`.
