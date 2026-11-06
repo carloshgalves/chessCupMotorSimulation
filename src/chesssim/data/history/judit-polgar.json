@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui pioneira na elite absoluta e bati um recorde de precocidade para o título de grande mestre.",
   "era_label": "1991–2005",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/judit-polgar.jpg",
+    "alt": "judit-polgar em Hoogovens Chess Tournament, Wijk aan Zee (1998-01-17)",
+    "author": "Fotoburo de Boer",
+    "license": "CC0 1.0",
+    "source_url": "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/a17d9a6f-d4af-cfff-84da-19917979bd71",
+    "verified_at": "2026-11-06",
+    "event": "Hoogovens Chess Tournament, Wijk aan Zee",
+    "event_date": "1998-01-17",
+    "rights_holder": "Noord-Hollands Archief",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "34cb980a26a826580dbb020641ad74bbef48fa104f32ddc2882bbbea99e65205",
+    "derivative_note": "Recorte quadrado e redução para 480×480 px a partir de fotografia oficial de torneio.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",
