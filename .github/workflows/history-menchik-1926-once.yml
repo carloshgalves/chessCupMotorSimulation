@@ -2,7 +2,7 @@ name: History Menchik 1926 public domain frontispiece - one shot
 on:
   push:
     branches: [feat/history-remaining-players-47]
-    paths: [.github/workflows/history-menchik-1926-once.yml]
+    paths: [.github/workflows/history-menchik-1926-once.yml, scripts/acquire_menchik_1926.py]
 permissions: {contents: write}
 jobs:
   import:
