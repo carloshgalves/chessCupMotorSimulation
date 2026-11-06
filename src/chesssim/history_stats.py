@@ -279,9 +279,10 @@ def list_stats(workspace: Path, slug: str) -> dict:
                     meta.get("schema") != "chesssim-arena-session-v1" or
                     meta.get("id") != session.name or
                     not isinstance(meta.get("config"), dict) or
-                    set((meta["config"].get("white"),meta["config"].get("black"))) !=
-                    set(meta["config"].get(k) for k in ("white", "black")) or
-                    any(meta["config"].get(k) not in names for k in ("white", "black"))):
+                    type(meta["config"].get("white")) is not str or
+                    type(meta["config"].get("black")) is not str or
+                    meta["config"]["white"] == meta["config"]["black"] or
+                    any(meta["config"][k] not in names for k in ("white", "black"))):
                 raise InvalidStats("Sessão da Arena inválida")
             if slug in (meta["config"]["white"], meta["config"]["black"]):
                 runs.add(run_id)
