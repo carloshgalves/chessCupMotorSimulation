@@ -63,7 +63,7 @@ const fetch=async(url,options)=>{
     totals:{tournaments:0,duels:0,games:0,completed:0,wins:0,draws:0,losses:0,incomplete:0},
     opponents:[],
     coverage:{sessions_seen:0,tournaments_seen:0,candidate_games:0,
-              verified_games:0,rejected_games:0,rejected_records:0,
+              verified_games:0,arena_verified_games:0,tournament_verified_games:0,rejected_games:0,rejected_records:0,
               excluded_attempts:0,failed_attempts:0,duplicate_records:0,partial:false}
   })};
   if(url==="/api/history/players/anand/games") return {
