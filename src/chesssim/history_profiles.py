@@ -21,6 +21,7 @@ _FIRST_PERSON = (
     "Mantive ", "Disputei ", "Publiquei ", "Tornei-me ",
     "Alcancei ", "Recebi ", "Recuperei ", "Voltei ", "Concluí ",
     "Joguei ", "Desenvolvi ", "Ajudei ", "Comecei ",
+    "Dividi ", "Empatei ", "Realizei ", "Terminei ",
 )
 
 
@@ -43,7 +44,7 @@ def _url(value: object, name: str) -> str:
 
 
 def _assert_year(value: object) -> None:
-    if type(value) is not int or not 1800 <= value <= 2026:
+    if type(value) is not int or not 1700 <= value <= 2026:
         raise ValueError("Ano histórico inválido")
 
 

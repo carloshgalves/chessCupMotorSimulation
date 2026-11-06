@@ -183,3 +183,10 @@ def test_tournament_photo_candidates_are_offline_and_license_checked():
     assert all(r["event"] and r["author"] and r["rights_holder"] for r in rows)
     have = [load_history_profile(r["slug"])["portrait"] is not None for r in rows]
     assert not any(have) or all(have), "Portrait import must complete as one transaction"
+
+
+def test_pre_1800_historical_year_is_supported():
+    from chesssim.history_profiles import _assert_year
+    _assert_year(1749)
+    with pytest.raises(ValueError):
+        _assert_year(1699)
