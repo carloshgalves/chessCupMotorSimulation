@@ -104,8 +104,21 @@ def _read(root: Path, relative: Path, limit: int) -> bytes:
 
 
 def _json(root: Path, relative: Path, limit: int) -> dict:
+    def unique_pairs(pairs):
+        data = {}
+        for key, value in pairs:
+            if key in data:
+                raise InvalidCatalogue("Chave duplicada em JSON")
+            data[key] = value
+        return data
+
+    def reject_nonfinite(value):
+        raise InvalidCatalogue("Constante numérica inválida: " + value)
+
     try:
-        result = json.loads(_read(root, relative, limit).decode("utf-8"))
+        result = json.loads(_read(root, relative, limit).decode("utf-8"),
+                            object_pairs_hook=unique_pairs,
+                            parse_constant=reject_nonfinite)
     except (UnicodeError, ValueError, RecursionError) as exc:
         raise InvalidCatalogue("Metadados inválidos") from exc
     if not isinstance(result, dict):
