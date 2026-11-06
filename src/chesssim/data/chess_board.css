@@ -1,0 +1,9 @@
+/* Canonical 8×8 board. Reused by watch, Arena viewer and History replay. */
+.board{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));aspect-ratio:1 / 1;width:100%;min-width:0;min-height:0;container-type:inline-size;overflow:hidden;border-radius:4px}
+.square{position:relative;display:grid;place-items:center;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;user-select:none}
+.square .piece-glyph{display:grid;place-items:center;width:100%;height:100%;font-family:"DejaVu Sans","Noto Sans Symbols 2","Segoe UI Symbol",sans-serif;font-size:clamp(16px,9.4cqw,68px);line-height:1}
+.square.light{background:#e5e4d1;color:#1c2b30}.square.dark{background:#72989d;color:#162933}
+.square.last{box-shadow:inset 0 0 0 5px #e2b859}
+.square.whitepiece .piece-glyph{color:#faf7eb;-webkit-text-stroke:1.15px #192933;text-shadow:0 2px 1px #12262dcc,1px 0 1px #12262dcc}
+.square.blackpiece .piece-glyph{color:#15232b;-webkit-text-stroke:1.15px #f7efdf;text-shadow:0 2px 1px #0d1a20cc,0 0 1px #f7efdf}
+.square.coordinate::after{content:attr(data-coordinate);position:absolute;bottom:3px;right:4px;font:600 9px system-ui;color:#192e35a6}
