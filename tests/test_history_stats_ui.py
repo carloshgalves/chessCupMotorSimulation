@@ -44,7 +44,8 @@ def test_stats_assets_do_not_leak_to_history_or_engines():
     assert "ChessSimHistoryStats.suspend" in history
     assert "ChessSimHistoryStats.resume" in history
     assert "No simulador" in html
-    assert "carreira real" in html
+    assert "Não são feitos históricos" in html
+    assert "rating FIDE" in html
     assert "history-stats-warning" in css
     for token in ("innerHTML", "eval(", "document.write", "WebSocket",
                   'method:"POST"', "Stockfish", "Rodent", "localStorage"):
