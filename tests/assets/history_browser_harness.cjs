@@ -56,6 +56,16 @@ const fetch=async(url,options)=>{
   calls.push({url,options});
   if(url==="/api/history/players") return {ok:true,json:async()=>({players:index})};
   if(url==="/api/history/players/anand") return {ok:true,json:async()=>profile};
+  if(url==="/api/history/players/anand/stats") return {
+    ok:true,json:async()=>({
+      schema:"chesssim-history-stats-v1",slug:"anand",
+      source_scope:{kind:"configured_arena_workspace"},
+      run_count:0,tournaments_participated:0,duels_count:0,
+      completed_games:0,wins:0,draws:0,losses:0,incomplete_games:0,
+      head_to_head:[],coverage:{complete:true,runs_scanned:0,
+        attempts_scanned:0,games_accepted:0,games_excluded:0,sources_rejected:0}
+    })
+  };
   if(url==="/api/history/players/anand/games") return {
     ok:true,json:async()=>({
       schema:"chesssim-history-games-v1",slug:"anand",count:0,limit:5,games:[]
@@ -69,6 +79,8 @@ vm.runInContext(fs.readFileSync(process.argv[3],"utf8"),ctx,
                 {filename:"chess_board.js",timeout:3000});
 vm.runInContext(fs.readFileSync(process.argv[4],"utf8"),ctx,
                 {filename:"history_replay.js",timeout:3000});
+vm.runInContext(fs.readFileSync(process.argv[5],"utf8"),ctx,
+                {filename:"history_stats.js",timeout:3000});
 vm.runInContext(source,ctx,{filename:"history.js",timeout:3000});
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function descendants(node) {
@@ -107,12 +119,14 @@ function descendants(node) {
   await tick();
   assert.equal($("history-games-section").hidden,false);
   assert($("history-games-status").textContent.includes("Nenhuma partida"));
+  assert($("history-stats-status").textContent.includes("Sem partidas verificadas"));
+  assert.equal($("history-stats-metrics").children.length,8);
   $("history-back").events.click();
   assert.equal($("history-position").textContent.includes("1 de 3"),true);
   $("tab-arena").events.click();
   assert.equal($("arena-view").hidden,false);
   assert.equal($("history-view").hidden,true);
-  assert.equal(calls.length,3);
+  assert.equal(calls.length,4);
   assert(calls.every(call=>!call.url.includes("token") && call.options.cache==="no-store"));
   console.log("History navigation, first-person facts, safe source links and photo credits: PASS");
 })().catch(err=>{console.error(err);process.exitCode=1;});
