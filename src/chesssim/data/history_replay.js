@@ -128,7 +128,9 @@
       ["COMPLETED","INCOMPLETE"].includes(game.status) &&
       typeof game.white_slug === "string" && typeof game.black_slug === "string" &&
       typeof game.source === "object" && game.source !== null &&
-      (game.status !== "COMPLETED" ||
+      typeof game.pgn_sha256 === "string" &&
+      /^[a-f0-9]{64}$/.test(game.pgn_sha256) &&
+      (game.status === "INCOMPLETE" ? game.result === null :
        ["1-0","0-1","1/2-1/2"].includes(game.result));
   }
   function playerName(playerSlug) {
@@ -208,6 +210,7 @@
         data.game.white_slug !== item.white_slug ||
         data.game.black_slug !== item.black_slug ||
         data.game.status !== item.status ||
+        data.game.result !== item.result ||
         data.game.pgn_sha256 !== item.pgn_sha256 ||
         !Array.isArray(data.states) || data.states.length < 1 ||
         data.states.length > 2001) return false;
