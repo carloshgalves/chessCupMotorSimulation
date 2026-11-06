@@ -114,7 +114,7 @@ def test_history_http_endpoint_is_get_only_and_has_no_path_access(tmp_path):
         with urlopen(base + "/api/history/players/capablanca") as response:
             profile = json.load(response)
             assert profile["has_historical_pack"]
-            assert profile["review_status"] == "pending"
+            assert profile["review_status"] == "reviewed"
         photo = load_history_profile("mequinho")["portrait"]
         if photo:
             with urlopen(base + "/api/history/portraits/mequinho.jpg") as response:
@@ -245,3 +245,33 @@ def test_history_browser_navigation_sources_credits_and_syntax():
                           capture_output=True, text=True, timeout=12, check=False)
     assert test.returncode == 0, test.stdout + test.stderr
     assert "photo credits: PASS" in test.stdout
+
+
+def test_all_42_expansion_packs_have_event_specific_audit_evidence():
+    """An original generic biography URL alone does not confer reviewed status."""
+    initial = {"steinitz", "lasker", "alekhine", "botvinnik", "tal",
+               "petrosian", "spassky", "fischer", "karpov", "kasparov",
+               "anand", "topalov", "anderssen", "morphy", "tarrasch",
+               "marshall", "rubinstein", "nimzowitsch", "reti",
+               "korchnoi", "larsen", "mequinho"}
+    expanded = {p.slug for p in load_roster()} - initial
+    assert len(expanded) == 42
+    for slug in expanded:
+        profile = load_history_profile(slug)
+        assert profile["review_status"] == "reviewed"
+        sources = {src["id"] for src in profile["sources"]}
+        assert len(profile["sources"]) >= 2, slug
+        for event in [*profile["highlights"], *profile["timeline"]]:
+            assert any(ref.startswith("audit-") for ref in event["source_ids"]), slug
+            assert set(event["source_ids"]).issubset(sources), slug
+
+
+def test_history_editorial_discrepancies_do_not_recur():
+    assert load_history_profile("smyslov")["timeline"][-1]["year"] == 1984
+    gligoric = load_history_profile("gligoric")
+    assert "segunda" in gligoric["highlights"][1]["text"]
+    pillsbury = load_history_profile("pillsbury")
+    assert "Showalter" in pillsbury["highlights"][1]["text"]
+    polgar = load_history_profile("judit-polgar")
+    assert "15 anos" in polgar["highlights"][0]["text"]
+    assert "meses" not in polgar["highlights"][0]["text"]
