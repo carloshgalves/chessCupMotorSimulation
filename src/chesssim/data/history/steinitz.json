@@ -1,0 +1,54 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "steinitz",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui o primeiro campeão mundial oficial e ajudei a transformar a compreensão do jogo posicional.",
+  "era_label": "1886–1894",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1886,
+      "text": "Conquistei o primeiro título mundial oficial ao derrotar Johannes Zukertort.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1889,
+      "text": "Defendi o título mundial em um match contra Mikhail Chigorin.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1886,
+      "title": "Marco de 1886",
+      "summary": "Conquistei o primeiro título mundial oficial ao derrotar Johannes Zukertort.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1889,
+      "title": "Marco de 1889",
+      "summary": "Defendi o título mundial em um match contra Mikhail Chigorin.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil de steinitz",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/wilhelm-steinitz",
+      "accessed_at": "2026-11-05"
+    }
+  ]
+}

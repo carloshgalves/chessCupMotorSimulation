@@ -1,0 +1,77 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "nimzowitsch",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui um dos formuladores do hipermodernismo e escrevi sobre estratégia e estrutura de peões.",
+  "era_label": "1925–1929",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1925,
+      "text": "Comecei a publicar Meu Sistema em fascículos em 1925; o volume completo foi reunido em 1927.",
+      "source_ids": [
+        "source-2"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1927,
+      "text": "Concluí em 1927 a publicação integral de Meu Sistema, inicialmente divulgada em fascículos desde 1925.",
+      "source_ids": [
+        "source-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1929,
+      "text": "Venci o torneio internacional de Carlsbad.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1925,
+      "title": "Marco de 1925",
+      "summary": "Comecei a publicar Meu Sistema em fascículos em 1925; o volume completo foi reunido em 1927.",
+      "source_ids": [
+        "source-2"
+      ]
+    },
+    {
+      "year": 1927,
+      "title": "Edição completa de Meu Sistema",
+      "summary": "Concluí em 1927 a publicação integral de Meu Sistema, inicialmente divulgada em fascículos desde 1925.",
+      "source_ids": [
+        "source-2"
+      ]
+    },
+    {
+      "year": 1929,
+      "title": "Marco de 1929",
+      "summary": "Venci o torneio internacional de Carlsbad.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil de nimzowitsch",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/aron-nimzowitsch",
+      "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-2",
+      "title": "Edward Winter — histórico editorial de Mein System (1925–1927)",
+      "publisher": "Chess Notes",
+      "url": "https://www.chesshistory.com/winter/extra/mysystem.html",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "lasker",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui o segundo campeão mundial e mantive a coroa por 27 anos.",
+  "era_label": "1894–1921",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1894,
+      "text": "Derrotei Wilhelm Steinitz e me tornei campeão mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1921,
+      "text": "Mantive o título mundial desde 1894 até 1921, o mais longo reinado da história.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1894,
+      "title": "Marco de 1894",
+      "summary": "Derrotei Wilhelm Steinitz e me tornei campeão mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1921,
+      "title": "Marco de 1921",
+      "summary": "Mantive o título mundial desde 1894 até 1921, o mais longo reinado da história.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil de lasker",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/emanuel-lasker",
+      "accessed_at": "2026-11-05"
+    }
+  ]
+}

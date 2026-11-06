@@ -1,0 +1,77 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "tal",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui conhecido pelo jogo de ataque e cheguei à coroa mundial após vencer o ciclo de Candidatos.",
+  "era_label": "1957–1961",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1957,
+      "text": "Conquistei o Campeonato Soviético pela primeira vez.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1959,
+      "text": "Venci o Torneio de Candidatos e ganhei o direito de desafiar Botvinnik.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1960,
+      "text": "Derrotei Mikhail Botvinnik e me tornei campeão mundial.",
+      "source_ids": [
+        "source-2"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1957,
+      "title": "Marco de 1957",
+      "summary": "Conquistei o Campeonato Soviético pela primeira vez.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1959,
+      "title": "Marco de 1959",
+      "summary": "Venci o Torneio de Candidatos e ganhei o direito de desafiar Botvinnik.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1960,
+      "title": "Marco de 1960",
+      "summary": "Derrotei Mikhail Botvinnik e me tornei campeão mundial.",
+      "source_ids": [
+        "source-2"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil de tal",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/mikhail-tal",
+      "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-2",
+      "title": "Chess.com — histórico e resultados",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/world-chess-champions",
+      "accessed_at": "2026-11-05"
+    }
+  ]
+}

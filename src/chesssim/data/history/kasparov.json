@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "kasparov",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão mundial em uma longa era de rivalidade com Anatoly Karpov.",
+  "era_label": "1985–2000",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1985,
+      "text": "Derrotei Anatoly Karpov e me tornei campeão mundial aos 22 anos.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1993,
+      "text": "Defendi o título mundial contra Nigel Short em um match fora da FIDE.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1995,
+      "text": "Defendi meu título contra Viswanathan Anand em Nova York.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1985,
+      "title": "Marco de 1985",
+      "summary": "Derrotei Anatoly Karpov e me tornei campeão mundial aos 22 anos.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1993,
+      "title": "Marco de 1993",
+      "summary": "Defendi o título mundial contra Nigel Short em um match fora da FIDE.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1995,
+      "title": "Marco de 1995",
+      "summary": "Defendi meu título contra Viswanathan Anand em Nova York.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — histórico e resultados",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/world-chess-champions",
+      "accessed_at": "2026-11-05"
+    }
+  ]
+}

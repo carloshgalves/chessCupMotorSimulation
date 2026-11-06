@@ -1,0 +1,91 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "petrosian",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão mundial e construí uma carreira marcada pela defesa e pela profilaxia.",
+  "era_label": "1963–1969",
+  "portrait": {
+    "local_asset": "history/portraits/petrosian.jpg",
+    "alt": "petrosian em IBM International Chess Tournament, Amsterdam (1973-07-17)",
+    "author": "Rob Croes / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Eerste_ronde_IBM-schaaktoernooi,_Petrosjan,_Bestanddeelnr_926-5520.jpg",
+    "verified_at": "2026-11-06",
+    "event": "IBM International Chess Tournament, Amsterdam",
+    "event_date": "1973-07-17",
+    "rights_holder": "Nationaal Archief (Anefo)",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "b1750e4ba1b75da948b62d18162716f70c0f904838315379919f95b14ddbe9a2",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1963,
+      "text": "Derrotei Mikhail Botvinnik e conquistei o campeonato mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1966,
+      "text": "Defendi a coroa mundial contra Boris Spassky.",
+      "source_ids": [
+        "source-2"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1975,
+      "text": "Conquistei meu quarto Campeonato Soviético.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1963,
+      "title": "Marco de 1963",
+      "summary": "Derrotei Mikhail Botvinnik e conquistei o campeonato mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1966,
+      "title": "Marco de 1966",
+      "summary": "Defendi a coroa mundial contra Boris Spassky.",
+      "source_ids": [
+        "source-2"
+      ]
+    },
+    {
+      "year": 1975,
+      "title": "Marco de 1975",
+      "summary": "Conquistei meu quarto Campeonato Soviético.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil de petrosian",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/tigran-petrosian",
+      "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-2",
+      "title": "Chess.com — histórico e resultados",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/world-chess-champions",
+      "accessed_at": "2026-11-05"
+    }
+  ]
+}

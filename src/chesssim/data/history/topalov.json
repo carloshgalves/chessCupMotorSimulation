@@ -1,0 +1,75 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "topalov",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão mundial da FIDE e disputei o match de reunificação da coroa.",
+  "era_label": "2005–2006 (FIDE)",
+  "portrait": {
+    "local_asset": "history/portraits/topalov.jpg",
+    "alt": "topalov em Tata Steel Chess Tournament, Wijk aan Zee (2012-01)",
+    "author": "Stefan64",
+    "license": "CC BY-SA 3.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:VeselinTopalov12a.jpg",
+    "verified_at": "2026-11-06",
+    "event": "Tata Steel Chess Tournament, Wijk aan Zee",
+    "event_date": "2012-01",
+    "rights_holder": "Stefan64",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+    "sha256": "5dbcbf13ab19ca12e67040a7eea063f85f299f37a8051e0867d452488672ad01",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2005,
+      "text": "Venci o Campeonato Mundial da FIDE sem perder partidas no torneio.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2006,
+      "text": "Disputei o match de reunificação do título mundial contra Vladimir Kramnik.",
+      "source_ids": [
+        "source-2"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2005,
+      "title": "Marco de 2005",
+      "summary": "Venci o Campeonato Mundial da FIDE sem perder partidas no torneio.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2006,
+      "title": "Marco de 2006",
+      "summary": "Disputei o match de reunificação do título mundial contra Vladimir Kramnik.",
+      "source_ids": [
+        "source-2"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — histórico e resultados",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/strongest-chess-players-from-1993-2006",
+      "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-2",
+      "title": "Chess.com — perfil de topalov",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/veselin-topalov",
+      "accessed_at": "2026-11-05"
+    }
+  ]
+}

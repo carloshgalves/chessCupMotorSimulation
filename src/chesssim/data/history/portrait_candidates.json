@@ -1,0 +1,111 @@
+{
+  "schema": "history-portrait-candidates-v1",
+  "checked_at": "2026-11-06",
+  "candidates": [
+    {
+      "slug": "mequinho",
+      "file": "Henrique Mecking 1978.jpg",
+      "event": "Hoogovens Chess Tournament",
+      "event_date": "1978-01-25",
+      "author": "Koen Suyk / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Henrique_Mecking_1978.jpg",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "larsen",
+      "file": "BentLarsen.jpg",
+      "event": "Hoogovens Chess Tournament",
+      "event_date": "1961-01-22",
+      "author": "Harry Pot / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:BentLarsen.jpg",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "spassky",
+      "file": "Interpolis schaaktoernooi in Tilburg, B Spassky, Bestanddeelnr 931-0359.jpg",
+      "event": "Interpolis Chess Tournament, Tilburg",
+      "event_date": "1980-09-23",
+      "author": "Hans van Dijk / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Interpolis_schaaktoernooi_in_Tilburg,_B_Spassky,_Bestanddeelnr_931-0359.jpg",
+      "centering": [
+        0.5,
+        0.4
+      ]
+    },
+    {
+      "slug": "petrosian",
+      "file": "Eerste ronde IBM-schaaktoernooi, Petrosjan, Bestanddeelnr 926-5520.jpg",
+      "event": "IBM International Chess Tournament, Amsterdam",
+      "event_date": "1973-07-17",
+      "author": "Rob Croes / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Eerste_ronde_IBM-schaaktoernooi,_Petrosjan,_Bestanddeelnr_926-5520.jpg",
+      "centering": [
+        0.66,
+        0.37
+      ]
+    },
+    {
+      "slug": "karpov",
+      "file": "Ohra schaaktoernooi Karpov, Bestanddeelnr 933-3781.jpg",
+      "event": "OHRA Chess Tournament, Amsterdam",
+      "event_date": "1985-07-16",
+      "author": "Rob Bogaerts / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Ohra_schaaktoernooi_Karpov,_Bestanddeelnr_933-3781.jpg",
+      "centering": [
+        0.52,
+        0.42
+      ]
+    },
+    {
+      "slug": "anand",
+      "file": "VAnand10.jpg",
+      "event": "Corus Chess Tournament, Wijk aan Zee",
+      "event_date": "2010-01",
+      "author": "Stefan64",
+      "rights_holder": "Stefan64",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:VAnand10.jpg",
+      "centering": [
+        0.55,
+        0.5
+      ]
+    },
+    {
+      "slug": "topalov",
+      "file": "VeselinTopalov12a.jpg",
+      "event": "Tata Steel Chess Tournament, Wijk aan Zee",
+      "event_date": "2012-01",
+      "author": "Stefan64",
+      "rights_holder": "Stefan64",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:VeselinTopalov12a.jpg",
+      "centering": [
+        0.5,
+        0.38
+      ]
+    }
+  ]
+}

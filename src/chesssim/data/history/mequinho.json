@@ -1,0 +1,148 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "mequinho",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão brasileiro aos 13 anos, alcancei os requisitos para grande mestre aos 19 e venci dois Interzonais.",
+  "era_label": "1965–1977",
+  "portrait": {
+    "local_asset": "history/portraits/mequinho.jpg",
+    "alt": "mequinho em Hoogovens Chess Tournament (1978-01-25)",
+    "author": "Koen Suyk / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Henrique_Mecking_1978.jpg",
+    "verified_at": "2026-11-06",
+    "event": "Hoogovens Chess Tournament",
+    "event_date": "1978-01-25",
+    "rights_holder": "Nationaal Archief (Anefo)",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "7085e53ae15900e6dc469dbf0bcb829d398005653ea84b0fb034c8d6535dd4cc",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1965,
+      "text": "Conquistei o Campeonato Brasileiro absoluto de xadrez aos 13 anos.",
+      "source_ids": [
+        "source-5",
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1972,
+      "text": "Alcancei os requisitos para o título de grande mestre internacional aos 19 anos, em Hastings, em janeiro de 1972; a FIDE formalizou o título depois.",
+      "source_ids": [
+        "source-4",
+        "source-2"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1973,
+      "text": "Venci o Interzonal de Petrópolis aos 21 anos e garanti uma vaga no ciclo de Candidatos.",
+      "source_ids": [
+        "source-3"
+      ]
+    },
+    {
+      "id": "achievement-4",
+      "year": 1974,
+      "text": "Disputei o match de Candidatos contra Viktor Korchnoi aos 22 anos.",
+      "source_ids": [
+        "source-3"
+      ]
+    },
+    {
+      "id": "achievement-5",
+      "year": 1976,
+      "text": "Venci o Interzonal de Manila e conquistei nova classificação ao Torneio de Candidatos.",
+      "source_ids": [
+        "source-3"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Henrique Mecking — acervo e biografia",
+      "publisher": "CEX",
+      "url": "https://www.cex.org.br/mestres/mecking",
+      "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-2",
+      "title": "Grandes Mestres Brasileiros",
+      "publisher": "Xadrez M.A.T.",
+      "url": "https://xadrezmat.com/gmsbrasileiros/",
+      "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-3",
+      "title": "Henrique Mecking — perfil e trajetória",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/henrique-mecking",
+      "accessed_at": "2026-11-05"
+    },
+    {
+      "id": "source-4",
+      "title": "Folha de S.Paulo — Mequinho e o título de grande mestre em janeiro de 1972",
+      "publisher": "Folha de S.Paulo",
+      "url": "https://www1.folha.uol.com.br/esporte/2022/01/sou-o-profeta-do-apocalipse-diz-1o-brasileiro-grande-mestre-de-xadrez.shtml",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "source-5",
+      "title": "BrasilBase — Campeonato Brasileiro absoluto de 1965 (classificação)",
+      "publisher": "BrasilBase",
+      "url": "https://brasilbase.pro.br/bca1965.htm",
+      "accessed_at": "2026-11-06"
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1965,
+      "title": "Campeão brasileiro",
+      "summary": "Conquistei o Campeonato Brasileiro absoluto de xadrez aos 13 anos.",
+      "source_ids": [
+        "source-5",
+        "source-1"
+      ]
+    },
+    {
+      "year": 1972,
+      "title": "Título de grande mestre",
+      "summary": "Alcancei os requisitos para o título de grande mestre internacional aos 19 anos, em Hastings, em janeiro de 1972; a FIDE formalizou o título depois.",
+      "source_ids": [
+        "source-4",
+        "source-2"
+      ]
+    },
+    {
+      "year": 1973,
+      "title": "Interzonal de Petrópolis",
+      "summary": "Venci o Interzonal de Petrópolis aos 21 anos e garanti uma vaga no ciclo de Candidatos.",
+      "source_ids": [
+        "source-3"
+      ]
+    },
+    {
+      "year": 1974,
+      "title": "Torneio de Candidatos",
+      "summary": "Disputei o match de Candidatos contra Viktor Korchnoi aos 22 anos.",
+      "source_ids": [
+        "source-3"
+      ]
+    },
+    {
+      "year": 1976,
+      "title": "Interzonal de Manila",
+      "summary": "Venci o Interzonal de Manila e conquistei nova classificação ao Torneio de Candidatos.",
+      "source_ids": [
+        "source-3"
+      ]
+    }
+  ]
+}

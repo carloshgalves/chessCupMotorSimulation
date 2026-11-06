@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "korchnoi",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Disputei duas vezes o título mundial contra Anatoly Karpov e permaneci competitivo por décadas.",
+  "era_label": "1978–2011",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1978,
+      "text": "Disputei o título mundial contra Anatoly Karpov.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1981,
+      "text": "Voltei a desafiar Anatoly Karpov pelo campeonato mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2011,
+      "text": "Conquistei o Campeonato Suíço aos 80 anos.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1978,
+      "title": "Marco de 1978",
+      "summary": "Disputei o título mundial contra Anatoly Karpov.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1981,
+      "title": "Marco de 1981",
+      "summary": "Voltei a desafiar Anatoly Karpov pelo campeonato mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2011,
+      "title": "Marco de 2011",
+      "summary": "Conquistei o Campeonato Suíço aos 80 anos.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil de korchnoi",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/viktor-korchnoi",
+      "accessed_at": "2026-11-05"
+    }
+  ]
+}

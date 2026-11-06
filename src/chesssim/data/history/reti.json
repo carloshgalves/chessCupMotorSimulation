@@ -1,0 +1,54 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "reti",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Ajudei a difundir ideias hipermodernas e uma abertura que leva meu nome.",
+  "era_label": "1923–1924",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1923,
+      "text": "Desenvolvi a abertura que ficou conhecida pelo meu sobrenome.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1924,
+      "text": "Derrotei José Raúl Capablanca no torneio de Nova York, encerrando sua longa sequência sem derrotas.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1923,
+      "title": "Marco de 1923",
+      "summary": "Desenvolvi a abertura que ficou conhecida pelo meu sobrenome.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1924,
+      "title": "Marco de 1924",
+      "summary": "Derrotei José Raúl Capablanca no torneio de Nova York, encerrando sua longa sequência sem derrotas.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil de reti",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/richard-reti",
+      "accessed_at": "2026-11-05"
+    }
+  ]
+}
