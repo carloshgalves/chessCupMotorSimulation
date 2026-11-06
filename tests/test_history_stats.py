@@ -467,7 +467,7 @@ def test_second_game_cannot_keep_first_games_colors(tmp_path):
 
 
 def test_aggregate_is_truly_read_only(tmp_path):
-    folder=arena_session(tmp_path)
+    arena_session(tmp_path)
     root,state,match=tournament_run(tmp_path)
     register_tournament(root,state,match)
     files=sorted(p for p in tmp_path.rglob("*") if p.is_file())
