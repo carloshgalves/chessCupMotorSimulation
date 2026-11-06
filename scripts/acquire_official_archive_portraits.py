@@ -65,7 +65,9 @@ def source_download(row: dict) -> tuple[str, str]:
         raise ValueError("Archive landing page does not identify selected player")
     origin = urlsplit(source).hostname
     if origin == "www.nationaalarchief.nl":
-        decoded = page.replace("\\u0022", '"').replace("\\/", "/")
+        decoded = page.replace("\\u0022", '"')
+        for _ in range(4):
+            decoded = decoded.replace("\\/", "/")  # Drupal double-escaped JSON
         if "Nationaal Archief, CC0" not in decoded:
             raise ValueError("Archive does not display a CC0 rights declaration")
         if row["event_date"] not in decoded:
