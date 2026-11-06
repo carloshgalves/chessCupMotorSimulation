@@ -24,6 +24,7 @@ jobs:
             "gallica-thumbnail": "https://gallica.bnf.fr/ark:/12148/btv1b9024663p/thumbnail",
             "national-image-download": "https://service.archief.nl/gaf/api/file/v1/default/7d9cc6b8-9061-4ffa-91d6-3583c339eb4a",
             "holland-image-thumb": "https://images.memorix.nl/ranh/thumb/640x480/bd5c6593-f6ea-00d6-a2af-54aa6b184ee3.jpg",
+            "gelfand-holland": "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/bca2a308-2829-b594-5fc7-7946ed2c642f",
             "picryl-public-domain": "https://picryl.com/media/tournoi-dechecs-alekhine-contre-colle-champion-de-belgique-photographie-de-513146",
           }
           for name, url in urls.items():
@@ -33,6 +34,10 @@ jobs:
                       print(name, "STATUS",res.status,"TYPE",res.headers.get("Content-Type"),"SIZE_READ",len(chunk),"END_URL",res.url[:170],flush=True)
                       if b"<html" in chunk[:2000].lower():
                           txt=chunk.decode("utf-8","ignore")
+                          if name == "gelfand-holland":
+                              print("GELFAND_TITLE",re.findall(r"<title[^>]*>(.*?)</title>",txt,re.I|re.S)[:2],flush=True)
+                              print("GELFAND_OG",re.findall(r'og:(?:title|description|image)"[^>]+',txt,re.I)[:5],flush=True)
+                              print("GELFAND_TOKENS",[(token,txt.lower().find(token)) for token in ("gelf", "korts", "1991","hoogovens")],flush=True)
                           images=re.findall(r'(?:src|href)=["\x27]([^"\x27]+(?:jpg|jpeg|png|webp)[^"\x27]*)',txt,re.I)
                           print(name,"IMAGE_LINKS",images[:6],flush=True)
                           for keyword in ("download","iiif","image","thumb","bestand","media","digital","api/","file"):
