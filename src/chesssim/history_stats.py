@@ -379,6 +379,7 @@ def _tournament_games(root: Path, names: dict[str, str], slug: str,
         ({root / "tournament.json"} if (root / "tournament.json").exists() else set()))
     if len(paths) > MAX_TOURNAMENTS:
         raise InvalidCatalogue("Limite de torneios excedido")
+    physical_count = 0
     for manifest in paths:
         relative = manifest.relative_to(root)
         run = relative.parent
@@ -415,6 +416,17 @@ def _tournament_games(root: Path, names: dict[str, str], slug: str,
                             conflicts.add(folder)
                         else:
                             grouped[folder] = attempt
+                    # Physical attempts not present in the canonical ledger
+                    # may represent crashes or tampering. Report them in
+                    # coverage; never reinterpret them as scored games.
+                    a, b = match["players"]
+                    attempt_root = root / run / "matches" / match["id"] / (
+                        "duels") / (a + "-vs-" + b)
+                    physical = sorted(attempt_root.glob("*/summary.json"))
+                    physical_count += len(physical)
+                    if physical_count > MAX_SUMMARIES:
+                        raise InvalidCatalogue("Limite de tentativas físicas excedido")
+                    declared = set(grouped)
                     excluded = match.get("excluded_attempts", [])
                     if not isinstance(excluded, list) or len(excluded) > MAX_SUMMARIES:
                         _mark(coverage, "excluded_attempt_manifest")
@@ -424,6 +436,16 @@ def _tournament_games(root: Path, names: dict[str, str], slug: str,
                                 coverage["excluded_attempts"] += 1
                             else:
                                 _mark(coverage, "excluded_attempt_manifest")
+                    excluded_names = {
+                        entry.get("folder") for entry in excluded
+                        if isinstance(entry, dict) and
+                        isinstance(entry.get("folder"), str)
+                    } if isinstance(excluded, list) else set()
+                    for physical_summary in physical:
+                        relative_folder = physical_summary.parent.relative_to(root / run)
+                        identifier = relative_folder.as_posix()
+                        if identifier not in declared and identifier not in excluded_names:
+                            _mark(coverage, "unregistered_tournament_attempt")
                     for folder, attempt in grouped.items():
                         coverage["candidate_games"] += 2
                         if folder in conflicts:
