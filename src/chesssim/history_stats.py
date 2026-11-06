@@ -29,11 +29,8 @@ from .tournament import SCHEMA as TOURNAMENT_SCHEMA, _check_bracket
 SCHEMA = "chesssim-history-stats-v1"
 MAX_RUNS = 300
 MAX_ATTEMPTS = 800
-_RUN_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}\Z")
 _ARENA_NAME = re.compile(r"session-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{12}\Z")
 _ATTEMPT_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,79}\Z")
-_MATCH_NAME = re.compile(r"r[0-9]{2}-m[0-9]{2}\Z")
-_RESULTS = {"1-0", "0-1", "1/2-1/2"}
 _STATUSES = {"RUNNING", "COMPLETED", "INCOMPLETE", "FAILED", "INTERRUPTED"}
 
 
