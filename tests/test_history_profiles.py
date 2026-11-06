@@ -31,7 +31,10 @@ def test_all_64_are_accessible_and_22_have_documented_packs():
         assert pack["slug"] == player.slug
         assert pack["name"] == player.name
         assert pack["historically_validated_model"] is False
-        assert pack["portrait"] is None
+        if pack["portrait"] is not None:
+            assert pack["portrait"]["approval_status"] == "approved"
+            assert pack["portrait"]["local_asset"] == f"history/portraits/{player.slug}.jpg"
+            assert pack["portrait"]["source_url"].startswith("https://commons.wikimedia.org/wiki/File:")
         if pack["has_historical_pack"]:
             assert pack["schema"] == SCHEMA
             assert pack["narrative_voice"] == "first_person_editorial"
@@ -142,3 +145,22 @@ def test_historical_corrections_are_documented():
     mecking = load_history_profile("mequinho")
     assert any("BrasilBase" == s["publisher"] for s in mecking["sources"])
     assert any("Folha de S.Paulo" == s["publisher"] for s in mecking["sources"])
+
+
+def test_tournament_photo_candidates_are_offline_and_license_checked():
+    from pathlib import Path
+    import sys
+
+    root = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(root / "scripts"))
+    from materialize_history_portraits import manifest_rows
+
+    rows = manifest_rows()
+    assert len(rows) == 7
+    names = {r["slug"] for r in rows}
+    assert names == {"mequinho", "larsen", "spassky", "petrosian",
+                     "karpov", "anand", "topalov"}
+    assert all(r["license"] in ("CC0 1.0", "CC BY-SA 3.0") for r in rows)
+    assert all(r["event"] and r["author"] and r["rights_holder"] for r in rows)
+    have = [load_history_profile(r["slug"])["portrait"] is not None for r in rows]
+    assert not any(have) or all(have), "Portrait import must complete as one transaction"
