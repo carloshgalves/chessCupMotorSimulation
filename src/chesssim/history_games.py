@@ -238,8 +238,14 @@ def _simulated(workspace: Path, names: dict[str, str]) -> list[_Entry]:
                 raise InvalidCatalogue("Status não reconhecido")
             if status in ("FAILED", "INTERRUPTED"):
                 continue
-            filename = f"jogo_{index}.pgn" if status == "COMPLETED" else f"jogo_{index}.partial.pgn"
-            relative_pgn = relative.parent / filename
+            final = relative.parent / f"jogo_{index}.pgn"
+            partial = relative.parent / f"jogo_{index}.partial.pgn"
+            # Matches persist even an INCOMPLETE terminated game as final PGN;
+            # a currently interrupted run may only have a partial checkpoint.
+            final_path = workspace / final
+            relative_pgn = (final if status == "COMPLETED" or
+                            final_path.exists() or final_path.is_symlink()
+                            else partial)
             raw = _read(workspace, relative_pgn, MAX_PGN_BYTES)
             game = _game(raw)
             white = next((p for p in players if game.headers.get("White") == names[p]), None)
