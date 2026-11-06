@@ -292,7 +292,7 @@ def test_semantically_same_game_in_differently_formatted_pgn_is_deduplicated(tmp
     second = tmp_path / "history-games/games/h-fixture-001.pgn"
     raw = first.read_bytes()
     # Same headers, position and moves, different byte content / SHA.
-    changed = raw.replace(b"1. f3", b"\n1. f3", 1)
+    changed = raw.replace(b"1. f3 e5", b"1. f3   e5", 1)
     assert changed != raw
     second.write_bytes(changed)
     records[1]["sha256"] = sha256(changed).hexdigest()
