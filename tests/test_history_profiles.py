@@ -180,7 +180,7 @@ def test_tournament_photo_candidates_are_offline_and_license_checked():
     names = {r["slug"] for r in rows}
     assert {"mequinho", "larsen", "spassky", "petrosian",
             "karpov", "anand", "topalov"}.issubset(names)
-    assert all(r["license"] in ("CC0 1.0", "CC BY-SA 3.0", "CC BY-SA 2.0", "CC BY 2.0", "Public Domain Mark 1.0") for r in rows)
+    assert all(r["license"] in ("CC0 1.0", "CC BY-SA 3.0", "CC BY-SA 4.0", "CC BY-SA 2.0", "CC BY 2.0", "Public Domain Mark 1.0") for r in rows)
     assert all(r["event"] and r["author"] and r["rights_holder"] for r in rows)
     # Additional photos are acquired in independently reviewable batches.
     for row in rows:
@@ -353,7 +353,7 @@ def test_history_58_documented_portraits_retained_without_orphans():
         profile = load_history_profile(slug)
         assert profile["portrait"] is not None
         assert profile["portrait"]["license"] in {
-            "CC0 1.0", "CC BY-SA 3.0", "CC BY-SA 2.0", "CC BY 2.0",
+            "CC0 1.0", "CC BY-SA 3.0", "CC BY-SA 4.0", "CC BY-SA 2.0", "CC BY 2.0",
             "Public Domain Mark 1.0",
         }
     assert "philidor" in available
