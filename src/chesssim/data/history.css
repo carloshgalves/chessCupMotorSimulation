@@ -72,3 +72,19 @@
 .history-game-card:focus-visible,.history-move-button:focus-visible,.history-replay-buttons button:focus-visible,#history-replay-seek:focus-visible,.history-replay-board:focus-visible{outline:3px solid #ffe39f;outline-offset:3px}
 @media(max-width:850px){.history-replay-layout{grid-template-columns:1fr}.history-replay-board-shell{max-width:460px}}
 @media(max-width:580px){.history-game-list{grid-template-columns:1fr}.history-game-replay{padding:10px}.history-replay-moves{max-height:190px}.history-replay-buttons{gap:5px}}
+
+/* Statistics from local ChessSim runs, not biographical achievements. */
+.history-stats{border-top:1px solid #3a4b51;padding-top:17px;margin:30px 0 10px}
+.history-stats[hidden]{display:none!important}
+.history-stats-disclaimer,.history-stats-definition{font-size:.83rem;color:#c2d2d7;line-height:1.6}
+.history-stats-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}
+.history-stats-metric{min-width:0;background:#1b3038;border:1px solid #52717c;border-radius:11px;padding:12px;display:flex;flex-direction:column;gap:7px}
+.history-stats-label{font-size:.78rem;color:#d3e2e5;line-height:1.4}
+.history-stats-number{font-size:clamp(1.35rem,2.8vw,2rem);font-variant-numeric:tabular-nums;color:#f6e0a1}
+.history-stats h4{font-size:1rem;color:#f5e5bb;margin:15px 0 9px}
+.history-stats-opponent{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#192c34;border:1px solid #465d65;border-radius:8px;padding:9px 12px;margin:6px 0;font-size:.83rem;color:#e8f1f2}
+.history-stats-opponent span{color:#c1d4d9}
+.history-stats-coverage{font-size:.79rem;line-height:1.6;color:#c1d1d5;margin:15px 0 8px}
+.history-stats-warning{color:#ffd39a;border-left:3px solid #ddb673;padding:8px 12px;background:#392b22}
+@media(max-width:850px){.history-stats-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:460px){.history-stats-metrics{gap:8px}.history-stats-metric{padding:10px}}
