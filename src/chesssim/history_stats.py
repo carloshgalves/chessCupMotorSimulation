@@ -135,6 +135,15 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
                             or summary.get("status") not in
                             {"RUNNING", "COMPLETED", "INCOMPLETE", "FAILED"}):
                         raise InvalidCatalogue("Resumo inválido")
+                    session_status = session.get("status")
+                    if session_status not in {
+                        "STARTING", "RUNNING", "COMPLETED", "INCOMPLETE",
+                        "FAILED", "INTERRUPTED",
+                    }:
+                        raise InvalidCatalogue("Status de sessão desconhecido")
+                    if (session_status in {"COMPLETED", "INCOMPLETE", "FAILED"}
+                            and session_status != summary["status"]):
+                        raise InvalidCatalogue("Sessão e resumo possuem status diferentes")
                     if summary["status"] == "FAILED":
                         coverage["failed_attempts"] += 1
                         continue
