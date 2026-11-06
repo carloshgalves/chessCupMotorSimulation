@@ -67,6 +67,8 @@ def acquire(row: dict) -> tuple[bytes, str, str]:
     expected_name = {
         "philidor": "Philidor",
         "nimzowitsch": "Nimzowitsch",
+        "reti": "Reti",
+        "marshall": "Marshall",
     }.get(row["slug"], row["slug"].split("-")[0])
     if expected_name.casefold() not in title.casefold():
         raise ValueError(f"Source title does not identify {row['slug']}: {title}")

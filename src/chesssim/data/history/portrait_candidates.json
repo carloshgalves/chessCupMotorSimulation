@@ -871,6 +871,66 @@
         0.5,
         0.5
       ]
+    },
+    {
+      "slug": "fischer",
+      "file": "925-3512.jpg",
+      "event": "Bobby Fischer em preparação para o Campeonato Mundial, reunião com Max Euwe, Amsterdam",
+      "event_date": "1972-01-31",
+      "author": "Bert Verhoeff / Anefo",
+      "rights_holder": "Nationaal Archief — CC0",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/abdf9680-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.28,
+        0.43
+      ]
+    },
+    {
+      "slug": "nimzowitsch",
+      "file": "cleveland-75.jpg",
+      "event": "Retrato individual de Aron Nimzowitsch",
+      "event_date": "1932",
+      "author": "Autoria não identificada (John G. White Collection)",
+      "rights_holder": "Cleveland Public Library — NoC-US; Public Domain Mark",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/75",
+      "centering": [
+        0.5,
+        0.43
+      ]
+    },
+    {
+      "slug": "marshall",
+      "file": "cleveland-108-marshall.jpg",
+      "event": "Frank Marshall jogando contra Richard Réti, Moscou",
+      "event_date": "1925",
+      "author": "Autoria não identificada (John G. White Collection)",
+      "rights_holder": "Cleveland Public Library — NoC-US; Public Domain Mark",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/108",
+      "centering": [
+        0.23,
+        0.48
+      ]
+    },
+    {
+      "slug": "reti",
+      "file": "cleveland-108-reti.jpg",
+      "event": "Richard Réti jogando contra Frank Marshall, Moscou",
+      "event_date": "1925",
+      "author": "Autoria não identificada (John G. White Collection)",
+      "rights_holder": "Cleveland Public Library — NoC-US; Public Domain Mark",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/108",
+      "centering": [
+        0.77,
+        0.48
+      ]
     }
   ]
 }
