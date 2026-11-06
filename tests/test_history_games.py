@@ -306,3 +306,27 @@ def test_distinct_dated_games_with_same_moves_are_not_conflated(tmp_path):
     records = write_historical(tmp_path, 2)
     assert records[0]["sha256"] != records[1]["sha256"]
     assert history_games.list_games(tmp_path, "fischer")["count"] == 2
+
+
+@pytest.mark.parametrize("payload", [
+    '{"schema":"chesssim-curated-games-v1","games":[],"games":[]}',
+    '{"schema":"chesssim-curated-games-v1","games":[],"confidence":NaN}',
+    '{"schema":"chesssim-curated-games-v1","games":[],"nested":{"x":0,"x":1}}',
+])
+def test_ambiguous_manifest_json_is_rejected(tmp_path, payload):
+    root = tmp_path / "history-games"
+    root.mkdir()
+    (root / "manifest.json").write_text(payload, encoding="utf-8")
+    with pytest.raises(history_games.InvalidCatalogue):
+        history_games.list_games(tmp_path, "fischer")
+
+
+def test_catalog_cannot_be_used_to_read_symlinked_session_summary(tmp_path):
+    folder = write_simulation(tmp_path)
+    original = folder / "summary.json"
+    shadow = tmp_path / "external-summary.json"
+    shadow.write_bytes(original.read_bytes())
+    original.unlink()
+    original.symlink_to(shadow)
+    with pytest.raises(history_games.InvalidCatalogue):
+        history_games.list_games(tmp_path, "fischer")
