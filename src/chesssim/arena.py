@@ -441,6 +441,22 @@ def make_arena_handler(manager: ArenaManager, token: str):
                         self._json(503, {"error": "Perfil histórico indisponível"})
                 except (OSError, KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "Perfil histórico indisponível"})
+            elif url.path.startswith("/api/history/portraits/"):
+                name = url.path.removeprefix("/api/history/portraits/")
+                slug = name.removesuffix(".jpg")
+                if url.query or not name.endswith(".jpg") or not slug or "/" in slug:
+                    self._reply(404, b"Not Found", "text/plain; charset=utf-8")
+                    return
+                try:
+                    profile = load_history_profile(slug)
+                    if profile["portrait"] is None:
+                        self._reply(404, b"Not Found", "text/plain; charset=utf-8")
+                    else:
+                        photo = files("chesssim.data").joinpath(
+                            "history", "portraits", slug + ".jpg").read_bytes()
+                        self._reply(200, photo, "image/jpeg")
+                except (ValueError, OSError, KeyError):
+                    self._reply(404, b"Not Found", "text/plain; charset=utf-8")
             elif url.path == "/api/arena":
                 try:
                     self._json(200, manager.status())
@@ -485,7 +501,7 @@ def make_arena_handler(manager: ArenaManager, token: str):
                     self.send_header("X-Frame-Options", "DENY")
                     self.send_header("Content-Security-Policy",
                                      "default-src 'none'; script-src 'self'; style-src 'self'; "
-                                     "connect-src 'self'; frame-src 'self'; form-action 'none'; "
+                                     "connect-src 'self'; img-src 'self'; frame-src 'self'; form-action 'none'; "
                                      "base-uri 'none'; frame-ancestors 'none'")
                     self.end_headers()
                     self.wfile.write(body)
