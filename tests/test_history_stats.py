@@ -21,7 +21,7 @@ from chesssim.matches import mainline_identity
 
 SESSION = "session-20261106T120000Z-123456789abc"
 MATE = ("f2f3", "e7e5", "g2g4", "d8h4")
-QUIET = ("g1f3", "g8f6", "f3g1", "f6g8")
+QUIET = ("g1f3", "g8f6", "f3g1", "f6g8") * 2
 
 
 def game(white="fischer", black="tal", *, result="0-1", incomplete=False):
@@ -42,7 +42,7 @@ def game(white="fischer", black="tal", *, result="0-1", incomplete=False):
         board.push(mv)
     obj.headers["Result"] = "*" if incomplete else result
     obj.headers["Termination"] = "OperatorStop" if incomplete else (
-        "Normal" if result == "1/2-1/2" else "CHECKMATE")
+        "THREEFOLD_REPETITION" if result == "1/2-1/2" else "CHECKMATE")
     digest, plies = mainline_identity(obj)
     entry = {"white": white, "black": black,
              "result": "*" if incomplete else result,
