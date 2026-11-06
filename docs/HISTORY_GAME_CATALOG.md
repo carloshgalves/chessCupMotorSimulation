@@ -98,10 +98,33 @@ copie o `game_id` para:
 http://127.0.0.1:8766/api/history/games/ID_AQUI/replay
 ```
 
-A UI de seleção e tabuleiro interativo no perfil é escopo posterior da
-issue #51; esta entrega fornece somente os contratos e as garantias de
-integridade para essa interface. A integração usa as sessões da Arena,
-sem interferir na execução dos motores.
+## Interface do perfil (issue #51)
+
+Acesse **Arena → História → Ver perfil histórico**. A seção “Partidas para
+explorar” consulta a API local do jogador e apresenta **de zero a cinco cards**,
+identificando a origem como **Histórica documentada** ou **Simulação local
+(experimental)**. Dados ausentes não são preenchidos com partidas inventadas.
+
+- O primeiro card válido é selecionado automaticamente. Para mudar de jogo,
+  clique em outro card; o tabuleiro antigo é limpo antes de buscar o replay.
+- O tabuleiro usa as **mesmas cores, silhuetas, geometria 8×8 e destaque de
+  último lance** do visor `watch`. A correção dos movimentos vem do PGN
+  interpretado no servidor por `python-chess`, sem motor nem regras em JS.
+- Controles **início, anterior, próximo, fim**, slider de meios-lances e
+  botões de lance da lista. Com foco no tabuleiro: **setas ←/→, Home e End**.
+  O slider e os botões também aceitam navegação nativa por teclado.
+- Jogos incompletos são identificados sem resultado final. PGN indisponível,
+  JSON inconsistente e FEN inválida não deixam uma posição antiga visível.
+- As requisições são somente `GET` locais, com `cache:no-store`. Trocas rápidas
+  de partida e navegação Arena/História descartam respostas tardias.
+- Não há download automático de PGNs externos, análise Stockfish, disparo
+  Rodent nem alteração da sessão/relógio da Arena.
+
+**Teste da apresentação:** usar a mesma raiz de sessões `--out` para
+visualizar partidas elegíveis previamente concluídas. Sem jogos, a mensagem
+“Nenhuma partida disponível neste acervo local” é o comportamento correto.
+O backend #50 permanece independente da interface e pode ser usado sem ela.
+O gate final de acessibilidade/direitos em Chrome/Debian é acompanhado em #53.
 
 ## Limites explícitos
 
