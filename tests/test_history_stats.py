@@ -400,3 +400,28 @@ def test_contradictory_session_and_summary_status_fail_closed(tmp_path):
     p = stat(tmp_path)
     assert p["totals"]["games"] == 0
     assert p["coverage"]["partial"] is True
+
+
+def test_excluded_tournament_attempt_requires_real_noncompleted_summary(tmp_path):
+    root, state, _ = cup(tmp_path)
+    match = state["rounds"][0]["matches"][0]
+    a, b = match["players"]
+    excluded_folder = (root / "matches" / match["id"] / "duels" /
+                       f"{a}-vs-{b}" / "attempt-aborted")
+    excluded_folder.mkdir(parents=True)
+    (excluded_folder / "summary.json").write_text(
+        json.dumps({"status": "INCOMPLETE", "players": [a, b]}))
+    match["excluded_attempts"] = [{
+        "folder": str(excluded_folder.relative_to(root)),
+        "reason": "NOT_COMPLETED",
+    }]
+    (root / "tournament.json").write_text(json.dumps(state))
+    p = stat(tmp_path)
+    assert p["totals"]["games"] == 2
+    assert p["coverage"]["excluded_attempts"] == 1
+    assert p["coverage"]["partial"] is False
+    match["excluded_attempts"][0]["folder"] = "../etc/passwd"
+    (root / "tournament.json").write_text(json.dumps(state))
+    p = stat(tmp_path)
+    assert p["coverage"]["excluded_attempts"] == 0
+    assert p["coverage"]["partial"] is True
