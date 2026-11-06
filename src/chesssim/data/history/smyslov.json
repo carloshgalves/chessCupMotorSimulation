@@ -25,10 +25,11 @@
     },
     {
       "id": "achievement-3",
-      "year": 1983,
+      "year": 1984,
       "text": "Alcancei a final dos matches de Candidatos, enfrentando Garry Kasparov.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "source-2"
       ]
     }
   ],
@@ -50,11 +51,12 @@
       ]
     },
     {
-      "year": 1983,
+      "year": 1984,
       "title": "Final dos Candidatos",
       "summary": "Alcancei a final dos matches de Candidatos, enfrentando Garry Kasparov.",
       "source_ids": [
-        "source-1"
+        "source-1",
+        "source-2"
       ]
     }
   ],
@@ -64,6 +66,13 @@
       "title": "Referência histórica de smyslov",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/vasily-smyslov",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "source-2",
+      "title": "FIDE Open Chess Museum — Vasily Smyslov",
+      "publisher": "FIDE",
+      "url": "https://museum.fide.com/champions/vasily-smyslov",
       "accessed_at": "2026-11-06"
     }
   ]
