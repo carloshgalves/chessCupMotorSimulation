@@ -24,7 +24,7 @@ function record(slug="fischer",extra={}) {
     totals:{tournaments:1,duels:2,games:3,completed:2,wins:1,draws:1,losses:0,incomplete:1},
     opponents:[{slug:"tal",games:3,completed:2,wins:1,draws:1,losses:0,incomplete:1}],
     coverage:{sessions_seen:1,tournaments_seen:1,candidate_games:4,
-              verified_games:3,rejected_games:1,rejected_records:1,
+              verified_games:3,arena_verified_games:1,tournament_verified_games:2,rejected_games:1,rejected_records:1,
               excluded_attempts:1,failed_attempts:0,duplicate_records:0,partial:true},
     ...extra
   };
@@ -81,7 +81,7 @@ const response=record=>({ok:true,json:async()=>record});
       scope:{directory:"runs",sources:["arena_local","tournament_local"],
              from_utc:null,to_utc:null},
       coverage:{sessions_seen:0,tournaments_seen:0,candidate_games:0,
-                verified_games:0,rejected_games:0,rejected_records:0,
+                verified_games:0,arena_verified_games:0,tournament_verified_games:0,rejected_games:0,rejected_records:0,
                 excluded_attempts:0,failed_attempts:0,duplicate_records:0,partial:false}
     });
     const app=browser(()=>Promise.resolve(response(empty)));
@@ -98,7 +98,7 @@ const response=record=>({ok:true,json:async()=>record});
         totals:{tournaments:0,duels:0,games:0,completed:0,wins:0,draws:0,losses:0,incomplete:0},
         opponents:[],
         coverage:{sessions_seen:0,tournaments_seen:0,candidate_games:0,
-                  verified_games:0,rejected_games:0,rejected_records:0,
+                  verified_games:0,arena_verified_games:0,tournament_verified_games:0,rejected_games:0,rejected_records:0,
                   excluded_attempts:0,failed_attempts:0,duplicate_records:0,partial:false}
       })));
     });
