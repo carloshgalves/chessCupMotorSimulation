@@ -330,3 +330,20 @@ def test_catalog_cannot_be_used_to_read_symlinked_session_summary(tmp_path):
     original.symlink_to(shadow)
     with pytest.raises(history_games.InvalidCatalogue):
         history_games.list_games(tmp_path, "fischer")
+
+
+def test_same_game_with_conflicting_completed_and_incomplete_metadata_fails_closed(tmp_path):
+    records = write_historical(tmp_path, 2)
+    original = (tmp_path / "history-games/games/h-fixture-000.pgn").read_bytes()
+    incomplete = original.replace(b'[Result "0-1"]', b'[Result "*"]')
+    incomplete = incomplete.replace(b"Qh4# 0-1", b"Qh4# *")
+    assert incomplete != original
+    second = tmp_path / "history-games/games/h-fixture-001.pgn"
+    second.write_bytes(incomplete)
+    records[1]["sha256"] = sha256(incomplete).hexdigest()
+    (tmp_path / "history-games/manifest.json").write_text(json.dumps({
+        "schema": history_games.MANIFEST_SCHEMA, "games": records,
+    }))
+    with pytest.raises(history_games.InvalidCatalogue,
+                       match="Resultados conflitantes"):
+        history_games.list_games(tmp_path, "fischer")
