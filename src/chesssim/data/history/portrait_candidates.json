@@ -106,6 +106,231 @@
         0.5,
         0.38
       ]
+    },
+    {
+      "slug": "euwe",
+      "file": "Wereldschaaktoernooi. Links dr. Max Euwe, rechts Michael Botwinnik, resp. tweede, Bestanddeelnr 934-5060.jpg",
+      "event": "Groningen Chess Tournament",
+      "event_date": "1946-08-12",
+      "author": "Anefo / Nationaal Archief",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Wereldschaaktoernooi._Links_dr._Max_Euwe,_rechts_Michael_Botwinnik,_resp._tweede,_Bestanddeelnr_934-5060.jpg",
+      "centering": [
+        0.23,
+        0.45
+      ]
+    },
+    {
+      "slug": "smyslov",
+      "file": "Vasily Smyslov 1964.jpg",
+      "event": "Amsterdam Interzonal Tournament",
+      "event_date": "1964-05-26",
+      "author": "Harry Pot / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Vasily_Smyslov_1964.jpg",
+      "centering": [
+        0.5,
+        0.4
+      ]
+    },
+    {
+      "slug": "najdorf",
+      "file": "Najdorf1950.jpg",
+      "event": "World Chess Tournament Amsterdam",
+      "event_date": "1950-12-10",
+      "author": "Carel L. de Vogel / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Najdorf1950.jpg",
+      "centering": [
+        0.5,
+        0.46
+      ]
+    },
+    {
+      "slug": "timman",
+      "file": "IBM schaaktoernooi 3e ronde Timman aan zet, Bestanddeelnr 929-8190.jpg",
+      "event": "IBM International Chess Tournament, Amsterdam",
+      "event_date": "1978-07-15",
+      "author": "Rob Croes / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:IBM_schaaktoernooi_3e_ronde_Timman_aan_zet,_Bestanddeelnr_929-8190.jpg",
+      "centering": [
+        0.5,
+        0.4
+      ]
+    },
+    {
+      "slug": "portisch",
+      "file": "PortischIBM1969.jpg",
+      "event": "IBM International Chess Tournament, Amsterdam",
+      "event_date": "1969-07-24",
+      "author": "Joost Evers / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:PortischIBM1969.jpg",
+      "centering": [
+        0.5,
+        0.4
+      ]
+    },
+    {
+      "slug": "keres",
+      "file": "Hoogoven Schaaktoernooi Keres, Bestanddeelnr 922-0145.jpg",
+      "event": "Hoogovens Chess Tournament",
+      "event_date": "1969-01-14",
+      "author": "Eric Koch / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Hoogoven_Schaaktoernooi_Keres,_Bestanddeelnr_922-0145.jpg",
+      "centering": [
+        0.5,
+        0.42
+      ]
+    },
+    {
+      "slug": "geller",
+      "file": "Hoogoven Schaaktoernooi Geller (links) en Keres, Bestanddeelnr 922-0477.jpg",
+      "event": "Hoogovens Chess Tournament",
+      "event_date": "1969-01-28",
+      "author": "Jack de Nijs / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Hoogoven_Schaaktoernooi_Geller_(links)_en_Keres,_Bestanddeelnr_922-0477.jpg",
+      "centering": [
+        0.26,
+        0.44
+      ]
+    },
+    {
+      "slug": "bronstein",
+      "file": "David Bronstein in 1954.jpg",
+      "event": "Chess Olympiad Amsterdam",
+      "event_date": "1954-09-25",
+      "author": "Joop van Bilsen / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:David_Bronstein_in_1954.jpg",
+      "centering": [
+        0.5,
+        0.42
+      ]
+    },
+    {
+      "slug": "gaprindashvili",
+      "file": "Gaprindashvili1963.jpg",
+      "event": "Hoogovens Women's Chess Tournament",
+      "event_date": "1963-01-21",
+      "author": "Harry Pot / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Gaprindashvili1963.jpg",
+      "centering": [
+        0.26,
+        0.44
+      ]
+    },
+    {
+      "slug": "chiburdanidze",
+      "file": "Ohra schaaktoernooi Maja Chiburdanidze tijdens haar partij met Pieterse, Bestanddeelnr 933-7153.jpg",
+      "event": "OHRA Chess Tournament, Amsterdam",
+      "event_date": "1986-07-22",
+      "author": "Bart Molendijk / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Ohra_schaaktoernooi_Maja_Chiburdanidze_tijdens_haar_partij_met_Pieterse,_Bestanddeelnr_933-7153.jpg",
+      "centering": [
+        0.48,
+        0.42
+      ]
+    },
+    {
+      "slug": "carlsen",
+      "file": "MagnusCarlsen13c.jpg",
+      "event": "Tata Steel Chess Tournament",
+      "event_date": "2013-01",
+      "author": "Stefan64",
+      "rights_holder": "Stefan64",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:MagnusCarlsen13c.jpg",
+      "centering": [
+        0.5,
+        0.42
+      ]
+    },
+    {
+      "slug": "nakamura",
+      "file": "HikaruNakamura13b.jpg",
+      "event": "Tata Steel Chess Tournament",
+      "event_date": "2013-01",
+      "author": "Stefan64",
+      "rights_holder": "Stefan64",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:HikaruNakamura13b.jpg",
+      "centering": [
+        0.5,
+        0.4
+      ]
+    },
+    {
+      "slug": "caruana",
+      "file": "FabianoCaruana13.jpg",
+      "event": "Tata Steel Chess Tournament",
+      "event_date": "2013-01",
+      "author": "Stefan64",
+      "rights_holder": "Stefan64",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:FabianoCaruana13.jpg",
+      "centering": [
+        0.5,
+        0.4
+      ]
+    },
+    {
+      "slug": "hou-yifan",
+      "file": "HouYifan13b.jpg",
+      "event": "Tata Steel Chess Tournament",
+      "event_date": "2013-01",
+      "author": "Stefan64",
+      "rights_holder": "Stefan64",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:HouYifan13b.jpg",
+      "centering": [
+        0.5,
+        0.4
+      ]
+    },
+    {
+      "slug": "ding-liren",
+      "file": "Ding Liren 2018 Candidates.jpg",
+      "event": "Candidates Tournament 2018",
+      "event_date": "2018-02-24",
+      "author": "Vladimir Barskij / Chess Federation of Russia",
+      "rights_holder": "Vladimir Barskij / Chess Federation of Russia",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Ding_Liren_2018_Candidates.jpg",
+      "centering": [
+        0.5,
+        0.45
+      ]
     }
   ]
 }
