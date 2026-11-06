@@ -441,6 +441,7 @@ def _tally(player: str, records: list[dict], tournaments: set[str]) -> tuple[dic
     totals = dict.fromkeys(COUNTERS, 0)
     totals.update({"tournaments": len(tournaments), "duels": 0})
     rivals = defaultdict(lambda: dict.fromkeys(COUNTERS, 0))
+    rival_duels = defaultdict(set)
     duel_ids = set()
     for record in records:
         if player not in (record["white"], record["black"]):
@@ -449,6 +450,7 @@ def _tally(player: str, records: list[dict], tournaments: set[str]) -> tuple[dic
         if rival == player:
             continue
         duel_ids.add(record["duel_id"])
+        rival_duels[rival].add(record["duel_id"])
         for collection in (totals, rivals[rival]):
             collection["games"] += 1
             if record["status"] != "COMPLETED":
@@ -462,7 +464,8 @@ def _tally(player: str, records: list[dict], tournaments: set[str]) -> tuple[dic
             else:
                 collection["losses"] += 1
     totals["duels"] = len(duel_ids)
-    opponents = [{"slug": opponent, **values}
+    opponents = [{"slug": opponent, "duels": len(rival_duels[opponent]),
+                  **values}
                  for opponent, values in sorted(
                      rivals.items(), key=lambda item: (-item[1]["games"], item[0]))]
     return totals, opponents
