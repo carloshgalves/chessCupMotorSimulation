@@ -5,6 +5,7 @@ on:
       - feat/history-remaining-players-47
     paths:
       - .github/workflows/history-portraits-expand-once.yml
+      - scripts/materialize_history_portraits.py
 permissions:
   contents: write
 jobs:
