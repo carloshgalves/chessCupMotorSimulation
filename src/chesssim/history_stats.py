@@ -32,7 +32,7 @@ _ARENA_NAME = re.compile(r"session-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{12}\Z")
 _ATTEMPT_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,79}\Z")
 _MATCH_NAME = re.compile(r"r[0-9]{2}-m[0-9]{2}\Z")
 _RESULTS = {"1-0", "0-1", "1/2-1/2"}
-_STATUSES = {"COMPLETED", "INCOMPLETE", "FAILED", "INTERRUPTED"}
+_STATUSES = {"RUNNING", "COMPLETED", "INCOMPLETE", "FAILED", "INTERRUPTED"}
 
 
 class InvalidStats(ValueError):
@@ -146,6 +146,19 @@ def _games(workspace: Path, folder: Path, summary: dict, names: dict[str, str],
         if status == "INCOMPLETE" and game.headers.get("Result") != "*":
             raise InvalidStats("Jogo incompleto com resultado final no PGN")
         _validate_game(game, white, black, names, status, outcome)
+        board = game.end().board()
+        proven = board.outcome(claim_draw=True)
+        if status == "COMPLETED" and proven is None:
+            if game.headers.get("Termination") != "TimeForfeit":
+                raise InvalidStats("Vitória/empate sem condição terminal ou queda de tempo")
+            remaining = entry.get("clock_left")
+            loser = 0 if board.turn == chess.WHITE else 1
+            if (not isinstance(remaining, list) or len(remaining) != 2 or
+                    any(type(x) not in (int, float) or not isinstance(x, (int, float))
+                        for x in remaining) or remaining[loser] > 0):
+                raise InvalidStats("Queda de tempo não comprovada")
+        elif status == "INCOMPLETE" and proven is not None:
+            raise InvalidStats("Jogo terminal classificado como incompleto")
         digest, plies = mainline_identity(game)
         if ((entry.get("mainline_sha256") is not None and
              entry["mainline_sha256"] != digest) or
