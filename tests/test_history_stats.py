@@ -447,3 +447,25 @@ def test_one_game_session_cannot_count_two_games_even_when_incomplete(tmp_path):
     output = stat(tmp_path)
     assert output["totals"]["games"] == 0
     assert output["coverage"]["partial"] is True
+
+
+@pytest.mark.parametrize("injection", [
+    b'"status": "COMPLETED", "status": "COMPLETED"',
+    b'"status": "COMPLETED", "value": NaN',
+])
+def test_tournament_summary_ambiguous_json_is_not_accepted_even_with_new_hash(
+        tmp_path, injection):
+    root, state, folder = cup(tmp_path)
+    summary_file = folder / "summary.json"
+    original = summary_file.read_bytes()
+    mutated = original.replace(b'"status": "COMPLETED"', injection, 1)
+    assert mutated != original
+    summary_file.write_bytes(mutated)
+    state["rounds"][0]["matches"][0]["attempts"][0]["summary_sha256"] = (
+        sha256(mutated).hexdigest()
+    )
+    (root / "tournament.json").write_text(json.dumps(state))
+    report = stat(tmp_path)
+    assert report["totals"]["games"] == 0
+    assert report["coverage"]["rejected_games"] == 2
+    assert report["coverage"]["partial"] is True
