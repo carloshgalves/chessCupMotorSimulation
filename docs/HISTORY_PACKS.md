@@ -92,3 +92,9 @@ A presença de `review_status=reviewed` representa revisão de coerência de fon
 O primeiro lote seleciona sete fotos feitas em competições oficiais, cada uma sob CC0 1.0 ou CC BY-SA 3.0. Fontes, fotógrafos, licenças e condições de crédito constam em `docs/PHOTO_LICENSES.md`. A materialização ocorre em passo explícito, com verificação da licença e hash local; as fotos não são baixadas pelo ChessSim durante a execução. Os demais perfis permanecem com `portrait=null`.
 
 Endpoint para o carrossel futuro: `GET /api/history/portraits/{slug}.jpg`, apenas para arquivo local validado.
+
+## Segundo lote de packs (issue #47)
+
+Foi adicionada uma camada de **42 novos packs** (total de 64 slugs canônicos com ficha), cada um seguindo o contrato `history-profile-v1` e com no mínimo dois marcos datados e fontes específicas. Eles são publicados inicialmente como `review_status=pending`, porque a verificação editorial independente de cada assertiva permanece necessária. Isso não impede leitura pela API, mas exige indicativo de curadoria não finalizada na interface. Os 22 packs da entrega inicial conservam seu status de revisão.
+
+Para as fotografias, a segunda leva possui **15 candidatas** de competições documentadas e licenças livres. Informações de autoria, torneio, data e URLs estão em `docs/PHOTO_LICENSES.md`; os arquivos só são efetivamente liberados quando o importador verifica as licenças e os hashes. A ampliação não introduz novas dependências de runtime, endpoints ou mudanças de schema.
