@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "najdorf",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui um dos principais enxadristas argentinos e me tornei conhecido pelas simultâneas às cegas.",
+  "era_label": "1947–1953",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1947,
+      "text": "Realizei uma exibição simultânea de 45 partidas às cegas.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1950,
+      "text": "Disputei o primeiro Torneio de Candidatos organizado pela FIDE.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1953,
+      "text": "Voltei a participar do Torneio de Candidatos em Zurique.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1947,
+      "title": "Simultâneas às cegas",
+      "summary": "Realizei uma exibição simultânea de 45 partidas às cegas.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1950,
+      "title": "Torneio de Candidatos",
+      "summary": "Disputei o primeiro Torneio de Candidatos organizado pela FIDE.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1953,
+      "title": "Candidatos de Zurique",
+      "summary": "Voltei a participar do Torneio de Candidatos em Zurique.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de najdorf",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/miguel-najdorf",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

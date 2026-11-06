@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "keres",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Venci o AVRO e fiquei repetidas vezes próximo de desafiar o campeão mundial.",
+  "era_label": "1938–1962",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1938,
+      "text": "Dividi o primeiro lugar do torneio AVRO com Reuben Fine, ficando à frente nos critérios de desempate.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1956,
+      "text": "Terminei na segunda posição no Torneio de Candidatos.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1962,
+      "text": "Dividi a segunda posição no Torneio de Candidatos, meio ponto atrás de Petrosian.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1938,
+      "title": "Torneio AVRO",
+      "summary": "Dividi o primeiro lugar do torneio AVRO com Reuben Fine, ficando à frente nos critérios de desempate.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1956,
+      "title": "Torneio de Candidatos",
+      "summary": "Terminei na segunda posição no Torneio de Candidatos.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1962,
+      "title": "Candidatos de Curaçao",
+      "summary": "Dividi a segunda posição no Torneio de Candidatos, meio ponto atrás de Petrosian.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de keres",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/paul-keres",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

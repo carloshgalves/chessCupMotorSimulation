@@ -1,0 +1,54 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "geller",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão soviético duas vezes e disputei diversos torneios de Candidatos.",
+  "era_label": "1955–1979",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1955,
+      "text": "Conquistei meu primeiro Campeonato Soviético.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1979,
+      "text": "Venci novamente o Campeonato Soviético, 24 anos após a primeira conquista.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1955,
+      "title": "Campeonato soviético",
+      "summary": "Conquistei meu primeiro Campeonato Soviético.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1979,
+      "title": "Segundo título soviético",
+      "summary": "Venci novamente o Campeonato Soviético, 24 anos após a primeira conquista.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de geller",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/efim-geller",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

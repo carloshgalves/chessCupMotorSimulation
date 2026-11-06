@@ -1,0 +1,54 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "timman",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui finalista do Campeonato Mundial da FIDE e conquistei nove campeonatos holandeses.",
+  "era_label": "1993–1996",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1993,
+      "text": "Disputei o match pelo título mundial da FIDE contra Anatoly Karpov.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1996,
+      "text": "Conquistei meu nono Campeonato Holandês.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1993,
+      "title": "Final da FIDE",
+      "summary": "Disputei o match pelo título mundial da FIDE contra Anatoly Karpov.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1996,
+      "title": "Campeonato holandês",
+      "summary": "Conquistei meu nono Campeonato Holandês.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de timman",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/jan-timman",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

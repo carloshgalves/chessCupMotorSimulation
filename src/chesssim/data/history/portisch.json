@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "portisch",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão húngaro diversas vezes e alcancei as semifinais dos Candidatos.",
+  "era_label": "1958–1981",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1958,
+      "text": "Conquistei meu primeiro Campeonato Húngaro de xadrez.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1977,
+      "text": "Alcancei as semifinais dos matches de Candidatos.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1980,
+      "text": "Voltei a alcançar as semifinais dos matches de Candidatos.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1958,
+      "title": "Primeiro título húngaro",
+      "summary": "Conquistei meu primeiro Campeonato Húngaro de xadrez.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1977,
+      "title": "Candidatos",
+      "summary": "Alcancei as semifinais dos matches de Candidatos.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1980,
+      "title": "Novo ciclo de Candidatos",
+      "summary": "Voltei a alcançar as semifinais dos matches de Candidatos.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de portisch",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/lajos-portisch",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

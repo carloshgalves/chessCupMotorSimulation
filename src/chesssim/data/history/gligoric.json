@@ -1,0 +1,54 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "gligoric",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Venci torneios internacionais e ajudei a desenvolver a teoria das aberturas.",
+  "era_label": "1950–1979",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1950,
+      "text": "Venci o torneio internacional de Mar del Plata.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1968,
+      "text": "Conquistei o torneio internacional de Manila.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1950,
+      "title": "Mar del Plata",
+      "summary": "Venci o torneio internacional de Mar del Plata.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1968,
+      "title": "Torneio de Manila",
+      "summary": "Conquistei o torneio internacional de Manila.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de gligoric",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/svetozar-gligoric",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

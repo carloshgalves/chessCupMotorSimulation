@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "ivanchuk",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui vencedor de torneios clássicos de elite e conquistei mundiais em ritmos rápidos.",
+  "era_label": "1989–2016",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1989,
+      "text": "Venci o torneio de Linares contra a elite mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2007,
+      "text": "Conquistei o Campeonato Mundial de Blitz.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2016,
+      "text": "Venci o Campeonato Mundial de Xadrez Rápido.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1989,
+      "title": "Torneio de Linares",
+      "summary": "Venci o torneio de Linares contra a elite mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2007,
+      "title": "Mundial de blitz",
+      "summary": "Conquistei o Campeonato Mundial de Blitz.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2016,
+      "title": "Mundial de rápidas",
+      "summary": "Venci o Campeonato Mundial de Xadrez Rápido.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de ivanchuk",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/vasyl-ivanchuk",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

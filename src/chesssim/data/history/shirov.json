@@ -1,0 +1,54 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "shirov",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Venci uma eliminatória contra Kramnik e fui finalista do Mundial da FIDE.",
+  "era_label": "1998–2000",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1998,
+      "text": "Derrotei Vladimir Kramnik em uma eliminatória cujo vencedor enfrentaria Kasparov, embora o match mundial não tenha ocorrido.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2000,
+      "text": "Disputei a final do Campeonato Mundial da FIDE contra Viswanathan Anand.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1998,
+      "title": "Match contra Kramnik",
+      "summary": "Derrotei Vladimir Kramnik em uma eliminatória cujo vencedor enfrentaria Kasparov, embora o match mundial não tenha ocorrido.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2000,
+      "title": "Final mundial da FIDE",
+      "summary": "Disputei a final do Campeonato Mundial da FIDE contra Viswanathan Anand.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de shirov",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/alexei-shirov",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

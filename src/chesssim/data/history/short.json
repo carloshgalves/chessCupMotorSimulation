@@ -1,0 +1,54 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "short",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão britânico e desafiei Garry Kasparov pela coroa mundial.",
+  "era_label": "1984–1993",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1984,
+      "text": "Conquistei o Campeonato Britânico e me tornei grande mestre.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1993,
+      "text": "Disputei em Londres o match pelo título mundial clássico contra Garry Kasparov.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1984,
+      "title": "Campeonato britânico",
+      "summary": "Conquistei o Campeonato Britânico e me tornei grande mestre.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1993,
+      "title": "Match pelo título",
+      "summary": "Disputei em Londres o match pelo título mundial clássico contra Garry Kasparov.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de short",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/nigel-short",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

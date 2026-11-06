@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "polugaevsky",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui bicampeão soviético e participei de ciclos consecutivos de Candidatos.",
+  "era_label": "1967–1980",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1967,
+      "text": "Dividi o primeiro lugar do Campeonato Soviético com Mikhail Tal.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1968,
+      "text": "Conquistei novamente o Campeonato Soviético.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1980,
+      "text": "Disputei as semifinais dos Candidatos contra Viktor Korchnoi.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1967,
+      "title": "Campeonato soviético",
+      "summary": "Dividi o primeiro lugar do Campeonato Soviético com Mikhail Tal.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1968,
+      "title": "Bicampeonato soviético",
+      "summary": "Conquistei novamente o Campeonato Soviético.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1980,
+      "title": "Matches de Candidatos",
+      "summary": "Disputei as semifinais dos Candidatos contra Viktor Korchnoi.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de polugaevsky",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/lev-polugaevsky",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

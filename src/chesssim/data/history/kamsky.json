@@ -1,0 +1,54 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "kamsky",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Disputei a coroa mundial da FIDE e retornei à elite após uma pausa competitiva.",
+  "era_label": "1996–2007",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1996,
+      "text": "Disputei um match pelo Campeonato Mundial da FIDE contra Anatoly Karpov.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2007,
+      "text": "Venci a Copa do Mundo de Xadrez.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1996,
+      "title": "Desafio mundial",
+      "summary": "Disputei um match pelo Campeonato Mundial da FIDE contra Anatoly Karpov.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2007,
+      "title": "Copa do Mundo",
+      "summary": "Venci a Copa do Mundo de Xadrez.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de kamsky",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/gata-kamsky",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}
