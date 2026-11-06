@@ -1,16 +1,15 @@
-name: History Cleveland photo collection catalog discovery
+name: History Cleveland chess portrait title-only results
 on:
   push:
     branches: [feat/history-remaining-players-47]
     paths: [.github/workflows/history-photo-libraries-probe-once.yml]
-permissions:
-  contents: read
+permissions: {contents: read}
 jobs:
-  discover:
+  names:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 7
     steps:
-      - name: Query rights metadata and permitted first-party image API
+      - name: Find historical portrait items by title without downloading
         shell: bash
         run: |
           python - <<'PY'
@@ -18,40 +17,19 @@ jobs:
           from urllib.parse import quote
           from urllib.request import Request,urlopen
           from urllib.error import HTTPError
-          base="https://cplorg.contentdm.oclc.org"
-          names=["Steinitz","Lasker","Capablanca","Alekhine","Philidor","Staunton","Anderssen","Morphy","Zukertort","Chigorin","Pillsbury","Tarrasch","Marshall","Rubinstein","Nimzowitsch","Reti","Menchik"]
-          stop=False
+          names=["Staunton","Pillsbury","Marshall","Rubinstein","Réti","Reti","Philidor","Lasker","Nimzowitsch","Tarrasch","Alekhine","Fischer","Menchik","Capablanca","Steinitz","Anderssen","Zukertort","Chigorin"]
+          host="https://cplorg.contentdm.oclc.org"
           for name in names:
-            if stop:break
-            url=base+"/digital/api/search/searchterm/"+quote(name)+"/field/all/mode/all/conn/and/maxRecords/8"
+            path="/digital/api/search/searchterm/"+quote(name)+"/field/title/mode/all/conn/and/maxRecords/24"
             try:
-              with urlopen(Request(url,headers={"User-Agent":"ChessSimulation/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)"}),timeout=15) as response:
-                data=response.read(120000)
-                if "json" not in response.headers.get("Content-Type",""):
-                  print("SEARCH",name,"UNEXPECTED",response.headers.get("Content-Type"),repr(data[:80]),flush=True);continue
-                j=json.loads(data)
-                results=j.get("items",[])
-                print("SEARCH",name,"TOTAL",j.get("totalResults"),"RESULTS",[(v.get("itemId"),v.get("title"),v.get("date"),v.get("metadataFields",{})) for v in results][:8],flush=True)
+              with urlopen(Request(host+path,headers={"User-Agent":"ChessSimulation/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)"}),timeout=15) as h:
+                j=json.loads(h.read(150000))
+                items=j.get("items",[])
+                print("NAME",name,"TOTAL",j.get("totalResults"),"MATCHES",[(k.get("itemId"),k.get("title"),next((x.get("value") for x in k.get("metadataFields",[]) if x.get("field")=="date"),None)) for k in items][:24],flush=True)
             except HTTPError as e:
-              print("SEARCH",name,"HTTP",e.code,flush=True)
-              if e.code in (401,403,429,451):stop=True
+              print("BLOCK",name,e.code,flush=True)
+              if e.code in (401,403,429,451):break
             except Exception as e:
-              print("SEARCH",name,"FAIL",type(e).__name__,str(e)[:200],flush=True)
-            time.sleep(.3)
-          for name,path in {
-            "iiif-steinitz-480":"/digital/iiif/p4014coll20/212/full/480,/0/default.jpg",
-            "iiif-morphy-480":"/digital/iiif/p4014coll20/11/full/480,/0/default.jpg",
-            "iiif-steinitz-alt":"/digital/api/singleitem/collection/p4014coll20/id/212/download",
-          }.items():
-            if stop:break
-            try:
-              url=base+path
-              with urlopen(Request(url,headers={"User-Agent":"ChessSimulation/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)"}),timeout=15) as res:
-                d=res.read(1000000)
-                print("IMAGE",name,"STATUS",res.status,"TYPE",res.headers.get("Content-Type"),"BYTES",len(d),"MAGIC",repr(d[:18]),flush=True)
-            except HTTPError as e:
-              print("IMAGE",name,"HTTP",e.code,flush=True)
-              if e.code in (401,403,429,451):stop=True
-            except Exception as e:
-              print("IMAGE",name,"FAIL",type(e).__name__,str(e)[:120],flush=True)
+              print("ERROR",name,type(e).__name__,str(e)[:180],flush=True)
+            time.sleep(.24)
           PY
