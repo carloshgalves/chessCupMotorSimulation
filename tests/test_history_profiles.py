@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import copy
 import json
-from pathlib import Path
 import threading
 from urllib.error import HTTPError
 from urllib.request import urlopen
