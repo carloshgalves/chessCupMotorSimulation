@@ -466,6 +466,36 @@
         0.5,
         0.45
       ]
+    },
+    {
+      "slug": "short",
+      "file": "933-5538.jpg",
+      "event": "Hoogovens Chess Tournament, Wijk aan Zee",
+      "event_date": "1986-01-29",
+      "author": "Rob Croes / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ad4f4ed4-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.5,
+        0.44
+      ]
+    },
+    {
+      "slug": "gelfand",
+      "file": "NL-HlmNHA_1478_35753K00_23.jpg",
+      "event": "Hoogovens Chess Tournament, Wijk aan Zee",
+      "event_date": "1991-01-23",
+      "author": "Fotoburo de Boer",
+      "rights_holder": "Noord-Hollands Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/bca2a308-2829-b594-5fc7-7946ed2c642f",
+      "centering": [
+        0.27,
+        0.45
+      ]
     }
   ]
 }
