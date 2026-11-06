@@ -59,9 +59,9 @@ A segunda leva foi selecionada por ocorrência documentada em torneios oficiais;
 
 A aquisição ampliou o número de JPEGs efetivamente presentes de **7 para 13**. A versão atual contém, além dos sete originais, retratos de **David Bronstein, Magnus Carlsen, Max Euwe, Miguel Najdorf, Vasily Smyslov e Jan Timman**, com hash e metadados CC0/CC BY-SA nos respectivos packs.
 
-Os outros **9 candidatos** do manifesto ampliado permanecem **sem arquivo e sem associação `portrait`**: Portisch, Keres, Geller, Gaprindashvili, Chiburdanidze, Nakamura, Caruana, Hou Yifan e Ding Liren. O serviço conserva os placeholders. A Wikimedia Commons rejeitou novas requisições do runner compartilhado (HTTP 429 com **robot policy**). A aquisição automática foi interrompida e o workflow temporário foi excluído; não se deve repetir chamadas automáticas de forma contínua. Solicitar autorização de acesso, utilizar transferência disponibilizada oficialmente pela origem ou selecionar outra fonte livre é preferível a contornar o bloqueio.
+Os **9 candidatos do lote 2** permanecem **sem arquivo e sem associação `portrait`**: Portisch, Keres, Geller, Gaprindashvili, Chiburdanidze, Nakamura, Caruana, Hou Yifan e Ding Liren. O serviço conserva os placeholders. A Wikimedia Commons rejeitou novas requisições do runner compartilhado (HTTP 429 com **robot policy**). A aquisição automática foi interrompida e o workflow temporário foi excluído; não se deve repetir chamadas automáticas de forma contínua. Solicitar autorização de acesso, utilizar transferência disponibilizada oficialmente pela origem ou selecionar outra fonte livre é preferível a contornar o bloqueio.
 
-O manifesto mantém esses nove **como candidatos, não como fotografias aprovadas**, até que exista arquivo local comprovado por SHA-256 e licença/documentação suficientes. A ausência de retrato não invalida o pack biográfico.
+O manifesto mantém essas fontes **como candidatas, não como fotografias aprovadas**, até que exista arquivo local comprovado por SHA-256 e licença/documentação suficientes. A ausência de retrato não invalida o pack biográfico.
 
 ## Novo candidato — Judit Polgár, Chess Classic Mainz 2008
 
@@ -83,3 +83,9 @@ python scripts/import_local_history_portrait.py \\
 ```
 
 O exemplo **não é uma autorização automática**: somente executar `--apply` depois de confirmar a correspondência do arquivo com o registro da foto e seus direitos. Antes disso, rodar sem `--apply` para obter o hash e a pré-validação. O importador não sobrescreve fotos existentes, recorta para 480 × 480 px e registra hash, metadados de licença e fontes no JSON. Após cada importação, executar testes e verificar o pacote de distribuição. 
+
+## Nova fonte CC0 — Kasparov, Optiebeurs 1988
+
+A fotografia [Kasparov contra Karpov, à direita, Optiebeurs 1988](https://commons.wikimedia.org/wiki/File:Optiebeurs_schaakvierkamp_Garri_Kasparov_tegen_Anatoli_Karpov_(rechts),_Bestanddeelnr_934-2524.jpg), do fotógrafo **Rob Croes / Anefo**, registra o torneio de 19 de maio de 1988 em Amsterdã e possui dedicação **CC0 1.0** pelo Nationaal Archief. Kasparov está identificado como jogador à esquerda, Karpov à direita. Foi adicionada **somente como candidata**, sem JPEG incorporado. O arquivo deve ser obtido por meio permitido e a seleção do recorte conferida visualmente.
+
+O manifesto passa a ter **24 fontes**: **13 retratos materializados** e **11 fontes candidatas com importação pendente**. O inventário atualizado de todos os 51 retratos ainda ausentes está em `docs/HISTORY_PORTRAIT_BACKLOG.md`.
