@@ -71,7 +71,8 @@ def source_download(row: dict) -> tuple[str, str]:
     source = row["source_url"]
     page = unescape(_read(source, max_bytes=300_000).decode("utf-8", "replace"))
     unaccented = "".join(c for c in unicodedata.normalize("NFKD", page.lower()) if not unicodedata.combining(c))
-    if IDENTITY_TOKENS[row["slug"]] not in unaccented:
+    if IDENTITY_TOKENS[row["slug"]] not in unaccented and not (
+            row["slug"] == "fischer" and "fisher" in unaccented):
         # Fotoburo de Boer identifies this image by accession rather than
         # people in its HTML.  Commons describes the very same accession as
         # "Gelfand vs Kortsnoj", Hoogovens Chess Tournament, 23 Jan 1991:
