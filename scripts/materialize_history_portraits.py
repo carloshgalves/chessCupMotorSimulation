@@ -117,7 +117,6 @@ def acquire(row: dict) -> bytes:
         "titles": "File:" + row["file"], "iiurlwidth": "500",
         "format": "json", "formatversion": "2"
     })
-    api_thumbnail = None
     try:
         obj = json.loads(get_bytes("https://commons.wikimedia.org/w/api.php?" + query,
                                    limit=200_000))
@@ -139,7 +138,6 @@ def acquire(row: dict) -> bytes:
             if (actual.hostname not in {"creativecommons.org", "www.creativecommons.org"}
                     or not actual.path.rstrip("/").startswith(expected_url.path.rstrip("/"))):
                 raise ValueError("Commons license URL differs from audited record")
-        api_thumbnail = info.get("thumburl")
     except HTTPError as exc:
         if exc.code != 429:
             raise
