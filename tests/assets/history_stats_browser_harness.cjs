@@ -96,7 +96,10 @@ const response=record=>({ok:true,json:async()=>record});
       if(url.includes("/fischer/"))return new Promise(resolve=>deferred.push(resolve));
       return Promise.resolve(response(record("tal",{
         totals:{tournaments:0,duels:0,games:0,completed:0,wins:0,draws:0,losses:0,incomplete:0},
-        opponents:[]
+        opponents:[],
+        coverage:{sessions_seen:0,tournaments_seen:0,candidate_games:0,
+                  verified_games:0,rejected_games:0,rejected_records:0,
+                  excluded_attempts:0,failed_attempts:0,duplicate_records:0,partial:false}
       })));
     });
     app.window.ChessSimHistoryStats.enter("fischer");
