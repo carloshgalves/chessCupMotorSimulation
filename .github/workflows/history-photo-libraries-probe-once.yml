@@ -1,35 +1,38 @@
-name: History Cleveland chess portrait title-only results
+name: History Cleveland portrait metadata audit
 on:
   push:
     branches: [feat/history-remaining-players-47]
     paths: [.github/workflows/history-photo-libraries-probe-once.yml]
 permissions: {contents: read}
 jobs:
-  names:
+  metadata:
     runs-on: ubuntu-latest
     timeout-minutes: 7
     steps:
-      - name: Find historical portrait items by title without downloading
+      - name: Examine only named archival items and photo rights statements
         shell: bash
         run: |
           python - <<'PY'
           import json,time
-          from urllib.parse import quote
           from urllib.request import Request,urlopen
           from urllib.error import HTTPError
-          names=["Staunton","Pillsbury","Marshall","Rubinstein","Réti","Reti","Philidor","Lasker","Nimzowitsch","Tarrasch","Alekhine","Fischer","Menchik","Capablanca","Steinitz","Anderssen","Zukertort","Chigorin"]
-          host="https://cplorg.contentdm.oclc.org"
-          for name in names:
-            path="/digital/api/search/searchterm/"+quote(name)+"/field/title/mode/all/conn/and/maxRecords/24"
+          ids={"steinitz":212,"lasker":115,"capablanca":6,"philidor":4034,
+               "staunton":2595,"anderssen":2532,"morphy":11,"zukertort":2599,
+               "chigorin":3048,"pillsbury":76,"tarrasch":37,"marshall":108,
+               "rubinstein":77,"nimzowitsch":75,"reti":108,"fischer":74,
+               "staunton_alt":2594,"philidor_alt":4031,"lasker_alt":57,
+               "capablanca_alt":0}
+          for slug,id in ids.items():
             try:
-              with urlopen(Request(host+path,headers={"User-Agent":"ChessSimulation/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)"}),timeout=15) as h:
-                j=json.loads(h.read(150000))
-                items=j.get("items",[])
-                print("NAME",name,"TOTAL",j.get("totalResults"),"MATCHES",[(k.get("itemId"),k.get("title"),next((x.get("value") for x in k.get("metadataFields",[]) if x.get("field")=="date"),None)) for k in items][:24],flush=True)
+              url=f"https://cplorg.contentdm.oclc.org/digital/api/singleitem/collection/p4014coll20/id/{id}"
+              with urlopen(Request(url,headers={"User-Agent":"ChessSimulationCurator/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)"}),timeout=15) as h:
+                j=json.loads(h.read(12000))
+                fields={x["key"]:x["value"] for x in j.get("fields",[])}
+                print("PHOTO",slug,id,json.dumps({k:fields.get(k) for k in ("title","creato","date","format","origin","standa","rightsl","rights","rightsn","descri")},ensure_ascii=False)[:1100],"CONTENT",j.get("contentType"),flush=True)
             except HTTPError as e:
-              print("BLOCK",name,e.code,flush=True)
+              print("BLOCK",slug,e.code,flush=True)
               if e.code in (401,403,429,451):break
             except Exception as e:
-              print("ERROR",name,type(e).__name__,str(e)[:180],flush=True)
-            time.sleep(.24)
+              print("ERROR",slug,type(e).__name__,str(e)[:150],flush=True)
+            time.sleep(.22)
           PY
