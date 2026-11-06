@@ -114,6 +114,25 @@ def test_history_http_endpoint_is_get_only_and_has_no_path_access(tmp_path):
         with urlopen(base + "/api/history/players/capablanca") as response:
             profile = json.load(response)
             assert not profile["has_historical_pack"]
+        photo = load_history_profile("mequinho")["portrait"]
+        if photo:
+            with urlopen(base + "/api/history/portraits/mequinho.jpg") as response:
+                data = response.read()
+                assert response.status == 200
+                assert response.headers["Content-Type"].startswith("image/jpeg")
+                assert data[:3] == bytes.fromhex("ffd8ff")
+        else:
+            with pytest.raises(HTTPError) as err:
+                urlopen(base + "/api/history/portraits/mequinho.jpg")
+            assert err.value.code == 404
+        for endpoint in (
+            "/api/history/portraits/../other.jpg",
+            "/api/history/portraits/unknown.jpg",
+            "/api/history/portraits/mequinho.jpg?token=invalid",
+        ):
+            with pytest.raises(HTTPError) as err:
+                urlopen(base + endpoint)
+            assert err.value.code == 404
         for endpoint in (
             "/api/history/players/unknown",
             "/api/history/players/kasparov?token=secret",
