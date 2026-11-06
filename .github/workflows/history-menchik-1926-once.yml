@@ -1,0 +1,27 @@
+name: History Menchik 1926 public domain frontispiece - one shot
+on:
+  push:
+    branches: [feat/history-remaining-players-47]
+    paths: [.github/workflows/history-menchik-1926-once.yml]
+permissions: {contents: write}
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v5
+        with: {ref: feat/history-remaining-players-47, persist-credentials: true}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.13'}
+      - run: python -m pip install 'Pillow>=11,<13'
+      - run: python scripts/acquire_menchik_1926.py
+      - name: Commit cited historical photo
+        shell: bash
+        run: |
+          git add src/chesssim/data/history/menchik.json src/chesssim/data/history/portraits/menchik.jpg
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'assets(history): record Vera Menchik from British Chess Magazine 1926'
+            git fetch origin feat/history-remaining-players-47
+            git rebase origin/feat/history-remaining-players-47
+            git push origin HEAD:feat/history-remaining-players-47
+          fi
