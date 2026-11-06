@@ -30,3 +30,27 @@ Os JPEGs são **derivados fotográficos com recorte quadrado e redução a 480×
 - Os outros jogadores continuam sem foto, utilizando placeholder até identificação de imagem liberada.
 
 **Direito de imagem e contexto:** mesmo material CC0 não autoriza sugerir que o jogador endossou o programa. Os packs são recriações biográficas em primeira pessoa e não são depoimentos ou dublagens reais. Para contextos promocionais ou não editoriais, realizar avaliação jurídica própria. Imagens são removíveis por slug; recurso sem hash/licença válida deve ser rejeitado.
+
+## Lote 2 — fontes e licenças verificadas (06/11/2026)
+
+A segunda leva foi selecionada por ocorrência documentada em torneios oficiais; a inclusão definitiva depende de conferir a licença corrente no Commons durante a materialização. Fotografias registradas como candidatas ainda não estão necessariamente no repositório.
+
+| Jogador | Evento | Fotógrafo/acervo | Licença | Página-fonte |
+| --- | --- | --- | --- | --- |
+| euwe | Groningen Chess Tournament (1946-08-12) | Anefo / Nationaal Archief | CC0 1.0 | [Arquivo no Commons](https://commons.wikimedia.org/wiki/File:Wereldschaaktoernooi._Links_dr._Max_Euwe,_rechts_Michael_Botwinnik,_resp._tweede,_Bestanddeelnr_934-5060.jpg) |
+| smyslov | Amsterdam Interzonal Tournament (1964-05-26) | Harry Pot / Anefo | CC0 1.0 | [Arquivo no Commons](https://commons.wikimedia.org/wiki/File:Vasily_Smyslov_1964.jpg) |
+| najdorf | World Chess Tournament Amsterdam (1950-12-10) | Carel L. de Vogel / Anefo | CC0 1.0 | [Arquivo no Commons](https://commons.wikimedia.org/wiki/File:Najdorf1950.jpg) |
+| timman | IBM International Chess Tournament, Amsterdam (1978-07-15) | Rob Croes / Anefo | CC0 1.0 | [Arquivo no Commons](https://commons.wikimedia.org/wiki/File:IBM_schaaktoernooi_3e_ronde_Timman_aan_zet,_Bestanddeelnr_929-8190.jpg) |
+| portisch | IBM International Chess Tournament, Amsterdam (1969-07-24) | Joost Evers / Anefo | CC0 1.0 | [Arquivo no Commons](https://commons.wikimedia.org/wiki/File:PortischIBM1969.jpg) |
+| keres | Hoogovens Chess Tournament (1969-01-14) | Eric Koch / Anefo | CC0 1.0 | [Arquivo no Commons](https://commons.wikimedia.org/wiki/File:Hoogoven_Schaaktoernooi_Keres,_Bestanddeelnr_922-0145.jpg) |
+| geller | Hoogovens Chess Tournament (1969-01-28) | Jack de Nijs / Anefo | CC0 1.0 | [Arquivo no Commons](https://commons.wikimedia.org/wiki/File:Hoogoven_Schaaktoernooi_Geller_%28links%29_en_Keres,_Bestanddeelnr_922-0477.jpg) |
+| bronstein | Chess Olympiad Amsterdam (1954-09-25) | Joop van Bilsen / Anefo | CC0 1.0 | [Arquivo no Commons](https://commons.wikimedia.org/wiki/File:David_Bronstein_in_1954.jpg) |
+| gaprindashvili | Hoogovens Women's Chess Tournament (1963-01-21) | Harry Pot / Anefo | CC0 1.0 | [Arquivo no Commons](https://commons.wikimedia.org/wiki/File:Gaprindashvili1963.jpg) |
+| chiburdanidze | OHRA Chess Tournament, Amsterdam (1986-07-22) | Bart Molendijk / Anefo | CC0 1.0 | [Arquivo no Commons](https://commons.wikimedia.org/wiki/File:Ohra_schaaktoernooi_Maja_Chiburdanidze_tijdens_haar_partij_met_Pieterse,_Bestanddeelnr_933-7153.jpg) |
+| carlsen | Tata Steel Chess Tournament (2013-01) | Stefan64 | CC BY-SA 3.0 | [Arquivo no Commons](https://commons.wikimedia.org/wiki/File:MagnusCarlsen13c.jpg) |
+| nakamura | Tata Steel Chess Tournament (2013-01) | Stefan64 | CC BY-SA 3.0 | [Arquivo no Commons](https://commons.wikimedia.org/wiki/File:HikaruNakamura13b.jpg) |
+| caruana | Tata Steel Chess Tournament (2013-01) | Stefan64 | CC BY-SA 3.0 | [Arquivo no Commons](https://commons.wikimedia.org/wiki/File:FabianoCaruana13.jpg) |
+| hou-yifan | Tata Steel Chess Tournament (2013-01) | Stefan64 | CC BY-SA 3.0 | [Arquivo no Commons](https://commons.wikimedia.org/wiki/File:HouYifan13b.jpg) |
+| ding-liren | Candidates Tournament 2018 (2018-02-24) | Vladimir Barskij / Chess Federation of Russia | CC BY-SA 3.0 | [Arquivo no Commons](https://commons.wikimedia.org/wiki/File:Ding_Liren_2018_Candidates.jpg) |
+
+**Estado de publicação:** cada pack só passa a referenciar a fotografia depois que o importador obtém o JPEG local, confere a licença no Commons e registra SHA-256, fotógrafo, evento, URL e derivação. Usuários das futuras telas História (#48/#49) devem visualizar os créditos e o vínculo de licença.
