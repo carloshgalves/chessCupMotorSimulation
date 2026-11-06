@@ -49,8 +49,19 @@ class FakeElement {
     this.dataset={};this.value="";this.textContent="";
     this.className="";this.scrollTop=0;
     this.classList={
-      add:()=>{},
-      toggle:()=>{}
+      add:(...names)=>{
+        const current=new Set(this.className.split(/\s+/).filter(Boolean));
+        for(const name of names) current.add(name);
+        this.className=[...current].join(" ");
+      },
+      toggle:(name,force)=>{
+        const current=new Set(this.className.split(/\s+/).filter(Boolean));
+        const enabled=force===undefined?!current.has(name):!!force;
+        if(enabled) current.add(name);
+        else current.delete(name);
+        this.className=[...current].join(" ");
+        return enabled;
+      }
     };
   }
   append(...items){this.children.push(...items);}
@@ -150,5 +161,36 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal(app.elements.get("match-title").textContent,
                "Emanuel Lasker × Frank Marshall");
   assert.equal(app.requests.at(-1),"/api/state");
+  // Layout regression: empty ranks remain 8 full rows, not implicit auto tracks.
+  const paint=fen=>vm.runInContext(
+    "paintBoard({fen:" + JSON.stringify(fen) +
+    ",last:null,turn:'white',clocks:[null,null]})",app.context
+  );
+  const squares=()=>descendants(app.elements.get("board"))
+    .filter(n=>n.tagName==="DIV" && n.className.split(/\s+/).includes("square"));
+  paint(FEN);
+  assert.equal(squares().length,64);
+  assert.equal(squares().filter(n=>n.children.length===1).length,32);
+  assert(squares()[0].className.includes("blackpiece"));
+  assert(squares()[56].className.includes("whitepiece"));
+  assert.equal(squares()[0].children[0].textContent,"♜");
+  assert.equal(squares()[56].children[0].textContent,"♜",
+               "both colors use the same silhouette and CSS contrasts the sides");
+  assert.equal(squares()[0].children[0].className,"piece-glyph");
+  assert.equal(squares()[0].children[0].attributes["aria-hidden"],"true");
+  assert.equal(squares()[0].attributes["aria-label"],"a8 torre preta");
+  paint("8/8/8/8/8/8/8/4K2k w - - 0 1");
+  assert.equal(squares().length,64);
+  for(let rank=0;rank<7;rank++){
+    assert(squares().slice(rank*8,(rank+1)*8).every(n=>n.children.length===0),
+           "an empty rank still contains exactly eight empty square nodes");
+  }
+  assert.equal(squares().filter(n=>n.children.length===0).length,62);
+  assert.equal(squares()[60].attributes["aria-label"],"e1 rei branco");
+  assert.equal(squares()[63].attributes["aria-label"],"h1 rei preto");
+  paint("8/8/8/8/8/8/8/8 w - - 0 1");
+  assert.equal(squares().length,64);
+  assert(squares().every(n=>n.children.length===0),
+         "even a completely empty display retains 64 squares");
   console.log("Live bracket browser smoke: PASS");
 })().catch(error=>{console.error(error);process.exitCode=1;});
