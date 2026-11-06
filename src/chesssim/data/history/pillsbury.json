@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui vencedor de Hastings e campeão norte-americano no fim do século XIX.",
   "era_label": "1895–1898 (Hastings e matches com Showalter)",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/pillsbury.jpg",
+    "alt": "Retrato histórico de Pillsbury, Harry Nelson, fonte Cleveland Public Library",
+    "author": "Fotógrafo não identificado (acervo Cleveland)",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/76",
+    "verified_at": "2026-11-06",
+    "event": "Retrato de Harry Nelson Pillsbury",
+    "event_date": "até 1906",
+    "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "f0837a9856acdbf6af3b285cad574503ad2a178db3c8a2296a55f589ccd76448",
+    "derivative_note": "Recorte e redução para 480×480 px de reprodução histórica; identificado por Cleveland Public Library como PDM 1.0/NoC-US. PDM é uma marcação de domínio público, não licença CC0. Verificar exigências territoriais antes de redistribuir.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui um importante competidor e professor de xadrez, com contribuições duradouras à teoria das aberturas.",
   "era_label": "1889–1908",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/tarrasch.jpg",
+    "alt": "Retrato histórico de Tarrasch, Siegbert , fonte Cleveland Public Library",
+    "author": "Julius Klinkhardt (atribuição do catálogo)",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/37",
+    "verified_at": "2026-11-06",
+    "event": "Retrato fotográfico de Siegbert Tarrasch",
+    "event_date": "cerca de 1900",
+    "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "d7543c029b47d4b00b77611d619421e0945dbfabc8cf3d8f57a353f24b0bdff3",
+    "derivative_note": "Recorte e redução para 480×480 px de reprodução histórica; identificado por Cleveland Public Library como PDM 1.0/NoC-US. PDM é uma marcação de domínio público, não licença CC0. Verificar exigências territoriais antes de redistribuir.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",
