@@ -18,9 +18,9 @@
     {
       "id": "achievement-2",
       "year": 1968,
-      "text": "Conquistei o torneio internacional de Manila.",
+      "text": "Dividi a segunda colocação no torneio internacional de Manila em 1968.",
       "source_ids": [
-        "source-1"
+        "source-2"
       ]
     }
   ],
@@ -36,9 +36,9 @@
     {
       "year": 1968,
       "title": "Torneio de Manila",
-      "summary": "Conquistei o torneio internacional de Manila.",
+      "summary": "Dividi a segunda colocação no torneio internacional de Manila em 1968.",
       "source_ids": [
-        "source-1"
+        "source-2"
       ]
     }
   ],
@@ -48,6 +48,13 @@
       "title": "Chess.com — perfil histórico de gligoric",
       "publisher": "Chess.com",
       "url": "https://www.chess.com/players/svetozar-gligoric",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "source-2",
+      "title": "Manila 1968 — classificação final",
+      "publisher": "365Chess",
+      "url": "https://www.365chess.com/tournaments/Manila_1968/26559",
       "accessed_at": "2026-11-06"
     }
   ]
