@@ -13,6 +13,7 @@ from hashlib import sha256
 from io import StringIO
 from pathlib import Path
 import re
+import math
 
 import chess.pgn
 
@@ -154,8 +155,11 @@ def _games(workspace: Path, folder: Path, summary: dict, names: dict[str, str],
             remaining = entry.get("clock_left")
             loser = 0 if board.turn == chess.WHITE else 1
             if (not isinstance(remaining, list) or len(remaining) != 2 or
-                    any(type(x) not in (int, float) or not isinstance(x, (int, float))
-                        for x in remaining) or remaining[loser] > 0):
+                    any(type(x) not in (int, float) or not math.isfinite(x)
+                        for x in remaining) or remaining[loser] > 0 or
+                    outcome != ("1/2-1/2" if board.has_insufficient_material(
+                        not board.turn) else "0-1" if board.turn == chess.WHITE
+                        else "1-0")):
                 raise InvalidStats("Queda de tempo não comprovada")
         elif status == "INCOMPLETE" and proven is not None:
             raise InvalidStats("Jogo terminal classificado como incompleto")
