@@ -22,6 +22,8 @@ jobs:
             "north-holland": "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/a17d9a6f-d4af-cfff-84da-19917979bd71",
             "gallica-bnf": "https://gallica.bnf.fr/iiif/ark:/12148/btv1b9024663p/f1/full/480,/0/native.jpg",
             "gallica-thumbnail": "https://gallica.bnf.fr/ark:/12148/btv1b9024663p/thumbnail",
+            "national-image-download": "https://service.archief.nl/gaf/api/file/v1/default/7d9cc6b8-9061-4ffa-91d6-3583c339eb4a",
+            "holland-image-thumb": "https://images.memorix.nl/ranh/thumb/640x480/bd5c6593-f6ea-00d6-a2af-54aa6b184ee3.jpg",
             "picryl-public-domain": "https://picryl.com/media/tournoi-dechecs-alekhine-contre-colle-champion-de-belgique-photographie-de-513146",
           }
           for name, url in urls.items():
