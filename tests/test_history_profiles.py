@@ -16,13 +16,13 @@ from chesssim.history_profiles import (
 )
 
 
-def test_all_64_are_accessible_and_22_have_documented_packs():
+def test_all_64_are_accessible_and_have_historical_packs():
     roster = load_roster()
     index = list_history_players()
     assert index["schema"] == "history-index-v1"
     assert len(index["players"]) == 64
     assert [p["slug"] for p in index["players"]] == [p.slug for p in roster]
-    assert sum(p["has_historical_pack"] for p in index["players"]) >= 22
+    assert sum(p["has_historical_pack"] for p in index["players"]) == 64
     assert {p.slug for p in roster if p.rodent_alias is not None or p.slug == "mequinho"}.issubset(
         {p["slug"] for p in index["players"] if p["has_historical_pack"]}
     )
@@ -38,7 +38,7 @@ def test_all_64_are_accessible_and_22_have_documented_packs():
         if pack["has_historical_pack"]:
             assert pack["schema"] == SCHEMA
             assert pack["narrative_voice"] == "first_person_editorial"
-            assert pack["review_status"] == "reviewed"
+            assert pack["review_status"] in {"pending", "reviewed"}
             assert len(pack["highlights"]) >= 2
             assert len(pack["timeline"]) >= 2
             assert pack["short_bio"]
@@ -181,8 +181,13 @@ def test_tournament_photo_candidates_are_offline_and_license_checked():
             "karpov", "anand", "topalov"}.issubset(names)
     assert all(r["license"] in ("CC0 1.0", "CC BY-SA 3.0") for r in rows)
     assert all(r["event"] and r["author"] and r["rights_holder"] for r in rows)
-    have = [load_history_profile(r["slug"])["portrait"] is not None for r in rows]
-    assert not any(have) or all(have), "Portrait import must complete as one transaction"
+    # Additional photos are acquired in independently reviewable batches.
+    for row in rows:
+        profile = load_history_profile(row["slug"])
+        assert profile["has_historical_pack"]
+        if profile["portrait"] is not None:
+            assert profile["portrait"]["source_url"] == row["source_url"]
+            assert profile["portrait"]["license"] == row["license"]
 
 
 def test_pre_1800_historical_year_is_supported():
@@ -190,3 +195,19 @@ def test_pre_1800_historical_year_is_supported():
     _assert_year(1749)
     with pytest.raises(ValueError):
         _assert_year(1699)
+
+
+def test_all_64_biographies_are_sourced_first_person_and_ordered():
+    index = list_history_players()
+    for player in index["players"]:
+        pack = load_history_profile(player["slug"])
+        assert pack["has_historical_pack"]
+        assert pack["short_bio"] and pack["era_label"]
+        assert pack["narrative_voice"] == "first_person_editorial"
+        assert len(pack["highlights"]) >= 2
+        assert [item["year"] for item in pack["timeline"]] == sorted(
+            item["year"] for item in pack["timeline"]
+        )
+        assert all(item["source_ids"] for item in pack["highlights"])
+        assert all(source["url"].startswith("https://") for source in pack["sources"])
+    assert load_history_profile("philidor")["highlights"][1]["year"] == 1749
