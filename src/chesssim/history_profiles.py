@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from importlib.resources import files
+from hashlib import sha256
 import json
 import re
 from urllib.parse import urlsplit
@@ -19,7 +20,7 @@ _FIRST_PERSON = (
     "Fui ", "Venci ", "Conquistei ", "Derrotei ", "Defendi ",
     "Mantive ", "Disputei ", "Publiquei ", "Tornei-me ",
     "Alcancei ", "Recebi ", "Recuperei ", "Voltei ", "Concluí ",
-    "Joguei ", "Desenvolvi ", "Ajudei ",
+    "Joguei ", "Desenvolvi ", "Ajudei ", "Comecei ",
 )
 
 
@@ -61,15 +62,38 @@ def validate_history_pack(data: object, *, slug: str) -> dict:
         raise ValueError("Biografia deve ser escrita em primeira pessoa")
     portrait = data["portrait"]
     if portrait is not None:
-        keys = {"local_asset", "alt", "author", "license", "source_url", "verified_at"}
-        if not isinstance(portrait, dict) or set(portrait) != keys:
-            raise ValueError("Retrato precisa de proveniência e direitos")
-        if not re.fullmatch(r"history/portraits/[A-Za-z0-9_-]+\.(?:png|jpg|jpeg|webp)",
-                            _text(portrait["local_asset"], "portrait.local_asset")):
-            raise ValueError("Caminho de retrato inválido")
-        for key in ("alt", "author", "license", "verified_at"):
-            _text(portrait[key], f"portrait.{key}")
-        _url(portrait["source_url"], "portrait.source_url")
+        required = {"local_asset", "alt", "author", "license", "source_url",
+                    "verified_at", "event", "event_date", "rights_holder",
+                    "license_url", "sha256", "derivative_note", "approval_status"}
+        if not isinstance(portrait, dict) or set(portrait) != required:
+            raise ValueError("Retrato sem proveniência e direitos completos")
+        if portrait["approval_status"] != "approved":
+            raise ValueError("Retrato sem aprovação")
+        path = _text(portrait["local_asset"], "portrait.local_asset")
+        if path != f"history/portraits/{slug}.jpg":
+            raise ValueError("Caminho de retrato não corresponde ao jogador")
+        allowed = {"CC0 1.0": "https://creativecommons.org/publicdomain/zero/1.0/",
+                   "CC BY-SA 3.0": "https://creativecommons.org/licenses/by-sa/3.0/"}
+        if (portrait["license"] not in allowed or
+                portrait["license_url"] != allowed[portrait["license"]]):
+            raise ValueError("Licença incompatível")
+        for field in ("alt", "author", "verified_at", "event", "event_date",
+                      "rights_holder", "derivative_note"):
+            _text(portrait[field], "portrait." + field)
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", portrait["verified_at"]):
+            raise ValueError("Data de conferência inválida")
+        url = _url(portrait["source_url"], "portrait.source_url")
+        if not url.startswith("https://commons.wikimedia.org/wiki/File:"):
+            raise ValueError("Retrato fora do repositório de licenças auditado")
+        digest = _text(portrait["sha256"], "portrait.sha256", max_len=64)
+        if not re.fullmatch(r"[a-f0-9]{64}", digest):
+            raise ValueError("SHA-256 de retrato inválido")
+        resource = files("chesssim.data").joinpath(*path.split("/"))
+        if not resource.is_file():
+            raise ValueError("Arquivo local de retrato inexistente")
+        binary = resource.read_bytes()
+        if len(binary) > 500_000 or sha256(binary).hexdigest() != digest:
+            raise ValueError("Retrato alterado ou muito grande")
     sources = data["sources"]
     if not isinstance(sources, list) or len(sources) > 32:
         raise ValueError("Fontes inválidas")
