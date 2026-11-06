@@ -873,94 +873,94 @@
       ]
     },
     {
-      "slug": "fischer",
-      "file": "Schaker Bobby Fisher aan bord (archief), Bestanddeelnr 924-7362.jpg",
-      "event": "Bobby Fischer ao tabuleiro — arquivo Anefo",
-      "event_date": "1971-07-15",
-      "author": "Fotógrafo desconhecido / Anefo",
-      "rights_holder": "Nationaal Archief — CC0",
-      "license": "CC0 1.0",
-      "source_url": "https://commons.wikimedia.org/wiki/File:Schaker_Bobby_Fisher_aan_bord_(archief),_Bestanddeelnr_924-7362.jpg",
-      "centering": [
-        0.5,
-        0.38
-      ],
-      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/"
-    },
-    {
       "slug": "alekhine",
       "file": "Alexander Alekhine.jpg",
       "event": "Retrato histórico de Alexander Alekhine",
-      "event_date": "1918",
-      "author": "Fotógrafo não identificado",
-      "rights_holder": "Retrato histórico — titular não identificado",
+      "event_date": "1918-08-01",
+      "author": "Fotógrafo desconhecido",
+      "rights_holder": "Autor desconhecido; estado de domínio público documentado no Commons",
       "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
       "source_url": "https://commons.wikimedia.org/wiki/File:Alexander_Alekhine.jpg",
       "centering": [
         0.5,
-        0.39
-      ],
-      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/"
+        0.38
+      ]
+    },
+    {
+      "slug": "fischer",
+      "file": "Schaker Bobby Fisher aan bord (archief), Bestanddeelnr 924-7362.jpg",
+      "event": "Retrato ao tabuleiro — coleção Anefo",
+      "event_date": "1971-07-15",
+      "author": "Fotógrafo desconhecido / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Schaker_Bobby_Fisher_aan_bord_(archief),_Bestanddeelnr_924-7362.jpg",
+      "centering": [
+        0.5,
+        0.4
+      ]
     },
     {
       "slug": "marshall",
       "file": "Frank Marshall (chess player).jpg",
       "event": "Retrato publicado em Chess Openings (1904)",
       "event_date": "antes de 1904",
-      "author": "Oxford and Dilhoff (crédito do livro)",
-      "rights_holder": "Fotografia histórica — domínio público indicado pelo Commons",
+      "author": "Oxford and Dilhoff (crédito da publicação)",
+      "rights_holder": "Estado de domínio público documentado no Commons",
       "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
       "source_url": "https://commons.wikimedia.org/wiki/File:Frank_Marshall_(chess_player).jpg",
       "centering": [
         0.5,
-        0.36
-      ],
-      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/"
+        0.38
+      ]
     },
     {
       "slug": "nimzowitsch",
       "file": "Aron Nimzowitsch2.jpg",
-      "event": "Retrato associado a livro sobre o torneio de Carlsbad",
+      "event": "Retrato histórico publicado antes de 1930",
       "event_date": "antes de 1930",
-      "author": "Fotógrafo não identificado",
-      "rights_holder": "Reprodução documental histórica — domínio público indicado pelo Commons",
+      "author": "Fotógrafo desconhecido",
+      "rights_holder": "Estado de domínio público documentado no Commons",
       "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
       "source_url": "https://commons.wikimedia.org/wiki/File:Aron_Nimzowitsch2.jpg",
       "centering": [
         0.5,
-        0.36
-      ],
-      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/"
+        0.37
+      ]
     },
     {
       "slug": "reti",
       "file": "Richard Réti (1889–1929) OeNB 9471305.jpg",
-      "event": "Retrato de Richard Réti — Bildarchiv Austria",
+      "event": "Retrato de arquivo — Österreichische Nationalbibliothek",
       "event_date": "década de 1920",
-      "author": "Fotógrafo anônimo; coleção ÖNB",
-      "rights_holder": "Österreichische Nationalbibliothek — Bildarchiv Austria",
+      "author": "Fotógrafo desconhecido / ÖNB",
+      "rights_holder": "Österreichische Nationalbibliothek (acervo; domínio público declarado na UE)",
       "license": "Public Domain Mark 1.0",
-      "source_url": "https://commons.wikimedia.org/wiki/File:Richard_Réti_(1889–1929)_OeNB_9471305.jpg",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Richard_R%C3%A9ti_(1889%E2%80%931929)_OeNB_9471305.jpg",
       "centering": [
         0.5,
-        0.37
-      ],
-      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/"
+        0.34
+      ]
     },
     {
       "slug": "kamsky",
       "file": "Kamsky,Gata 2016 Karlsruhe.jpeg",
-      "event": "Grenke Chess Open, Karlsruhe",
+      "event": "Grenke Chess Open — 9ª rodada, Karlsruhe",
       "event_date": "2016-03-28",
       "author": "GFHund",
       "rights_holder": "GFHund",
       "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
       "source_url": "https://commons.wikimedia.org/wiki/File:Kamsky,Gata_2016_Karlsruhe.jpeg",
       "centering": [
         0.5,
-        0.35
-      ],
-      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/"
+        0.42
+      ]
     }
   ]
 }
