@@ -33,6 +33,9 @@ jobs:
                           txt=chunk.decode("utf-8","ignore")
                           images=re.findall(r'(?:src|href)=["\x27]([^"\x27]+(?:jpg|jpeg|png|webp)[^"\x27]*)',txt,re.I)
                           print(name,"IMAGE_LINKS",images[:6],flush=True)
+                          for keyword in ("download","iiif","image","thumb","bestand","media","digital","api/","file"):
+                              found = list(re.finditer(keyword,txt,re.I))
+                              print(name,"TERM",keyword,"COUNT",len(found),"SAMPLE",[txt[max(0,m.start()-100):m.end()+220].replace(chr(10),' ') for m in found[:3]],flush=True)
               except HTTPError as e:
                   print(name,"HTTP",e.code,"REASON",e.reason,flush=True)
               except Exception as e:
