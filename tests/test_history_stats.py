@@ -185,6 +185,8 @@ def test_rematch_and_identical_game_mainlines_are_independent_games(tmp_path):
     assert report["totals"]["duels"] == 2
     assert report["totals"]["wins"] == 2
     assert report["totals"]["losses"] == 2
+    assert report["coverage"]["arena_verified_games"] == 4
+    assert report["coverage"]["tournament_verified_games"] == 0
 
 
 def test_partial_and_failed_attempts_never_create_wins(tmp_path):
@@ -225,6 +227,8 @@ def test_tournament_ledger_two_colors_and_manifest_no_double_count(tmp_path):
     assert p["totals"]["duels"] == 1
     assert p["totals"]["games"] == 2
     assert p["coverage"]["verified_games"] == 2
+    assert p["coverage"]["arena_verified_games"] == 0
+    assert p["coverage"]["tournament_verified_games"] == 2
     assert p["coverage"]["rejected_games"] == 0
 
 
@@ -373,6 +377,8 @@ def test_statistics_do_not_mutate_ledger_or_session(tmp_path):
     before = [file.read_bytes() for file in files]
     report = stat(tmp_path)
     assert report["totals"]["games"] == 4
+    assert report["coverage"]["arena_verified_games"] == 2
+    assert report["coverage"]["tournament_verified_games"] == 2
     assert [file.read_bytes() for file in files] == before
     assert not list(tmp_path.rglob("*.lock"))
 
