@@ -85,13 +85,14 @@ def _meta(meta: dict, field: str) -> str:
 
 
 def acquire(row: dict) -> bytes:
-    """Verify Commons' current rights metadata before downloading any image."""
+    """Acquire from a manually checked Commons file record, verifying licensing when API allows."""
     from PIL import Image, ImageOps
     query = urlencode({
         "action": "query", "prop": "imageinfo", "iiprop": "url|extmetadata",
-        "titles": "File:" + row["file"], "iiurlwidth": "800",
+        "titles": "File:" + row["file"], "iiurlwidth": "500",
         "format": "json", "formatversion": "2"
     })
+    api_thumbnail = None
     try:
         obj = json.loads(get_bytes("https://commons.wikimedia.org/w/api.php?" + query,
                                    limit=200_000))
@@ -111,36 +112,24 @@ def acquire(row: dict) -> bytes:
             if (actual.hostname not in {"creativecommons.org", "www.creativecommons.org"}
                     or not actual.path.rstrip("/").startswith(expected_url.path.rstrip("/"))):
                 raise ValueError("Commons license URL differs from audited record")
-        remote = info.get("thumburl") or info.get("url")
+        api_thumbnail = info.get("thumburl")
     except HTTPError as exc:
         if exc.code != 429:
             raise
-        # The Wikimedia API may throttle GitHub's shared runner IP.  File
-        # records in the allowlist have been manually checked for authorship
-        # and CC licensing; use Wikimedia's stable public image store.
-        # This path is a documented SOURCE-CONFIRMED fallback, NOT a live
-        # re-verification.  Never use it for an uncurated row.
-        filename = row["file"].replace(" ", "_")
-        digest = md5(filename.encode("utf-8"), usedforsecurity=False).hexdigest()
-        remote = ("https://upload.wikimedia.org/wikipedia/commons/"
-                  + digest[0] + "/" + digest[:2] + "/" + quote(filename))
-        print(f"Commons API throttled; source-record fallback for {row['slug']}",
-              flush=True)
-    parsed = urlsplit(remote or "")
-    if (parsed.scheme != "https" or parsed.hostname != "upload.wikimedia.org" or
-            not parsed.path.startswith("/wikipedia/commons/")):
-        # A Commons API result is not itself a trusted media URL. Do not follow
-        # off-host addresses: use a filename-derived immutable upload URL.
-        filename = row["file"].replace(" ", "_")
-        digest = md5(filename.encode("utf-8"), usedforsecurity=False).hexdigest()
-        remote = ("https://upload.wikimedia.org/wikipedia/commons/"
-                  + digest[0] + "/" + digest[:2] + "/" + quote(filename))
-        print(f"Unexpected Commons media URL; safe upload fallback for {row['slug']}",
-              flush=True)
-    parsed = urlsplit(remote)
+        print(f"Commons API rate-limited: using pre-reviewed file {row['slug']}", flush=True)
+    filename = row["file"].replace(" ", "_")
+    digest = md5(filename.encode("utf-8"), usedforsecurity=False).hexdigest()
+    width = 500 if row["slug"] in {"hou-yifan", "caruana"} else 960
+    prefix = ("https://upload.wikimedia.org/wikipedia/commons/thumb/"
+              + digest[0] + "/" + digest[:2] + "/" + quote(filename))
+    # Prefer existing Commons thumbnails: Wikimedia explicitly asks clients
+    # not to trigger mass resizing of full-size originals on shared runners.
+    known_thumbnail = prefix + "/" + str(width) + "px-" + quote(filename)
+    candidate = api_thumbnail if api_thumbnail and api_thumbnail == known_thumbnail else known_thumbnail
+    parsed = urlsplit(candidate)
     if parsed.scheme != "https" or parsed.hostname != "upload.wikimedia.org":
-        raise ValueError("Unsafe media URL")
-    with Image.open(BytesIO(get_bytes(remote, limit=8_000_000))) as im:
+        raise ValueError("Unsafe thumbnail URL")
+    with Image.open(BytesIO(get_bytes(candidate, limit=2_000_000))) as im:
         if im.format not in {"JPEG", "PNG"}:
             raise ValueError("Unsupported media type")
         im = ImageOps.fit(im.convert("RGB"), (480, 480),
