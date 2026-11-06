@@ -101,10 +101,14 @@ Para as fotografias, a segunda leva possui **15 candidatas** de competições do
 
 ## Estado consolidado da PR #55
 
-**64/64 packs** em primeira pessoa editorial: 22 revisados na entrega inicial e **42 verificados por marco**, com referências independentes vinculadas (`review_status=reviewed`). **13/64 retratos** registrados e integralmente distribuíveis; outros **51** ainda sem foto. Desses, **dez** têm fonte candidata rastreada no Commons (incluindo Judit Polgár), mas os downloads automáticos restantes foram bloqueados pelo provedor. Mais informações no registro `docs/PHOTO_LICENSES.md`.
+**64/64 packs** em primeira pessoa editorial: 22 revisados na entrega inicial e **42 verificados por marco**, com referências independentes vinculadas (`review_status=reviewed`). **13/64 retratos** registrados e integralmente distribuíveis; outros **51** ainda sem foto. Desses, **onze** têm fonte candidata rastreada no Commons (incluindo Judit Polgár), mas os downloads automáticos restantes foram bloqueados pelo provedor. Mais informações no registro `docs/PHOTO_LICENSES.md`.
 
 A integridade é validada para cada `portrait` presente, enquanto os demais usam fallback nulo. A issue #47 permanece aberta para obtenção das **51 fotos restantes** e homologação visual nas #48/#49. Os componentes de créditos vinculados à licença já estão implementados na PR #55; ainda falta teste visual em navegador real.
 
 ## Interface História e auditoria (PR #55)
 
 A Arena local agora oferece uma aba História com navegação horizontal pelo elenco, biografia individual, conquistas e linha do tempo. As 13 fotos incorporadas são acompanhadas de créditos de autoria, evento, fonte original, licença e aviso de recorte, sem depender de scripts ou imagens externas. As fotografias sem licença disponível continuam com placeholder. A API permanece somente leitura e não altera o token de execução da Arena. Ver `src/chesssim/data/history.js`, `history.css` e `tests/assets/history_browser_harness.cjs`. A homologação visual com navegador real e a integração das partidas/estatísticas permanecem etapas próprias.
+
+## Restante do acervo e rota de importação sem rede
+
+A situação por jogador (51 JPEGs ausentes, 11 com fonte catalogada) está em `docs/HISTORY_PORTRAIT_BACKLOG.md`. Há dois candidatos novos além dos nove já existentes: **Judit Polgár (Chess Classic Mainz 2008, CC BY-SA 3.0)** e **Garry Kasparov (Optiebeurs 1988, CC0 1.0)**. O trabalho de direitos e aquisição desses arquivos permanece pendente. Para arquivos já obtidos de forma autorizada, `scripts/import_local_history_portrait.py` cria o JPEG 480×480 e grava metadata/hash sem consultar nenhum host remoto. O bloqueio do Wikimedia não deve ser contornado.
