@@ -17,6 +17,7 @@ import pytest
 from chesssim import arena, history_stats, tournament
 from chesssim.catalog import find_player
 from chesssim.matches import mainline_identity
+from chesssim.protocol import OFFICIAL
 
 
 SESSION = "session-20261106T120000Z-123456789abc"
@@ -88,7 +89,11 @@ def tournament_run(workspace: Path, *, name="copa-2026", players=None):
     shuffled = players.copy()
     random.Random(seed).shuffle(shuffled)
     match = tournament._match(1,1,*shuffled)
+    resources = {"engine_sha256":"e"*64,
+                 "profile_sha256":{p:p[0]*64 for p in players},
+                 "book_sha256":{},"books_by_player":{p:[] for p in players}}
     state = {"schema":tournament.SCHEMA,"created_utc":"2026-11-06T10:00:00Z",
+             "preset":"official","clock":[600,2],"resources":resources,
              "status":"RUNNING","participants":players,"seed":seed,
              "initial_bracket":shuffled,"max_tiebreak_pairs":3,
              "rounds":[{"number":1,"matches":[match]}],"champion":None}
@@ -106,9 +111,17 @@ def register_tournament(root, state, match, *, attempt="20261106T120000Z-demo",
     records=[]
     for w,k,res,incomplete in gamespecs:
         pgn,record=game(w,k,result=res,incomplete=incomplete)
+        pgn.headers["EngineSHA256"]=state["resources"]["engine_sha256"]
+        pgn.headers["WhiteProfileSHA256"]=state["resources"]["profile_sha256"][w]
+        pgn.headers["BlackProfileSHA256"]=state["resources"]["profile_sha256"][k]
+        pgn.headers["TimeControl"]="600+2"
         games.append(pgn)
         records.append(record)
-    summary={"status":"COMPLETED","players":[a,b],"games":records}
+    summary={"status":"COMPLETED","players":[a,b],"games":records,
+             "file_hashes":{"exe":state["resources"]["engine_sha256"],
+                            a:state["resources"]["profile_sha256"][a],
+                            b:state["resources"]["profile_sha256"][b]},
+             "book_hashes":{},"protocol":OFFICIAL.json()}
     summary_path=folder/"summary.json"
     pgn_path=folder/"duelo.pgn"
     summary_path.write_text(json.dumps(summary),encoding="utf-8")
