@@ -9,7 +9,7 @@ jobs:
   acquire:
     if: github.repository == 'carloshgalves/chessCupMotorSimulation'
     runs-on: ubuntu-latest
-    timeout-minutes: 13
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v5
         with:
