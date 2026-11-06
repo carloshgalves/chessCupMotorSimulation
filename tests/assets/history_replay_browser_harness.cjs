@@ -147,8 +147,13 @@ const countSquares=element=>descendants(element).filter(node=>node.className.spl
       const moveButton=descendants($("history-replay-moves")).find(node=>
         node.tagName==="BUTTON"&&node.textContent.includes("e5"));
       assert(moveButton);
+      app.document.activeElement = moveButton;
       moveButton.events.click();
       assert.equal($("history-replay-progress").textContent,"2 / 2");
+      const replacement = descendants($("history-replay-moves")).find(node=>
+        node.tagName==="BUTTON"&&node.dataset.historyReplayMove==="2");
+      assert(replacement && replacement.focused,
+             "keyboard focus must survive move-list replacement");
       assert($("history-replay-meta").textContent.includes("Bobby Fischer"));
       assert(calls.every(c=>!c.options.method||c.options.method==="GET"));
       assert(calls.every(c=>c.options.cache==="no-store"));
