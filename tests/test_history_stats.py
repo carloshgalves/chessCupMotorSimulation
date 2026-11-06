@@ -425,3 +425,19 @@ def test_excluded_tournament_attempt_requires_real_noncompleted_summary(tmp_path
     p = stat(tmp_path)
     assert p["coverage"]["excluded_attempts"] == 0
     assert p["coverage"]["partial"] is True
+
+
+def test_one_game_session_cannot_count_two_games_even_when_incomplete(tmp_path):
+    folder, _ = session(tmp_path, 0, results=("1-0", "0-1"))
+    manifest = folder / "session.json"
+    entry = json.loads(manifest.read_text())
+    entry["config"]["reverse"] = False
+    entry["status"] = "INCOMPLETE"
+    manifest.write_text(json.dumps(entry))
+    summary = next(folder.glob("duels/*/*/summary.json"))
+    content = json.loads(summary.read_text())
+    content["status"] = "INCOMPLETE"
+    summary.write_text(json.dumps(content))
+    output = stat(tmp_path)
+    assert output["totals"]["games"] == 0
+    assert output["coverage"]["partial"] is True
