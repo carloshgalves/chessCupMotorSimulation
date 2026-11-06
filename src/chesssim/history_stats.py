@@ -184,6 +184,45 @@ def _tournament_attempt(workspace: Path, path: Path, state: dict, match: dict,
     summary = _strict_json(summary_bytes)
     if summary.get("players") != [a, b]:
         raise InvalidStats("Confronto do torneio com participantes errados")
+    resources = state.get("resources")
+    if (not isinstance(resources, dict) or
+            not isinstance(resources.get("profile_sha256"), dict) or
+            not isinstance(resources.get("books_by_player"), dict) or
+            not isinstance(resources.get("book_sha256"), dict)):
+        raise InvalidStats("Identidade dos motores do torneio ausente")
+    expected_hashes = {"exe": resources.get("engine_sha256"),
+                       a: resources["profile_sha256"].get(a),
+                       b: resources["profile_sha256"].get(b)}
+    expected_books = {}
+    for player in (a, b):
+        for key in resources["books_by_player"].get(player, []):
+            if key not in resources["book_sha256"]:
+                raise InvalidStats("Livro de abertura não registrado")
+            expected_books[key] = resources["book_sha256"][key]
+    if (not all(type(value) is str and value for value in expected_hashes.values()) or
+            summary.get("file_hashes") != expected_hashes or
+            summary.get("book_hashes") != expected_books):
+        raise InvalidStats("Recursos do confronto divergentes")
+    clock = state.get("clock")
+    if (not isinstance(clock, list) or len(clock) != 2 or
+            any(type(x) is not int for x in clock)):
+        raise InvalidStats("Ritmo do torneio inválido")
+    from .protocol import OFFICIAL
+    protocol = summary.get("protocol")
+    if state.get("preset") == "official":
+        if not isinstance(protocol, dict) or protocol.get("sha256") != OFFICIAL.json()["sha256"]:
+            raise InvalidStats("Protocolo oficial não comprovado")
+    elif (not isinstance(protocol, dict) or
+          protocol.get("time_control") != f"{clock[0]}+{clock[1]}"):
+        raise InvalidStats("Protocolo de tempo divergente")
+    games = _read_combined(pgn_bytes)
+    for i, game in enumerate(games):
+        white, black = (a, b) if i == 0 else (b, a)
+        if (game.headers.get("EngineSHA256") != resources["engine_sha256"] or
+                game.headers.get("WhiteProfileSHA256") != resources["profile_sha256"][white] or
+                game.headers.get("BlackProfileSHA256") != resources["profile_sha256"][black] or
+                game.headers.get("TimeControl") != f"{clock[0]}+{clock[1]}"):
+            raise InvalidStats("Proveniência do PGN diverge da configuração congelada")
     verified = _games(workspace, rel, summary, names, tournament=True,
                       combined_raw=pgn_bytes)
     if (len(verified) != 2 or entry.get("results") != [g[3] for g in verified]):
