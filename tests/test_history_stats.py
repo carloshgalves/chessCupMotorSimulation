@@ -470,3 +470,50 @@ def test_tournament_summary_ambiguous_json_is_not_accepted_even_with_new_hash(
     assert report["totals"]["games"] == 0
     assert report["coverage"]["rejected_games"] == 2
     assert report["coverage"]["partial"] is True
+
+
+def test_unproven_win_in_a_nonterminal_arena_pgn_is_not_counted(tmp_path):
+    _, folder = session(tmp_path, 0, results=("1-0",))
+    pgn = game("fischer", "tal", "*")
+    pgn.headers["Result"] = "1-0"
+    pgn.headers["Termination"] = "Normal"
+    (folder / "jogo_1.pgn").write_text(str(pgn) + "\n")
+    path = folder / "summary.json"
+    summary = json.loads(path.read_text())
+    signature, plies = mainline_identity(pgn)
+    summary["games"][0].update({
+        "result": "1-0", "termination": "Normal",
+        "mainline_sha256": signature, "plies": plies,
+    })
+    path.write_text(json.dumps(summary))
+    report = stat(tmp_path)
+    assert report["totals"]["games"] == 0
+    assert report["totals"]["wins"] == 0
+    assert report["coverage"]["rejected_games"] == 1
+    assert report["coverage"]["partial"] is True
+
+
+def test_time_forfeit_requires_clock_proof_and_correct_winner(tmp_path):
+    _, folder = session(tmp_path, 0, results=("1-0",))
+    pgn = game("fischer", "tal", "*")  # two plies; White to move
+    pgn.headers["Result"] = "0-1"
+    pgn.headers["Termination"] = "TimeForfeit"
+    (folder / "jogo_1.pgn").write_text(str(pgn) + "\n")
+    path = folder / "summary.json"
+    summary = json.loads(path.read_text())
+    signature, plies = mainline_identity(pgn)
+    summary["games"][0].update({
+        "result": "0-1", "termination": "TimeForfeit",
+        "mainline_sha256": signature, "plies": plies,
+        "clock_left": [-0.1, 120.0],
+    })
+    path.write_text(json.dumps(summary))
+    valid = stat(tmp_path)
+    assert valid["totals"]["games"] == 1
+    assert valid["totals"]["losses"] == 1
+    for clocks in ([10.0, 120.0], [float("nan"), 120.0], [False, 120.0]):
+        summary["games"][0]["clock_left"] = clocks
+        path.write_text(json.dumps(summary))
+        rejected = stat(tmp_path)
+        assert rejected["totals"]["games"] == 0
+        assert rejected["coverage"]["partial"] is True

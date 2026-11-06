@@ -96,11 +96,32 @@ def _validated_result(game: chess.pgn.Game, white: str, black: str,
         identity, _ = mainline_identity(game)
         if identity != meta["mainline_sha256"]:
             raise InvalidCatalogue("Assinatura da partida divergente")
-    # A recorded completion may be a resignation or timeout. When there is
-    # a terminal board state, its winner must still agree with the summary.
-    outcome = game.end().board().outcome(claim_draw=True)
-    if outcome is not None and status == "COMPLETED" and outcome.result() != result:
-        raise InvalidCatalogue("Resultado contradiz o tabuleiro")
+    # Every scored finish requires a terminal board result or a documented
+    # time forfeit. PGN headers and summary alone cannot prove a win.
+    board = game.end().board()
+    outcome = board.outcome(claim_draw=True)
+    if meta.get("termination") is not None and (
+            meta["termination"] != game.headers.get("Termination")):
+        raise InvalidCatalogue("Terminação diverge do PGN")
+    if status == "INCOMPLETE":
+        if outcome is not None:
+            raise InvalidCatalogue("Partida terminal indevidamente interrompida")
+        return
+    if outcome is not None:
+        if outcome.result() != result:
+            raise InvalidCatalogue("Resultado contradiz o tabuleiro")
+        return
+    if game.headers.get("Termination") != "TimeForfeit":
+        raise InvalidCatalogue("Resultado final sem prova de término")
+    clocks = meta.get("clock_left")
+    loser_index = 0 if board.turn == chess.WHITE else 1
+    expected = ("1/2-1/2" if board.has_insufficient_material(not board.turn)
+                else "0-1" if board.turn == chess.WHITE else "1-0")
+    if (not isinstance(clocks, list) or len(clocks) != 2
+            or any(type(v) not in (int, float) or not math.isfinite(v)
+                   for v in clocks)
+            or clocks[loser_index] > 0 or result != expected):
+        raise InvalidCatalogue("Queda de tempo sem comprovação")
 
 
 def _arena_games(root: Path, names: dict[str, str], slug: str,
