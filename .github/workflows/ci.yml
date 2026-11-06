@@ -101,7 +101,9 @@ jobs:
               actual_photos = {n for n in names if n.startswith(root + "portraits/") and n.endswith(".jpg")}
               assert actual_photos == referenced_photos, "Orphan portraits or undisclosed photos in wheel"
               for asset in ("monitor.html", "monitor.css", "monitor.js",
-                            "arena.html", "arena.css", "arena.js"):
+                            "arena.html", "arena.css", "arena.js",
+                            "history.js", "history.css", "history_replay.js",
+                            "chess_board.js", "chess_board.css"):
                   assert f"chesssim/data/{asset}" in names, f"Live-board asset missing: {asset}"
               entry_points = [
                   name for name in names
