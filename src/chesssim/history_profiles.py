@@ -128,7 +128,7 @@ def validate_history_pack(data: object, *, slug: str) -> dict:
         if not _text(record["text"], f"highlight[{idx}].text").startswith(_FIRST_PERSON):
             raise ValueError("Feito deve usar primeira pessoa")
         _check_sources(record["source_ids"], source_ids)
-    last_year = 1800
+    last_year = 1700
     for record in timeline:
         if not isinstance(record, dict) or set(record) != {
                 "year", "title", "summary", "source_ids"}:
