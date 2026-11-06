@@ -98,3 +98,9 @@ Endpoint para o carrossel futuro: `GET /api/history/portraits/{slug}.jpg`, apena
 Foi adicionada uma camada de **42 novos packs** (total de 64 slugs canônicos com ficha), cada um seguindo o contrato `history-profile-v1` e com no mínimo dois marcos datados e fontes específicas. Eles são publicados inicialmente como `review_status=pending`, porque a verificação editorial independente de cada assertiva permanece necessária. Isso não impede leitura pela API, mas exige indicativo de curadoria não finalizada na interface. Os 22 packs da entrega inicial conservam seu status de revisão.
 
 Para as fotografias, a segunda leva possui **15 candidatas** de competições documentadas e licenças livres. Informações de autoria, torneio, data e URLs estão em `docs/PHOTO_LICENSES.md`; os arquivos só são efetivamente liberados quando o importador verifica as licenças e os hashes. A ampliação não introduz novas dependências de runtime, endpoints ou mudanças de schema.
+
+## Estado consolidado da PR #55
+
+**64/64 packs** em primeira pessoa editorial: 22 revisados na entrega inicial e 42 novos identificados como `pending` para revisão factual. **13/64 retratos** registrados e integralmente distribuíveis; outros **51** ainda sem foto. Desses, nove têm fonte candidata rastreada no Commons, mas foram bloqueados para download pelo provedor. Mais informações no registro `docs/PHOTO_LICENSES.md`.
+
+A integridade é validada para cada `portrait` presente, enquanto os demais usam fallback nulo. A issue #47 permanece aberta para auditoria histórica, conclusão das fotos e atribuição visual nas #48/#49.
