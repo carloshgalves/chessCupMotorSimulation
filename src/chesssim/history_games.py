@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from hashlib import sha256
 from io import StringIO
 import json
+import os
+import stat
 from pathlib import Path
 import re
 from urllib.parse import urlsplit
@@ -23,6 +25,7 @@ SCHEMA = "chesssim-history-games-v1"
 REPLAY_SCHEMA = "chesssim-history-replay-v1"
 MANIFEST_SCHEMA = "chesssim-curated-games-v1"
 MAX_PGN_BYTES = 2 * 1024 * 1024
+MAX_PLIES = 2000
 MAX_MANIFEST_BYTES = 256 * 1024
 MAX_CATALOGUE_GAMES = 1000
 MAX_SESSION_SUMMARIES = 2000
@@ -48,6 +51,7 @@ class _Entry:
     white_slug: str
     black_slug: str
     sha256: str
+    signature: str
     status: str
     result: str | None
     event: str
@@ -66,26 +70,35 @@ class _Entry:
 
 
 def _read(root: Path, relative: Path, limit: int) -> bytes:
-    """Reject parent traversal, symlinks in *any* component and oversized data."""
-    if relative.is_absolute() or ".." in relative.parts or not relative.parts:
+    """Open all components by directory FD with O_NOFOLLOW; never trust a path check.
+
+    An attacker controlling local files cannot replace a checked symlink before
+    opening it. A bounded read protects against growth after fstat.
+    """
+    if (relative.is_absolute() or not relative.parts or
+            any(part in (".", "..") for part in relative.parts)):
         raise InvalidCatalogue("Referência de arquivo inválida")
     try:
-        target = root / relative
-        absolute = target.absolute()
-        base = root.resolve(strict=True)
-        if (not absolute.is_relative_to(base) or
-                absolute != target.resolve(strict=True) or
-                not target.is_file()):
-            raise InvalidCatalogue("Arquivo fora da raiz ou link simbólico")
-        if target.stat().st_size > limit:
-            raise InvalidCatalogue("Arquivo excede limite")
-        data = target.read_bytes()
-        if len(data) > limit:
-            raise InvalidCatalogue("Arquivo excede limite")
-        # Detect a symlink replacement between metadata check and file read.
-        if target.is_symlink() or target.resolve(strict=True) != absolute:
-            raise InvalidCatalogue("Arquivo redirecionado")
-        return data
+        fd = os.open(root.resolve(strict=True),
+                     os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            for index, part in enumerate(relative.parts):
+                flags = os.O_RDONLY | os.O_NOFOLLOW
+                if index < len(relative.parts) - 1:
+                    flags |= os.O_DIRECTORY
+                next_fd = os.open(part, flags, dir_fd=fd)
+                os.close(fd)
+                fd = next_fd
+            metadata = os.fstat(fd)
+            if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > limit:
+                raise InvalidCatalogue("Artefato inválido ou excede limite")
+            with os.fdopen(fd, "rb", closefd=False) as stream:
+                raw = stream.read(limit + 1)
+            if len(raw) > limit:
+                raise InvalidCatalogue("Arquivo excede limite")
+            return raw
+        finally:
+            os.close(fd)
     except (OSError, RuntimeError) as exc:
         raise InvalidCatalogue("Artefato local indisponível") from exc
 
@@ -111,9 +124,20 @@ def _game(raw: bytes) -> chess.pgn.Game:
             raise InvalidCatalogue("Variante de xadrez não suportada")
         if not game.board().is_valid():
             raise InvalidCatalogue("FEN inicial inválida")
+        if sum(1 for _ in game.mainline_moves()) > MAX_PLIES:
+            raise InvalidCatalogue("PGN excede limite de lances")
         return game
     except (UnicodeError, ValueError, RecursionError, OverflowError) as exc:
         raise InvalidCatalogue("PGN ou FEN inválido") from exc
+
+
+def _signature(game: chess.pgn.Game, white: str, black: str) -> str:
+    """Semantic duplicate key without treating distinct dated games as identical."""
+    payload = [white, black, game.headers.get("Event", "?"),
+               game.headers.get("Date", "?"), game.headers.get("Round", "?"),
+               game.board().fen(), *[move.uci() for move in game.mainline_moves()]]
+    return sha256(json.dumps(payload, ensure_ascii=False,
+                             separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
 def _validate_game(game: chess.pgn.Game, white: str, black: str,
@@ -180,7 +204,7 @@ def _historical(workspace: Path, names: dict[str, str]) -> list[_Entry]:
         _validate_game(game, white, black, names, status, result)
         entries.append(_Entry(
             ident, rel, "historical", white, black, digest,
-            status, result, game.headers.get("Event", "?"),
+            _signature(game, white, black), status, result, game.headers.get("Event", "?"),
             game.headers.get("Date"), {"label": label, "url": source}, priority,
         ))
     return entries
@@ -228,7 +252,7 @@ def _simulated(workspace: Path, names: dict[str, str]) -> list[_Entry]:
             ident = "s-" + sha256(relative_pgn.as_posix().encode("utf-8")).hexdigest()[:24]
             entries.append(_Entry(
                 ident, relative_pgn, "simulation", white, black,
-                digest, status, result, game.headers.get("Event", "?"),
+                digest, _signature(game, white, black), status, result, game.headers.get("Event", "?"),
                 game.headers.get("Date"),
                 {"label": "Partida local do ChessSimulation", "session_id": parts[0]},
             ))
@@ -245,13 +269,15 @@ def _selection(workspace: Path) -> dict[str, list[_Entry]]:
     selected: dict[str, list[_Entry]] = {slug: [] for slug in names}
     seen_ids: set[str] = set()
     seen_hashes: set[str] = set()
+    seen_signatures: set[str] = set()
     for entry in historic + simulated:
         if entry.game_id in seen_ids:
             raise InvalidCatalogue("IDs duplicados no catálogo")
         seen_ids.add(entry.game_id)
-        if entry.sha256 in seen_hashes:
+        if entry.sha256 in seen_hashes or entry.signature in seen_signatures:
             continue
         seen_hashes.add(entry.sha256)
+        seen_signatures.add(entry.signature)
         for slug in {entry.white_slug, entry.black_slug}:
             if len(selected[slug]) < MAX_VISIBLE:
                 selected[slug].append(entry)
