@@ -1,25 +1,35 @@
-# Situação consolidada dos retratos — ChessSimulation / issue #47
+# Retratos da Copa dos Imortais — estado consolidado (06/11/2026)
 
-**Revisão: 06/11/2026 · PR #55 (Draft).**
+**64 perfis biográficos · 64 imagens locais · nenhum placeholder de retrato.**
 
-O elenco possui **64/64 packs biográficos** e **58/64 retratos visuais empacotados**. Dos 58, há fotografias de torneios, retratos históricos e reproduções artísticas corretamente descritas nos metadados, incluindo a gravura de Philidor. A expressão "58 fotografias" seria historicamente imprecisa. Os seis registros abaixo permanecem com `portrait: null`, apresentando fallback na interface.
+A PR #55 incorpora 58 retratos de lotes anteriores e seis imagens documentais adicionais: Alekhine, Fischer, Marshall, Nimzowitsch, Réti e Gata Kamsky. O manifesto `src/chesssim/data/history/portrait_candidates.json` tem 64 registros; os perfis apontam para JPEGs de 480×480 px com SHA-256, crédito, URL de origem, indicação de recorte e informação sobre direitos.
 
-| Jogador | Estado em 06/11/2026 | Fonte analisada e próximo bloqueio |
-| --- | --- | --- |
-| Alexander Alekhine | **PENDENTE — 0 JPEG** | [Retrato de 1918 identificado como domínio público](https://commons.wikimedia.org/wiki/File:Alexander_Alekhine.jpg) e [acervo fotográfico da FIDE](https://museum.fide.com/thematic_collections/alexander-alekhine-in-photographs). Necessário arquivo por meio permitido e verificação do direito aplicável no Brasil; não usar o site bloqueado como meio indireto. |
-| Bobby Fischer | **PENDENTE — 0 JPEG; fonte CC0 verificada** | [Nationaal Archief, foto de 15/07/1971](https://www.nationaalarchief.nl/onderzoeken/fotocollectie/abc6ac60-d0b4-102d-bcf8-003048976d84), fotógrafo desconhecido/Anefo. Página oficial identifica CC0. O serviço de imagem respondeu 404 (derivado) e 406 (original com Accept JPEG); não existe JPG importado. |
-| Frank Marshall | **PENDENTE — 0 JPEG; direitos não avaliados** | [Cleveland Public Library, partida Marshall–Réti, Moscou 1925](https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/108). A ficha possui marca **CNE: Copyright Not Evaluated**, e não PDM/CC0; não importar sem base adicional. |
-| Aron Nimzowitsch | **PENDENTE — 0 JPEG; direitos não avaliados** | [Cleveland Public Library, retrato de 1932](https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/75). Classificado **CNE**, sem licença de redistribuição demonstrada. |
-| Richard Réti | **PENDENTE — 0 JPEG; direitos não avaliados** | [Cleveland Public Library, partida de Moscou 1925](https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/108). Mesma ficha CNE do registro de Marshall; não duplicar imagem nem tratar localização do rosto como verificada sem inspeção. |
-| Gata Kamsky | **PENDENTE — 0 JPEG; licença identificada** | [Imagem do Grenke Open 2016, autor GFHund](https://commons.wikimedia.org/wiki/File:Kamsky,Gata_2016_Karlsruhe.jpeg) publicada como **CC BY-SA 4.0**. Obter arquivo licenciado do titular ou canal de download oficialmente permitido; preservar attribution, licença e indicação da transformação. |
+## Seis imagens incorporadas nesta rodada
 
-## Direitos, nomenclatura e integridade
+| Slug | Fonte | Fotógrafo/crédito | Estado de direitos indicado pela fonte |
+| --- | --- | --- | --- |
+| `alekhine` | [Retrato de 1918](https://commons.wikimedia.org/wiki/File:Alexander_Alekhine.jpg) | Desconhecido | Public Domain Mark 1.0; não equivale a CC0 |
+| `fischer` | [Anefo/Nationaal Archief, 1971](https://commons.wikimedia.org/wiki/File:Schaker_Bobby_Fisher_aan_bord_(archief),_Bestanddeelnr_924-7362.jpg) | Desconhecido / Anefo | CC0 1.0 |
+| `marshall` | [Retrato de Chess Openings, antes de 1904](https://commons.wikimedia.org/wiki/File:Frank_Marshall_(chess_player).jpg) | Oxford and Dilhoff (crédito da publicação) | Public Domain Mark 1.0; não equivale a CC0 |
+| `nimzowitsch` | [Retrato histórico anterior a 1930](https://commons.wikimedia.org/wiki/File:Aron_Nimzowitsch2.jpg) | Desconhecido | Public Domain Mark 1.0; não equivale a CC0 |
+| `reti` | [Österreichische Nationalbibliothek, década de 1920](https://commons.wikimedia.org/wiki/File:Richard_R%C3%A9ti_(1889%E2%80%931929)_OeNB_9471305.jpg) | Desconhecido / ÖNB | Domínio público indicado para a União Europeia; PDM não equivale a CC0 |
+| `kamsky` | [GFHund, Grenke Open de 2016](https://commons.wikimedia.org/wiki/File:Kamsky,Gata_2016_Karlsruhe.jpeg) | GFHund | CC BY-SA 4.0 (atribuição, link e indicação de transformação obrigatórios) |
 
-- **27** imagens CC0 1.0; **3** CC BY-SA 3.0; **15** CC BY-SA 2.0; **1** CC BY 2.0; **12** com **Public Domain Mark 1.0**: total **58 arquivos JPEG locais** com `sha256` e dados de proveniência.
-- **Public Domain Mark (PDM) não é licença nem autorização universal**; a Cleveland utiliza a indicação `NoC-US` para parte do acervo. A situação autoral em jurisdição brasileira deve ser verificada antes de eventual redistribuição pública, especialmente na hipótese de comercialização.
-- O manifesto `portrait_candidates.json` registra **59 linhas**: 58 imagens incorporadas mais uma única fonte candidata ainda não materializada (**Fischer**). Outros casos sem licença/arquivo não foram falsamente aprovados no manifesto.
-- A gravura de **Philidor, 1772**, veio da coleção Open Access do Metropolitan Museum of Art; `alt` e `derivative_note` identificam expressamente o desenho, não uma fotografia em vida.
-- Não usar Google Imagens, agregadores de fotos, APIs bloqueadas, material licenciado apenas para uso editorial ou cópias de procedência incerta como alternativa automática.
-- Antes do merge, executar testes, inspecionar visualmente **identidade e recorte dos 58 retratos** em Chrome/Debian, confirmar crédito/alt/license na aba História, verificar o wheel e tratar o aceite de direitos territoriais como gate separado.
+As seis imagens foram inspecionadas após incorporação: os retratos exibem os jogadores identificados, sem substituição por imagens geradas. É uma coleção de fotografias históricas e material artístico documental, não uma certificação de estilo ou força do motor.
 
-**Não fechar #47**: além destes seis retratos, a issue acompanha a homologação de direitos e de apresentação da interface. A PR #55 permanece Draft até o gate humano.
+## Situação de direitos
+
+Inventário global: **28 CC0 1.0; 3 CC BY-SA 3.0; 15 CC BY-SA 2.0; 1 CC BY 2.0; 1 CC BY-SA 4.0; 16 Public Domain Mark 1.0** (64). Public Domain Mark é um rótulo descritivo da página da fonte, e **não uma licença mundial**. A avaliação territorial, inclusive para distribuição pública/comercial no Brasil, deve ser documentada separadamente antes desse uso. As fontes antigas da Cleveland rotuladas CNE foram descartadas, não reclassificadas.
+
+O Código GPL não relicencia as imagens CC BY-SA. A interface deve manter autoria, licença, URL da fonte e aviso de recorte acessíveis, sem sugerir endosso dos jogadores.
+
+## Gate de release
+
+- [x] 64/64 perfis com retrato local e SHA-256.
+- [x] Seis alternativas documentais selecionadas sem fontes CNE.
+- [x] Inspeção das seis imagens adicionais.
+- [ ] CI de qualidade e empacotamento no HEAD final.
+- [ ] Conferência final de apresentação desktop/mobile da interface.
+- [ ] Análise jurídica específica do uso territorial de PDM antes de redistribuição pública ou comercial.
+
+A PR #55 contém o histórico da curadoria; não confundir fontes candidatas ou estados intermediários anteriores com a versão final.
