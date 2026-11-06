@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Copa dos Imortais · Arena local</title>
   <link rel="stylesheet" href="/arena.css">
+  <link rel="stylesheet" href="/history.css">
   <script src="/arena.js" defer></script>
+  <script src="/history.js" defer></script>
 </head>
 <body>
   <main class="layout">
@@ -15,9 +17,13 @@
         <h1>Arena de confrontos</h1>
         <p>Configure um duelo Rodent IV e acompanhe o resultado. Execução local.</p>
       </div>
+      <nav class="main-nav" aria-label="Áreas da aplicação">
+        <button id="tab-arena" type="button" aria-pressed="true" aria-controls="arena-view">Arena</button>
+        <button id="tab-history" type="button" aria-pressed="false" aria-controls="history-view">História</button>
+      </nav>
       <span id="connection" role="status" aria-live="polite">Conectando…</span>
     </header>
-    <div class="columns">
+    <div id="arena-view"><div class="columns">
       <section class="controls">
         <section class="panel">
           <div class="section-header">
@@ -125,7 +131,34 @@
         <iframe id="board-frame" src="/viewer" title="Tabuleiro de confronto, lances e relógios" loading="eager"></iframe>
         <p class="note">Pausar o replay não pausa o confronto. Resultados são lidos dos PGNs e resumos produzidos pelo simulador.</p>
       </section>
-    </div>
+    </div></div>
+    <section id="history-view" class="history-shell" aria-labelledby="history-heading" hidden>
+      <header class="history-heading">
+        <span class="overline">ACERVO HISTÓRICO · 64 ENXADRISTAS</span>
+        <h2 id="history-heading">História dos enxadristas</h2>
+        <p>Carreiras documentadas. Narrativas originais em primeira pessoa, sem simular declarações reais.</p>
+      </header>
+      <p id="history-status" role="status" aria-live="polite">Abra História para carregar o catálogo local.</p>
+      <div id="history-roster" hidden>
+        <div id="history-carousel" class="history-carousel" aria-label="Escolher enxadrista">
+          <button id="history-prev" type="button" aria-label="Enxadrista anterior">←</button>
+          <div id="history-left" class="history-neighbor"></div>
+          <article id="history-selected" class="history-selected" aria-live="polite"></article>
+          <div id="history-right" class="history-neighbor"></div>
+          <button id="history-next" type="button" aria-label="Próximo enxadrista">→</button>
+        </div>
+        <p id="history-position" class="history-position" aria-live="polite"></p>
+        <div id="history-actions">
+          <button id="history-open" type="button" class="primary">Ver perfil histórico</button>
+        </div>
+      </div>
+      <section id="history-profile" class="history-profile" aria-labelledby="history-profile-name" hidden>
+        <button id="history-back" type="button">← Todos os jogadores</button>
+        <h2 id="history-profile-name"></h2>
+        <div id="history-profile-body"></div>
+      </section>
+      <p class="history-disclaimer">Os resultados de motores são experimentais e não representam partidas ou feitos dos jogadores reais. Fotografias documentais não implicam aprovação deste projeto pelas pessoas retratadas.</p>
+    </section>
   </main>
 </body>
 </html>
