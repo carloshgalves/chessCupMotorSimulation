@@ -91,7 +91,7 @@ Com a Arena ativa (exemplo de porta 8766), abrir no navegador:
 http://127.0.0.1:8766/api/history/players/fischer/games
 ```
 
-O campo `count` pode ser zero sem ser erro. Se houver jogo,
+O campo `count` pode ser zero sem ser erro. O resultado vazio foi homologado no Chrome/Debian após o merge da frente de retratos; a disponibilidade de partidas depende dos arquivos locais do operador. Se houver jogo,
 copie o `game_id` para:
 
 ```text
