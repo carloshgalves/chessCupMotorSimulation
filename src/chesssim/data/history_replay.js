@@ -284,6 +284,10 @@
   function renderMoves() {
     const list = byId("history-replay-moves");
     const states = replay.states;
+    const focusedMove = document.activeElement &&
+      document.activeElement.dataset &&
+      document.activeElement.dataset.historyReplayMove;
+    let replacementFocus = null;
     list.replaceChildren();
     // Virtualize long games to avoid 2,000 live controls on the local page.
     const begin = Math.max(1, ply - 16);
@@ -295,6 +299,8 @@
       const label = String(moveNumber) + (index % 2 ? ". " : "… ") + states[index].san;
       const button = make("button", label, "history-move-button");
       button.type = "button";
+      button.dataset.historyReplayMove = String(index);
+      if (focusedMove === String(index)) replacementFocus = button;
       button.setAttribute("aria-label", "Ir ao lance " + index + ": " + states[index].san);
       if (index === ply) {
         button.setAttribute("aria-current", "step");
@@ -304,6 +310,9 @@
       li.append(button);
       list.append(li);
     }
+    // Replacing a virtualized move list must not strand keyboard focus on
+    // a detached button after Enter/Space activation.
+    if (replacementFocus) replacementFocus.focus();
   }
   function renderReplay() {
     if (!replay || !active) return;
