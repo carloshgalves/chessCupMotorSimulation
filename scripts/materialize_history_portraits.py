@@ -24,11 +24,21 @@ LICENSES = {
 
 
 def get_bytes(url: str, *, limit: int) -> bytes:
-    with urlopen(Request(url, headers={"User-Agent": USER_AGENT}), timeout=30) as reply:
-        data = reply.read(limit + 1)
-    if len(data) > limit:
-        raise ValueError("Exceeded download size limit")
-    return data
+    # Wikimedia may rate-limit shared GitHub Actions IPs. Honor backoff, no
+    # unlimited retries, and avoid treating upstream 429 as license failure.
+    for attempt in range(3):
+        try:
+            with urlopen(Request(url, headers={"User-Agent": USER_AGENT}),
+                         timeout=30) as reply:
+                data = reply.read(limit + 1)
+            if len(data) > limit:
+                raise ValueError("Exceeded download size limit")
+            return data
+        except HTTPError as exc:
+            if exc.code != 429 or attempt == 2:
+                raise
+            sleep(3 * (attempt + 1))
+    raise RuntimeError("Unreachable retry state")
 
 
 def manifest_rows() -> list[dict]:
@@ -119,6 +129,16 @@ def acquire(row: dict) -> bytes:
     parsed = urlsplit(remote or "")
     if (parsed.scheme != "https" or parsed.hostname != "upload.wikimedia.org" or
             not parsed.path.startswith("/wikipedia/commons/")):
+        # A Commons API result is not itself a trusted media URL. Do not follow
+        # off-host addresses: use a filename-derived immutable upload URL.
+        filename = row["file"].replace(" ", "_")
+        digest = md5(filename.encode("utf-8"), usedforsecurity=False).hexdigest()
+        remote = ("https://upload.wikimedia.org/wikipedia/commons/"
+                  + digest[0] + "/" + digest[:2] + "/" + quote(filename))
+        print(f"Unexpected Commons media URL; safe upload fallback for {row['slug']}",
+              flush=True)
+    parsed = urlsplit(remote)
+    if parsed.scheme != "https" or parsed.hostname != "upload.wikimedia.org":
         raise ValueError("Unsafe media URL")
     with Image.open(BytesIO(get_bytes(remote, limit=8_000_000))) as im:
         if im.format not in {"JPEG", "PNG"}:
