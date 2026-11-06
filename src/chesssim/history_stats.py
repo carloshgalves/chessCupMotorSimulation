@@ -298,6 +298,30 @@ def _tournament_attempt(root: Path, run: Path, state: dict,
     return records
 
 
+def _verified_exclusion(root: Path, run: Path, match: dict,
+                        excluded: dict) -> bool:
+    """Only count an excluded attempt if its actual saved summary is nonfinal."""
+    if (not isinstance(excluded, dict) or excluded.get("reason") != "NOT_COMPLETED"
+            or not isinstance(excluded.get("folder"), str)):
+        return False
+    a, b = match["players"]
+    prefix = Path("matches") / match["id"] / "duels" / (a + "-vs-" + b)
+    value = excluded["folder"]
+    if "\\" in value:
+        return False
+    parts = Path(value).parts
+    if (len(parts) != 5 or Path(*parts[:4]) != prefix or
+            not ATTEMPT.fullmatch(parts[4])):
+        return False
+    try:
+        summary = _json(root, run / Path(value) / "summary.json", MAX_MANIFEST_BYTES)
+        return (summary.get("status") in {"FAILED", "INCOMPLETE", "RUNNING"}
+                and (summary.get("players") is None or
+                     summary.get("players") == [a, b]))
+    except (InvalidCatalogue, OSError, ValueError, TypeError, KeyError):
+        return False
+
+
 def _tournament_games(root: Path, names: dict[str, str], slug: str,
                       coverage: Counter, seen: set[str], records: list[dict],
                       dates: list[str], tournaments: set[str]) -> None:
@@ -345,7 +369,15 @@ def _tournament_games(root: Path, names: dict[str, str], slug: str,
                             conflicts.add(folder)
                         else:
                             grouped[folder] = attempt
-                    coverage["excluded_attempts"] += len(match.get("excluded_attempts", []))
+                    excluded = match.get("excluded_attempts", [])
+                    if not isinstance(excluded, list) or len(excluded) > MAX_SUMMARIES:
+                        _mark(coverage, "excluded_attempt_manifest")
+                    else:
+                        for record in excluded:
+                            if _verified_exclusion(root, run, match, record):
+                                coverage["excluded_attempts"] += 1
+                            else:
+                                _mark(coverage, "excluded_attempt_manifest")
                     for folder, attempt in grouped.items():
                         coverage["candidate_games"] += 2
                         if folder in conflicts:
