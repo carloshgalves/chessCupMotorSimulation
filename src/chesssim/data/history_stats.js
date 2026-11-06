@@ -100,8 +100,26 @@
       coverage.games_accepted+" jogos do jogador aceitos; "+
       coverage.games_excluded+" registros excluídos. "+
       (coverage.complete ? "Cobertura sem erros detectados." :
-       "Cobertura parcial: "+coverage.sources_rejected+" fontes com inconsistências.");
-    byId("history-stats-coverage").textContent = text;
+       "Cobertura parcial: "+coverage.sources_rejected+
+       " fontes excluídas ou inconsistentes.");
+    const reasonLabels = {
+      INVALID_ARENA_SESSION:"sessão da Arena inválida",
+      INVALID_ARENA_PATH:"caminho de duelo incompatível",
+      INVALID_ARENA_ATTEMPT:"PGN ou resumo de duelo inválido",
+      INVALID_TOURNAMENT:"manifesto de torneio inválido",
+      INVALID_TOURNAMENT_LEDGER:"registro de torneio inválido",
+      INVALID_TOURNAMENT_ATTEMPT:"tentativa de torneio inválida",
+      UNREGISTERED_TOURNAMENT_ATTEMPT:"tentativa não registrada",
+      EXCLUDED_TOURNAMENT_ATTEMPT:"tentativa excluída/interrompida",
+      DUPLICATE_ATTEMPT:"tentativa repetida"
+    };
+    const reasons = coverage.reasons && typeof coverage.reasons === "object" ?
+      Object.entries(coverage.reasons).filter(([key,count]) =>
+        Object.prototype.hasOwnProperty.call(reasonLabels,key) &&
+        Number.isSafeInteger(count) && count > 0) : [];
+    const details = reasons.map(([key,count]) => reasonLabels[key]+" ("+count+")").join("; ");
+    byId("history-stats-coverage").textContent =
+      text + (details ? " Motivos: "+details+"." : "");
     if (data.completed_games === 0 && data.incomplete_games === 0) {
       byId("history-stats-status").textContent =
         "Sem partidas verificadas neste acervo local. Participações sem jogos são mostradas separadamente.";
