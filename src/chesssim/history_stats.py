@@ -8,11 +8,12 @@ and are reported as excluded coverage rather than fabricated outcomes.
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from hashlib import sha256
 from io import StringIO
 from pathlib import Path
 import re
+import math
 
 import chess
 import chess.pgn
@@ -27,10 +28,10 @@ from .history_profiles import _player
 from .tournament import SCHEMA as CUP_SCHEMA, _check_bracket
 
 SCHEMA = "chesssim-player-stats-v1"
-MAX_SESSIONS = 1000
+MAX_SESSIONS = 8192
 MAX_TOURNAMENTS = 100
-MAX_SUMMARIES = 2000
-MAX_GAMES = 4000
+MAX_SUMMARIES = 16384
+MAX_GAMES = 16384
 SESSION_ID = re.compile(r"session-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{12}\Z")
 ATTEMPT = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}\Z")
 RESULTS = frozenset({"1-0", "0-1", "1/2-1/2"})
@@ -45,7 +46,7 @@ def _timestamp(value: object) -> str | None:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
         if parsed.tzinfo is None or parsed.utcoffset() is None:
             return None
-        return parsed.isoformat()
+        return parsed.astimezone(timezone.utc).isoformat()
     except (ValueError, OverflowError):
         return None
 
@@ -84,6 +85,13 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
     manifests = sorted(root.glob("session-*/session.json"))
     if len(manifests) > MAX_SESSIONS:
         raise InvalidCatalogue("Limite de sessões excedido")
+    manifest_ids = {manifest.parent.name for manifest in manifests}
+    orphan_summaries = list(root.glob("session-*/duels/*/*/summary.json"))
+    if len(orphan_summaries) > MAX_SUMMARIES:
+        raise InvalidCatalogue("Limite de resumos excedido")
+    for path in orphan_summaries:
+        if path.relative_to(root).parts[0] not in manifest_ids:
+            _mark(coverage, "orphan_summary")
     for manifest in manifests:
         relative = manifest.relative_to(root)
         sid = relative.parts[0]
@@ -97,6 +105,7 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
                     or session.get("id") != sid or not isinstance(config, dict)
                     or config.get("white") not in names
                     or config.get("black") not in names
+                    or type(config.get("reverse")) is not bool
                     or config["white"] == config["black"]):
                 raise InvalidCatalogue("Sessão inconsistente")
             participants = [config["white"], config["black"]]
@@ -260,7 +269,8 @@ def _tournament_attempt(root: Path, run: Path, state: dict,
             clocks = meta.get("clock_left")
             loser_index = 0 if game.end().board().turn else 1
             if (not isinstance(clocks, list) or len(clocks) != 2 or
-                    not isinstance(clocks[loser_index], (int, float))
+                    type(clocks[loser_index]) not in (int, float)
+                    or not math.isfinite(clocks[loser_index])
                     or clocks[loser_index] > 0):
                 raise InvalidCatalogue("Tempo excedido sem evidência")
         identity, plies = mainline_identity(game)
