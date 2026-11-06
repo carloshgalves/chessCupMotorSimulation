@@ -346,6 +346,21 @@
         0.5,
         0.45
       ]
+    },
+    {
+      "slug": "kasparov",
+      "file": "Optiebeurs schaakvierkamp Garri Kasparov tegen Anatoli Karpov (rechts), Bestanddeelnr 934-2524.jpg",
+      "event": "Optiebeurs Chess Tournament, Amsterdam",
+      "event_date": "1988-05-19",
+      "author": "Rob Croes / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Optiebeurs_schaakvierkamp_Garri_Kasparov_tegen_Anatoli_Karpov_(rechts),_Bestanddeelnr_934-2524.jpg",
+      "centering": [
+        0.25,
+        0.46
+      ]
     }
   ]
 }
