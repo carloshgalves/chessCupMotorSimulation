@@ -69,7 +69,9 @@ function fixture(n,opts={}) {
     const bad=opts.invalidReplayFor===game.game_id;
     const states=bad?[stateData[0],{...stateData[1],fen:"9/8/8/8/8/8/8/8 w - - 0 1"}]:
       stateData;
-    return {schema:"chesssim-history-replay-v1",game,states};
+    const metadata = opts.mismatchResultFor===game.game_id ?
+      {...game,result:"0-1"} : game;
+    return {schema:"chesssim-history-replay-v1",game:metadata,states};
   };
   const fetch=(url,options)=>{
     calls.push({url,options});
@@ -150,13 +152,19 @@ const countSquares=element=>descendants(element).filter(node=>node.className.spl
       assert($("history-replay-meta").textContent.includes("Bobby Fischer"));
       assert(calls.every(c=>!c.options.method||c.options.method==="GET"));
       assert(calls.every(c=>c.options.cache==="no-store"));
-      if(n>=4){
-        const second=$("history-game-list").children[1];
-        second.events.click();
+      for(let index=1;index<n;index++){
+        const card=$("history-game-list").children[index];
+        card.events.click();
         await settle();
-        assert.equal(second.attributes["aria-pressed"],"true");
-        assert($("history-replay-meta").textContent.includes("Simulação local"));
-        assert($("history-replay-meta").textContent.includes("não é partida histórica"));
+        assert.equal(card.attributes["aria-pressed"],"true");
+        assert.equal($("history-game-list").children[0].attributes["aria-pressed"],"false");
+        assert($("history-replay-meta").textContent.includes("Evento "+index));
+        if(index%2===1){
+          assert($("history-replay-meta").textContent.includes("Simulação local"));
+          assert($("history-replay-meta").textContent.includes("não é partida histórica"));
+        } else {
+          assert($("history-replay-meta").textContent.includes("Histórica documentada"));
+        }
         assert.equal(countSquares($("history-replay-board")).length,64);
       }
       assert.equal(games.length,n);
@@ -221,6 +229,28 @@ const countSquares=element=>descendants(element).filter(node=>node.className.spl
     await settle();
     assert($("history-game-list").textContent.includes("<img src=x onerror"));
     assert(descendants($("history-game-list")).every(node=>node.tagName!=="IMG"));
+  }
+  // A forged/changed outcome must be rejected despite matching game ID/hash.
+  {
+    const app=fixture(4,{mismatchResultFor:"h-fixture-001"}),{$,window}=app;
+    window.ChessSimHistoryGames.enter("fischer");
+    await settle();
+    $("history-game-list").children[1].events.click();
+    await settle();
+    assert.equal(countSquares($("history-replay-board")).length,0);
+    assert($("history-games-status").textContent.includes("PGN inválido"));
+  }
+  // Leaving a profile discards late replies even after the same slug reopens.
+  {
+    const app=fixture(1,{holdFirst:true}),{$,window,deferred}=app;
+    window.ChessSimHistoryGames.enter("fischer");
+    await settle();
+    assert.equal(deferred.length,1);
+    window.ChessSimHistoryGames.leave();
+    deferred[0]();
+    await settle();
+    assert.equal($("history-games-section").hidden,true);
+    assert.equal(countSquares($("history-replay-board")).length,0);
   }
   // Valid empty FEN ranks retain all 64 squares (regression #43).
   {
