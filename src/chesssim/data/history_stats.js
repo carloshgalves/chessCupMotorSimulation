@@ -47,10 +47,21 @@
             key=>isCount(item[key])) &&
           item.games === item.completed + item.incomplete &&
           item.completed === item.wins + item.draws + item.losses)) {
-      // Opponent records have no tournament/duel counters; see check below.
       return false;
     }
-    return true;
+    if(coverage.verified_games !== data.totals.games ||
+       coverage.candidate_games < coverage.verified_games + coverage.rejected_games ||
+       coverage.partial !== Boolean(coverage.rejected_records || coverage.rejected_games)) {
+      return false;
+    }
+    const seen = new Set();
+    const sum = {games:0,completed:0,wins:0,draws:0,losses:0,incomplete:0};
+    for(const opponent of data.opponents) {
+      if(seen.has(opponent.slug)) return false;
+      seen.add(opponent.slug);
+      for(const key of Object.keys(sum)) sum[key] += opponent[key];
+    }
+    return Object.keys(sum).every(key=>sum[key]===data.totals[key]);
   }
   function counterList(report) {
     const group = $("history-stats-totals");
