@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui pentacampeão dos Estados Unidos e vencedor do torneio de elite de Wijk aan Zee.",
   "era_label": "2005–2019",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/nakamura.jpg",
+    "alt": "nakamura fotografado em 42nd Chess Olympiad, Baku (2016-09-06)",
+    "author": "Andreas Kontokanis",
+    "license": "CC BY-SA 2.0",
+    "source_url": "https://www.flickr.com/photos/8022405@N02/29608320206",
+    "verified_at": "2026-11-06",
+    "event": "42nd Chess Olympiad, Baku",
+    "event_date": "2016-09-06",
+    "rights_holder": "Andreas Kontokanis",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "sha256": "0431e761ee864b608629587b067bd32257805698eff859b74e1dec196814cd5f",
+    "derivative_note": "Recorte quadrado de 480×480 px de imagem de torneio. A fotografia derivada mantém a licença da fonte; atribuição ao fotógrafo.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

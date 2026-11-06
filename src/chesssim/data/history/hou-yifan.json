@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui a mais jovem campeã mundial feminina e conquistei a coroa quatro vezes.",
   "era_label": "2010–2016 (campeã mundial feminina em quatro ocasiões)",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/hou-yifan.jpg",
+    "alt": "hou-yifan fotografado em 42nd Chess Olympiad, Baku (2016-09-13)",
+    "author": "Andreas Kontokanis",
+    "license": "CC BY-SA 2.0",
+    "source_url": "https://www.flickr.com/photos/8022405@N02/29762728494",
+    "verified_at": "2026-11-06",
+    "event": "42nd Chess Olympiad, Baku",
+    "event_date": "2016-09-13",
+    "rights_holder": "Andreas Kontokanis",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "sha256": "f9d5444a0030284b40ce3f2c3782d1bfa8d63b68e1e5a9817b71d91a654261c5",
+    "derivative_note": "Recorte quadrado de 480×480 px de imagem de torneio. A fotografia derivada mantém a licença da fonte; atribuição ao fotógrafo.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",
