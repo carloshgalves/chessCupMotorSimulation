@@ -71,11 +71,12 @@ jobs:
               history_packs = sorted(name for name in names
                                      if name.startswith(root) and name.endswith(".json")
                                      and name != root + "portrait_candidates.json")
-              assert len(history_packs) >= 22, f"Expected at least 22 biographies, got {len(history_packs)}"
+              assert len(history_packs) == 64, f"Expected 64 biographies, got {len(history_packs)}"
               assert len(history_packs) <= 64, "More packs than canonical players"
               assert root + "portrait_candidates.json" in names
-              baseline = {"anand", "karpov", "larsen", "mequinho",
-                          "petrosian", "spassky", "topalov"}
+              baseline = {"anand", "bronstein", "carlsen", "euwe", "karpov",
+                          "larsen", "mequinho", "najdorf", "petrosian", "smyslov",
+                          "spassky", "timman", "topalov"}
               seen_slugs = set()
               referenced_photos = set()
               for biography in history_packs:
