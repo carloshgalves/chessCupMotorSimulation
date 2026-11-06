@@ -445,3 +445,35 @@ def test_no_historical_pgn_can_count_as_simulator_victory(tmp_path):
     data=history_stats.list_stats(tmp_path,"fischer")
     assert data["completed_games"]==data["run_count"]==0
     assert data["source_scope"]["historical_pgns_included"] is False
+
+
+def test_reverse_color_checkpoint_cannot_claim_complete_with_only_one_game(tmp_path):
+    folder=arena_session(tmp_path,specs=[("fischer","tal","0-1",False)])
+    manifest=json.loads((folder/"summary.json").read_text())
+    assert manifest["status"]=="INCOMPLETE"
+    manifest["status"]="COMPLETED"  # dishonest full completion
+    (folder/"summary.json").write_text(json.dumps(manifest))
+    report=history_stats.list_stats(tmp_path,"fischer")
+    assert report["completed_games"]==report["duels_count"]==0
+    assert report["coverage"]["reasons"]["INVALID_ARENA_ATTEMPT"]==1
+
+
+def test_second_game_cannot_keep_first_games_colors(tmp_path):
+    arena_session(tmp_path,specs=[("fischer","tal","0-1",False),
+                                  ("fischer","tal","0-1",False)])
+    data=history_stats.list_stats(tmp_path,"fischer")
+    assert data["completed_games"]==0
+    assert data["coverage"]["complete"] is False
+
+
+def test_aggregate_is_truly_read_only(tmp_path):
+    folder=arena_session(tmp_path)
+    root,state,match=tournament_run(tmp_path)
+    register_tournament(root,state,match)
+    files=sorted(p for p in tmp_path.rglob("*") if p.is_file())
+    before={p.relative_to(tmp_path):p.read_bytes() for p in files}
+    for player in ("fischer","tal","carlsen"):
+        history_stats.list_stats(tmp_path,player)
+    after={p.relative_to(tmp_path):p.read_bytes() for p in files}
+    assert after==before
+    assert sorted(p for p in tmp_path.rglob("*") if p.is_file())==files
