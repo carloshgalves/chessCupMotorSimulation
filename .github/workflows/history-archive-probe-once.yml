@@ -1,0 +1,40 @@
+name: History official archive source accessibility check
+on:
+  push:
+    branches: [feat/history-remaining-players-47]
+    paths: [.github/workflows/history-archive-probe-once.yml]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe independent archive access (single request per host/source)
+        shell: bash
+        run: |
+          python - <<'PY'
+          import re
+          from urllib.request import Request, urlopen
+          from urllib.error import HTTPError, URLError
+          urls = {
+            "national-archive": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ad6aaa12-d0b4-102d-bcf8-003048976d84?tab=files",
+            "north-holland": "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/a17d9a6f-d4af-cfff-84da-19917979bd71",
+            "gallica-bnf": "https://gallica.bnf.fr/iiif/ark:/12148/btv1b9024663p/f1/full/480,/0/native.jpg",
+            "gallica-thumbnail": "https://gallica.bnf.fr/ark:/12148/btv1b9024663p/thumbnail",
+            "picryl-public-domain": "https://picryl.com/media/tournoi-dechecs-alekhine-contre-colle-champion-de-belgique-photographie-de-513146",
+          }
+          for name, url in urls.items():
+              try:
+                  with urlopen(Request(url, headers={"User-Agent":"ChessSimulationResearch/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)","Accept":"text/html,image/jpeg,image/png,*/*"}),timeout=12) as res:
+                      chunk=res.read(120000)
+                      print(name, "STATUS",res.status,"TYPE",res.headers.get("Content-Type"),"SIZE_READ",len(chunk),"END_URL",res.url[:170],flush=True)
+                      if b"<html" in chunk[:2000].lower():
+                          txt=chunk.decode("utf-8","ignore")
+                          images=re.findall(r'(?:src|href)=["\x27]([^"\x27]+(?:jpg|jpeg|png|webp)[^"\x27]*)',txt,re.I)
+                          print(name,"IMAGE_LINKS",images[:6],flush=True)
+              except HTTPError as e:
+                  print(name,"HTTP",e.code,"REASON",e.reason,flush=True)
+              except Exception as e:
+                  print(name,type(e).__name__,str(e)[:140],flush=True)
+          PY
