@@ -229,31 +229,31 @@
     },
     {
       "slug": "gaprindashvili",
-      "file": "Gaprindashvili1963.jpg",
-      "event": "Hoogovens Women's Chess Tournament",
+      "file": "1963-hoogovens-gapri.jpg",
+      "event": "Hoogovens Women's Chess Tournament, Beverwijk",
       "event_date": "1963-01-21",
       "author": "Harry Pot / Anefo",
-      "rights_holder": "Nationaal Archief (Anefo)",
+      "rights_holder": "Nationaal Archief",
       "license": "CC0 1.0",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "source_url": "https://commons.wikimedia.org/wiki/File:Gaprindashvili1963.jpg",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/aa26ca98-d0b4-102d-bcf8-003048976d84",
       "centering": [
-        0.26,
+        0.22,
         0.44
       ]
     },
     {
       "slug": "chiburdanidze",
-      "file": "Ohra schaaktoernooi Maja Chiburdanidze tijdens haar partij met Pieterse, Bestanddeelnr 933-7153.jpg",
+      "file": "933-7153.jpg",
       "event": "OHRA Chess Tournament, Amsterdam",
       "event_date": "1986-07-22",
       "author": "Bart Molendijk / Anefo",
-      "rights_holder": "Nationaal Archief (Anefo)",
+      "rights_holder": "Nationaal Archief",
       "license": "CC0 1.0",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "source_url": "https://commons.wikimedia.org/wiki/File:Ohra_schaaktoernooi_Maja_Chiburdanidze_tijdens_haar_partij_met_Pieterse,_Bestanddeelnr_933-7153.jpg",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ad5596c2-d0b4-102d-bcf8-003048976d84",
       "centering": [
-        0.48,
+        0.5,
         0.42
       ]
     },
@@ -391,6 +391,21 @@
         0.78,
         0.45
       ]
+    },
+    {
+      "slug": "tal",
+      "file": "1982-hoogovens-tal.jpg",
+      "event": "Hoogovens Chess Tournament, Wijk aan Zee",
+      "event_date": "1982-01-19",
+      "author": "Rob Croes / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "centering": [
+        0.25,
+        0.45
+      ],
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ad0d975a-d0b4-102d-bcf8-003048976d84",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/"
     }
   ]
 }
