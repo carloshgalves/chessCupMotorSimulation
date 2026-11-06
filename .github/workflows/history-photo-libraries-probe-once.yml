@@ -1,4 +1,4 @@
-name: History photo archives - probe Cleveland and Library of Congress
+name: History Cleveland photo collection catalog discovery
 on:
   push:
     branches: [feat/history-remaining-players-47]
@@ -6,46 +6,52 @@ on:
 permissions:
   contents: read
 jobs:
-  source-probe:
+  discover:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
-      - name: Check authorized public archive APIs once
+      - name: Query rights metadata and permitted first-party image API
         shell: bash
         run: |
           python - <<'PY'
-          import json
-          from urllib.request import Request,urlopen
-          from urllib.error import HTTPError,URLError
+          import json,time
           from urllib.parse import quote
-          urls = {
-            "cleveland-steinitz-json":"https://cplorg.contentdm.oclc.org/digital/api/singleitem/collection/p4014coll20/id/212",
-            "cleveland-morphy-json":"https://cplorg.contentdm.oclc.org/digital/api/singleitem/collection/p4014coll20/id/11",
-            "cleveland-photo-image":"https://cplorg.contentdm.oclc.org/digital/api/singleitem/collection/p4014coll20/id/212/thumbnail",
-            "loc-morphy-json":"https://www.loc.gov/item/2007675802/?fo=json",
-            "loc-capablanca-json":"https://www.loc.gov/item/2016866175/?fo=json",
-            "loc-morphy-jpg":"https://cdn.loc.gov/service/pnp/cph/3a10000/3a10000/3a10900/3a10917r.jpg",
-          }
-          denied=set()
-          for title,url in urls.items():
-            host=url.split('/')[2]
-            if host in denied: continue
+          from urllib.request import Request,urlopen
+          from urllib.error import HTTPError
+          base="https://cplorg.contentdm.oclc.org"
+          names=["Steinitz","Lasker","Capablanca","Alekhine","Philidor","Staunton","Anderssen","Morphy","Zukertort","Chigorin","Pillsbury","Tarrasch","Marshall","Rubinstein","Nimzowitsch","Reti","Menchik"]
+          stop=False
+          for name in names:
+            if stop:break
+            url=base+"/digital/api/search/searchterm/"+quote(name)+"/field/all/mode/all/conn/and/maxRecords/8"
             try:
-              with urlopen(Request(url,headers={"User-Agent":"ChessSimulationArchiveCurator/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)","Accept":"application/json,text/html,image/jpeg"}),timeout=16) as response:
-                data=response.read(160000)
-                print("SOURCE",title,"STATUS",response.status,"TYPE",response.headers.get("Content-Type"),"BYTES",len(data),flush=True)
-                if "json" in str(response.headers.get("Content-Type")).lower():
-                  obj=json.loads(data)
-                  if "cleveland" in title:
-                    print("META",title,str(obj)[:3300],flush=True)
-                  else:
-                    it=obj.get("item",{})
-                    print("META",title,json.dumps({k:it.get(k) for k in ("title","rights","rights_advisory","date","image_url","item_id","creator","created_published","source_collection")})[:3300],flush=True)
-                elif "text/" in str(response.headers.get("Content-Type")):
-                  print("HTML",title,repr(data[:160]),flush=True)
-            except HTTPError as exc:
-              print("ACCESS",title,exc.code,flush=True)
-              if exc.code in (401,403,429,451):denied.add(host)
-            except (ValueError,URLError,TimeoutError,OSError) as exc:
-              print("ERROR",title,type(exc).__name__,str(exc)[:140],flush=True)
+              with urlopen(Request(url,headers={"User-Agent":"ChessSimulation/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)"}),timeout=15) as response:
+                data=response.read(120000)
+                if "json" not in response.headers.get("Content-Type",""):
+                  print("SEARCH",name,"UNEXPECTED",response.headers.get("Content-Type"),repr(data[:80]),flush=True);continue
+                j=json.loads(data)
+                results=j.get("items",[])
+                print("SEARCH",name,"TOTAL",j.get("totalResults"),"RESULTS",[(v.get("itemId"),v.get("title"),v.get("date"),v.get("metadataFields",{})) for v in results][:8],flush=True)
+            except HTTPError as e:
+              print("SEARCH",name,"HTTP",e.code,flush=True)
+              if e.code in (401,403,429,451):stop=True
+            except Exception as e:
+              print("SEARCH",name,"FAIL",type(e).__name__,str(e)[:200],flush=True)
+            time.sleep(.3)
+          for name,path in {
+            "iiif-steinitz-480":"/digital/iiif/p4014coll20/212/full/480,/0/default.jpg",
+            "iiif-morphy-480":"/digital/iiif/p4014coll20/11/full/480,/0/default.jpg",
+            "iiif-steinitz-alt":"/digital/api/singleitem/collection/p4014coll20/id/212/download",
+          }.items():
+            if stop:break
+            try:
+              url=base+path
+              with urlopen(Request(url,headers={"User-Agent":"ChessSimulation/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)"}),timeout=15) as res:
+                d=res.read(1000000)
+                print("IMAGE",name,"STATUS",res.status,"TYPE",res.headers.get("Content-Type"),"BYTES",len(d),"MAGIC",repr(d[:18]),flush=True)
+            except HTTPError as e:
+              print("IMAGE",name,"HTTP",e.code,flush=True)
+              if e.code in (401,403,429,451):stop=True
+            except Exception as e:
+              print("IMAGE",name,"FAIL",type(e).__name__,str(e)[:120],flush=True)
           PY
