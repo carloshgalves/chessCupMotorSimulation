@@ -193,6 +193,10 @@ def test_partial_and_failed_attempts_never_create_wins(tmp_path):
     summary = json.loads((folder / "summary.json").read_text())
     summary["status"] = "FAILED"
     (folder / "summary.json").write_text(json.dumps(summary))
+    manifest = folder.parents[2] / "session.json"
+    session_state = json.loads(manifest.read_text())
+    session_state["status"] = "FAILED"
+    manifest.write_text(json.dumps(session_state))
     result = stat(tmp_path)
     assert result["totals"]["games"] == 1
     assert result["totals"]["incomplete"] == 1
@@ -385,3 +389,14 @@ def test_cap_is_enforced_without_partial_fabricated_result(tmp_path, monkeypatch
     monkeypatch.setattr(history_stats, "MAX_SESSIONS", 0)
     with pytest.raises(ValueError, match="Limite"):
         stat(tmp_path)
+
+
+def test_contradictory_session_and_summary_status_fail_closed(tmp_path):
+    folder, duel = session(tmp_path, 0, results=("1-0",))
+    session_path = folder / "session.json"
+    session_info = json.loads(session_path.read_text())
+    session_info["status"] = "FAILED"
+    session_path.write_text(json.dumps(session_info))
+    p = stat(tmp_path)
+    assert p["totals"]["games"] == 0
+    assert p["coverage"]["partial"] is True
