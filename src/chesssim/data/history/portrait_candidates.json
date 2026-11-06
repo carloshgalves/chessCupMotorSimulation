@@ -106,6 +106,861 @@
         0.5,
         0.38
       ]
+    },
+    {
+      "slug": "euwe",
+      "file": "Wereldschaaktoernooi. Links dr. Max Euwe, rechts Michael Botwinnik, resp. tweede, Bestanddeelnr 934-5060.jpg",
+      "event": "Groningen Chess Tournament",
+      "event_date": "1946-08-12",
+      "author": "Anefo / Nationaal Archief",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Wereldschaaktoernooi._Links_dr._Max_Euwe,_rechts_Michael_Botwinnik,_resp._tweede,_Bestanddeelnr_934-5060.jpg",
+      "centering": [
+        0.23,
+        0.45
+      ]
+    },
+    {
+      "slug": "smyslov",
+      "file": "Vasily Smyslov 1964.jpg",
+      "event": "Amsterdam Interzonal Tournament",
+      "event_date": "1964-05-26",
+      "author": "Harry Pot / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Vasily_Smyslov_1964.jpg",
+      "centering": [
+        0.5,
+        0.4
+      ]
+    },
+    {
+      "slug": "najdorf",
+      "file": "Najdorf1950.jpg",
+      "event": "World Chess Tournament Amsterdam",
+      "event_date": "1950-12-10",
+      "author": "Carel L. de Vogel / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Najdorf1950.jpg",
+      "centering": [
+        0.5,
+        0.46
+      ]
+    },
+    {
+      "slug": "timman",
+      "file": "IBM schaaktoernooi 3e ronde Timman aan zet, Bestanddeelnr 929-8190.jpg",
+      "event": "IBM International Chess Tournament, Amsterdam",
+      "event_date": "1978-07-15",
+      "author": "Rob Croes / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:IBM_schaaktoernooi_3e_ronde_Timman_aan_zet,_Bestanddeelnr_929-8190.jpg",
+      "centering": [
+        0.5,
+        0.4
+      ]
+    },
+    {
+      "slug": "portisch",
+      "file": "915-9235.jpg",
+      "event": "Hoogovens Chess Tournament, Beverwijk",
+      "event_date": "1964-01-08",
+      "author": "Jack de Nijs / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/aa5521d6-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.5,
+        0.44
+      ]
+    },
+    {
+      "slug": "keres",
+      "file": "915-9231.jpg",
+      "event": "Hoogovens Chess Tournament, Beverwijk",
+      "event_date": "1964-01-08",
+      "author": "Jack de Nijs / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/aa551e48-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.5,
+        0.46
+      ]
+    },
+    {
+      "slug": "geller",
+      "file": "922-0477.jpg",
+      "event": "Hoogovens Chess Tournament, Beverwijk",
+      "event_date": "1969-01-28",
+      "author": "Jack de Nijs / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ab5c5428-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.22,
+        0.46
+      ]
+    },
+    {
+      "slug": "bronstein",
+      "file": "David Bronstein in 1954.jpg",
+      "event": "Chess Olympiad Amsterdam",
+      "event_date": "1954-09-25",
+      "author": "Joop van Bilsen / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:David_Bronstein_in_1954.jpg",
+      "centering": [
+        0.5,
+        0.42
+      ]
+    },
+    {
+      "slug": "gaprindashvili",
+      "file": "1963-hoogovens-gapri.jpg",
+      "event": "Hoogovens Women's Chess Tournament, Beverwijk",
+      "event_date": "1963-01-21",
+      "author": "Harry Pot / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/aa26ca98-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.22,
+        0.44
+      ]
+    },
+    {
+      "slug": "chiburdanidze",
+      "file": "933-7153.jpg",
+      "event": "OHRA Chess Tournament, Amsterdam",
+      "event_date": "1986-07-22",
+      "author": "Bart Molendijk / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ad5596c2-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.5,
+        0.42
+      ]
+    },
+    {
+      "slug": "carlsen",
+      "file": "MagnusCarlsen13c.jpg",
+      "event": "Tata Steel Chess Tournament",
+      "event_date": "2013-01",
+      "author": "Stefan64",
+      "rights_holder": "Stefan64",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:MagnusCarlsen13c.jpg",
+      "centering": [
+        0.5,
+        0.42
+      ]
+    },
+    {
+      "slug": "nakamura",
+      "file": "29608320206.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-06",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/29608320206",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "caruana",
+      "file": "30218058631.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-10",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/30218058631",
+      "centering": [
+        0.52,
+        0.44
+      ]
+    },
+    {
+      "slug": "hou-yifan",
+      "file": "29762728494.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-13",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/29762728494",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "ding-liren",
+      "file": "30201145173.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-02",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/30201145173",
+      "centering": [
+        0.5,
+        0.46
+      ]
+    },
+    {
+      "slug": "judit-polgar",
+      "file": "NL-HlmNHA_1478_45143K00_15.jpg",
+      "event": "Hoogovens Chess Tournament, Wijk aan Zee",
+      "event_date": "1998-01-17",
+      "author": "Fotoburo de Boer",
+      "rights_holder": "Noord-Hollands Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/a17d9a6f-d4af-cfff-84da-19917979bd71",
+      "centering": [
+        0.5,
+        0.43
+      ]
+    },
+    {
+      "slug": "kasparov",
+      "file": "934-2506.jpg",
+      "event": "Optiebeurs Chess Tournament, Amsterdam",
+      "event_date": "1988-05-19",
+      "author": "Rob Croes / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ad6aaa12-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.5,
+        0.42
+      ]
+    },
+    {
+      "slug": "botvinnik",
+      "file": "922-0655.jpg",
+      "event": "Hoogovens Chess Tournament, Beverwijk",
+      "event_date": "1969-02-01",
+      "author": "Jack de Nijs / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ab5cfe00-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.24,
+        0.45
+      ]
+    },
+    {
+      "slug": "gligoric",
+      "file": "924-7305.jpg",
+      "event": "IBM International Chess Tournament, Amsterdam",
+      "event_date": "1971-07-13",
+      "author": "Joost Evers / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/abc67a92-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.78,
+        0.45
+      ]
+    },
+    {
+      "slug": "tal",
+      "file": "1982-hoogovens-tal.jpg",
+      "event": "Hoogovens Chess Tournament, Wijk aan Zee",
+      "event_date": "1982-01-19",
+      "author": "Rob Croes / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "centering": [
+        0.25,
+        0.45
+      ],
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ad0d975a-d0b4-102d-bcf8-003048976d84",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "slug": "korchnoi",
+      "file": "929-5514.jpg",
+      "event": "Hoogovens Chess Tournament, Wijk aan Zee",
+      "event_date": "1978-01-31",
+      "author": "Hans Peters / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/acab5f2c-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "taimanov",
+      "file": "923-2049.jpg",
+      "event": "Hoogovens Chess Tournament, Beverwijk",
+      "event_date": "1970-01-31",
+      "author": "Joost Evers / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ab8b16d2-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.5,
+        0.43
+      ]
+    },
+    {
+      "slug": "reshevsky",
+      "file": "916-5873.jpg",
+      "event": "Chess Candidates Playoff, Amsterdam GAK",
+      "event_date": "1964-06-25",
+      "author": "Jack de Nijs / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/aa6eab38-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "polugaevsky",
+      "file": "925-6635.jpg",
+      "event": "IBM International Chess Tournament, Amsterdam",
+      "event_date": "1972-06-13",
+      "author": "Anefo",
+      "rights_holder": "Nationaal Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/abec6496-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "short",
+      "file": "933-5538.jpg",
+      "event": "Hoogovens Chess Tournament, Wijk aan Zee",
+      "event_date": "1986-01-29",
+      "author": "Rob Croes / Anefo",
+      "rights_holder": "Nationaal Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ad4f4ed4-d0b4-102d-bcf8-003048976d84",
+      "centering": [
+        0.5,
+        0.44
+      ]
+    },
+    {
+      "slug": "gelfand",
+      "file": "NL-HlmNHA_1478_35753K00_23.jpg",
+      "event": "Hoogovens Chess Tournament, Wijk aan Zee",
+      "event_date": "1991-01-23",
+      "author": "Fotoburo de Boer",
+      "rights_holder": "Noord-Hollands Archief",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/bca2a308-2829-b594-5fc7-7946ed2c642f",
+      "centering": [
+        0.27,
+        0.45
+      ]
+    },
+    {
+      "slug": "ivanchuk",
+      "file": "1824512615.jpg",
+      "event": "European Club Cup, Heraklion",
+      "event_date": "2007-11-01",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY 2.0",
+      "license_url": "https://creativecommons.org/licenses/by/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/1824512615",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "kramnik",
+      "file": "29490544661.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-05",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/29490544661",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "mamedyarov",
+      "file": "30680155211.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-09",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/30680155211",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "grischuk",
+      "file": "30754960216.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-10",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/30754960216",
+      "centering": [
+        0.5,
+        0.44
+      ]
+    },
+    {
+      "slug": "karjakin",
+      "file": "30073009080.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-10",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/30073009080",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "nepomniachtchi",
+      "file": "31118550352.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/31118550352",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "wesley-so",
+      "file": "28955094824.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/28955094824",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "vachier-lagrave",
+      "file": "29525938546.jpg",
+      "event": "42nd Chess Olympiad, Baku",
+      "event_date": "2016-09-05",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/29525938546",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "aronian",
+      "file": "6319418131.jpg",
+      "event": "European Team Chess Championship, Porto Carras",
+      "event_date": "2011-11-06",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/6319418131",
+      "centering": [
+        0.5,
+        0.45
+      ]
+    },
+    {
+      "slug": "shirov",
+      "file": "6352157086.jpg",
+      "event": "European Team Chess Championship, Porto Carras",
+      "event_date": "2011-11-11",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/6352157086",
+      "centering": [
+        0.5,
+        0.43
+      ]
+    },
+    {
+      "slug": "svidler",
+      "file": "6312101622.jpg",
+      "event": "European Team Chess Championship, Porto Carras",
+      "event_date": "2011-11-03",
+      "author": "Andreas Kontokanis",
+      "rights_holder": "Andreas Kontokanis",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/8022405@N02/6312101622",
+      "centering": [
+        0.58,
+        0.4
+      ]
+    },
+    {
+      "slug": "leko",
+      "file": "54275360618.jpg",
+      "event": "Tata Steel Chess Tournament, Wijk aan Zee",
+      "event_date": "2025-01-18",
+      "author": "Frans Peeters",
+      "rights_holder": "Frans Peeters",
+      "license": "CC BY-SA 2.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "source_url": "https://www.flickr.com/photos/suspeeters/54275360618",
+      "centering": [
+        0.75,
+        0.5
+      ]
+    },
+    {
+      "slug": "steinitz",
+      "file": "cleveland-212.jpg",
+      "event": "Retrato de gabinete de Wilhelm Steinitz",
+      "event_date": "1883",
+      "author": "Lilienthal (New Orleans)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/212",
+      "centering": [
+        0.5,
+        0.4
+      ]
+    },
+    {
+      "slug": "lasker",
+      "file": "cleveland-115.jpg",
+      "event": "Lasker contra J. S. Ryan no torneio de Nova York",
+      "event_date": "1893",
+      "author": "Hubbard Photograph Co.",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/115",
+      "centering": [
+        0.3,
+        0.47
+      ]
+    },
+    {
+      "slug": "capablanca",
+      "file": "cleveland-6.jpg",
+      "event": "Exibição simultânea de Capablanca no Manhattan Chess Club",
+      "event_date": "1922",
+      "author": "Fotograms (New York)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/6",
+      "centering": [
+        0.38,
+        0.45
+      ]
+    },
+    {
+      "slug": "philidor",
+      "file": "DP828972.jpg",
+      "event": "Retrato gravado de Philidor (representação artística, não fotografia)",
+      "event_date": "1772",
+      "author": "Augustin de Saint-Aubin (após Charles-Nicolas Cochin II)",
+      "rights_holder": "Metropolitan Museum of Art — Open Access",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://www.metmuseum.org/art/collection/search/423124",
+      "centering": [
+        0.5,
+        0.48
+      ]
+    },
+    {
+      "slug": "staunton",
+      "file": "cleveland-2595.jpg",
+      "event": "Desenho histórico de Howard Staunton (reprodução)",
+      "event_date": "sem data",
+      "author": "Artista não identificado (desenho histórico)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/2595",
+      "centering": [
+        0.5,
+        0.43
+      ]
+    },
+    {
+      "slug": "anderssen",
+      "file": "cleveland-2532.jpg",
+      "event": "Retrato histórico de Adolf Anderssen",
+      "event_date": "século XIX",
+      "author": "Fotógrafo não identificado (acervo Cleveland)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/2532",
+      "centering": [
+        0.5,
+        0.42
+      ]
+    },
+    {
+      "slug": "morphy",
+      "file": "cleveland-11.jpg",
+      "event": "Reprodução fotográfica atribuída a Paul Morphy na Filadélfia",
+      "event_date": "1859",
+      "author": "Autor do original não identificado (reprodução de época)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/11",
+      "centering": [
+        0.5,
+        0.46
+      ]
+    },
+    {
+      "slug": "zukertort",
+      "file": "cleveland-2599.jpg",
+      "event": "Retrato histórico de Johannes Zukertort",
+      "event_date": "século XIX",
+      "author": "Fotógrafo não identificado (acervo Cleveland)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/2599",
+      "centering": [
+        0.5,
+        0.42
+      ]
+    },
+    {
+      "slug": "chigorin",
+      "file": "cleveland-3048.jpg",
+      "event": "Retrato histórico de Mikhail Chigorin",
+      "event_date": "até 1908",
+      "author": "Fotógrafo não identificado (acervo Cleveland)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/3048",
+      "centering": [
+        0.5,
+        0.42
+      ]
+    },
+    {
+      "slug": "pillsbury",
+      "file": "cleveland-76.jpg",
+      "event": "Retrato de Harry Nelson Pillsbury",
+      "event_date": "até 1906",
+      "author": "Fotógrafo não identificado (acervo Cleveland)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/76",
+      "centering": [
+        0.5,
+        0.44
+      ]
+    },
+    {
+      "slug": "tarrasch",
+      "file": "cleveland-37.jpg",
+      "event": "Retrato fotográfico de Siegbert Tarrasch",
+      "event_date": "cerca de 1900",
+      "author": "Julius Klinkhardt (atribuição do catálogo)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/37",
+      "centering": [
+        0.5,
+        0.44
+      ]
+    },
+    {
+      "slug": "rubinstein",
+      "file": "cleveland-77.jpg",
+      "event": "Retrato histórico de Akiba Rubinstein",
+      "event_date": "século XX",
+      "author": "Fotógrafo não identificado (acervo Cleveland)",
+      "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/77",
+      "centering": [
+        0.5,
+        0.44
+      ]
+    },
+    {
+      "slug": "menchik",
+      "file": "cn8774_menchik.jpg",
+      "event": "British Chess Magazine, torneio juvenil feminino, fevereiro de 1926",
+      "event_date": "1926-02",
+      "author": "Fotógrafo desconhecido; British Chess Magazine (1926)",
+      "rights_holder": "Imagem histórica publicada em periódico de 1926; domínio público por antiguidade de publicação",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://www.chesshistory.com/winter/extra/menchikclub.html",
+      "centering": [
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "slug": "alekhine",
+      "file": "Alexander Alekhine.jpg",
+      "event": "Retrato histórico de Alexander Alekhine",
+      "event_date": "1918-08-01",
+      "author": "Fotógrafo desconhecido",
+      "rights_holder": "Autor desconhecido; estado de domínio público documentado no Commons",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Alexander_Alekhine.jpg",
+      "centering": [
+        0.5,
+        0.38
+      ]
+    },
+    {
+      "slug": "fischer",
+      "file": "Schaker Bobby Fisher aan bord (archief), Bestanddeelnr 924-7362.jpg",
+      "event": "Retrato ao tabuleiro — coleção Anefo",
+      "event_date": "1971-07-15",
+      "author": "Fotógrafo desconhecido / Anefo",
+      "rights_holder": "Nationaal Archief (Anefo)",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Schaker_Bobby_Fisher_aan_bord_(archief),_Bestanddeelnr_924-7362.jpg",
+      "centering": [
+        0.5,
+        0.4
+      ]
+    },
+    {
+      "slug": "marshall",
+      "file": "Frank Marshall (chess player).jpg",
+      "event": "Retrato publicado em Chess Openings (1904)",
+      "event_date": "antes de 1904",
+      "author": "Oxford and Dilhoff (crédito da publicação)",
+      "rights_holder": "Estado de domínio público documentado no Commons",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Frank_Marshall_(chess_player).jpg",
+      "centering": [
+        0.5,
+        0.38
+      ]
+    },
+    {
+      "slug": "nimzowitsch",
+      "file": "Aron Nimzowitsch2.jpg",
+      "event": "Retrato histórico publicado antes de 1930",
+      "event_date": "antes de 1930",
+      "author": "Fotógrafo desconhecido",
+      "rights_holder": "Estado de domínio público documentado no Commons",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Aron_Nimzowitsch2.jpg",
+      "centering": [
+        0.5,
+        0.37
+      ]
+    },
+    {
+      "slug": "reti",
+      "file": "Richard Réti (1889–1929) OeNB 9471305.jpg",
+      "event": "Retrato de arquivo — Österreichische Nationalbibliothek",
+      "event_date": "década de 1920",
+      "author": "Fotógrafo desconhecido / ÖNB",
+      "rights_holder": "Österreichische Nationalbibliothek (acervo; domínio público declarado na UE)",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Richard_R%C3%A9ti_(1889%E2%80%931929)_OeNB_9471305.jpg",
+      "centering": [
+        0.5,
+        0.34
+      ]
+    },
+    {
+      "slug": "kamsky",
+      "file": "Kamsky,Gata 2016 Karlsruhe.jpeg",
+      "event": "Grenke Chess Open — 9ª rodada, Karlsruhe",
+      "event_date": "2016-03-28",
+      "author": "GFHund",
+      "rights_holder": "GFHund",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Kamsky,Gata_2016_Karlsruhe.jpeg",
+      "centering": [
+        0.5,
+        0.42
+      ]
     }
   ]
 }

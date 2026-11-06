@@ -1,0 +1,104 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "capablanca",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão mundial e destaquei-me pelo domínio dos finais e da técnica posicional.",
+  "era_label": "1911–1927",
+  "portrait": {
+    "local_asset": "history/portraits/capablanca.jpg",
+    "alt": "Retrato histórico de Capablanca, Jose Raul, 1922, in Simultaneous Exhibition, fonte Cleveland Public Library",
+    "author": "Fotograms (New York)",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/6",
+    "verified_at": "2026-11-06",
+    "event": "Exibição simultânea de Capablanca no Manhattan Chess Club",
+    "event_date": "1922",
+    "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "40cc71a932fbe91735029796a1cb8c369f69dd693b6d4f4ea36e119a96bf2488",
+    "derivative_note": "Recorte e redução para 480×480 px de reprodução histórica; identificado por Cleveland Public Library como PDM 1.0/NoC-US. PDM é uma marcação de domínio público, não licença CC0. Verificar exigências territoriais antes de redistribuir.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1911,
+      "text": "Venci o torneio internacional de San Sebastián, na Espanha.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1921,
+      "text": "Derrotei Emanuel Lasker e me tornei campeão mundial em Havana.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1927,
+      "text": "Disputei a defesa do título mundial contra Alexander Alekhine em Buenos Aires.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1911,
+      "title": "San Sebastián",
+      "summary": "Venci o torneio internacional de San Sebastián, na Espanha.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 1921,
+      "title": "Título mundial",
+      "summary": "Derrotei Emanuel Lasker e me tornei campeão mundial em Havana.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    },
+    {
+      "year": 1927,
+      "title": "Defesa da coroa",
+      "summary": "Disputei a defesa do título mundial contra Alexander Alekhine em Buenos Aires.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Referência histórica de capablanca",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/world-chess-champions",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Chess.com — Capablanca e San Sebastián 1911",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/jose-raul-capablanca",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "Museu FIDE — Capablanca, Lasker e Alekhine",
+      "publisher": "FIDE",
+      "url": "https://museum.fide.com/champions/jose-raul-capablanca",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

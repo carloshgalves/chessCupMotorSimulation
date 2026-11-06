@@ -1,0 +1,90 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "geller",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão soviético duas vezes e disputei diversos torneios de Candidatos.",
+  "era_label": "1955–1979",
+  "portrait": {
+    "local_asset": "history/portraits/geller.jpg",
+    "alt": "geller em Hoogovens Chess Tournament, Beverwijk (1969-01-28)",
+    "author": "Jack de Nijs / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ab5c5428-d0b4-102d-bcf8-003048976d84",
+    "verified_at": "2026-11-06",
+    "event": "Hoogovens Chess Tournament, Beverwijk",
+    "event_date": "1969-01-28",
+    "rights_holder": "Nationaal Archief",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "61659e35b1cfbee3e39e60d7df1eaaefa97c03587fb33cb706d948f3903df7a7",
+    "derivative_note": "Recorte quadrado e redução para 480×480 px a partir de fotografia oficial de torneio.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1955,
+      "text": "Conquistei meu primeiro Campeonato Soviético.",
+      "source_ids": [
+        "source-1",
+        "audit-2",
+        "audit-3"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1979,
+      "text": "Venci novamente o Campeonato Soviético, 24 anos após a primeira conquista.",
+      "source_ids": [
+        "source-1",
+        "audit-2",
+        "audit-3"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1955,
+      "title": "Campeonato soviético",
+      "summary": "Conquistei meu primeiro Campeonato Soviético.",
+      "source_ids": [
+        "source-1",
+        "audit-2",
+        "audit-3"
+      ]
+    },
+    {
+      "year": 1979,
+      "title": "Segundo título soviético",
+      "summary": "Venci novamente o Campeonato Soviético, 24 anos após a primeira conquista.",
+      "source_ids": [
+        "source-1",
+        "audit-2",
+        "audit-3"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de geller",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/efim-geller",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Chess.com — campeonatos soviéticos 1955 e 1979",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/efim-geller",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "OlimpBase — dois campeonatos soviéticos",
+      "publisher": "OlimpBase",
+      "url": "https://www.olimpbase.org/statistics-ind/urs-individual.html",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

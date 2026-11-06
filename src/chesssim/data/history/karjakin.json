@@ -1,0 +1,111 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "karjakin",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão mundial de rápidas e blitz e desafiante de Magnus Carlsen.",
+  "era_label": "2012–2016",
+  "portrait": {
+    "local_asset": "history/portraits/karjakin.jpg",
+    "alt": "karjakin fotografado em 42nd Chess Olympiad, Baku (2016-09-10)",
+    "author": "Andreas Kontokanis",
+    "license": "CC BY-SA 2.0",
+    "source_url": "https://www.flickr.com/photos/8022405@N02/30073009080",
+    "verified_at": "2026-11-06",
+    "event": "42nd Chess Olympiad, Baku",
+    "event_date": "2016-09-10",
+    "rights_holder": "Andreas Kontokanis",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "sha256": "551d34551b8068f161ab273a8f467f9e93ced0685ce961fca533ce4d03de728a",
+    "derivative_note": "Recorte quadrado de 480×480 px de imagem de torneio. A fotografia derivada mantém a licença da fonte; atribuição ao fotógrafo.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2012,
+      "text": "Conquistei o Campeonato Mundial de Xadrez Rápido.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2016,
+      "text": "Venci o Torneio de Candidatos e ganhei o direito de desafiar Magnus Carlsen.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2016,
+      "text": "Conquistei o Campeonato Mundial de Blitz.",
+      "source_ids": [
+        "source-1",
+        "audit-4"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2012,
+      "title": "Mundial de rápidas",
+      "summary": "Conquistei o Campeonato Mundial de Xadrez Rápido.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 2016,
+      "title": "Candidatos",
+      "summary": "Venci o Torneio de Candidatos e ganhei o direito de desafiar Magnus Carlsen.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    },
+    {
+      "year": 2016,
+      "title": "Mundial de blitz",
+      "summary": "Conquistei o Campeonato Mundial de Blitz.",
+      "source_ids": [
+        "source-1",
+        "audit-4"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil e conquistas de karjakin",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/sergey-karjakin",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE — campeão mundial rápido 2012",
+      "publisher": "FIDE",
+      "url": "https://old.fide.com/component/content/article/1-fide-news/7140-shakhriyar-mamedyarov-became-the-world-rapid-chess-champion.html",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "FIDE — vitória nos Candidatos 2016",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/history-of-the-candidates-from-budapest-1950-to-cyprus-2026/",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-4",
+      "title": "Chess.com — campeão mundial de blitz 2016",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/world-rapid-and-blitz-chess-champions",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

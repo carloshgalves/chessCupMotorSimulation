@@ -1,0 +1,86 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "timman",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui finalista do Campeonato Mundial da FIDE e conquistei nove campeonatos holandeses.",
+  "era_label": "1993–1996",
+  "portrait": {
+    "local_asset": "history/portraits/timman.jpg",
+    "alt": "timman em IBM International Chess Tournament, Amsterdam (1978-07-15)",
+    "author": "Rob Croes / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:IBM_schaaktoernooi_3e_ronde_Timman_aan_zet,_Bestanddeelnr_929-8190.jpg",
+    "verified_at": "2026-11-06",
+    "event": "IBM International Chess Tournament, Amsterdam",
+    "event_date": "1978-07-15",
+    "rights_holder": "Nationaal Archief (Anefo)",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "e62c990e93e8357316c65987fe8d916f02eeff182750915d6de8b3d2b2c92169",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1993,
+      "text": "Disputei o match pelo título mundial da FIDE contra Anatoly Karpov.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1996,
+      "text": "Conquistei meu nono Campeonato Holandês.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1993,
+      "title": "Final da FIDE",
+      "summary": "Disputei o match pelo título mundial da FIDE contra Anatoly Karpov.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 1996,
+      "title": "Campeonato holandês",
+      "summary": "Conquistei meu nono Campeonato Holandês.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de timman",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/jan-timman",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Chess.com — final da FIDE de 1993",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/jan-timman",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "Federação Holandesa — nono campeonato de 1996",
+      "publisher": "KNSB",
+      "url": "https://schaakbond.nl/over-de-knsb/geschiedenis/onderscheidingen/jan-timman/",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "staunton",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui um dos principais mestres ingleses e ajudei a organizar o histórico torneio de Londres.",
+  "era_label": "1843–1851",
+  "portrait": {
+    "local_asset": "history/portraits/staunton.jpg",
+    "alt": "Desenho histórico de Howard Staunton; não é uma fotografia",
+    "author": "Artista não identificado (desenho histórico)",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/2595",
+    "verified_at": "2026-11-06",
+    "event": "Desenho histórico de Howard Staunton (reprodução)",
+    "event_date": "sem data",
+    "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "df636299c8d3cfa40300ab8877b96405ce66a8f16500209ca38ef5657acaaa24",
+    "derivative_note": "Recorte e redução para 480×480 px de reprodução artística; identificado por Cleveland Public Library como PDM 1.0/NoC-US. PDM é uma marcação de domínio público, não licença CC0. Verificar exigências territoriais antes de redistribuir.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1843,
+      "text": "Derrotei Pierre de Saint-Amant em um match realizado em Paris.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1851,
+      "text": "Ajudei a organizar o torneio internacional de Londres de 1851.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1843,
+      "title": "Match de Paris",
+      "summary": "Derrotei Pierre de Saint-Amant em um match realizado em Paris.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 1851,
+      "title": "Torneio de Londres",
+      "summary": "Ajudei a organizar o torneio internacional de Londres de 1851.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Referência histórica de staunton",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/howard-staunton",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Chess.com — match Staunton–Saint-Amant 1843",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/staunton-beats-a-saint",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "Chess.com — organização do torneio de Londres 1851",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/london-1851-the-first-international-chess-tournament",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

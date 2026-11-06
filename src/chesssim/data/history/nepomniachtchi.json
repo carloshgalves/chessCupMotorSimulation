@@ -1,0 +1,104 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "nepomniachtchi",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Venci dois torneios de Candidatos e disputei duas vezes a coroa mundial.",
+  "era_label": "2021–2023",
+  "portrait": {
+    "local_asset": "history/portraits/nepomniachtchi.jpg",
+    "alt": "nepomniachtchi fotografado em 42nd Chess Olympiad, Baku (2016-09)",
+    "author": "Andreas Kontokanis",
+    "license": "CC BY-SA 2.0",
+    "source_url": "https://www.flickr.com/photos/8022405@N02/31118550352",
+    "verified_at": "2026-11-06",
+    "event": "42nd Chess Olympiad, Baku",
+    "event_date": "2016-09",
+    "rights_holder": "Andreas Kontokanis",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "sha256": "1c0479d44494737d16c28c658a2af5da76649905873641cdfbb344d76041df8b",
+    "derivative_note": "Recorte quadrado de 480×480 px de imagem de torneio. A fotografia derivada mantém a licença da fonte; atribuição ao fotógrafo.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2021,
+      "text": "Venci o Torneio de Candidatos de 2020–2021.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2022,
+      "text": "Conquistei novamente o Torneio de Candidatos.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2023,
+      "text": "Disputei o Campeonato Mundial contra Ding Liren.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2021,
+      "title": "Candidatos 2020–2021",
+      "summary": "Venci o Torneio de Candidatos de 2020–2021.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 2022,
+      "title": "Candidatos de Madri",
+      "summary": "Conquistei novamente o Torneio de Candidatos.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 2023,
+      "title": "Match mundial",
+      "summary": "Disputei o Campeonato Mundial contra Ding Liren.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil e conquistas de nepomniachtchi",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/meet-the-candidates-2022",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE — torneios de Candidatos de 2021 e 2022",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/history-of-the-candidates-from-budapest-1950-to-cyprus-2026/",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "FIDE — match mundial de 2023",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/ding-liren-crowned-world-champion/",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

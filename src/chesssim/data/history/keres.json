@@ -1,0 +1,111 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "keres",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Venci o AVRO e fiquei repetidas vezes próximo de desafiar o campeão mundial.",
+  "era_label": "1938–1962",
+  "portrait": {
+    "local_asset": "history/portraits/keres.jpg",
+    "alt": "keres em Hoogovens Chess Tournament, Beverwijk (1964-01-08)",
+    "author": "Jack de Nijs / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/aa551e48-d0b4-102d-bcf8-003048976d84",
+    "verified_at": "2026-11-06",
+    "event": "Hoogovens Chess Tournament, Beverwijk",
+    "event_date": "1964-01-08",
+    "rights_holder": "Nationaal Archief",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "91e8d209da57dbfe2d2541c5d8d438765b1a45a028b616c3af414dcc366a2c64",
+    "derivative_note": "Recorte quadrado e redução para 480×480 px a partir de fotografia oficial de torneio.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1938,
+      "text": "Dividi o primeiro lugar do torneio AVRO com Reuben Fine, ficando à frente nos critérios de desempate.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1956,
+      "text": "Terminei na segunda posição no Torneio de Candidatos.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1962,
+      "text": "Dividi a segunda posição no Torneio de Candidatos, meio ponto atrás de Petrosian.",
+      "source_ids": [
+        "source-1",
+        "audit-4"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1938,
+      "title": "Torneio AVRO",
+      "summary": "Dividi o primeiro lugar do torneio AVRO com Reuben Fine, ficando à frente nos critérios de desempate.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 1956,
+      "title": "Torneio de Candidatos",
+      "summary": "Terminei na segunda posição no Torneio de Candidatos.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    },
+    {
+      "year": 1962,
+      "title": "Candidatos de Curaçao",
+      "summary": "Dividi a segunda posição no Torneio de Candidatos, meio ponto atrás de Petrosian.",
+      "source_ids": [
+        "source-1",
+        "audit-4"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de keres",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/paul-keres",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Chess.com — AVRO 1938 e desempate",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/keres---euwe-match-of-gentlemen-warriors",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "Chess.com — segundo lugar em Candidatos 1956",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/paul-keres",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-4",
+      "title": "OlimpBase — tabela Curaçao 1962",
+      "publisher": "OlimpBase",
+      "url": "https://www.olimpbase.org/ind-wcc/wc1963-cand.html",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Ajudei a difundir ideias hipermodernas e uma abertura que leva meu nome.",
   "era_label": "1923–1924",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/reti.jpg",
+    "alt": "reti em Retrato de arquivo — Österreichische Nationalbibliothek (década de 1920)",
+    "author": "Fotógrafo desconhecido / ÖNB",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Richard_R%C3%A9ti_(1889%E2%80%931929)_OeNB_9471305.jpg",
+    "verified_at": "2026-11-06",
+    "event": "Retrato de arquivo — Österreichische Nationalbibliothek",
+    "event_date": "década de 1920",
+    "rights_holder": "Österreichische Nationalbibliothek (acervo; domínio público declarado na UE)",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "81a76769c21fef04b7c357d325ea5eb468624662f2f4c5a2f42abaeec8a2e1af",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

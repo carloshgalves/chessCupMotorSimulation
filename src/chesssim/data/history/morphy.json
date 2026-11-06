@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui um dos principais enxadristas de minha época e fiquei conhecido pelo rápido desenvolvimento das peças.",
   "era_label": "1857–1859",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/morphy.jpg",
+    "alt": "Reprodução fotográfica histórica atribuída a Paul Morphy (1859)",
+    "author": "Autor do original não identificado (reprodução de época)",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/11",
+    "verified_at": "2026-11-06",
+    "event": "Reprodução fotográfica atribuída a Paul Morphy na Filadélfia",
+    "event_date": "1859",
+    "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "cb19f33ba6f3b7f2e45ded4f401714edc76054dc7c9e5fe800993dbb95c06b2b",
+    "derivative_note": "Recorte e redução para 480×480 px de reprodução histórica; identificado por Cleveland Public Library como PDM 1.0/NoC-US. PDM é uma marcação de domínio público, não licença CC0. Verificar exigências territoriais antes de redistribuir.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

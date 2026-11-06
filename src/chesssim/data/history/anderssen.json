@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Venci o grande torneio de Londres e fui protagonista de partidas clássicas da era romântica.",
   "era_label": "1851–1866",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/anderssen.jpg",
+    "alt": "Retrato histórico de Anderssen, Adolf \"#1\", fonte Cleveland Public Library",
+    "author": "Fotógrafo não identificado (acervo Cleveland)",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/2532",
+    "verified_at": "2026-11-06",
+    "event": "Retrato histórico de Adolf Anderssen",
+    "event_date": "século XIX",
+    "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "8d4020082aa35896779175e65319dedd9608a388c963dd519d9a32a2b6544272",
+    "derivative_note": "Recorte e redução para 480×480 px de reprodução histórica; identificado por Cleveland Public Library como PDM 1.0/NoC-US. PDM é uma marcação de domínio público, não licença CC0. Verificar exigências territoriais antes de redistribuir.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

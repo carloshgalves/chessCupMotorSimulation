@@ -1,0 +1,97 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "judit-polgar",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui pioneira na elite absoluta e bati um recorde de precocidade para o título de grande mestre.",
+  "era_label": "1991–2005",
+  "portrait": {
+    "local_asset": "history/portraits/judit-polgar.jpg",
+    "alt": "judit-polgar em Hoogovens Chess Tournament, Wijk aan Zee (1998-01-17)",
+    "author": "Fotoburo de Boer",
+    "license": "CC0 1.0",
+    "source_url": "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/a17d9a6f-d4af-cfff-84da-19917979bd71",
+    "verified_at": "2026-11-06",
+    "event": "Hoogovens Chess Tournament, Wijk aan Zee",
+    "event_date": "1998-01-17",
+    "rights_holder": "Noord-Hollands Archief",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "34cb980a26a826580dbb020641ad74bbef48fa104f32ddc2882bbbea99e65205",
+    "derivative_note": "Recorte quadrado e redução para 480×480 px a partir de fotografia oficial de torneio.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1991,
+      "text": "Tornei-me grande mestre aos 15 anos, superando o recorde de precocidade de Bobby Fischer.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1994,
+      "text": "Venci invicta o torneio internacional de Madri contra jogadores de elite.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2005,
+      "text": "Disputei o torneio do Campeonato Mundial da FIDE em San Luis.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1991,
+      "title": "Título de GM",
+      "summary": "Tornei-me grande mestre aos 15 anos, superando o recorde de precocidade de Bobby Fischer.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 1994,
+      "title": "Torneio de Madri",
+      "summary": "Venci invicta o torneio internacional de Madri contra jogadores de elite.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 2005,
+      "title": "Mundial de San Luis",
+      "summary": "Disputei o torneio do Campeonato Mundial da FIDE em San Luis.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil e conquistas de judit-polgar",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/pt-BR/players/judit-polgar",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE Mulheres — GM aos 15, Madri 1994 e mundial de 2005",
+      "publisher": "FIDE",
+      "url": "https://wom.fide.com/judit-polgar/",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "zukertort",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Venci Londres 1883 e disputei o primeiro match oficial da história do campeonato mundial.",
+  "era_label": "1883–1886",
+  "portrait": {
+    "local_asset": "history/portraits/zukertort.jpg",
+    "alt": "Retrato histórico de Zukertort, J. H., fonte Cleveland Public Library",
+    "author": "Fotógrafo não identificado (acervo Cleveland)",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/2599",
+    "verified_at": "2026-11-06",
+    "event": "Retrato histórico de Johannes Zukertort",
+    "event_date": "século XIX",
+    "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "20b6c5982b95025e622d349bc21cd1dbde0989ea63b6d7ae529945c5df7c74bd",
+    "derivative_note": "Recorte e redução para 480×480 px de reprodução histórica; identificado por Cleveland Public Library como PDM 1.0/NoC-US. PDM é uma marcação de domínio público, não licença CC0. Verificar exigências territoriais antes de redistribuir.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1883,
+      "text": "Venci o torneio internacional de Londres à frente de Wilhelm Steinitz.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1886,
+      "text": "Disputei contra Steinitz o primeiro match oficial pelo Campeonato Mundial.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1883,
+      "title": "Torneio de Londres",
+      "summary": "Venci o torneio internacional de Londres à frente de Wilhelm Steinitz.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 1886,
+      "title": "Primeiro mundial oficial",
+      "summary": "Disputei contra Steinitz o primeiro match oficial pelo Campeonato Mundial.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Referência histórica de zukertort",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/Johannes-Zukertort",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Comissão Histórica FIDE — Londres 1883 e primeiro mundial 1886",
+      "publisher": "FIDE",
+      "url": "https://his.fide.com/2026/05/08/chess-in-the-19th-century-milestones-of-1886/",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

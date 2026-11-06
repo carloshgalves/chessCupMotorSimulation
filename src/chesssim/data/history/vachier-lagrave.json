@@ -1,0 +1,111 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "vachier-lagrave",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Alcancei o grupo dos jogadores mais fortes do mundo e venci o Mundial de Blitz.",
+  "era_label": "2016–2021",
+  "portrait": {
+    "local_asset": "history/portraits/vachier-lagrave.jpg",
+    "alt": "vachier-lagrave fotografado em 42nd Chess Olympiad, Baku (2016-09-05)",
+    "author": "Andreas Kontokanis",
+    "license": "CC BY-SA 2.0",
+    "source_url": "https://www.flickr.com/photos/8022405@N02/29525938546",
+    "verified_at": "2026-11-06",
+    "event": "42nd Chess Olympiad, Baku",
+    "event_date": "2016-09-05",
+    "rights_holder": "Andreas Kontokanis",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "sha256": "b33dbb0510363668d749610487fc1a3174f3e521fea647133659ba9b72f38ed1",
+    "derivative_note": "Recorte quadrado de 480×480 px de imagem de torneio. A fotografia derivada mantém a licença da fonte; atribuição ao fotógrafo.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2016,
+      "text": "Alcancei o rating clássico de 2819 pontos.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2021,
+      "text": "Terminei em segundo lugar no Torneio de Candidatos de 2020–2021.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2021,
+      "text": "Conquistei o Campeonato Mundial de Blitz após o desempate.",
+      "source_ids": [
+        "source-1",
+        "audit-4"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2016,
+      "title": "Marca no ranking",
+      "summary": "Alcancei o rating clássico de 2819 pontos.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 2021,
+      "title": "Torneio de Candidatos",
+      "summary": "Terminei em segundo lugar no Torneio de Candidatos de 2020–2021.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    },
+    {
+      "year": 2021,
+      "title": "Mundial de blitz",
+      "summary": "Conquistei o Campeonato Mundial de Blitz após o desempate.",
+      "source_ids": [
+        "source-1",
+        "audit-4"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Referência histórica de vachier-lagrave",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/maxime-vachier-lagrave",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE — auge de 2819 pontos em agosto 2016",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/introducing-candidates-maxime-vachier-lagrave/",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "Chess.com — segundo lugar Candidatos 2020/21",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/maxime-vachier-lagrave",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-4",
+      "title": "FIDE — vitória mundial Blitz 2021",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/vachier-lagrave-and-assaubayeva-are-the-new-world-blitz-champions/",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

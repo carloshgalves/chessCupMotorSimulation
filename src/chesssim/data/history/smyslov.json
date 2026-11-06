@@ -1,0 +1,106 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "smyslov",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão mundial e fiquei conhecido pela precisão técnica nos finais.",
+  "era_label": "1953–1984",
+  "portrait": {
+    "local_asset": "history/portraits/smyslov.jpg",
+    "alt": "smyslov em Amsterdam Interzonal Tournament (1964-05-26)",
+    "author": "Harry Pot / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Vasily_Smyslov_1964.jpg",
+    "verified_at": "2026-11-06",
+    "event": "Amsterdam Interzonal Tournament",
+    "event_date": "1964-05-26",
+    "rights_holder": "Nationaal Archief (Anefo)",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "0301791c285779933c255b3ef291abd1fdabf9e0f1abbf28654542cb1aff153b",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1953,
+      "text": "Venci o Torneio de Candidatos de Zurique.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1957,
+      "text": "Derrotei Mikhail Botvinnik e conquistei o Campeonato Mundial.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1984,
+      "text": "Alcancei a final dos matches de Candidatos, enfrentando Garry Kasparov.",
+      "source_ids": [
+        "source-1",
+        "source-2",
+        "audit-2"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1953,
+      "title": "Candidatos",
+      "summary": "Venci o Torneio de Candidatos de Zurique.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 1957,
+      "title": "Título mundial",
+      "summary": "Derrotei Mikhail Botvinnik e conquistei o Campeonato Mundial.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 1984,
+      "title": "Final dos Candidatos",
+      "summary": "Alcancei a final dos matches de Candidatos, enfrentando Garry Kasparov.",
+      "source_ids": [
+        "source-1",
+        "source-2",
+        "audit-2"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Referência histórica de smyslov",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/vasily-smyslov",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "source-2",
+      "title": "FIDE Open Chess Museum — Vasily Smyslov",
+      "publisher": "FIDE",
+      "url": "https://museum.fide.com/champions/vasily-smyslov",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Museu FIDE — 1953, 1957 e final de Candidatos em 1984",
+      "publisher": "FIDE",
+      "url": "https://museum.fide.com/champions/vasily-smyslov",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui conhecido pelo jogo de ataque e cheguei à coroa mundial após vencer o ciclo de Candidatos.",
   "era_label": "1957–1961",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/tal.jpg",
+    "alt": "tal em Hoogovens Chess Tournament, Wijk aan Zee (1982-01-19)",
+    "author": "Rob Croes / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ad0d975a-d0b4-102d-bcf8-003048976d84",
+    "verified_at": "2026-11-06",
+    "event": "Hoogovens Chess Tournament, Wijk aan Zee",
+    "event_date": "1982-01-19",
+    "rights_holder": "Nationaal Archief",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "cba9ec57d13c3e853634c96164b10155fdc159ea36a2de1a41915470895d976f",
+    "derivative_note": "Recorte quadrado e redução para 480×480 px a partir de fotografia oficial de torneio.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

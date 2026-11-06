@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão mundial em três períodos e me dediquei à preparação sistemática no xadrez.",
   "era_label": "1948–1957; 1958–1960; 1961–1963 (campeão mundial)",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/botvinnik.jpg",
+    "alt": "botvinnik em Hoogovens Chess Tournament, Beverwijk (1969-02-01)",
+    "author": "Jack de Nijs / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ab5cfe00-d0b4-102d-bcf8-003048976d84",
+    "verified_at": "2026-11-06",
+    "event": "Hoogovens Chess Tournament, Beverwijk",
+    "event_date": "1969-02-01",
+    "rights_holder": "Nationaal Archief",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "7da938d31499c9d02c5eb96f50a4e3ec36b95ff4c3f961efc172426ee22cb8d5",
+    "derivative_note": "Recorte quadrado e redução para 480×480 px a partir de fotografia oficial de torneio.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

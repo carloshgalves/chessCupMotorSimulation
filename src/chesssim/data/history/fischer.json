@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão dos Estados Unidos ainda adolescente e, depois, conquistei a coroa mundial.",
   "era_label": "1957–1972",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/fischer.jpg",
+    "alt": "fischer em Retrato ao tabuleiro — coleção Anefo (1971-07-15)",
+    "author": "Fotógrafo desconhecido / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Schaker_Bobby_Fisher_aan_bord_(archief),_Bestanddeelnr_924-7362.jpg",
+    "verified_at": "2026-11-06",
+    "event": "Retrato ao tabuleiro — coleção Anefo",
+    "event_date": "1971-07-15",
+    "rights_holder": "Nationaal Archief (Anefo)",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "164552c90bd14698def233d595a5b98f84646279b09bb4ddc42be912d824e507",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

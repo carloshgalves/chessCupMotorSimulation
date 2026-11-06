@@ -1,0 +1,111 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "aronian",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui vencedor de duas Copas do Mundo e destaque da elite internacional.",
+  "era_label": "2005–2017",
+  "portrait": {
+    "local_asset": "history/portraits/aronian.jpg",
+    "alt": "aronian fotografado em European Team Chess Championship, Porto Carras (2011-11-06)",
+    "author": "Andreas Kontokanis",
+    "license": "CC BY-SA 2.0",
+    "source_url": "https://www.flickr.com/photos/8022405@N02/6319418131",
+    "verified_at": "2026-11-06",
+    "event": "European Team Chess Championship, Porto Carras",
+    "event_date": "2011-11-06",
+    "rights_holder": "Andreas Kontokanis",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "sha256": "e736f864c91fbfd525b8534e08ec8df2c8942e0a750ac92a60c2161b5691363b",
+    "derivative_note": "Recorte quadrado de 480×480 px de imagem de torneio. A fotografia derivada mantém a licença da fonte; atribuição ao fotógrafo.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2005,
+      "text": "Venci a Copa do Mundo de Xadrez.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2010,
+      "text": "Conquistei o Campeonato Mundial de Blitz.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2017,
+      "text": "Conquistei novamente a Copa do Mundo de Xadrez.",
+      "source_ids": [
+        "source-1",
+        "audit-4"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2005,
+      "title": "Copa do Mundo",
+      "summary": "Venci a Copa do Mundo de Xadrez.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 2010,
+      "title": "Mundial de blitz",
+      "summary": "Conquistei o Campeonato Mundial de Blitz.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    },
+    {
+      "year": 2017,
+      "title": "Segunda Copa do Mundo",
+      "summary": "Conquistei novamente a Copa do Mundo de Xadrez.",
+      "source_ids": [
+        "source-1",
+        "audit-4"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil e conquistas de aronian",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/Levon-Aronian",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Chess.com — Copa do Mundo 2005",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/Levon-Aronian",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "Chess.com — mundial blitz 2010",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/world-rapid-and-blitz-chess-champions",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-4",
+      "title": "FIDE — Copa do Mundo Tbilisi 2017",
+      "publisher": "FIDE",
+      "url": "https://old.fide.com/component/fidecalendar/?aid=1221&view=fcalview",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

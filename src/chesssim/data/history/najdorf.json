@@ -1,0 +1,104 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "najdorf",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui um dos principais enxadristas argentinos e me tornei conhecido pelas simultâneas às cegas.",
+  "era_label": "1947–1953",
+  "portrait": {
+    "local_asset": "history/portraits/najdorf.jpg",
+    "alt": "najdorf em World Chess Tournament Amsterdam (1950-12-10)",
+    "author": "Carel L. de Vogel / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Najdorf1950.jpg",
+    "verified_at": "2026-11-06",
+    "event": "World Chess Tournament Amsterdam",
+    "event_date": "1950-12-10",
+    "rights_holder": "Nationaal Archief (Anefo)",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "b02167e55df4faa8480f09cfdab622a3979ed1f19457d078a860300ff11075ea",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1947,
+      "text": "Realizei uma exibição simultânea de 45 partidas às cegas.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1950,
+      "text": "Disputei o primeiro Torneio de Candidatos organizado pela FIDE.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1953,
+      "text": "Voltei a participar do Torneio de Candidatos em Zurique.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1947,
+      "title": "Simultâneas às cegas",
+      "summary": "Realizei uma exibição simultânea de 45 partidas às cegas.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 1950,
+      "title": "Torneio de Candidatos",
+      "summary": "Disputei o primeiro Torneio de Candidatos organizado pela FIDE.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 1953,
+      "title": "Candidatos de Zurique",
+      "summary": "Voltei a participar do Torneio de Candidatos em Zurique.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de najdorf",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/miguel-najdorf",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE Histórica — 45 partidas às cegas em 1947 e Budapeste 1950",
+      "publisher": "FIDE",
+      "url": "https://his.fide.com/2026/04/20/argentine-chess-milestones-of-global-significance-1810-2025/",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "FIDE — composição do Torneio de Candidatos 1953",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/history-of-the-candidates-from-budapest-1950-to-cyprus-2026/",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "taimanov",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão soviético e conciliei a carreira no xadrez com a música.",
+  "era_label": "1956–1971",
+  "portrait": {
+    "local_asset": "history/portraits/taimanov.jpg",
+    "alt": "taimanov em Hoogovens Chess Tournament, Beverwijk (1970-01-31)",
+    "author": "Joost Evers / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/ab8b16d2-d0b4-102d-bcf8-003048976d84",
+    "verified_at": "2026-11-06",
+    "event": "Hoogovens Chess Tournament, Beverwijk",
+    "event_date": "1970-01-31",
+    "rights_holder": "Nationaal Archief",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "7ea45686f0a1dd06ca78d38986c3267fc8a592f8290a217363ad41e4b7388ace",
+    "derivative_note": "Recorte quadrado e redução para 480×480 px a partir de fotografia oficial de torneio.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1956,
+      "text": "Venci o Campeonato Soviético após os desempates.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1971,
+      "text": "Disputei um match de Candidatos contra Bobby Fischer.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1956,
+      "title": "Campeonato soviético",
+      "summary": "Venci o Campeonato Soviético após os desempates.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 1971,
+      "title": "Match de Candidatos",
+      "summary": "Disputei um match de Candidatos contra Bobby Fischer.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de taimanov",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/mark-taimanov",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "European Chess Union — campeonato soviético 1956 e Fischer 1971",
+      "publisher": "European Chess Union",
+      "url": "https://www.europechess.org/in-memoriam-mark-taimanov/",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

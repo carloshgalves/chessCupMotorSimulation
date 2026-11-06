@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui conhecido pelo domínio dos finais e pelas vitórias nos grandes torneios do meu tempo.",
   "era_label": "1907–1912",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/rubinstein.jpg",
+    "alt": "Retrato histórico de Rubinstein, Akiba Kiwelowicz 1880-1961, fonte Cleveland Public Library",
+    "author": "Fotógrafo não identificado (acervo Cleveland)",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/77",
+    "verified_at": "2026-11-06",
+    "event": "Retrato histórico de Akiba Rubinstein",
+    "event_date": "século XX",
+    "rights_holder": "Obra identificada como domínio público no catálogo Cleveland (NoC-US)",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "8efd808826904f7d74a5b3f8fdb54e35d45080ce5ad81fd062ddb93a0b279f65",
+    "derivative_note": "Recorte e redução para 480×480 px de reprodução histórica; identificado por Cleveland Public Library como PDM 1.0/NoC-US. PDM é uma marcação de domínio público, não licença CC0. Verificar exigências territoriais antes de redistribuir.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

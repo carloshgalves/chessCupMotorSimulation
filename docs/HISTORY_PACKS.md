@@ -4,7 +4,7 @@
 
 Uma biografia por jogador do elenco, editada como dados e acessada por um **slug canônico**. O código do carregador é único; acrescentar um jogador consiste em criar `src/chesssim/data/history/<slug>.json` e preencher os mesmos campos. O nome e o grupo **não** são copiados: vêm de `roster.json`.
 
-Nesta primeira entrega existem **22 packs: 21 personalidades com alias oficial do Rodent IV e Mequinho, cujo perfil experimental é tratado separadamente**. Os demais **42** integrantes do elenco retornam um registro completo e pesquisável com `has_historical_pack=false`, `review_status=pending`, nenhuma conquista e foto ausente. Um jogador sem motor instalado continua pesquisável e pode receber um pack no futuro. Mequinho possui um pack próprio por sua importância no projeto, **sem** que isso o transforme em uma das 21 personalidades oficiais do Rodent IV ou valide o estilo do modelo.
+**Estado atual na PR #55 (06/11/2026): 64/64 packs disponíveis.** Os 22 packs do lote inicial foram complementados por 42 packs de cronologia e fatos revisados em lotes separados. **58/64 jogadores possuem um retrato histórico ou representação artística documentada**, e os seis restantes retornam placeholder. A existência de biografia/retrato não significa motor UCI disponível ou modelo de estilo validado. Mequinho possui pack próprio sem se tornar uma das 21 personalidades oficiais do Rodent IV.
 
 ## Voz narrativa
 
@@ -92,3 +92,25 @@ A presença de `review_status=reviewed` representa revisão de coerência de fon
 O primeiro lote seleciona sete fotos feitas em competições oficiais, cada uma sob CC0 1.0 ou CC BY-SA 3.0. Fontes, fotógrafos, licenças e condições de crédito constam em `docs/PHOTO_LICENSES.md`. A materialização ocorre em passo explícito, com verificação da licença e hash local; as fotos não são baixadas pelo ChessSim durante a execução. Os demais perfis permanecem com `portrait=null`.
 
 Endpoint para o carrossel futuro: `GET /api/history/portraits/{slug}.jpg`, apenas para arquivo local validado.
+
+## Segundo lote de packs (issue #47)
+
+Foi adicionada uma camada de **42 novos packs** (total de 64 slugs canônicos com ficha), cada um seguindo o contrato `history-profile-v1` e com no mínimo dois marcos datados e fontes específicas. Os 42 novos packs foram conferidos e promovidos a `review_status=reviewed`, com pelo menos uma referência adicional (`audit-*`) por conquista e por marco cronológico. O relatório de controle de fontes encontra-se em `docs/HISTORY_EDITORIAL_AUDIT_2026-11-06.md`. Os 22 packs da entrega inicial conservam seu status de revisão.
+
+Para as fotografias, a segunda leva possui **15 candidatas** de competições documentadas e licenças livres. Informações de autoria, torneio, data e URLs estão em `docs/PHOTO_LICENSES.md`; os arquivos só são efetivamente liberados quando o importador verifica as licenças e os hashes. A ampliação não introduz novas dependências de runtime, endpoints ou mudanças de schema.
+
+## Estado consolidado da PR #55
+
+**64/64 packs** em primeira pessoa editorial: 22 revisados na entrega inicial e **42 verificados por marco**, com referências independentes vinculadas (`review_status=reviewed`). **13/64 retratos** registrados e integralmente distribuíveis; outros **51** ainda sem foto. Desses, **onze** têm fonte candidata rastreada no Commons (incluindo Judit Polgár), mas os downloads automáticos restantes foram bloqueados pelo provedor. Mais informações no registro `docs/PHOTO_LICENSES.md`.
+
+A integridade é validada para cada `portrait` presente, enquanto os demais usam fallback nulo. A issue #47 permanece aberta para obtenção das **51 fotos restantes** e homologação visual nas #48/#49. Os componentes de créditos vinculados à licença já estão implementados na PR #55; ainda falta teste visual em navegador real.
+
+## Interface História e auditoria (PR #55)
+
+A Arena local agora oferece uma aba História com navegação horizontal pelo elenco, biografia individual, conquistas e linha do tempo. As 13 fotos incorporadas são acompanhadas de créditos de autoria, evento, fonte original, licença e aviso de recorte, sem depender de scripts ou imagens externas. As fotografias sem licença disponível continuam com placeholder. A API permanece somente leitura e não altera o token de execução da Arena. Ver `src/chesssim/data/history.js`, `history.css` e `tests/assets/history_browser_harness.cjs`. A homologação visual com navegador real e a integração das partidas/estatísticas permanecem etapas próprias.
+
+## Retratos históricos: inventário atualizado e importação offline
+
+**58 imagens empacotadas; seis pendentes**, discriminadas por motivo e direitos em `docs/HISTORY_PORTRAIT_BACKLOG.md`. O acervo combina CC0, CC BY, CC BY-SA e 12 registros Public Domain Mark; a última marca **não é** licença CC0. A aquisição da Cleveland Public Library foi tratada separadamente, com aviso de direitos territoriais. A figura de Philidor é uma gravura do século XVIII, explicitamente descrita como representação artística.
+
+O importador local `scripts/import_local_history_portrait.py` mantém o fluxo autorizado de incorporar novas fotos sem rede: cada arquivo exige origem, licença, autoria, JPEG derivado e hash. **Não substituir placeholders por imagens sem documentação**. A homologação visual real no Debian/Chrome, a continuação das partidas históricas e as estatísticas continuam sob as issues #48–#53.

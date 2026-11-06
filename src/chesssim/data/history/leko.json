@@ -1,0 +1,86 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "leko",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui recordista de precocidade no título de grande mestre e empatei um match mundial.",
+  "era_label": "1994–2004",
+  "portrait": {
+    "local_asset": "history/portraits/leko.jpg",
+    "alt": "leko fotografado em Tata Steel Chess Tournament, Wijk aan Zee (2025-01-18)",
+    "author": "Frans Peeters",
+    "license": "CC BY-SA 2.0",
+    "source_url": "https://www.flickr.com/photos/suspeeters/54275360618",
+    "verified_at": "2026-11-06",
+    "event": "Tata Steel Chess Tournament, Wijk aan Zee",
+    "event_date": "2025-01-18",
+    "rights_holder": "Frans Peeters",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "sha256": "9d8be533fca40410210dee893f7348c806f119e0c3a50ae4e7e00c6a345c78f2",
+    "derivative_note": "Recorte quadrado de 480×480 px de imagem de torneio. A fotografia derivada mantém a licença da fonte; atribuição ao fotógrafo.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1994,
+      "text": "Tornei-me o mais jovem grande mestre do mundo até então.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2004,
+      "text": "Empatei em 7–7 o match pelo título clássico contra Vladimir Kramnik, que manteve a coroa pelo regulamento.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1994,
+      "title": "Grande mestre precoce",
+      "summary": "Tornei-me o mais jovem grande mestre do mundo até então.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 2004,
+      "title": "Match mundial clássico",
+      "summary": "Empatei em 7–7 o match pelo título clássico contra Vladimir Kramnik, que manteve a coroa pelo regulamento.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil e conquistas de leko",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/peter-leko",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "Deseret News — recorde de GM de Peter Leko em 1994",
+      "publisher": "Deseret News",
+      "url": "https://www.deseret.com/1994/2/4/19090211/hungarian-is-youngest-grandmaster-at-14/",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "The Chess Drum — 7–7 em 2004 e retenção da coroa por Kramnik",
+      "publisher": "The Chess Drum",
+      "url": "https://www.thechessdrum.net/newsbriefs/2004/NB_KramnikLeko.html",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

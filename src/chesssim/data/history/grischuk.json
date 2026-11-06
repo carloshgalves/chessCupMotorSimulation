@@ -1,0 +1,111 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "grischuk",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui tricampeão mundial de blitz e participei da elite do xadrez clássico.",
+  "era_label": "2006–2015",
+  "portrait": {
+    "local_asset": "history/portraits/grischuk.jpg",
+    "alt": "grischuk fotografado em 42nd Chess Olympiad, Baku (2016-09-10)",
+    "author": "Andreas Kontokanis",
+    "license": "CC BY-SA 2.0",
+    "source_url": "https://www.flickr.com/photos/8022405@N02/30754960216",
+    "verified_at": "2026-11-06",
+    "event": "42nd Chess Olympiad, Baku",
+    "event_date": "2016-09-10",
+    "rights_holder": "Andreas Kontokanis",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "sha256": "abc534ed294c6ce3de4fc930bbca9dd901fbece5510ecd4d88214a439dcfb543",
+    "derivative_note": "Recorte quadrado de 480×480 px de imagem de torneio. A fotografia derivada mantém a licença da fonte; atribuição ao fotógrafo.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2006,
+      "text": "Conquistei o Campeonato Mundial de Blitz da FIDE.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2012,
+      "text": "Venci o Campeonato Mundial de Blitz novamente.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2015,
+      "text": "Conquistei meu terceiro Campeonato Mundial de Blitz.",
+      "source_ids": [
+        "source-1",
+        "audit-4"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2006,
+      "title": "Primeira coroa de blitz",
+      "summary": "Conquistei o Campeonato Mundial de Blitz da FIDE.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 2012,
+      "title": "Segunda coroa de blitz",
+      "summary": "Venci o Campeonato Mundial de Blitz novamente.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    },
+    {
+      "year": 2015,
+      "title": "Tricampeonato de blitz",
+      "summary": "Conquistei meu terceiro Campeonato Mundial de Blitz.",
+      "source_ids": [
+        "source-1",
+        "audit-4"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Referência histórica de grischuk",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/alexander-grischuk",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE — mundial blitz 2006",
+      "publisher": "FIDE",
+      "url": "https://old.fide.com/component/content/article/4-tournaments/1999-490-alexander-grischuk-is-the-fide-world-blitz-champion.html",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "FIDE — mundial blitz 2012",
+      "publisher": "FIDE",
+      "url": "https://old.fide.com/component/content/article/1-fide-news/6289-world-blitz-championship-2012-grischuk-wins.html",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-4",
+      "title": "FIDE — mundial blitz 2015",
+      "publisher": "FIDE",
+      "url": "https://old.fide.com/component/content/article/1-fide-news/9116-grischuk-world-blitz-chess-championship-2015.html",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

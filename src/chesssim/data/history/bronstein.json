@@ -1,0 +1,104 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "bronstein",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Venci o Torneio de Candidatos e empatei um match mundial com Botvinnik.",
+  "era_label": "1950–1956",
+  "portrait": {
+    "local_asset": "history/portraits/bronstein.jpg",
+    "alt": "bronstein em Chess Olympiad Amsterdam (1954-09-25)",
+    "author": "Joop van Bilsen / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:David_Bronstein_in_1954.jpg",
+    "verified_at": "2026-11-06",
+    "event": "Chess Olympiad Amsterdam",
+    "event_date": "1954-09-25",
+    "rights_holder": "Nationaal Archief (Anefo)",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "986cde2db6bb992b59ce85db9981a5f42ad14ed35bc0dd0b3385ebde0b55598d",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1950,
+      "text": "Venci o Torneio de Candidatos e ganhei o direito de desafiar o campeão mundial.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1951,
+      "text": "Empatei por 12–12 o match mundial contra Mikhail Botvinnik.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1955,
+      "text": "Venci o Interzonal de Gotemburgo e voltei ao ciclo de Candidatos.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1950,
+      "title": "Torneio de Candidatos",
+      "summary": "Venci o Torneio de Candidatos e ganhei o direito de desafiar o campeão mundial.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 1951,
+      "title": "Match contra Botvinnik",
+      "summary": "Empatei por 12–12 o match mundial contra Mikhail Botvinnik.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 1955,
+      "title": "Interzonal de Gotemburgo",
+      "summary": "Venci o Interzonal de Gotemburgo e voltei ao ciclo de Candidatos.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de bronstein",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/david-bronstein",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE — Candidatos 1950 e match 1951",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/history-of-the-candidates-from-budapest-1950-to-cyprus-2026/",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "OlimpBase — crosstable Interzonal Gotemburgo 1955",
+      "publisher": "OlimpBase",
+      "url": "https://www.olimpbase.org/ind-wcc/wc1957-iz.html",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

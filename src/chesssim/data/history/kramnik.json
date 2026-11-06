@@ -1,0 +1,79 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "kramnik",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão clássico ao derrotar Kasparov e posteriormente reunifiquei a coroa mundial.",
+  "era_label": "2000–2007 (campeão clássico e unificado)",
+  "portrait": {
+    "local_asset": "history/portraits/kramnik.jpg",
+    "alt": "kramnik fotografado em 42nd Chess Olympiad, Baku (2016-09-05)",
+    "author": "Andreas Kontokanis",
+    "license": "CC BY-SA 2.0",
+    "source_url": "https://www.flickr.com/photos/8022405@N02/29490544661",
+    "verified_at": "2026-11-06",
+    "event": "42nd Chess Olympiad, Baku",
+    "event_date": "2016-09-05",
+    "rights_holder": "Andreas Kontokanis",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "sha256": "75e3343b6d3cbfcb009b05f5c92dcf6e5565b4251f1a74e32321d7880ca106cb",
+    "derivative_note": "Recorte quadrado de 480×480 px de imagem de torneio. A fotografia derivada mantém a licença da fonte; atribuição ao fotógrafo.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2000,
+      "text": "Derrotei Garry Kasparov e conquistei o título mundial clássico.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2006,
+      "text": "Venci Veselin Topalov no match de reunificação dos títulos mundiais.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2000,
+      "title": "Match com Kasparov",
+      "summary": "Derrotei Garry Kasparov e conquistei o título mundial clássico.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 2006,
+      "title": "Reunificação mundial",
+      "summary": "Venci Veselin Topalov no match de reunificação dos títulos mundiais.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Referência histórica de kramnik",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/vladimir-kramnik",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE — título clássico em 2000 e reunificação de 2006",
+      "publisher": "FIDE",
+      "url": "https://worldchesschampionship2023.fide.com/chess-champions",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

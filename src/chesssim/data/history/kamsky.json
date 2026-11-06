@@ -1,0 +1,86 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "kamsky",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Disputei a coroa mundial da FIDE e retornei à elite após uma pausa competitiva.",
+  "era_label": "1996–2007",
+  "portrait": {
+    "local_asset": "history/portraits/kamsky.jpg",
+    "alt": "kamsky em Grenke Chess Open — 9ª rodada, Karlsruhe (2016-03-28)",
+    "author": "GFHund",
+    "license": "CC BY-SA 4.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Kamsky,Gata_2016_Karlsruhe.jpeg",
+    "verified_at": "2026-11-06",
+    "event": "Grenke Chess Open — 9ª rodada, Karlsruhe",
+    "event_date": "2016-03-28",
+    "rights_holder": "GFHund",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "sha256": "ae744892f8f5dd686d87434d8028eb3934ef0ae6b8cfa2f6882fe72344f0faed",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1996,
+      "text": "Disputei um match pelo Campeonato Mundial da FIDE contra Anatoly Karpov.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2007,
+      "text": "Venci a Copa do Mundo de Xadrez.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1996,
+      "title": "Desafio mundial",
+      "summary": "Disputei um match pelo Campeonato Mundial da FIDE contra Anatoly Karpov.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 2007,
+      "title": "Copa do Mundo",
+      "summary": "Venci a Copa do Mundo de Xadrez.",
+      "source_ids": [
+        "source-1",
+        "audit-3"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Chess.com — perfil histórico de kamsky",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/gata-kamsky",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE — match mundial com Karpov 1996",
+      "publisher": "FIDE",
+      "url": "https://worldchesschampionship2023.fide.com/chess-champions",
+      "accessed_at": "2026-11-06"
+    },
+    {
+      "id": "audit-3",
+      "title": "FIDE — campeão da Copa do Mundo de 2007",
+      "publisher": "FIDE",
+      "url": "https://old.fide.com/index.php?aid=383&option=com_fidecalendar&view=archiveview",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

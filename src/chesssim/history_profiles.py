@@ -21,6 +21,7 @@ _FIRST_PERSON = (
     "Mantive ", "Disputei ", "Publiquei ", "Tornei-me ",
     "Alcancei ", "Recebi ", "Recuperei ", "Voltei ", "Concluí ",
     "Joguei ", "Desenvolvi ", "Ajudei ", "Comecei ",
+    "Dividi ", "Empatei ", "Realizei ", "Terminei ",
 )
 
 
@@ -43,7 +44,7 @@ def _url(value: object, name: str) -> str:
 
 
 def _assert_year(value: object) -> None:
-    if type(value) is not int or not 1800 <= value <= 2026:
+    if type(value) is not int or not 1700 <= value <= 2026:
         raise ValueError("Ano histórico inválido")
 
 
@@ -73,7 +74,11 @@ def validate_history_pack(data: object, *, slug: str) -> dict:
         if path != f"history/portraits/{slug}.jpg":
             raise ValueError("Caminho de retrato não corresponde ao jogador")
         allowed = {"CC0 1.0": "https://creativecommons.org/publicdomain/zero/1.0/",
-                   "CC BY-SA 3.0": "https://creativecommons.org/licenses/by-sa/3.0/"}
+                   "CC BY-SA 3.0": "https://creativecommons.org/licenses/by-sa/3.0/",
+                   "CC BY-SA 4.0": "https://creativecommons.org/licenses/by-sa/4.0/",
+                   "CC BY-SA 2.0": "https://creativecommons.org/licenses/by-sa/2.0/",
+                   "CC BY 2.0": "https://creativecommons.org/licenses/by/2.0/",
+                   "Public Domain Mark 1.0": "https://creativecommons.org/publicdomain/mark/1.0/"}
         if (portrait["license"] not in allowed or
                 portrait["license_url"] != allowed[portrait["license"]]):
             raise ValueError("Licença incompatível")
@@ -83,8 +88,23 @@ def validate_history_pack(data: object, *, slug: str) -> dict:
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", portrait["verified_at"]):
             raise ValueError("Data de conferência inválida")
         url = _url(portrait["source_url"], "portrait.source_url")
-        if not url.startswith("https://commons.wikimedia.org/wiki/File:"):
-            raise ValueError("Retrato fora do repositório de licenças auditado")
+        parsed = urlsplit(url)
+        archive = (parsed.hostname == "www.nationaalarchief.nl" and
+                   re.fullmatch(r"/onderzoeken/fotocollectie/[0-9a-f-]{36}", parsed.path))
+        holland = (parsed.hostname == "noord-hollandsarchief.nl" and
+                   re.fullmatch(r"/beelden/beeldbankdeboer/detail/[0-9a-f-]{36}", parsed.path))
+        commons = (parsed.hostname == "commons.wikimedia.org" and
+                   parsed.path.startswith("/wiki/File:"))
+        flickr = (parsed.hostname == "www.flickr.com" and
+                  re.fullmatch(r"/photos/(?:8022405@N02|karpidis|suspeeters)/[0-9]{8,20}/?", parsed.path))
+        cleveland = (parsed.hostname == "cplorg.contentdm.oclc.org" and
+                     re.fullmatch(r"/digital/collection/p4014coll20/id/[0-9]{1,6}/?", parsed.path))
+        met = (parsed.hostname == "www.metmuseum.org" and
+               parsed.path == "/art/collection/search/423124")
+        chesshistory = (parsed.hostname == "www.chesshistory.com" and
+                        parsed.path == "/winter/extra/menchikclub.html")
+        if not (archive or holland or commons or flickr or cleveland or met or chesshistory):
+            raise ValueError("Origem do retrato não pertence a acervo auditado")
         digest = _text(portrait["sha256"], "portrait.sha256", max_len=64)
         if not re.fullmatch(r"[a-f0-9]{64}", digest):
             raise ValueError("SHA-256 de retrato inválido")
@@ -127,7 +147,7 @@ def validate_history_pack(data: object, *, slug: str) -> dict:
         if not _text(record["text"], f"highlight[{idx}].text").startswith(_FIRST_PERSON):
             raise ValueError("Feito deve usar primeira pessoa")
         _check_sources(record["source_ids"], source_ids)
-    last_year = 1800
+    last_year = 1700
     for record in timeline:
         if not isinstance(record, dict) or set(record) != {
                 "year", "title", "summary", "source_ids"}:
