@@ -496,10 +496,12 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 except (ValueError, OSError, FileNotFoundError,
                         KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "Estado do duelo indisponível"})
-            elif url.path in ("/", "/arena.js", "/arena.css", "/history.js", "/history.css", "/viewer"):
+            elif url.path in ("/", "/arena.js", "/arena.css", "/history.js", "/history.css", "/chess-board.js", "/chess-board.css", "/viewer"):
                 asset = {"/": "arena.html", "/arena.js": "arena.js",
                          "/arena.css": "arena.css", "/history.js": "history.js",
-                         "/history.css": "history.css", "/viewer": "monitor.html"}[url.path]
+                         "/history.css": "history.css",
+                         "/chess-board.js": "chess_board.js",
+                         "/chess-board.css": "chess_board.css", "/viewer": "monitor.html"}[url.path]
                 kind = ("text/html; charset=utf-8" if asset.endswith(".html") else
                         "text/javascript; charset=utf-8" if asset.endswith(".js") else
                         "text/css; charset=utf-8")
