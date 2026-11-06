@@ -36,7 +36,8 @@
           Array.isArray(data.scope.sources) && data.scope.sources.includes(s))) return false;
     const coverage = data.coverage;
     for (const key of ["sessions_seen","tournaments_seen","candidate_games",
-                       "verified_games","rejected_games","rejected_records",
+                       "verified_games","arena_verified_games","tournament_verified_games",
+                       "rejected_games","rejected_records",
                        "excluded_attempts","failed_attempts","duplicate_records"]) {
       if (!isCount(coverage[key])) return false;
     }
@@ -49,7 +50,9 @@
           item.completed === item.wins + item.draws + item.losses)) {
       return false;
     }
-    if(coverage.verified_games !== data.totals.games ||
+    if(coverage.arena_verified_games + coverage.tournament_verified_games !==
+           coverage.verified_games ||
+       coverage.verified_games !== data.totals.games ||
        coverage.candidate_games < coverage.verified_games + coverage.rejected_games ||
        coverage.partial !== Boolean(coverage.rejected_records || coverage.rejected_games)) {
       return false;
@@ -111,6 +114,8 @@
       coverage.candidate_games + " candidatas; " +
       coverage.rejected_games + " partidas e " +
       coverage.rejected_records + " registros rejeitados. " +
+      "Origem verificada: " + coverage.arena_verified_games + " jogos da Arena e " +
+      coverage.tournament_verified_games + " jogos de torneios. " +
       coverage.excluded_attempts + " tentativas excluídas; " +
       coverage.failed_attempts + " tentativas falhas.";
     $("history-stats-warning").textContent = coverage.partial ?
