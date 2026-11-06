@@ -44,7 +44,8 @@
     if (typeof coverage.partial !== "boolean" ||
         !data.opponents.every(item=>item &&
           typeof item.slug === "string" && /^[a-z0-9-]{2,48}$/.test(item.slug) &&
-          item.slug !== slug && ["games","completed","wins","draws","losses","incomplete"].every(
+          item.slug !== slug && isCount(item.duels) && item.duels <= item.games &&
+          ["games","completed","wins","draws","losses","incomplete"].every(
             key=>isCount(item[key])) &&
           item.games === item.completed + item.incomplete &&
           item.completed === item.wins + item.draws + item.losses)) {
@@ -89,7 +90,8 @@
         window.ChessSimHistoryPlayerName(entry.slug) : entry.slug;
       const li = make("li");
       li.append(make("strong", display));
-      li.append(make("span", entry.games + " jogos · " + entry.wins +
+      li.append(make("span", entry.duels + " duelos · " + entry.games +
+        " jogos · " + entry.wins +
         " V · " + entry.draws + " E · " + entry.losses + " D · " +
         entry.incomplete + " incompletos"));
       list.append(li);
