@@ -1,0 +1,36 @@
+name: History open museums - first party CC0 source check
+on:
+  push:
+    branches: [feat/history-remaining-players-47]
+    paths: [.github/workflows/history-open-museums-probe-once.yml]
+permissions: {contents: read}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check institutional CC0/PDM object endpoints once
+        shell: bash
+        run: |
+          python - <<'PY'
+          from urllib.request import Request,urlopen
+          from urllib.error import HTTPError
+          import json
+          sources={
+            "met-public-api":"https://collectionapi.metmuseum.org/public/collection/v1/objects/423124",
+            "wellcome-work":"https://api.wellcomecollection.org/catalogue/v2/works/bhquu6gn",
+          }
+          for name,url in sources.items():
+            try:
+              with urlopen(Request(url,headers={"User-Agent":"ChessSimulationHistoricalCurator/1.0 (+https://github.com/carloshgalves/chessCupMotorSimulation)"}),timeout=18) as res:
+                blob=res.read(30000)
+                obj=json.loads(blob)
+                if name.startswith("met"):
+                  print("MUSEUM",name,"status",res.status,"data",json.dumps({x:obj.get(x) for x in ("objectID","title","artistDisplayName","objectDate","isPublicDomain","primaryImage","primaryImageSmall","creditLine")})[:4500],flush=True)
+                else:
+                  print("MUSEUM",name,"status",res.status,"data",json.dumps({"title":obj.get("title"),"items":obj.get("items"),"images":obj.get("images"),"availabilities":obj.get("availabilities")})[:4500],flush=True)
+            except HTTPError as e:
+              print("MUSEUM",name,"denied",e.code,flush=True)
+            except Exception as e:
+              print("MUSEUM",name,"error",type(e).__name__,str(e)[:180],flush=True)
+          PY
