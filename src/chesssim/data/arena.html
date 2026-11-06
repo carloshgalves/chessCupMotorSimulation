@@ -10,6 +10,7 @@
   <script src="/arena.js" defer></script>
   <script src="/chess-board.js" defer></script>
   <script src="/history_replay.js" defer></script>
+  <script src="/history_stats.js" defer></script>
   <script src="/history.js" defer></script>
 </head>
 <body>
@@ -191,9 +192,15 @@
             </div>
           </section>
         </section>
-        <section class="history-stats-placeholder" aria-label="Estatísticas locais">
-          <h3>No simulador</h3>
-          <p>Estatísticas locais serão integradas na issue #52. Não representam a carreira real.</p>
+        <section id="history-stats-section" class="history-stats" aria-labelledby="history-stats-heading" hidden>
+          <h3 id="history-stats-heading">No simulador</h3>
+          <p class="history-stats-disclaimer">Resultados de partidas geradas nesta instalação. Não são feitos históricos, rating FIDE nem prova de fidelidade de estilo.</p>
+          <p id="history-stats-status" role="status" aria-live="polite"></p>
+          <div id="history-stats-metrics" class="history-stats-metrics" aria-label="Totais locais"></div>
+          <h4 id="history-stats-rivals-heading" hidden>Confrontos diretos</h4>
+          <div id="history-stats-rivals" aria-labelledby="history-stats-rivals-heading"></div>
+          <p id="history-stats-coverage" class="history-stats-coverage"></p>
+          <p class="history-stats-definition">Partidas concluídas = vitórias + empates + derrotas. Jogos interrompidos são contabilizados separadamente. Duelo é uma tentativa/confronto, independentemente da inversão de cores. Participação em torneio não corresponde necessariamente a jogos disputados.</p>
         </section>
       </section>
       <p class="history-disclaimer">Os resultados de motores são experimentais e não representam partidas ou feitos dos jogadores reais. Fotografias documentais não implicam aprovação deste projeto pelas pessoas retratadas.</p>
