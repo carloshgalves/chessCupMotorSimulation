@@ -95,12 +95,16 @@ Endpoint para o carrossel futuro: `GET /api/history/portraits/{slug}.jpg`, apena
 
 ## Segundo lote de packs (issue #47)
 
-Foi adicionada uma camada de **42 novos packs** (total de 64 slugs canônicos com ficha), cada um seguindo o contrato `history-profile-v1` e com no mínimo dois marcos datados e fontes específicas. Eles são publicados inicialmente como `review_status=pending`, porque a verificação editorial independente de cada assertiva permanece necessária. Isso não impede leitura pela API, mas exige indicativo de curadoria não finalizada na interface. Os 22 packs da entrega inicial conservam seu status de revisão.
+Foi adicionada uma camada de **42 novos packs** (total de 64 slugs canônicos com ficha), cada um seguindo o contrato `history-profile-v1` e com no mínimo dois marcos datados e fontes específicas. Os 42 novos packs foram conferidos e promovidos a `review_status=reviewed`, com pelo menos uma referência adicional (`audit-*`) por conquista e por marco cronológico. O relatório de controle de fontes encontra-se em `docs/HISTORY_EDITORIAL_AUDIT_2026-11-06.md`. Os 22 packs da entrega inicial conservam seu status de revisão.
 
 Para as fotografias, a segunda leva possui **15 candidatas** de competições documentadas e licenças livres. Informações de autoria, torneio, data e URLs estão em `docs/PHOTO_LICENSES.md`; os arquivos só são efetivamente liberados quando o importador verifica as licenças e os hashes. A ampliação não introduz novas dependências de runtime, endpoints ou mudanças de schema.
 
 ## Estado consolidado da PR #55
 
-**64/64 packs** em primeira pessoa editorial: 22 revisados na entrega inicial e 42 novos identificados como `pending` para revisão factual. **13/64 retratos** registrados e integralmente distribuíveis; outros **51** ainda sem foto. Desses, nove têm fonte candidata rastreada no Commons, mas foram bloqueados para download pelo provedor. Mais informações no registro `docs/PHOTO_LICENSES.md`.
+**64/64 packs** em primeira pessoa editorial: 22 revisados na entrega inicial e **42 verificados por marco**, com referências independentes vinculadas (`review_status=reviewed`). **13/64 retratos** registrados e integralmente distribuíveis; outros **51** ainda sem foto. Desses, **dez** têm fonte candidata rastreada no Commons (incluindo Judit Polgár), mas os downloads automáticos restantes foram bloqueados pelo provedor. Mais informações no registro `docs/PHOTO_LICENSES.md`.
 
-A integridade é validada para cada `portrait` presente, enquanto os demais usam fallback nulo. A issue #47 permanece aberta para auditoria histórica, conclusão das fotos e atribuição visual nas #48/#49.
+A integridade é validada para cada `portrait` presente, enquanto os demais usam fallback nulo. A issue #47 permanece aberta para obtenção das **51 fotos restantes** e homologação visual nas #48/#49. Os componentes de créditos vinculados à licença já estão implementados na PR #55; ainda falta teste visual em navegador real.
+
+## Interface História e auditoria (PR #55)
+
+A Arena local agora oferece uma aba História com navegação horizontal pelo elenco, biografia individual, conquistas e linha do tempo. As 13 fotos incorporadas são acompanhadas de créditos de autoria, evento, fonte original, licença e aviso de recorte, sem depender de scripts ou imagens externas. As fotografias sem licença disponível continuam com placeholder. A API permanece somente leitura e não altera o token de execução da Arena. Ver `src/chesssim/data/history.js`, `history.css` e `tests/assets/history_browser_harness.cjs`. A homologação visual com navegador real e a integração das partidas/estatísticas permanecem etapas próprias.
