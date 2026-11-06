@@ -856,6 +856,21 @@
         0.5,
         0.44
       ]
+    },
+    {
+      "slug": "menchik",
+      "file": "cn8774_menchik.jpg",
+      "event": "British Chess Magazine, torneio juvenil feminino, fevereiro de 1926",
+      "event_date": "1926-02",
+      "author": "Fotógrafo desconhecido; British Chess Magazine (1926)",
+      "rights_holder": "Imagem histórica publicada em periódico de 1926; domínio público por antiguidade de publicação",
+      "license": "Public Domain Mark 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "source_url": "https://www.chesshistory.com/winter/extra/menchikclub.html",
+      "centering": [
+        0.5,
+        0.5
+      ]
     }
   ]
 }

@@ -100,7 +100,9 @@ def validate_history_pack(data: object, *, slug: str) -> dict:
                      re.fullmatch(r"/digital/collection/p4014coll20/id/[0-9]{1,6}/?", parsed.path))
         met = (parsed.hostname == "www.metmuseum.org" and
                parsed.path == "/art/collection/search/423124")
-        if not (archive or holland or commons or flickr or cleveland or met):
+        chesshistory = (parsed.hostname == "www.chesshistory.com" and
+                        parsed.path == "/winter/extra/menchikclub.html")
+        if not (archive or holland or commons or flickr or cleveland or met or chesshistory):
             raise ValueError("Origem do retrato não pertence a acervo auditado")
         digest = _text(portrait["sha256"], "portrait.sha256", max_len=64)
         if not re.fullmatch(r"[a-f0-9]{64}", digest):

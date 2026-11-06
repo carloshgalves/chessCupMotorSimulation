@@ -34,7 +34,7 @@ def test_all_64_are_accessible_and_have_historical_packs():
         if pack["portrait"] is not None:
             assert pack["portrait"]["approval_status"] == "approved"
             assert pack["portrait"]["local_asset"] == f"history/portraits/{player.slug}.jpg"
-            assert pack["portrait"]["source_url"].startswith(("https://commons.wikimedia.org/wiki/File:", "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/", "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/", "https://www.flickr.com/photos/8022405@N02/", "https://www.flickr.com/photos/suspeeters/", "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/"))
+            assert pack["portrait"]["source_url"].startswith(("https://commons.wikimedia.org/wiki/File:", "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/", "https://noord-hollandsarchief.nl/beelden/beeldbankdeboer/detail/", "https://www.flickr.com/photos/8022405@N02/", "https://www.flickr.com/photos/suspeeters/", "https://cplorg.contentdm.oclc.org/digital/collection/p4014coll20/id/", "https://www.metmuseum.org/art/collection/search/", "https://www.chesshistory.com/winter/extra/"))
         if pack["has_historical_pack"]:
             assert pack["schema"] == SCHEMA
             assert pack["narrative_voice"] == "first_person_editorial"
@@ -330,3 +330,13 @@ def test_met_open_access_philidor_engraving_not_photography():
     assert philidor["source_url"] == "https://www.metmuseum.org/art/collection/search/423124"
     assert philidor["license"] == "CC0 1.0" and philidor["event_date"] == "1772"
     assert "gravado" in philidor["event"] and "não fotografia" in philidor["event"]
+
+
+def test_menchik_1926_photo_source_not_confused_with_cc0():
+    from pathlib import Path
+    import json
+    p = Path(__file__).resolve().parents[1] / "src/chesssim/data/history/portrait_candidates.json"
+    row = next(v for v in json.loads(p.read_text(encoding="utf-8"))["candidates"] if v["slug"] == "menchik")
+    assert row["license"] == "Public Domain Mark 1.0"
+    assert row["event_date"] == "1926-02" and "British Chess Magazine" in row["event"]
+    assert row["source_url"] == "https://www.chesshistory.com/winter/extra/menchikclub.html"
