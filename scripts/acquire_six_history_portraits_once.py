@@ -86,7 +86,7 @@ def acquire(row: dict) -> tuple[bytes, str]:
         out = BytesIO()
         square.save(out, "JPEG", quality=82, optimize=True, progressive=True)
         derived = out.getvalue()
-    if not derived.startswith(b"\\xff\\xd8") or len(derived) > 500_000:
+    if not derived.startswith(b"\xff\xd8") or len(derived) > 500_000:
         raise ValueError("Derivado JPEG inválido ou grande demais")
     return derived, actual_sha1
 
@@ -135,7 +135,7 @@ def main() -> None:
             "approval_status": "approved",
         }
         dest.write_bytes(derived)
-        profile_path.write_text(json.dumps(profile, ensure_ascii=False, indent=2) + "\\n",
+        profile_path.write_text(json.dumps(profile, ensure_ascii=False, indent=2) + "\n",
                                 encoding="utf-8")
         imported.append(slug)
         print(f"IMPORTED {slug}: {len(derived)} bytes; sha256={sha256(derived).hexdigest()}", flush=True)
