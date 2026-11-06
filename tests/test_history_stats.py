@@ -304,3 +304,84 @@ def test_arena_get_stats_is_read_only_and_404_for_unknown(tmp_path):
         server.server_close()
         server.arena_manager.shutdown()
         thread.join(timeout=2)
+
+
+
+def test_orphan_summary_is_reported_not_counted(tmp_path):
+    folder, duel = session(tmp_path, 0)
+    (folder / "session.json").unlink()
+    p = stat(tmp_path)
+    assert p["totals"]["games"] == 0
+    assert p["coverage"]["rejected_records"] == 1
+    assert p["coverage"]["partial"] is True
+
+
+def test_string_reverse_flag_does_not_bypass_session_contract(tmp_path):
+    folder, _ = session(tmp_path, 0, results=("1-0",))
+    path = folder / "session.json"
+    obj = json.loads(path.read_text())
+    obj["config"]["reverse"] = "false"
+    path.write_text(json.dumps(obj))
+    p = stat(tmp_path)
+    assert p["totals"]["games"] == 0
+    assert p["coverage"]["rejected_records"] == 1
+
+
+def test_naive_timestamp_does_not_become_invented_utc(tmp_path):
+    folder, _ = session(tmp_path, 0, results=("1-0",))
+    path = folder / "session.json"
+    obj = json.loads(path.read_text())
+    obj["created_utc"] = "2026-11-06T12:00:00"
+    path.write_text(json.dumps(obj))
+    p = stat(tmp_path)
+    assert p["totals"]["games"] == 1
+    assert p["scope"]["from_utc"] is None
+
+
+def test_manifest_timezone_is_normalized_before_minmax(tmp_path):
+    folder, _ = session(tmp_path, 0, results=("1-0",))
+    path = folder / "session.json"
+    obj = json.loads(path.read_text())
+    obj["created_utc"] = "2026-11-06T09:00:00-03:00"
+    path.write_text(json.dumps(obj))
+    p = stat(tmp_path)
+    assert p["scope"]["from_utc"] == "2026-11-06T12:00:00+00:00"
+
+
+def test_tournament_symlink_summary_rejected_even_when_file_exists(tmp_path):
+    root, _, folder = cup(tmp_path)
+    original = folder / "summary.json"
+    external = tmp_path / "summary-shadow.json"
+    external.write_bytes(original.read_bytes())
+    original.unlink()
+    original.symlink_to(external)
+    p = stat(tmp_path)
+    assert p["totals"]["tournaments"] == 1
+    assert p["totals"]["games"] == 0
+    assert p["coverage"]["partial"] is True
+
+
+def test_statistics_do_not_mutate_ledger_or_session(tmp_path):
+    folder, duel = session(tmp_path, 0)
+    cup_root, _, cup_folder = cup(tmp_path)
+    files = [folder / "session.json", duel / "summary.json",
+             cup_root / "tournament.json", cup_folder / "duelo.pgn"]
+    before = [file.read_bytes() for file in files]
+    report = stat(tmp_path)
+    assert report["totals"]["games"] == 4
+    assert [file.read_bytes() for file in files] == before
+    assert not list(tmp_path.rglob("*.lock"))
+
+
+def test_unrelated_historical_pgn_cannot_pollute_simulation_stats(tmp_path):
+    hist = tmp_path / "history-games"
+    hist.mkdir()
+    (hist / "historic.pgn").write_text(str(game("fischer", "tal", "1-0")))
+    assert stat(tmp_path)["totals"]["games"] == 0
+
+
+def test_cap_is_enforced_without_partial_fabricated_result(tmp_path, monkeypatch):
+    session(tmp_path, 0)
+    monkeypatch.setattr(history_stats, "MAX_SESSIONS", 0)
+    with pytest.raises(ValueError, match="Limite"):
+        stat(tmp_path)
