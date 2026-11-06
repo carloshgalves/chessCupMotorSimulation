@@ -131,7 +131,8 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
                     summary = _json(root, rel, MAX_MANIFEST_BYTES)
                     games = summary.get("games")
                     if (summary.get("players") != participants
-                            or not isinstance(games, list) or len(games) > 2
+                            or not isinstance(games, list)
+                            or len(games) > (2 if config["reverse"] else 1)
                             or summary.get("status") not in
                             {"RUNNING", "COMPLETED", "INCOMPLETE", "FAILED"}):
                         raise InvalidCatalogue("Resumo inválido")
