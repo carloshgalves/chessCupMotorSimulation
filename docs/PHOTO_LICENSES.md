@@ -62,3 +62,24 @@ A aquisição ampliou o número de JPEGs efetivamente presentes de **7 para 13**
 Os outros **9 candidatos** do manifesto ampliado permanecem **sem arquivo e sem associação `portrait`**: Portisch, Keres, Geller, Gaprindashvili, Chiburdanidze, Nakamura, Caruana, Hou Yifan e Ding Liren. O serviço conserva os placeholders. A Wikimedia Commons rejeitou novas requisições do runner compartilhado (HTTP 429 com **robot policy**). A aquisição automática foi interrompida e o workflow temporário foi excluído; não se deve repetir chamadas automáticas de forma contínua. Solicitar autorização de acesso, utilizar transferência disponibilizada oficialmente pela origem ou selecionar outra fonte livre é preferível a contornar o bloqueio.
 
 O manifesto mantém esses nove **como candidatos, não como fotografias aprovadas**, até que exista arquivo local comprovado por SHA-256 e licença/documentação suficientes. A ausência de retrato não invalida o pack biográfico.
+
+## Novo candidato — Judit Polgár, Chess Classic Mainz 2008
+
+A página [File:Judit Polgar.jpg](https://commons.wikimedia.org/wiki/File:Judit_Polgar.jpg) registra fotografia feita por **Stefan64** durante o **Chess Classic Mainz 2008** e disponibilizada sob **CC BY-SA 3.0**, com link de licença e possibilidade de transformação com atribuição. O registro foi incluído no manifesto como fonte **candidata**, não como arquivo autorizado/baixado; sua fotografia continuará ausente do pacote até a aquisição por meio permitido e conferência de identidade e direitos.
+
+## Aquisição manual permitida em ambiente local
+
+Como o Commons bloqueou o runner compartilhado por política de robôs (HTTP 429), **não repetir scraping, rotação de IP ou tentativas automatizadas**. Para cada foto, obter o arquivo pela opção oficial de download quando acessível, ou por arquivo fornecido com licença comprovada. A ferramenta `scripts/import_local_history_portrait.py` não realiza qualquer requisição à internet. Instalar Pillow no ambiente de curadoria:
+
+```bash
+python -m pip install 'Pillow>=11,<13'
+python scripts/import_local_history_portrait.py \\
+  --slug judit-polgar \\
+  --input /caminho/autorizado/foto.jpg \\
+  --source-url https://commons.wikimedia.org/wiki/File:Judit_Polgar.jpg \\
+  --confirmed-license 'CC BY-SA 3.0' \\
+  --confirmed-event 'Chess Classic Mainz' \\
+  --rights-and-identity-checked --apply
+```
+
+O exemplo **não é uma autorização automática**: somente executar `--apply` depois de confirmar a correspondência do arquivo com o registro da foto e seus direitos. Antes disso, rodar sem `--apply` para obter o hash e a pré-validação. O importador não sobrescreve fotos existentes, recorta para 480 × 480 px e registra hash, metadados de licença e fontes no JSON. Após cada importação, executar testes e verificar o pacote de distribuição. 
