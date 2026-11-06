@@ -22,7 +22,7 @@ function record(slug="fischer",extra={}) {
     scope:{directory:"<img onerror=alert(1)>",sources:["arena_local","tournament_local"],
            from_utc:"2026-11-06T12:00:00+00:00",to_utc:"2026-11-06T13:00:00+00:00"},
     totals:{tournaments:1,duels:2,games:3,completed:2,wins:1,draws:1,losses:0,incomplete:1},
-    opponents:[{slug:"tal",games:3,completed:2,wins:1,draws:1,losses:0,incomplete:1}],
+    opponents:[{slug:"tal",duels:2,games:3,completed:2,wins:1,draws:1,losses:0,incomplete:1}],
     coverage:{sessions_seen:1,tournaments_seen:1,candidate_games:4,
               verified_games:3,arena_verified_games:1,tournament_verified_games:2,rejected_games:1,rejected_records:1,
               excluded_attempts:1,failed_attempts:0,duplicate_records:0,partial:true},
