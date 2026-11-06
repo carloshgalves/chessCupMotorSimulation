@@ -32,7 +32,9 @@ Resposta versionada `chesssim-player-stats-v1`:
   "opponents": [],
   "coverage": {
     "sessions_seen": 0, "tournaments_seen": 0,
-    "candidate_games": 0, "verified_games": 0, "rejected_games": 0,
+    "candidate_games": 0, "verified_games": 0,
+    "arena_verified_games": 0, "tournament_verified_games": 0,
+    "rejected_games": 0,
     "rejected_records": 0, "excluded_attempts": 0, "failed_attempts": 0,
     "duplicate_records": 0, "partial": false
   }
@@ -51,6 +53,10 @@ O exemplo apresenta **sem dados**, e não uma taxa de vitórias hipotética.
   `<out>/tournaments/<torneio>/`. Torneios salvos fora dessa
   árvore **não são descobertos automaticamente**; não há varredura do
   sistema de arquivos ou leitura de caminhos fornecidos por HTTP.
+- A cobertura informa separadamente jogos efetivamente verificados na Arena
+  (`arena_verified_games`) e em torneios (`tournament_verified_games`);
+  a soma coincide com `verified_games`. Os nomes em `scope.sources`
+  indicam os sistemas de armazenamento consultados, não jogos existentes.
 - O período apresentado é a menor e maior data **de criação do manifesto**
   registrada com fuso; valores são normalizados para UTC. **Não** representa
   o tempo de início/fim efetivo de cada partida, sua duração ou a data real
