@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "grischuk",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui tricampeão mundial de blitz e participei da elite do xadrez clássico.",
+  "era_label": "2006–2015",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2006,
+      "text": "Conquistei o Campeonato Mundial de Blitz da FIDE.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2012,
+      "text": "Venci o Campeonato Mundial de Blitz novamente.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2015,
+      "text": "Conquistei meu terceiro Campeonato Mundial de Blitz.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2006,
+      "title": "Primeira coroa de blitz",
+      "summary": "Conquistei o Campeonato Mundial de Blitz da FIDE.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2012,
+      "title": "Segunda coroa de blitz",
+      "summary": "Venci o Campeonato Mundial de Blitz novamente.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2015,
+      "title": "Tricampeonato de blitz",
+      "summary": "Conquistei meu terceiro Campeonato Mundial de Blitz.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Referência histórica de grischuk",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/alexander-grischuk",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

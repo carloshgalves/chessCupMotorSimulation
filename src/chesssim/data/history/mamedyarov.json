@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "mamedyarov",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui bicampeão mundial juvenil e também campeão mundial de rápidas.",
+  "era_label": "2003–2018",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2003,
+      "text": "Conquistei o Campeonato Mundial Júnior de xadrez.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2005,
+      "text": "Venci novamente o Campeonato Mundial Júnior.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 2013,
+      "text": "Conquistei o Campeonato Mundial de Xadrez Rápido.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2003,
+      "title": "Mundial júnior",
+      "summary": "Conquistei o Campeonato Mundial Júnior de xadrez.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2005,
+      "title": "Bicampeonato júnior",
+      "summary": "Venci novamente o Campeonato Mundial Júnior.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 2013,
+      "title": "Mundial de rápidas",
+      "summary": "Conquistei o Campeonato Mundial de Xadrez Rápido.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Referência histórica de mamedyarov",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/Shakhriyar-Mamedyarov",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

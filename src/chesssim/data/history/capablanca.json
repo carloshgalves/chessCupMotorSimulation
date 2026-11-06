@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "capablanca",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão mundial e destaquei-me pelo domínio dos finais e da técnica posicional.",
+  "era_label": "1911–1927",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1911,
+      "text": "Venci o torneio internacional de San Sebastián, na Espanha.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1921,
+      "text": "Derrotei Emanuel Lasker e me tornei campeão mundial em Havana.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1927,
+      "text": "Disputei a defesa do título mundial contra Alexander Alekhine em Buenos Aires.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1911,
+      "title": "San Sebastián",
+      "summary": "Venci o torneio internacional de San Sebastián, na Espanha.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1921,
+      "title": "Título mundial",
+      "summary": "Derrotei Emanuel Lasker e me tornei campeão mundial em Havana.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1927,
+      "title": "Defesa da coroa",
+      "summary": "Disputei a defesa do título mundial contra Alexander Alekhine em Buenos Aires.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Referência histórica de capablanca",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/article/view/world-chess-champions",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

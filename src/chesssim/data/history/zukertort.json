@@ -1,0 +1,54 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "zukertort",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Venci Londres 1883 e disputei o primeiro match oficial da história do campeonato mundial.",
+  "era_label": "1883–1886",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1883,
+      "text": "Venci o torneio internacional de Londres à frente de Wilhelm Steinitz.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1886,
+      "text": "Disputei contra Steinitz o primeiro match oficial pelo Campeonato Mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1883,
+      "title": "Torneio de Londres",
+      "summary": "Venci o torneio internacional de Londres à frente de Wilhelm Steinitz.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1886,
+      "title": "Primeiro mundial oficial",
+      "summary": "Disputei contra Steinitz o primeiro match oficial pelo Campeonato Mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Referência histórica de zukertort",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/Johannes-Zukertort",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

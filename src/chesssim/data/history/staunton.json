@@ -1,0 +1,54 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "staunton",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui um dos principais mestres ingleses e ajudei a organizar o histórico torneio de Londres.",
+  "era_label": "1843–1851",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1843,
+      "text": "Derrotei Pierre de Saint-Amant em um match realizado em Paris.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1851,
+      "text": "Ajudei a organizar o torneio internacional de Londres de 1851.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1843,
+      "title": "Match de Paris",
+      "summary": "Derrotei Pierre de Saint-Amant em um match realizado em Paris.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1851,
+      "title": "Torneio de Londres",
+      "summary": "Ajudei a organizar o torneio internacional de Londres de 1851.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Referência histórica de staunton",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/howard-staunton",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

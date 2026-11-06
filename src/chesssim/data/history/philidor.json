@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "philidor",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui pioneiro da estratégia dos peões e autor de um influente tratado de xadrez.",
+  "era_label": "1747–1783",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1747,
+      "text": "Derrotei Philip Stamma em um match disputado na Inglaterra.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1749,
+      "text": "Publiquei a primeira edição de L'Analyse du jeu des Échecs.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1783,
+      "text": "Disputei três partidas simultâneas às cegas em Londres.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1747,
+      "title": "Match com Stamma",
+      "summary": "Derrotei Philip Stamma em um match disputado na Inglaterra.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1749,
+      "title": "Tratado de xadrez",
+      "summary": "Publiquei a primeira edição de L'Analyse du jeu des Échecs.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1783,
+      "title": "Simultâneas às cegas",
+      "summary": "Disputei três partidas simultâneas às cegas em Londres.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Referência histórica de philidor",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/francois-philidor",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

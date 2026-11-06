@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "chigorin",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui um dos mais importantes mestres russos da era romântica e desafiei Steinitz.",
+  "era_label": "1889–1903",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1889,
+      "text": "Dividi o primeiro lugar no torneio de Nova York e disputei um match mundial contra Steinitz.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1892,
+      "text": "Disputei novamente o campeonato mundial contra Steinitz.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1899,
+      "text": "Conquistei o primeiro Campeonato de Toda a Rússia.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1889,
+      "title": "Torneio de Nova York",
+      "summary": "Dividi o primeiro lugar no torneio de Nova York e disputei um match mundial contra Steinitz.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1892,
+      "title": "Segundo mundial",
+      "summary": "Disputei novamente o campeonato mundial contra Steinitz.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1899,
+      "title": "Campeonato russo",
+      "summary": "Conquistei o primeiro Campeonato de Toda a Rússia.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Referência histórica de chigorin",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/mikhail-chigorin",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

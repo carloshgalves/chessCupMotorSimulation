@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "euwe",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão mundial e, mais tarde, presidente da federação internacional de xadrez.",
+  "era_label": "1935–1937 (campeão mundial)",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1928,
+      "text": "Conquistei o Campeonato Mundial Amador de xadrez.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1935,
+      "text": "Derrotei Alexander Alekhine e conquistei a coroa mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1970,
+      "text": "Tornei-me presidente da FIDE, função que exerci até 1978.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1928,
+      "title": "Amador mundial",
+      "summary": "Conquistei o Campeonato Mundial Amador de xadrez.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1935,
+      "title": "Título mundial",
+      "summary": "Derrotei Alexander Alekhine e conquistei a coroa mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1970,
+      "title": "FIDE",
+      "summary": "Tornei-me presidente da FIDE, função que exerci até 1978.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Referência histórica de euwe",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/max-euwe",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}

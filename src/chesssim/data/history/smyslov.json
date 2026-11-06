@@ -1,0 +1,70 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "smyslov",
+  "review_status": "pending",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeão mundial e fiquei conhecido pela precisão técnica nos finais.",
+  "era_label": "1953–1983",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 1953,
+      "text": "Venci o Torneio de Candidatos de Zurique.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 1957,
+      "text": "Derrotei Mikhail Botvinnik e conquistei o Campeonato Mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "id": "achievement-3",
+      "year": 1983,
+      "text": "Alcancei a final dos matches de Candidatos, enfrentando Garry Kasparov.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 1953,
+      "title": "Candidatos",
+      "summary": "Venci o Torneio de Candidatos de Zurique.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1957,
+      "title": "Título mundial",
+      "summary": "Derrotei Mikhail Botvinnik e conquistei o Campeonato Mundial.",
+      "source_ids": [
+        "source-1"
+      ]
+    },
+    {
+      "year": 1983,
+      "title": "Final dos Candidatos",
+      "summary": "Alcancei a final dos matches de Candidatos, enfrentando Garry Kasparov.",
+      "source_ids": [
+        "source-1"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Referência histórica de smyslov",
+      "publisher": "Chess.com",
+      "url": "https://www.chess.com/players/vasily-smyslov",
+      "accessed_at": "2026-11-06"
+    }
+  ]
+}
