@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão mundial em dois períodos e recuperei a coroa depois de perdê-la.",
   "era_label": "1927–1935; 1937–1946 (campeão mundial)",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/alekhine.jpg",
+    "alt": "alekhine em Retrato histórico de Alexander Alekhine (1918-08-01)",
+    "author": "Fotógrafo desconhecido",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Alexander_Alekhine.jpg",
+    "verified_at": "2026-11-06",
+    "event": "Retrato histórico de Alexander Alekhine",
+    "event_date": "1918-08-01",
+    "rights_holder": "Autor desconhecido; estado de domínio público documentado no Commons",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "ede74b4351dd78993984a30a389a006cdde61156f0141a82483979ee9080229e",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

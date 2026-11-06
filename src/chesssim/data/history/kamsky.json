@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Disputei a coroa mundial da FIDE e retornei à elite após uma pausa competitiva.",
   "era_label": "1996–2007",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/kamsky.jpg",
+    "alt": "kamsky em Grenke Chess Open — 9ª rodada, Karlsruhe (2016-03-28)",
+    "author": "GFHund",
+    "license": "CC BY-SA 4.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Kamsky,Gata_2016_Karlsruhe.jpeg",
+    "verified_at": "2026-11-06",
+    "event": "Grenke Chess Open — 9ª rodada, Karlsruhe",
+    "event_date": "2016-03-28",
+    "rights_holder": "GFHund",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "sha256": "ae744892f8f5dd686d87434d8028eb3934ef0ae6b8cfa2f6882fe72344f0faed",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

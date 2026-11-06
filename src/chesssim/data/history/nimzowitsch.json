@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui um dos formuladores do hipermodernismo e escrevi sobre estratégia e estrutura de peões.",
   "era_label": "1925–1929",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/nimzowitsch.jpg",
+    "alt": "nimzowitsch em Retrato histórico publicado antes de 1930 (antes de 1930)",
+    "author": "Fotógrafo desconhecido",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Aron_Nimzowitsch2.jpg",
+    "verified_at": "2026-11-06",
+    "event": "Retrato histórico publicado antes de 1930",
+    "event_date": "antes de 1930",
+    "rights_holder": "Estado de domínio público documentado no Commons",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "8b99dcca40dcee4b1baf8307dbb980346ee34a6480d16f179df4e82adc2349b0",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",

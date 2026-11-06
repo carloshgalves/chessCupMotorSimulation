@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeão norte-americano e construí uma reputação pelo jogo de ataque.",
   "era_label": "1904–1936",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/marshall.jpg",
+    "alt": "marshall em Retrato publicado em Chess Openings (1904) (antes de 1904)",
+    "author": "Oxford and Dilhoff (crédito da publicação)",
+    "license": "Public Domain Mark 1.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Frank_Marshall_(chess_player).jpg",
+    "verified_at": "2026-11-06",
+    "event": "Retrato publicado em Chess Openings (1904)",
+    "event_date": "antes de 1904",
+    "rights_holder": "Estado de domínio público documentado no Commons",
+    "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "sha256": "153b84b19147e80d397c6295f96051570536683058ebd3fd7921d513d3a301b8",
+    "derivative_note": "Recorte quadrado e redução a 480×480 px.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",
