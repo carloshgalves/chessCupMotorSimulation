@@ -5,7 +5,21 @@
   "narrative_voice": "first_person_editorial",
   "short_bio": "Fui campeã mundial por dezesseis anos e a primeira mulher a receber o título absoluto de grande mestre.",
   "era_label": "1962–1978 (campeã mundial feminina)",
-  "portrait": null,
+  "portrait": {
+    "local_asset": "history/portraits/gaprindashvili.jpg",
+    "alt": "gaprindashvili em Hoogovens Women's Chess Tournament, Beverwijk (1963-01-21)",
+    "author": "Harry Pot / Anefo",
+    "license": "CC0 1.0",
+    "source_url": "https://www.nationaalarchief.nl/onderzoeken/fotocollectie/aa26ca98-d0b4-102d-bcf8-003048976d84",
+    "verified_at": "2026-11-06",
+    "event": "Hoogovens Women's Chess Tournament, Beverwijk",
+    "event_date": "1963-01-21",
+    "rights_holder": "Nationaal Archief",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sha256": "080ae803f668a44106a3c72decfda623530f4a1192960b0b47b6c959af1f2c65",
+    "derivative_note": "Recorte quadrado e redução para 480×480 px a partir de fotografia oficial de torneio.",
+    "approval_status": "approved"
+  },
   "highlights": [
     {
       "id": "achievement-1",
