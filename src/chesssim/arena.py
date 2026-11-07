@@ -21,6 +21,7 @@ from .history_profiles import list_history_players, load_history_profile
 from .history_games import InvalidCatalogue, UnknownGame, list_games, replay
 from .history_stats import player_stats
 from .competition_rating import rating_report, RATING_POOLS
+from .human_game import HumanGame, HumanInput, HumanBusy
 from .live_board import SCHEMA, make_handler, snapshot
 from .matches import _atomic_text, official_book_hashes, play_duel, validate
 from .peak_windows import CLOCK_PRESETS, PROVISIONAL_PEAKS
@@ -251,6 +252,13 @@ class ArenaManager:
         self._process_lock = _lock(self.workspace)
         self._process_lock.__enter__()
         self._process_lock_closed = False
+        try:
+            self.human = HumanGame(self.root, self.workspace,
+                                   max_wall_seconds=self.max_game_wall_seconds)
+        except BaseException:
+            self._process_lock_closed = True
+            self._process_lock.__exit__(None, None, None)
+            raise
 
     def _save(self, folder: Path, state: dict) -> None:
         _atomic_text(folder / "session.json",
@@ -298,7 +306,8 @@ class ArenaManager:
     def status(self) -> dict:
         with self._lock:
             selected = self._status_unlocked()
-            return {"session": selected, "busy": self._active,
+            return {"session": selected, "busy": self._active or self.human.busy,
+                    "human_busy": self.human.busy,
                     "players": _profiles(self.root),
                     "presets": {name: {"initial_seconds": v[0], "increment_seconds": v[1]}
                                 for name, v in PRESETS.items()},
@@ -330,8 +339,8 @@ class ArenaManager:
     def launch(self, raw: object) -> dict:
         config = normalize_config(raw)
         with self._lock:
-            if self._active:
-                raise ArenaBusy("Já existe confronto em andamento")
+            if self._active or self.human.busy:
+                raise ArenaBusy("Já existe confronto ou partida em andamento")
             white, black = (find_player(config[x]) for x in ("white", "black"))
             try:
                 _, files = validate(self.root, white, black)
@@ -400,6 +409,14 @@ class ArenaManager:
                 finally:
                     self._active = False
 
+    def human_start(self, raw: object) -> dict:
+        with self._lock:
+            return self.human.start(raw, duel_busy=self._active)
+
+    def human_resume(self, raw: object) -> dict:
+        with self._lock:
+            return self.human.resume(raw, duel_busy=self._active)
+
     def stop(self) -> dict:
         with self._lock:
             if not self._active:
@@ -408,6 +425,7 @@ class ArenaManager:
             return {"stop_requested": True}
 
     def shutdown(self) -> None:
+        self.human.shutdown()
         with self._lock:
             if self._active:
                 self._stop.set()
@@ -567,6 +585,11 @@ def make_arena_handler(manager: ArenaManager, token: str):
             elif url.path.startswith("/piece-assets/"):
                 # Source-pinned SVG files, allowlisted by the read-only handler.
                 super().do_GET()
+            elif url.path == "/api/arena/human" and not url.query:
+                try:
+                    self._json(200, manager.human.state())
+                except (ValueError, OSError, KeyError, TypeError, json.JSONDecodeError):
+                    self._json(503, {"error": "Estado do modo Jogar indisponível"})
             elif url.path == "/api/arena":
                 try:
                     self._json(200, manager.status())
@@ -633,7 +656,11 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 self._json(403, {"error": "Host não autorizado"})
                 return
             route = urlsplit(self.path)
-            if route.path not in ("/api/arena/launch", "/api/arena/stop") or route.query:
+            if route.path not in (
+                "/api/arena/launch", "/api/arena/stop",
+                "/api/arena/human/start", "/api/arena/human/move",
+                "/api/arena/human/action", "/api/arena/human/resume",
+            ) or route.query:
                 self._json(404, {"error": "Rota desconhecida"})
                 return
             origins = {f"http://127.0.0.1:{self.server.server_port}",
@@ -659,15 +686,23 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 return
             try:
                 data = _decode_json(body)
-                if route.path.endswith("/launch"):
+                if route.path == "/api/arena/launch":
                     self._json(202, manager.launch(data))
-                else:
+                elif route.path == "/api/arena/stop":
                     if data:
                         raise BadLaunch("Parada não aceita parâmetros")
                     self._json(202, manager.stop())
-            except BadLaunch as exc:
+                elif route.path == "/api/arena/human/start":
+                    self._json(201, manager.human_start(data))
+                elif route.path == "/api/arena/human/move":
+                    self._json(200, manager.human.move(data))
+                elif route.path == "/api/arena/human/action":
+                    self._json(200, manager.human.action(data))
+                else:
+                    self._json(200, manager.human_resume(data))
+            except (BadLaunch, HumanInput) as exc:
                 self._json(400, {"error": str(exc)})
-            except ArenaBusy as exc:
+            except (ArenaBusy, HumanBusy) as exc:
                 self._json(409, {"error": str(exc)})
             except (OSError, RuntimeError, ValueError) as exc:
                 print(f"Falha operacional local: {type(exc).__name__}: {exc}",
