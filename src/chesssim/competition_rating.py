@@ -12,7 +12,9 @@ from decimal import Decimal, ROUND_HALF_UP, localcontext
 from hashlib import sha256
 import json
 import math
+import os
 from pathlib import Path
+import tempfile
 
 from .catalog import load_roster
 from .history_stats import verified_competition_games
@@ -282,3 +284,43 @@ def rating_report(workspace: Path, *, k: object = DEFAULT_K,
         summary["rating_ledger"] = snapshot["rating_ledger"]
         summary["ledger_genesis"] = snapshot["ledger_genesis"]
     return summary
+
+
+def export_rating_ledger(workspace: Path, out: Path, *,
+                         k: object = DEFAULT_K, replace: bool = False) -> dict:
+    """Explicit CLI-only, atomic and idempotent snapshot; GET never writes."""
+    report = rating_report(workspace, k=k, include_ledger=True)
+    snapshot = {
+        **report,
+        "snapshot_checksum": sha256(_canonical(report)).hexdigest(),
+    }
+    data = json.dumps(snapshot, sort_keys=True, ensure_ascii=False, indent=2,
+                      allow_nan=False).encode("utf-8") + b"\n"
+    output = out.expanduser().absolute()
+    parent = output.parent
+    if not parent.is_dir() or parent.is_symlink() or output.is_symlink():
+        raise ValueError("Destino deve ter diretório existente e não ser symlink")
+    if output.exists():
+        existing = output.read_bytes()
+        if existing == data:
+            return {"path": str(output), "changed": False,
+                    "scored_games": report["counts"]["scored_games"]}
+        if not replace:
+            raise FileExistsError("Ledger mudou; use --replace explicitamente")
+    with tempfile.NamedTemporaryFile(
+        mode="wb", dir=parent, prefix=".rating-", suffix=".tmp", delete=False,
+    ) as temp:
+        temporary = Path(temp.name)
+        try:
+            temp.write(data)
+            temp.flush()
+            os.fsync(temp.fileno())
+        except BaseException:
+            temporary.unlink(missing_ok=True)
+            raise
+    try:
+        os.replace(temporary, output)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return {"path": str(output), "changed": True,
+            "scored_games": report["counts"]["scored_games"]}
