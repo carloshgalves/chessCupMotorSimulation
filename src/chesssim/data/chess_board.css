@@ -7,6 +7,8 @@
 .square.whitepiece .piece-glyph{color:var(--piece-white);-webkit-text-stroke:1.15px var(--outline-white);text-shadow:0 2px 1px #12262dcc,1px 0 1px #12262dcc}
 .square.blackpiece .piece-glyph{color:var(--piece-black);-webkit-text-stroke:1.15px var(--outline-black);text-shadow:0 2px 1px #0d1a20cc,0 0 1px #f7efdf}
 .square.coordinate::after{content:attr(data-coordinate);position:absolute;bottom:3px;right:4px;font:600 9px system-ui;color:#192e35a6}
+.board .square.dark.coordinate::after{color:#fff}
+.board .square.light.coordinate::after{color:#101820}
 
 /* Board palette variables never recolor Arena forms or History biography. */
 .board[data-board-theme="wood"]{--square-light:#f5e4c8;--square-dark:#89684e;--last-move:#ffda64;--outline-white:#10212c;--outline-black:#fff5df}
@@ -17,11 +19,11 @@
 .board[data-board-theme="contrast"] .square.dark.coordinate::after{color:#fff}
 .board[data-board-theme="contrast"] .square.light.coordinate::after{color:#101820}
 .board[data-piece-style="outline"] .square.whitepiece .piece-glyph{
-  color:var(--piece-white);-webkit-text-fill-color:transparent;
+  color:var(--piece-white);-webkit-text-fill-color:var(--piece-white);
   -webkit-text-stroke:2.4px var(--outline-white);text-shadow:none
 }
 .board[data-piece-style="outline"] .square.blackpiece .piece-glyph{
-  color:var(--piece-black);-webkit-text-fill-color:transparent;
+  color:var(--piece-black);-webkit-text-fill-color:var(--piece-black);
   -webkit-text-stroke:2.4px var(--outline-black);text-shadow:none
 }
 @keyframes chesssim-board-move-highlight{
