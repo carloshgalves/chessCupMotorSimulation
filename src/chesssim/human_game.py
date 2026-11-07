@@ -103,6 +103,8 @@ class HumanGame:
         self._session_started = monotonic()
         self._thread: Thread | None = None
         self._closed = False
+        self._epoch = 0
+        self._wall_budget = self.max_wall_seconds
         self._load_last()
 
     @property
@@ -173,7 +175,7 @@ class HumanGame:
         now = monotonic()
         elapsed = max(0.0, now - self._turn_started)
         self._turn_started = now
-        if now - self._session_started > self.max_wall_seconds:
+        if now - self._session_started > self._wall_budget:
             self._finish_locked("*", "WallTimeLimit", "INCOMPLETE")
             return
         clocks = self._data["clocks"]
@@ -229,6 +231,7 @@ class HumanGame:
                 if not self._is_engine_turn_locked():
                     return
                 session_id = self._data["id"]
+                epoch = self._epoch
                 revision = self._data["revision"]
                 conf = self._data["config"].copy()
                 board = self._board.copy(stack=True)
@@ -256,6 +259,7 @@ class HumanGame:
                     engine.close()
             with self._lock:
                 if (self._data["id"] != session_id or
+                        self._epoch != epoch or
                         self._data["revision"] != revision or
                         not self._is_engine_turn_locked()):
                     return
@@ -271,7 +275,8 @@ class HumanGame:
                   str(exc), flush=True)
             with self._lock:
                 if (self._data and self._data["status"] == "RUNNING" and
-                        self._data["id"] == session_id):
+                        self._data["id"] == session_id and
+                        self._epoch == epoch):
                     self._finish_locked("*", "EngineFailure", "FAILED")
         finally:
             with self._lock:
@@ -318,6 +323,13 @@ class HumanGame:
                 "EngineSlug": opponent.slug, "SearchLimit": "depth=" + str(conf["depth"]),
                 "SourceKind": "human_vs_engine",
             })
+            self._epoch += 1
+            # Long classical/custom clocks must not hit the standard 1h
+            # duel safety budget while both players still have time.
+            self._wall_budget = max(
+                self.max_wall_seconds,
+                2 * conf["clock"][0] + 400 * conf["clock"][1] + 600
+                if conf["clock"] else self.max_wall_seconds)
             self._data = {
                 "schema": SCHEMA, "id": ident, "config": conf,
                 "created_utc": _utc(), "updated_utc": _utc(), "finished_utc": None,
@@ -339,11 +351,28 @@ class HumanGame:
             self._tick_locked()
             data = self._data
             moves = []
+            replay_board = self._game.board()
+            replay_clocks = ([float(self._data["config"]["clock"][0])] * 2
+                             if self._data["config"]["clock"] else [None,None])
+            states = [{"fen": replay_board.fen(), "last": None,
+                       "clocks": replay_clocks.copy(), "turn": "white"}]
             for ply, node in enumerate(self._game.mainline(), 1):
+                actor = 0 if replay_board.turn else 1
+                san = replay_board.san(node.move)
+                uci = node.move.uci()
+                replay_board.push(node.move)
+                move_clock = node.clock()
+                if move_clock is not None:
+                    replay_clocks[actor] = move_clock
                 moves.append({
-                    "ply": ply, "san": node.san(),
-                    "uci": node.move.uci(),
-                    "clock": node.clock(),
+                    "ply": ply, "san": san, "uci": uci,
+                    "clock": move_clock,
+                })
+                states.append({
+                    "fen": replay_board.fen(),
+                    "last": [uci[:2],uci[2:4]],
+                    "turn": "white" if replay_board.turn else "black",
+                    "clocks": replay_clocks.copy(),
                 })
             last = moves[-1]["uci"] if moves else None
             return {
@@ -364,7 +393,8 @@ class HumanGame:
                     "last": [last[:2], last[2:4]] if last else None,
                     "result": data["result"], "termination": data["termination"],
                     "clocks": list(data["clocks"]) if data["clocks"] else None,
-                    "moves": moves, "draw_offer": data["draw_offer"],
+                    "moves": moves, "states": states,
+                    "draw_offer": data["draw_offer"],
                 },
             }
 
@@ -406,6 +436,7 @@ class HumanGame:
                 raise HumanBusy("Partida não está em andamento")
             kind = raw["action"]
             if kind == "resign":
+                self._epoch += 1
                 result = "0-1" if self._data["config"]["color"] == "white" else "1-0"
                 self._finish_locked(result, "HumanResignation")
             elif kind == "claim_draw":
@@ -419,6 +450,7 @@ class HumanGame:
                 self._data["draw_offer"] = "Motor UCI não negocia propostas; oferta recusada."
                 self._save_locked()
             elif kind == "interrupt":
+                self._epoch += 1
                 self._finish_locked("*", "OperatorStop", "INTERRUPTED")
             else:
                 raise HumanInput("Ação não reconhecida")
@@ -444,6 +476,11 @@ class HumanGame:
                 raise HumanInput("Motor não disponível para retomada") from exc
             if self._data["clocks"] and min(self._data["clocks"]) <= 0:
                 raise HumanInput("Partida sem tempo restante")
+            self._epoch += 1
+            self._wall_budget = max(
+                self.max_wall_seconds,
+                2 * conf["clock"][0] + 400 * conf["clock"][1] + 600
+                if conf["clock"] else self.max_wall_seconds)
             self._data["status"] = "RUNNING"
             self._data["result"] = "*"
             self._data["termination"] = None
@@ -459,6 +496,7 @@ class HumanGame:
     def shutdown(self) -> None:
         with self._lock:
             self._closed = True
+            self._epoch += 1
             if self.busy:
                 self._finish_locked("*", "ServerShutdown", "INTERRUPTED")
             thread = self._thread
