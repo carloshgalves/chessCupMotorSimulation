@@ -24,33 +24,45 @@ O código reaproveita o verificador de PGNs de history_stats.py (#52). Somente s
 
 IDs idênticos numa retomada entram uma vez. IDs idênticos com conteúdo divergente são erro. PGNs de conteúdo igual com IDs diferentes podem ser partidas independentes; pseudorreplicação de escolhas de estilo é um problema distinto da #69.
 
-O universo padrão é **local-uci-observed-v1**, com classificação global que informa as modalidades presentes e **avisa quando são misturadas**. O preset official do ChessSimulation não é tratado como certificação FIDE. Partidas sem relógio de preset são unclassified. Simulações estatísticas futuras e Carreira precisam de outros universos, com reset e provenance próprios.
+O universo padrão é **local-uci-observed-v2**, com ratings independentes por modalidade e sem Elo global que misture ritmos. O preset official do ChessSimulation não é tratado como certificação FIDE. Partidas sem relógio de preset são unclassified. Simulações estatísticas futuras e Carreira precisam de outros universos, com reset e provenance próprios.
+
+## Ratings por relógio: classificação e isolamento
+
+Cada modalidade mantém **seu próprio rating/ledger**, com os 64 jogadores inicialmente em 2500. Resultados não transitam entre classical, rapid, blitz e bullet; partidas sem relógio jogado são isoladas em `unclassified`, sem creditar Elo nas outras quatro modalidades. A fórmula logística e o K não mudam, apenas a escolha do conjunto de partidas. Não há um Elo combinado.
+
+A classificação considera **o tempo inicial por jogador mais 60 incrementos**, sempre em segundos: `T = initial_seconds + 60 * increment_seconds`. Bullet: **T < 180** (convenção do ChessSimulation, não rating FIDE); blitz: **180 ≤ T ≤ 600**; rapid: **600 < T < 3600**; classical: **T ≥ 3600**. A regra é determinística e não infere modalidade do nome arbitrário do preset. Limites gerais de rápido e blitz: https://handbook.fide.com/chapter/e012023.
+
+Exemplos: 1+0 bullet, 3+2 blitz, 10+0 blitz, **10+2 rapid**, 30+5 rapid, 30+20 rapid, 45+0 rapid, **30+30 classical**, 45+30 classical. O preset antigo `official` é 10+2 (rapid), não uma alegação de Elo FIDE. Exceções de torneios com rating FIDE em 2026 não mudam esta classificação local: https://www.fide.com/fide-updates-rating-regulations-to-include-faster-time-controls-for-major-events/.
+
+A Arena oferece relógios personalizados (1–240 minutos iniciais, incremento 0–120 segundos). Os valores persistidos na sessão devem coincidir com `TimeControl` no PGN validado, antes de pontuar. Torneios existentes usam seus `clock` explícitos; no futuro, presets customizados em torneios também serão classificados pelos números e não pelo rótulo. Modos depth e movetime não possuem relógio equivalente, portanto permanecem `unclassified`.
+
+Os contratos foram versionados para `chesssim-competition-elo-v2` e `chesssim-rating-ledger-v2`, distinguindo-os dos snapshots globais anteriores. Qualquer migração de dados antigos deve ser explícita.
 
 ## Ordenação e trilha de auditoria
 
 Os eventos são ordenados deterministamente por **created_manifest_utc e game_id**, com datas nulas no final. created_manifest_utc indica a criação do manifesto e **não equivale à data/hora em que cada partida começou ou terminou**. Sem o horário de execução da partida, não é possível alegar uma curva Elo cronológica real. A curva representa apenas o fechamento na ordem versionada.
 
-O esquema de ledger é **chesssim-rating-ledger-v1**. Cada evento registra: game_id, white, black, result, score_white, expected_white, before/after das duas cores, K, origem, modalidade, data do manifesto, **SHA-256 do PGN efetivamente validado**, hashes de configuração quando disponíveis, versão de modelo, previous_checksum e checksum. Para Arena o hash identifica o arquivo individual; para torneios ele identifica o PGN consolidado de duas partidas, conforme o ledger da competição. A cadeia é SHA256 do checksum anterior concatenado à serialização JSON canônica de cada evento; a verificação detecta modificação, exclusão ou reordenação do ledger. A cadeia é prova de *consistência interna de um snapshot*, não assinatura criptográfica de fonte externa.
+O esquema de ledger é **chesssim-rating-ledger-v2**. Cada evento registra: game_id, white, black, result, score_white, expected_white, before/after das duas cores, K, origem, modalidade, data do manifesto, **SHA-256 do PGN efetivamente validado**, hashes de configuração quando disponíveis, versão de modelo, previous_checksum e checksum. Para Arena o hash identifica o arquivo individual; para torneios ele identifica o PGN consolidado de duas partidas, conforme o ledger da competição. A cadeia é SHA256 do checksum anterior concatenado à serialização JSON canônica de cada evento; a verificação detecta modificação, exclusão ou reordenação do ledger. A cadeia é prova de *consistência interna de um snapshot*, não assinatura criptográfica de fonte externa.
 
 ## API de leitura e exportação explícita
 
-- GET /api/competition/ratings retorna classificação dos 64, contagens, avisos e checksum, **sem ledger detalhado**.
-- GET /api/history/players/fischer/rating retorna o rating experimental do jogador, amostra e status.
+- GET /api/competition/ratings?modality=rapid apresenta somente rápido; valores válidos: classical, rapid, blitz, bullet e unclassified. Sem parâmetro, rapid. Cada relatório apresenta ratings dos 64 e `available_modalities` com contagem por pool, sem expor o ledger.
+- GET /api/history/players/fischer/rating?modality=classical apresenta apenas o Elo clássico de Fischer.
 - Nenhum GET modifica arquivo, estado UCI ou token. Nenhuma rota HTTP recebe caminho arbitrário de exportação.
 
 Exportação pelo terminal:
 
-    python -m chesssim rating-export --workspace ~/chesssim-sessoes-visual --out ~/elo-local.json
+    python -m chesssim rating-export --workspace ~/chesssim-sessoes-visual --modality rapid --out ~/elo-rapid.json
 
 Para atualizar o mesmo arquivo após partidas novas, exigir opção explícita:
 
-    python -m chesssim rating-export --workspace ~/chesssim-sessoes-visual --out ~/elo-local.json --replace
+    python -m chesssim rating-export --workspace ~/chesssim-sessoes-visual --modality rapid --out ~/elo-rapid.json --replace
 
 Para experimento separado com K=20:
 
-    python -m chesssim rating-export --workspace ~/chesssim-sessoes-visual --out ~/elo-k20.json --k 20
+    python -m chesssim rating-export --workspace ~/chesssim-sessoes-visual --modality classical --out ~/elo-classical-k20.json --k 20
 
-Se o snapshot é byte a byte igual, não regravar. Se mudou, recusar substituição sem --replace. A exportação usa temporário no mesmo diretório, fsync e os.replace. Arquivos existentes e symlinks exigem validação explícita.
+O `snapshot_checksum` é **obrigatório** para verificar relatórios exportados, não bastando a cadeia de hashes do ledger. É prova de consistência interna, não assinatura digital de uma fonte independente. Se o snapshot é byte a byte igual, não regravar. Se mudou, recusar substituição sem --replace. A exportação usa temporário no mesmo diretório, fsync e os.replace. Arquivos existentes e symlinks exigem validação explícita.
 
 ## Provisoriedade, amostra e limitações
 
@@ -66,6 +78,6 @@ Se o snapshot é byte a byte igual, não regravar. Se mudou, recusar substituiç
 
 A matriz automatizada cobre aritmética analítica, empates, offset, soma das atualizações, reprocessamento de 100 jogos em ordem permutada, identidade de evento, retomada, entradas incompletas e adulteradas, cadeia de hash, exportação, endpoints GET-only, CSP e DOM com XSS e respostas atrasadas.
 
-A inspeção visual em Chrome/Debian ainda precisa verificar tabela vazia, ranking parcial, páginas de jogadores, mobilidade, teclado e clareza dos rótulos. Os testes opcionais externos do motor não devem ser declarados aprovados se estiverem em skip.
+A homologação Chrome/Debian precisa comprovar ranking vazio e preenchido de **cada pool**, edição de relógio personalizado, páginas de jogador, responsividade, teclado, e migração de sessões antigas sem relógio. Os testes opcionais externos do motor não devem ser declarados aprovados se estiverem em skip.
 
 Referência de contexto, não incorporação integral da FIDE: https://handbook.fide.com/chapter/B022024.
