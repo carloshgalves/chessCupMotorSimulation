@@ -1,36 +1,98 @@
-# Tabuleiro 2D configurável e estudo de visualização 3D — Issue #68
+# Tabuleiro 2D configurável e estudo 3D — Issue #68
 
-## Entrega 2D — contrato funcional
+## Correção visual após homologação da PR #76
 
-As telas **Arena / História** e **watch** exibem o painel `Aparência do tabuleiro`. Todas usam o renderer canônico `chess_board.js` e a folha `chess_board.css`; o editor de preferências vive em `board_preferences.js`. **Nenhum código desta entrega altera lance, PGN, FEN, motor, relógios, sessão, token da Arena, resultado ou rating.**
+O usuário validou a mecânica mas identificou **falta de diversidade cromática e
+silhuetas inadequadas de peças** no uso exclusivo de Unicode. Este checkpoint
+substitui as opções visuais de peças por **sete conjuntos SVG originais
+distribuídos no Lichess, com atribuição e licenças individuais**, e amplia
+os tabuleiros para **12 estilos**. O código mantém o núcleo de regras intacto.
 
-| Campo | Valores permitidos | Padrão |
+### Catálogo de tabuleiros
+
+| ID | Tema | Aparência |
 | --- | --- | --- |
-| Cores | `classic` (clássico), `wood` (madeira), `slate` (azul-acizentado), `light` (claro), `dark` (escuro), `contrast` (alto contraste) | `classic` |
-| Peças | `solid` (silhueta com preenchimento e borda), `outline` (contorno) | `solid` |
-| Movimento | `off`, `fast` (160 ms), `normal` (330 ms) | `off` |
+| `classic` | Clássico | Marfim e verde-acinzentado original |
+| `wood` | Madeira clara | Grãos discretos em areia e caramelo |
+| `slate` | Ardósia | Cinza mineral e azul-acinzentado com microtextura |
+| `light` | Claro | Marfim suave e verde-pálido, sem textura |
+| `dark` | Escuro | Grafite azulado e aço |
+| `contrast` | Alto contraste | Branco-gelo e quase preto |
+| `green` | Verde tradicional | Creme e verde vivo |
+| `blue` | Azul torneio | Azul-claro e azul profundo |
+| `walnut` | Nogueira | Marfim quente e marrom-escuro com grãos |
+| `marble` | Mármore | Branco mineral e pedra cinza com veios |
+| `lavender` | Lavanda | Lilás-claro e roxo |
+| `terracotta` | Terracota | Areia-clara e barro queimado com textura |
 
-A animação é apenas o breve realce das casas do último movimento; **não há interpolação física nem movimentação da peça**. Ela ocorre somente em mudanças de FEN efetivamente exibida. Em polling da mesma posição, o destaque não se repete. A regra do sistema `prefers-reduced-motion: reduce` prevalece e desativa a animação, mesmo quando o usuário escolheu `fast` ou `normal`.
+A miniatura 2×2 do seletor mostra cada paleta antes da aplicação. Temas
+de madeira, pedra e terracota recebem **texturas CSS próprias**, sem
+download de imagens de terceiros ou CDN.
 
-O tema altera somente as cores de 64 casas e os contrastes das silhuetas; não afeta as cores de formulários, biografias, retratos ou gráficos. A geometria 8×8, os rótulos de casas e a orientação existente permanecem inalterados.
+### Sete conjuntos reais de peças (todos com 12 SVGs)
 
-**Desenho das peças e direitos:** as duas variantes se baseiam nos glifos Unicode de xadrez já existentes e nas fontes que o sistema operacional do usuário disponibiliza (DejaVu Sans / Noto Sans Symbols 2 / Segoe UI Symbol). Nenhuma fonte, imagem vetorial de terceiros ou biblioteca de peças foi incorporada ao repositório. O modo `outline` ajusta o traço CSS da mesma silhueta; não é uma nova coleção de ilustrações. Se futuramente for incorporada uma biblioteca de peças real, exigirá auditoria explícita da licença/atribuição e testes de fallback.
+| ID | Nome | Autor | Licença |
+| --- | --- | --- | --- |
+| `cburnett` | Cburnett (padrão) | Colin M. L. Burnett | GPL-2.0-or-later |
+| `merida` | Merida | Armando Hernandez Marroquin | GPL-2.0-or-later |
+| `chessnut` | Chessnut | Alexis Luengas | Apache-2.0 |
+| `fantasy` | Fantasy | Maurizio Monge | MIT |
+| `spatial` | Spatial | Maurizio Monge | MIT |
+| `celtic` | Celtic | Maurizio Monge | MIT |
+| `rhosgfx` | RhosGFX | RhosGFX | CC0-1.0 |
 
-## Persistência, privacidade e integração
+**Fonte auditável:** [Lichess/lila — COPYING.md](https://github.com/lichess-org/lila/blob/104a754b35740129fade423f920ad6de965031dd/COPYING.md),
+commit `104a754b35740129fade423f920ad6de965031dd`.
+O manifesto `src/chesssim/data/pieces/SOURCES.json` armazena
+o SHA-1 Git de cada SVG; todos os originais são empacotados sem modificar.
+Os textos de licença acompanham `pieces/licenses/` no wheel.
 
-A chave `chesssim.board-presentation.v1` usa exclusivamente `window.localStorage` da origem local. O valor é JSON contendo somente `theme`, `pieces`, `motion`; campos adicionais ou valores fora de allowlists são ignorados. JSON inválido, excessivamente longo ou armazenamento indisponível não bloqueiam o programa: aplica-se o padrão ou a alteração somente na página.
+Os nomes dos conjuntos identificam os autores/obras livres; não há
+reprodução de assets proprietários do Chess.com nem afiliação ou
+endosso do Lichess. As marcas não são usadas como componentes da interface.
 
-- Na **Arena**, as preferências aplicam-se imediatamente ao tabuleiro de replay do perfil histórico e à tela de watch embutida, que recebe o evento de sincronização `storage` da mesma origem.
-- No **watch independente**, as mesmas configurações podem ser editadas. Cada origem (protocolo + host + porta) mantém suas preferências próprias, por isolamento normal do navegador.
-- Nunca colocar preferências em query string, URL fragment, cookie de autenticação, API HTTP, PGN, JSON de competição ou comandos UCI.
-- **Restaurar padrão** grava as três opções iniciais; não reinicia partida.
-- O iframe do monitor embutido não deve apresentar um segundo editor redundante. Continua lendo as preferências da origem e recebendo eventos `storage` enquanto a Arena apresenta o único editor visível.
+Peças SVG são carregadas de uma rota local com caminhos estritamente
+allowlisted. Caso um SVG falhe ao carregar, o glifo Unicode permanece
+como **fallback**, sem tornar a casa vazia nem afetar o lance. A variante
+branca/negra é explicitamente escolhida a partir da FEN; rótulos de
+acessibilidade continuam em português.
 
-## Evidência e controle de qualidade
+### Persistência e animação
 
-`tests/assets/board_preferences_browser_harness.cjs` testa armazenamento válido/inválido, allowlists, reset, fallback em storage bloqueado, sincronização de contextos, 64 casas e atualização de tema sem reconstruir a posição. O teste `tests/test_board_preferences.py` verifica publicação do asset no wheel, GET-only, CSP e consistência com os arquivos do renderer e dos formulários. Os testes existentes da Arena, watch e replay também devem passar em Python 3.11/3.12/3.13.
+- Chave browser-local `chesssim.board-presentation.v1`; atributos
+  `theme`, `pieces` e `motion` somente. Inputs fora de allowlist,
+  JSON inválido e armazenamento bloqueado não executam código ou
+  alteram estado de jogo.
+- Padrões: `classic` + `cburnett` + `off`. Preferências legadas
+  `solid` e `outline` migram respectivamente para `cburnett`
+  e `spatial` para evitar o glifo inadequado observado em homologação.
+- `motion`: `off`, `fast` (160 ms), `normal` (330 ms).
+  Realce de último lance somente quando a FEN exibida muda; o polling
+  da mesma posição não dispara repetidamente. CSS
+  `prefers-reduced-motion:reduce` tem precedência.
+- Arena, replay do perfil e `watch` usam um renderer único. Uma
+  mudança de conjunto de peças atualiza os `img` existentes sem
+  reconstruir casas, perder realce, mudar posição ou tocar o motor.
+  O visualizador embutido recebe sincronização por `storage` e
+  não exibe um segundo editor redundante; portas/origens diferentes
+  mantêm armazenamentos separados.
+- Fontes completas de licenças e atribuições: `NOTICE.md`.
+  A GPL do código não suprime termos específicos da arte.
 
-**Limitação honesta:** CI e DOM simulado não certificam visualmente legibilidade de glifos nas fontes específicas do Debian, telas de alto DPI ou testes touch. Verificar manualmente Chrome/Debian com viewport 1440×900, 390×844 e 320×568, foco, estilos, tabuleiro real e `prefers-reduced-motion`. Não marcar essa etapa como executada sem screenshot ou evidência funcional.
+### Gates e limitações
+
+A revisão de código exige: 84 SVGs íntegros no wheel; endpoint GET
+com allowlist, `Content-Type: image/svg+xml`, `nosniff` e CSP
+same-origin; ausência de scripts/links ativos nos SVGs; render
+das 64 casas e das 12 peças com carregamento e fallback; persistência,
+reset, sincronização e migração; invariância de motores, PGN, relógios
+e FEN. Matriz de Python 3.11/3.12/3.13 com testes de frontend Node.
+
+**Não afirmar homologação visual por testes DOM.** Em Chrome/Debian, validar
+rei, dama, torre, bispo, cavalo e peão para ambas as cores em todos os
+sete conjuntos, a 100% e 200% de zoom, temas claros/escuros, 390×844,
+320×568 e modo de movimento reduzido. Verificar ausência de scroll
+horizontal, bordas cortadas e foco perdido. A decisão de merge continua humana.
 
 ## Estudo técnico — modo 3D opcional (sem implementação nesta issue)
 
