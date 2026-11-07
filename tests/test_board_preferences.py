@@ -45,7 +45,8 @@ def test_preferences_are_local_to_shared_8x8_board_and_reduced_motion():
         assert word not in js
     for name in ("data-board-theme", "data-piece-style", "data-board-motion"):
         assert name in js
-    for value in ("classic", "wood", "slate", "light", "dark", "contrast"):
+    for value in ("classic", "wood", "slate", "light", "dark", "contrast",
+                  "green", "blue", "walnut", "marble", "lavender", "terracotta"):
         assert f'[data-board-theme="{value}"]' in css or value == "classic"
     assert '[data-piece-style="outline"]' in css
     assert "-webkit-text-fill-color:transparent" not in css
@@ -60,6 +61,12 @@ def test_preferences_are_local_to_shared_8x8_board_and_reduced_motion():
     assert "grid-template-columns:repeat(8,minmax(0,1fr))" in css
     assert "grid-template-rows:repeat(8,minmax(0,1fr))" in css
     assert "aspect-ratio:1 / 1" in css
+    assert "pieceSlots = new WeakMap()" in renderer
+    assert "refreshArtwork(container)" in renderer
+    assert '"/piece-assets/" + selected + "/" + code + ".svg"' in renderer
+    assert 'image.addEventListener("error"' in renderer
+    assert ".board[data-piece-kind=\"svg\"] .piece-glyph[data-art-ready=\"1\"]" in css
+    assert ".square .piece-glyph .piece-svg" in css
     assert "lastPosition = new WeakMap()" in renderer
     assert "position.fen" in renderer
     assert "container.replaceChildren(fragment)" in renderer
@@ -78,7 +85,11 @@ def test_board_preferences_both_html_surfaces_have_controls():
         assert 'class="board-prefs"' in html
         assert 'id="board-pref-status" role="status" aria-live="polite"' in html
         assert 'id="board-pref-reset"' in html
-        for name, n in (("theme", 6), ("pieces", 2), ("motion", 3)):
+        assert 'id="board-theme-gallery"' in html
+        assert 'id="board-piece-gallery"' in html
+        assert len(re.findall(r'class="board-theme-chip"', html)) == 12
+        assert len(re.findall(r'class="board-piece-chip"', html)) == 7
+        for name, n in (("theme", 12), ("pieces", 7), ("motion", 3)):
             assert f'id="board-pref-{name}"' in html
             match = re.search(rf'<select id="board-pref-{name}">(.*?)</select>', html, re.S)
             assert match
