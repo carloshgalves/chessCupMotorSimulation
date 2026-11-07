@@ -45,7 +45,7 @@ def test_preferences_are_local_to_shared_8x8_board_and_reduced_motion():
         assert word not in js
     for name in ("data-board-theme", "data-piece-style", "data-board-motion"):
         assert name in js
-    for value in ("classic", "wood", "slate", "contrast"):
+    for value in ("classic", "wood", "slate", "light", "dark", "contrast"):
         assert f'[data-board-theme="{value}"]' in css or value == "classic"
     assert '[data-piece-style="outline"]' in css
     assert "animation:chesssim-board-move-highlight 160ms" in css
@@ -73,7 +73,7 @@ def test_board_preferences_both_html_surfaces_have_controls():
         assert 'class="board-prefs"' in html
         assert 'id="board-pref-status" role="status" aria-live="polite"' in html
         assert 'id="board-pref-reset"' in html
-        for name, n in (("theme", 4), ("pieces", 2), ("motion", 3)):
+        for name, n in (("theme", 6), ("pieces", 2), ("motion", 3)):
             assert f'id="board-pref-{name}"' in html
             match = re.search(rf'<select id="board-pref-{name}">(.*?)</select>', html, re.S)
             assert match
