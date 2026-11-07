@@ -7,6 +7,11 @@
     boardSeq:0, boardPending:false,
   };
   const STATUSES = new Set(["sem_amostra","provisional","observed_experimental"]);
+  const MODALITIES = new Set(["classical","rapid","blitz","bullet","unclassified"]);
+  const modeLabel = mode => ({
+    classical:"Clássico",rapid:"Rápido",blitz:"Blitz",bullet:"Bullet",
+    unclassified:"Sem relógio"
+  })[mode] || mode;
   const make = (tag, value) => {
     const node = document.createElement(tag);
     if(value !== undefined && value !== null) node.textContent = String(value);
@@ -43,10 +48,14 @@
                                               Number.isFinite(x) && x >= 0 && x <= 1) &&
          row.score_range_exploratory[0] <= row.score_range_exploratory[1]));
   }
-  function valid(data, slug) {
-    if (!data || data.schema !== "chesssim-competition-elo-v1" ||
+  function valid(data, slug, mode) {
+    if (!MODALITIES.has(mode) || !data ||
+        data.schema !== "chesssim-competition-elo-v2" ||
         data.baseline !== "2500" ||
-        data.universe !== "local-uci-observed-v1" ||
+        data.universe !== "local-uci-observed-v2" ||
+        data.modality !== mode ||
+        !data.available_modalities ||
+        [...MODALITIES].some(m => !count(data.available_modalities[m])) ||
         !Array.isArray(data.ratings) ||
         data.ratings.length !== (slug ? 1 : 64) ||
         !data.ratings.every(safeRow) ||
@@ -55,7 +64,7 @@
         !decimal(data.k) ||
         typeof data.scale_note !== "string" || data.scale_note.length > 400 ||
         !Array.isArray(data.modalities) ||
-        typeof data.mixed_modalities_warning !== "boolean" ||
+        data.mixed_modalities_warning !== false ||
         (slug && (data.slug !== slug || data.ratings[0].slug !== slug))) return false;
     return new Set(data.ratings.map(x=>x.slug)).size === data.ratings.length;
   }
@@ -73,7 +82,8 @@
   function renderPlayer(report) {
     const row = report.ratings[0];
     $("history-rating-value").textContent =
-      "Elo ChessSimulation: " + row.display_rating + " · " + statusText(row) +
+      "Elo ChessSimulation (" + modeLabel(report.modality) + "): " +
+      row.display_rating + " · " + statusText(row) +
       " · " + row.games + " partidas; " + row.points_3_1_0 +
       " pontos (3/1/0).";
     $("history-rating-proof").textContent =
@@ -88,15 +98,17 @@
   }
   async function loadPlayer(slug) {
     const id = ++state.playerSeq;
+    const mode = $("history-rating-mode").value;
+    if (!MODALITIES.has(mode)) return;
     state.playerPending = true;
     $("history-rating-status").textContent = "Calculando Elo experimental local…";
     try {
-      const res = await fetch("/api/history/players/" + slug + "/rating",
-                              {cache:"no-store"});
+      const res = await fetch("/api/history/players/" + slug +
+                              "/rating?modality=" + mode, {cache:"no-store"});
       if(!res.ok) throw new Error("HTTP");
       const data = await res.json();
       if(id !== state.playerSeq || !state.playerActive || slug !== state.slug) return;
-      if(!valid(data,slug)) throw new Error("Contrato");
+      if(!valid(data,slug,mode)) throw new Error("Contrato");
       state.playerPending = false;
       renderPlayer(data);
     } catch (_) {
@@ -140,15 +152,18 @@
   }
   async function loadBoard() {
     const id = ++state.boardSeq;
+    const mode = $("competition-rating-mode").value;
+    if (!MODALITIES.has(mode)) return;
     state.boardPending = true;
     clearBoard();
     $("competition-rating-status").textContent = "Calculando ranking experimental…";
     try {
-      const response = await fetch("/api/competition/ratings",{cache:"no-store"});
+      const response = await fetch("/api/competition/ratings?modality=" + mode,
+                                   {cache:"no-store"});
       if(!response.ok) throw new Error("HTTP");
       const report = await response.json();
       if(id !== state.boardSeq || !$("competition-rating-leaderboard").open) return;
-      if(!valid(report,null)) throw new Error("Contrato");
+      if(!valid(report,null,mode)) throw new Error("Contrato");
       const target = $("competition-rating-rows");
       target.replaceChildren();
       for(const row of report.ratings) {
@@ -169,14 +184,15 @@
         target.append(tr);
       }
       $("competition-rating-meta").textContent =
-        report.counts.scored_games + " partidas válidas. Rating inicial 2500, " +
-        "K=" + report.k + ". " +
+        modeLabel(mode) + ": " + report.counts.scored_games +
+        " partidas válidas nesse ritmo. Elo inicial 2500, K=" + report.k + ". " +
         (report.mixed_modalities_warning ?
          "Atenção: modalidades misturadas; ranking não é classificação FIDE. " : "") +
         "Precisão de lances não medida; força UCI não avaliada. " +
         "A faixa de score é apenas descritiva, não intervalo de Elo." +
         (report.coverage.partial ? " Cobertura parcial: registros excluídos." : "");
-      $("competition-rating-status").textContent = "Ranking experimental local.";
+      $("competition-rating-status").textContent =
+        "Ranking experimental local: " + modeLabel(mode) + ".";
       state.boardPending = false;
     } catch (_) {
       if(id === state.boardSeq && $("competition-rating-leaderboard").open) {
@@ -187,6 +203,12 @@
       }
     }
   }
+  $("history-rating-mode").addEventListener("change", () => {
+    if (state.playerActive && state.slug) loadPlayer(state.slug);
+  });
+  $("competition-rating-mode").addEventListener("change", () => {
+    if ($("competition-rating-leaderboard").open) loadBoard();
+  });
   $("competition-rating-leaderboard").addEventListener("toggle", () => {
     if($("competition-rating-leaderboard").open) loadBoard();
     else {

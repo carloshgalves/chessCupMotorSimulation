@@ -53,6 +53,7 @@ function updateForm() {
   $("depth-wrap").hidden = mode !== "depth";
   $("movetime-wrap").hidden = mode !== "movetime";
   $("preset-wrap").hidden = mode !== "preset";
+  $("custom-clock-wrap").hidden = mode !== "preset" || $("preset").value !== "custom";
   const official = mode === "preset" && $("preset").value === "official";
   const opening = $("opening");
   if (official) {
@@ -90,7 +91,13 @@ function configFromForm() {
   };
   if (mode === "depth") config.depth = Number($("depth").value);
   else if (mode === "movetime") config.movetime = Number($("movetime").value);
-  else config.preset = $("preset").value;
+  else {
+    config.preset = $("preset").value;
+    if (config.preset === "custom") {
+      config.initial_seconds = Number($("custom-minutes").value) * 60;
+      config.increment_seconds = Number($("custom-increment").value);
+    }
+  }
   if (config.opening_mode === "historical") config.seed = Number($("seed").value);
   return config;
 }
@@ -108,7 +115,9 @@ function renderSession() {
   const pieces = [
     ["Brancas", player(config.white)?.name || config.white],
     ["Pretas", player(config.black)?.name || config.black],
-    ["Busca", config.mode === "preset" ? config.preset :
+    ["Busca", config.mode === "preset" ?
+      (config.preset === "custom" ? (config.initial_seconds / 60) + "+" +
+       config.increment_seconds + " (personalizado)" : config.preset) :
       config.mode === "depth" ? "depth " + config.depth : config.movetime + " s/lance"],
     ["Cores invertidas",config.reverse ? "Sim" : "Não"],
     ["Abertura", config.opening_mode +
@@ -201,7 +210,7 @@ $("swap").addEventListener("click", () => {
   $("black").value = a;
   updateForm();
 });
-for (const field of ["white","black","mode","preset","opening","reverse","max-plies"]) {
+for (const field of ["white","black","mode","preset","custom-minutes","custom-increment","opening","reverse","max-plies"]) {
   $(field).addEventListener("change", updateForm);
 }
 $("launch").disabled = true;

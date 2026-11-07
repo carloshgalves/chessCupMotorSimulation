@@ -160,7 +160,15 @@
                     <option value="rapid">Rápido · 15+10</option>
                     <option value="blitz">Blitz · 3+2</option>
                     <option value="bullet">Bullet · 1+0</option>
+                    <option value="custom">Personalizado · minutos + incremento</option>
                   </select>
+                </div>
+                <div id="custom-clock-wrap" hidden>
+                  <label for="custom-minutes">Minutos iniciais por jogador (1–240)</label>
+                  <input type="number" id="custom-minutes" value="30" min="1" max="240" step="1">
+                  <label for="custom-increment">Incremento por lance em segundos (0–120)</label>
+                  <input type="number" id="custom-increment" value="5" min="0" max="120" step="1">
+                  <p class="note">Categoria Elo: tempo inicial + 60 × incremento. Não altera força UCI.</p>
                 </div>
                 <div>
                   <label for="max-plies">Limite de meios-lances</label>
@@ -227,7 +235,13 @@
       <p id="history-status" role="status" aria-live="polite">Abra História para carregar o catálogo local.</p>
       <details id="competition-rating-leaderboard" class="competition-rating-panel">
         <summary>Elo ChessSimulation · ranking experimental local</summary>
-        <p class="history-stats-disclaimer">Todos começam em 2500. Não é rating FIDE, força UCI, precisão Stockfish nem fidelidade histórica.</p>
+        <p class="history-stats-disclaimer">Cada ritmo possui Elo independente começando em 2500. A classificação usa tempo inicial + 60 incrementos. Não é rating FIDE, força UCI nem fidelidade histórica.</p>
+        <label for="competition-rating-mode">Modalidade do ranking</label>
+        <select id="competition-rating-mode" aria-label="Modalidade do ranking Elo">
+          <option value="rapid" selected>Rápido</option><option value="classical">Clássico</option>
+          <option value="blitz">Blitz</option><option value="bullet">Bullet</option>
+          <option value="unclassified">Sem relógio (isolado)</option>
+        </select>
         <p id="competition-rating-status" role="status" aria-live="polite"></p>
         <div class="competition-rating-table-wrap" tabindex="0" role="region" aria-label="Ranking experimental local">
           <table class="competition-rating-table">
@@ -288,6 +302,12 @@
         </section>
         <section id="history-rating-profile" class="history-rating-profile" aria-label="Rating experimental do simulador" hidden>
           <h3>Elo ChessSimulation · experimental</h3>
+          <label for="history-rating-mode">Modalidade do jogador</label>
+          <select id="history-rating-mode" aria-label="Modalidade do Elo do jogador">
+            <option value="rapid" selected>Rápido</option><option value="classical">Clássico</option>
+            <option value="blitz">Blitz</option><option value="bullet">Bullet</option>
+            <option value="unclassified">Sem relógio (isolado)</option>
+          </select>
           <p id="history-rating-status" role="status" aria-live="polite"></p>
           <p id="history-rating-value"></p>
           <p id="history-rating-proof" class="history-stats-disclaimer"></p>

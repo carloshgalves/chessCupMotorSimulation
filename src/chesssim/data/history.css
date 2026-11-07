@@ -119,3 +119,11 @@
 .competition-rating-table th{position:sticky;top:0;background:#213b44;z-index:1}
 .history-rating-profile h3{font-size:1.05rem;margin:4px 0}
 .history-rating-profile p{overflow-wrap:anywhere}
+
+/* Distinct Elo pools: keyboard-accessible controls on desktop/mobile. */
+.competition-rating-panel select,.history-rating-profile select{
+  background:#213b44;color:#edf4f5;border:1px solid #93b5bb;
+  border-radius:6px;padding:8px;margin:6px 0 10px;max-width:100%
+}
+.competition-rating-panel select:focus-visible,
+.history-rating-profile select:focus-visible{outline:3px solid #ffe39f;outline-offset:2px}
