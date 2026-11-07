@@ -170,6 +170,18 @@ class HumanGame:
             game = chess.pgn.read_game(stream)
             if game is None or game.errors or chess.pgn.read_game(stream) is not None:
                 raise ValueError("PGN humano corrompido")
+        expected_clock = (f"{configured_clock[0]}+{configured_clock[1]}"
+                          if configured_clock else "-")
+        opponent = find_player(config["opponent"])
+        expected_white = "Você" if config["color"] == "white" else opponent.name
+        expected_black = "Você" if config["color"] == "black" else opponent.name
+        if (game.headers.get("TimeControl") != expected_clock or
+                game.headers.get("EngineSHA256") != hashes["engine"] or
+                game.headers.get("EngineProfileSHA256") != hashes["profile"] or
+                game.headers.get("EngineSlug") != config["opponent"] or
+                game.headers.get("White") != expected_white or
+                game.headers.get("Black") != expected_black):
+            raise ValueError("PGN humano diverge dos metadados de sessão")
         self._folder, self._data, self._game = path.parent, data, game
         self._board, self._node = game.end().board(), game.end()
         if data["revision"] != self._board.ply():
