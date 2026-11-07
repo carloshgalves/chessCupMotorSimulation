@@ -12,6 +12,14 @@ let attemptSignature = null;
 let bracketSignature = null;
 let fetching = false;
 let requestVersion = 0;
+let moveSignature = "";
+let moveCells = [];
+let followMoves = true;
+let automaticMoveScroll = false;
+// Presentation-only pacing: never change the engine clock or the PGN.
+const LIVE_MOVE_INTERVAL_MS = 650;
+let liveGameId = "";
+let lastPresentedAt = 0;
 
 function readSelection() {
   const params = new URLSearchParams(window.location.hash.slice(1));
@@ -43,6 +51,9 @@ function applySelection() {
   selectionSignature = null;
   attemptSignature = null;
   bracketSignature = null;
+  liveGameId = "";
+  lastPresentedAt = 0;
+  followMoves = true;
   poll();
 }
 window.addEventListener("hashchange", applySelection);
@@ -53,7 +64,48 @@ function availableGames() {
 function currentGame() {
   if (pinned) return pinned;
   const games = availableGames();
-  return games[games.length - 1] || null;
+  // A second game can start before the first one's visual queue has drained.
+  return games.find(game => game.id === liveGameId) ||
+    games[games.length - 1] || null;
+}
+function acceptLiveSnapshot() {
+  if (pinned) return;
+  const games = availableGames();
+  if (!games.length) {
+    liveGameId = "";
+    cursor = 0;
+    return;
+  }
+  const index = games.findIndex(game => game.id === liveGameId);
+  if (index < 0) {
+    const game = games[games.length - 1];
+    const isInitial = !liveGameId;
+    liveGameId = game.id;
+    // On entry show the current position. When the selected game changes,
+    // start at its initial position so its first moves aren't skipped.
+    cursor = isInitial ? game.states.length - 1 : 0;
+    lastPresentedAt = Date.now();
+  } else {
+    cursor = Math.min(cursor, games[index].states.length - 1);
+  }
+}
+function advanceLivePlayback(now = Date.now()) {
+  if (pinned || !liveGameId || now - lastPresentedAt < LIVE_MOVE_INTERVAL_MS) return;
+  const games = availableGames();
+  const index = games.findIndex(game => game.id === liveGameId);
+  if (index < 0) return;
+  const game = games[index];
+  if (cursor < game.states.length - 1) {
+    // Advance exactly one half-move per visual tick, never jump to the tail.
+    cursor += 1;
+  } else if (index + 1 < games.length) {
+    liveGameId = games[index + 1].id;
+    cursor = 0;
+  } else {
+    return;
+  }
+  lastPresentedAt = now;
+  render();
 }
 function freezeView() {
   if (!pinned) {
@@ -68,8 +120,12 @@ function freezeView() {
 function resumeView() {
   pinned = null;
   activeKey = "";
-  const game = currentGame();
+  followMoves = true;
+  const games = availableGames();
+  const game = games[games.length - 1] || null;
+  liveGameId = game ? game.id : "";
   cursor = game ? game.states.length - 1 : 0;
+  lastPresentedAt = Date.now();
   render();
 }
 function goLive() {
@@ -80,6 +136,7 @@ function goLive() {
   resumeView();
 }
 function stepTo(ply) {
+  followMoves = false;
   freezeView();
   const game = currentGame();
   if (!game) return;
@@ -114,24 +171,77 @@ function paintClocks() {
     box.classList.toggle("low", clocks[index] !== null &&
                          clocks[index] !== undefined && clocks[index] < 30);
     box.classList.toggle("active", !!game && !pinned && game.live &&
+                         cursor === game.states.length - 1 &&
                          (state.turn === "white" ? 0 : 1) === index);
   }
 }
 function displayMoves(game) {
   const list = $("moves");
-  list.replaceChildren();
-  const start = Math.max(1, cursor - 19);
-  for (let n = start; n <= cursor; n++) {
-    const item = document.createElement("li");
-    item.textContent = Math.ceil(n / 2) + (n % 2 ? ". " : "... ") +
-                       game.states[n].san;
-    if (n === cursor) item.classList.add("selected");
-    list.appendChild(item);
+  // The notation must advance with the paced board, not reveal future plies.
+  const visiblePly = pinned ? game.states.length - 1 : cursor;
+  const signature = game.id + "|" + visiblePly + "|" +
+    game.states.slice(1, visiblePly + 1).map(x => x.san).join("|");
+  if (signature !== moveSignature) {
+    const priorScroll = list.scrollTop;
+    const knownPly = moveCells.length;
+    const knownPrefix = game.id + "|" + knownPly + "|" +
+      game.states.slice(1, knownPly + 1).map(x => x.san).join("|");
+    const appendOnly = moveSignature === knownPrefix && visiblePly >= knownPly;
+    if (!appendOnly || (knownPly === 0 && visiblePly > 0)) {
+      // A different game, rewind or corrected PGN needs a fresh notation.
+      // A new move in the same game never recreates previous move buttons.
+      list.replaceChildren();
+      if (!appendOnly) moveCells = [];
+    }
+    const makeCell = ply => {
+      const number = Math.ceil(ply / 2);
+      const black = ply % 2 === 0;
+      const cell = document.createElement("button");
+      cell.type = "button";
+      cell.className = "move-cell";
+      cell.textContent = number + (black ? "... " : ". ") + game.states[ply].san;
+      cell.setAttribute("aria-label",
+        "Lance " + number + (black ? " das pretas: " : " das brancas: ") +
+        game.states[ply].san);
+      cell.addEventListener("click", () => stepTo(ply));
+      return cell;
+    };
+    for (let ply = moveCells.length + 1; ply <= visiblePly; ply++) {
+      const cell = makeCell(ply);
+      if (ply % 2) {
+        const row = document.createElement("li");
+        row.className = "move-row";
+        const empty = document.createElement("span");
+        empty.className = "move-empty";
+        empty.textContent = "—";
+        row.append(cell, empty);
+        list.appendChild(row);
+      } else {
+        const row = list.children[list.children.length - 1];
+        // Preserve the white button; replace only black's placeholder.
+        row.replaceChildren(row.children[0], cell);
+      }
+      moveCells.push({ply,cell});
+    }
+    if (visiblePly === 0 && !list.children.length) {
+      const placeholder = document.createElement("li");
+      placeholder.className = "move-empty";
+      placeholder.textContent = "Aguardando lances";
+      list.appendChild(placeholder);
+    }
+    moveSignature = signature;
+    if (!followMoves || pinned) list.scrollTop = priorScroll;
   }
-  if (cursor === 0) {
-    const placeholder = document.createElement("li");
-    placeholder.textContent = "Aguardando lances";
-    list.appendChild(placeholder);
+  for (const item of moveCells) {
+    const selected = item.ply === cursor;
+    item.cell.classList.toggle("selected", selected);
+    item.cell.setAttribute("aria-current", selected ? "step" : "false");
+  }
+  // Follow new turns only in live mode and only while the user is at the end.
+  if (followMoves && !pinned && Number.isFinite(list.scrollHeight)) {
+    automaticMoveScroll = true;
+    list.scrollTop = list.scrollHeight;
+    automaticMoveScroll = false;
   }
 }
 function updateSelector() {
@@ -292,15 +402,29 @@ function render() {
   $("games").value = pinned ? activeKey : game ? game.id : "";
   $("pause").textContent = pinned ? "▶ Continuar ao vivo" : "⏸ Pausar visualização";
   $("pause").setAttribute("aria-pressed", pinned ? "true" : "false");
+  const games = availableGames();
+  const currentIndex = game ? games.findIndex(x => x.id === game.id) : -1;
+  const remaining = !pinned && currentIndex >= 0 ?
+    Math.max(0, game.states.length - 1 - cursor) +
+      games.slice(currentIndex + 1).reduce(
+        (sum, next) => sum + Math.max(0, next.states.length - 1), 0) : 0;
   $("view-status").textContent = pinned ?
     "Visualização pausada. O torneio continua jogando." :
+    remaining ?
+    "Reprodução visual em sequência: " + remaining +
+    " meio(s)-lance aguardando. Relógios refletem o lance exibido; " +
+    "o motor continua em tempo real." :
     selection.match ? "Revisão histórica selecionada; o torneio pode seguir em outra rodada." :
-    "A visualização acompanha o lance mais recente.";
+    "Ao vivo. Cada meio-lance é apresentado separadamente.";
   $("updated").textContent = game ?
     "Última atualização: " + new Date(game.updated_at * 1000).toLocaleTimeString("pt-BR") :
     "Sem atualizações de partida";
   if (game) displayMoves(game);
-  else $("moves").replaceChildren();
+  else {
+    $("moves").replaceChildren();
+    moveSignature = "";
+    moveCells = [];
+  }
 }
 async function poll() {
   if (fetching) return;
@@ -316,10 +440,7 @@ async function poll() {
     if (revision !== requestVersion) return;
     if (next.schema !== "chesssim-live-board-v1") throw new Error("Formato inesperado");
     feed = next;
-    if (!pinned) {
-      const game = currentGame();
-      cursor = game ? game.states.length - 1 : 0;
-    }
+    acceptLiveSnapshot();
     $("connection").textContent = "● Conectado ao simulador";
     $("connection").className = "connection live";
     render();
@@ -331,6 +452,13 @@ async function poll() {
     if (revision !== requestVersion) poll();
   }
 }
+$("moves").addEventListener("scroll", () => {
+  if (automaticMoveScroll) return;
+  const list = $("moves");
+  if (Number.isFinite(list.scrollHeight) && Number.isFinite(list.clientHeight)) {
+    followMoves = list.scrollHeight - list.scrollTop - list.clientHeight <= 24;
+  }
+});
 $("games").addEventListener("change", () => {
   const chosen = availableGames().find(g => g.id === $("games").value);
   if (chosen) {
@@ -365,4 +493,6 @@ document.addEventListener("keydown", event => {
 render();
 poll();
 setInterval(poll, 1200);
+// Independent rendering cadence: fast UCI bursts are queued for the viewer.
+setInterval(advanceLivePlayback, 100);
 setInterval(paintClocks, 250);

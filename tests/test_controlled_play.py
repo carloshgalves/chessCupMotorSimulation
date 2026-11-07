@@ -239,3 +239,42 @@ def test_clock_annotations_are_written_to_live_checkpoints(engine_fixture):
     assert all(node.clock() is not None for node in nodes)
     assert all(600 <= node.clock() <= 602 for node in nodes)
     assert all(e.closed for e in engines)
+
+
+def test_search_depth_cap_and_game_clock_pass_to_uci_together(engine_fixture,monkeypatch):
+    root,exe,white,black,_,engines=engine_fixture
+    seen=[]
+    def open_tracking(*args,**kwargs):
+        motor=FakeEngine()
+        original=motor.play
+        def play(board,limit,game,info):
+            seen.append(limit)
+            return original(board,limit,game,info)
+        motor.play=play
+        engines.append(motor)
+        return motor
+    monkeypatch.setattr(matches,"_open_engine",open_tracking)
+    game,meta=matches._play_one(
+        root,exe,white,black,16,None,2,1,
+        {"exe":"sha",white.slug:"white",black.slug:"black"},
+        clock=(60,0),use_books=False)
+    assert meta["status"]=="INCOMPLETE"
+    assert game.headers["TimeControl"]=="60+0"
+    assert game.headers["SearchLimit"]=="clock=60+0;depth=16"
+    assert len(seen)==2
+    assert all(limit.depth==16 and limit.white_clock is not None and
+               limit.black_clock is not None for limit in seen)
+    assert all(engine.closed for engine in engines)
+
+
+def test_depth_and_clock_preflight_accepts_pair_but_rejects_movetime_mix(
+        engine_fixture,tmp_path):
+    root,_,white,black,_,_=engine_fixture
+    with pytest.raises(ValueError,match="clock"):
+        matches.play_duel(root,tmp_path/"bad",white,black,
+                          depth=3,movetime=0.5,clock=(60,0))
+    assert not (tmp_path/"bad").exists()
+    folder=matches.play_duel(root,tmp_path/"good",white,black,
+                             depth=3,clock=(60,0),max_plies=2,
+                             reverse=False,use_books=False)
+    assert (folder/"summary.json").is_file()

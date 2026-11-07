@@ -5,7 +5,8 @@
     K:"♚",Q:"♛",R:"♜",B:"♝",N:"♞",P:"♟",
     k:"♚",q:"♛",r:"♜",b:"♝",n:"♞",p:"♟"
   };
-  const lastPosition = new WeakMap();
+  // Preserve the 64 squares and loaded SVG artwork across PGN polls.
+  const boardCache = new WeakMap();
   const pieceSlots = new WeakMap();
   const SVG_SETS = Object.freeze([
     "cburnett","merida","chessnut","fantasy","spatial","celtic","rhosgfx"
@@ -55,70 +56,108 @@
   }
   function paint(container, position, ply=0) {
     const rows = position && parseFen(position.fen);
-    // Fail closed: an invalid replay must never leave a previous game's board visible.
+    // Malformed replay data must not retain a stale board from another game.
     if (!rows || !container) {
       if (container) {
         container.replaceChildren();
         container.setAttribute("aria-label", "Posição do tabuleiro inválida");
-        lastPosition.delete(container);
+        boardCache.delete(container);
         pieceSlots.delete(container);
       }
       return false;
     }
     const last = (Array.isArray(position.last) && position.last.length === 2 &&
-                  position.last.every(s=>typeof s==="string" && /^[a-h][1-8]$/.test(s)))
+                  position.last.every(x => typeof x === "string" && /^[a-h][1-8]$/.test(x)))
       ? position.last : [];
-    // Only flash when the displayed position actually changes. Repeated GET
-    // polling of the same PGN may repaint the DOM, but must not reanimate.
-    const changed = lastPosition.has(container) && lastPosition.get(container) !== position.fen;
-    const fragment = document.createDocumentFragment();
-    const images = [];
+    const lastKey = last.join("|");
+    // The History tab may clear the board itself when changing games.
+    // A detached cache must be discarded before attempting a new paint.
+    let old = boardCache.get(container);
+    if (old && container.children.length === 0) {
+      old = null;
+      boardCache.delete(container);
+      pieceSlots.delete(container);
+    }
+    if (old && old.fen === position.fen && old.ply === ply && old.last === lastKey) {
+      // Polls of an unchanged position preserve SVG nodes while retiring the
+      // one-frame motion class (the existing reduced-motion contract).
+      if (old.fresh) {
+        for (const cell of old.cells) {
+          cell.className = cell.className.replace(" fresh-last", "");
+        }
+        old.fresh = false;
+      }
+      return true;
+    }
+    const changed = !!old && old.fen !== position.fen;
+    let cells = old && old.cells;
+    if (!cells) {
+      cells = [];
+      const fragment = document.createDocumentFragment();
+      for (let rank = 0; rank < 8; rank++) {
+        for (let file = 0; file < 8; file++) {
+          const square = document.createElement("div");
+          if (rank === 7) {
+            square.dataset.coordinate = String.fromCharCode(97 + file);
+          }
+          cells.push(square);
+          fragment.appendChild(square);
+        }
+      }
+      container.replaceChildren(fragment);
+    }
+    const codes = [];
+    const slots = [];
     for (let rank = 0; rank < 8; rank++) {
       for (let file = 0; file < 8; file++) {
+        const i = rank * 8 + file;
+        const square = cells[i];
         const squareName = String.fromCharCode(97 + file) + String(8 - rank);
         const piece = rows[rank][file];
-        const square = document.createElement("div");
-        square.className = "square " + ((rank + file) % 2 ? "dark" : "light");
-        if (last.includes(squareName)) {
-          square.classList.add("last");
-          if (changed) square.classList.add("fresh-last");
+        const prior = old && old.codes[i];
+        let slot = old && old.slots[i];
+        // Only affected squares receive a new glyph/SVG node after a move.
+        if (!old || prior !== piece) {
+          square.replaceChildren();
+          slot = null;
+          if (piece) {
+            const label = document.createElement("span");
+            label.className = "piece-glyph";
+            label.textContent = glyph[piece];
+            label.setAttribute("aria-hidden", "true");
+            label.setAttribute("data-art-ready", "0");
+            const image = document.createElement("img");
+            image.className = "piece-svg";
+            image.setAttribute("alt", "");
+            image.setAttribute("aria-hidden", "true");
+            image.setAttribute("decoding", "async");
+            image.setAttribute("draggable", "false");
+            const code = (piece === piece.toUpperCase() ? "w" : "b") +
+                         piece.toUpperCase();
+            image.addEventListener("load", () =>
+              label.setAttribute("data-art-ready", "1"));
+            image.addEventListener("error", () =>
+              label.setAttribute("data-art-ready", "0"));
+            label.appendChild(image);
+            square.appendChild(label);
+            slot = {label, image, code};
+          }
         }
-        if (piece) square.classList.add(piece === piece.toUpperCase() ?
-                                      "whitepiece" : "blackpiece");
-        if (rank === 7) {
-          square.classList.add("coordinate");
-          square.dataset.coordinate = squareName[0];
-        }
-        if (piece) {
-          const label = document.createElement("span");
-          label.className = "piece-glyph";
-          label.textContent = glyph[piece];
-          label.setAttribute("aria-hidden", "true");
-          label.setAttribute("data-art-ready", "0");
-          const image = document.createElement("img");
-          image.className = "piece-svg";
-          image.setAttribute("alt", "");
-          image.setAttribute("aria-hidden", "true");
-          image.setAttribute("decoding", "async");
-          image.setAttribute("draggable", "false");
-          const code = (piece === piece.toUpperCase() ? "w" : "b") +
-                       piece.toUpperCase();
-          image.addEventListener("load", () =>
-            label.setAttribute("data-art-ready", "1"));
-          image.addEventListener("error", () =>
-            label.setAttribute("data-art-ready", "0"));
-          label.appendChild(image);
-          images.push({label, image, code});
-          square.appendChild(label);
-        }
+        const pieceKind = !piece ? "" :
+          piece === piece.toUpperCase() ? " whitepiece" : " blackpiece";
+        const marked = last.includes(squareName);
+        square.className = "square " + ((rank + file) % 2 ? "dark" : "light") +
+          (rank === 7 ? " coordinate" : "") + pieceKind +
+          (marked ? " last" : "") + (marked && changed ? " fresh-last" : "");
         square.setAttribute("aria-label", squareName + " " + (names[piece] || "vazio"));
-        fragment.appendChild(square);
+        codes.push(piece);
+        slots.push(slot);
       }
     }
-    container.replaceChildren(fragment);
-    pieceSlots.set(container, images);
+    boardCache.set(container, {cells,codes,slots,fen:position.fen,ply,last:lastKey,
+                              fresh:changed});
+    pieceSlots.set(container, slots.filter(Boolean));
     refreshArtwork(container);
-    lastPosition.set(container, position.fen);
     container.setAttribute("aria-label", "Tabuleiro após " + ply + " meios-lances");
     return true;
   }
