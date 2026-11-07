@@ -48,6 +48,11 @@ def test_preferences_are_local_to_shared_8x8_board_and_reduced_motion():
     for value in ("classic", "wood", "slate", "light", "dark", "contrast"):
         assert f'[data-board-theme="{value}"]' in css or value == "classic"
     assert '[data-piece-style="outline"]' in css
+    assert "-webkit-text-fill-color:transparent" not in css
+    assert "-webkit-text-fill-color:var(--piece-white)" in css
+    assert "-webkit-text-fill-color:var(--piece-black)" in css
+    assert ".board .square.dark.coordinate::after{color:#fff}" in css
+    assert ".board .square.light.coordinate::after{color:#101820}" in css
     assert "animation:chesssim-board-move-highlight 160ms" in css
     assert "animation:chesssim-board-move-highlight 330ms" in css
     assert "@media(prefers-reduced-motion:reduce)" in css
