@@ -66,7 +66,9 @@ for raw in sys.stdin:
 
     monkeypatch.setattr(human_game, "validate", synthetic_validate)
     monkeypatch.setattr(human_game, "official_book_hashes", lambda *args: {})
-    return root, tmp_path / "arena"
+    workspace=tmp_path / "arena"
+    workspace.mkdir()
+    return root, workspace
 
 
 @contextmanager
