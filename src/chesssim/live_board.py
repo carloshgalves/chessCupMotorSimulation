@@ -22,6 +22,10 @@ class InvalidSelection(ValueError):
 
 
 SCHEMA = "chesssim-live-board-v1"
+_PIECE_PATH = re.compile(
+    r"/piece-assets/(cburnett|merida|chessnut|fantasy|spatial|celtic|rhosgfx)/"
+    r"([wb][KQRBNP])\.svg\Z"
+)
 _ASSETS = {"/": ("monitor.html", "text/html; charset=utf-8"),
            "/app.js": ("monitor.js", "text/javascript; charset=utf-8"),
            "/chess-board.js": ("chess_board.js", "text/javascript; charset=utf-8"),
@@ -266,7 +270,8 @@ def make_handler(directory: Path):
             self.send_header("X-Frame-Options", "DENY")
             self.send_header("Content-Security-Policy",
                              "default-src 'none'; script-src 'self'; style-src 'self'; "
-                             "connect-src 'self'; base-uri 'none'; frame-ancestors 'none'")
+                             "connect-src 'self'; img-src 'self'; object-src 'none'; "
+                             "base-uri 'none'; frame-ancestors 'none'")
             self.end_headers()
             self.wfile.write(content)
 
@@ -294,6 +299,20 @@ def make_handler(directory: Path):
                     self._reply(503, payload, "application/json; charset=utf-8")
                     return
                 self._reply(200, payload, "application/json; charset=utf-8")
+                return
+            if route.startswith("/piece-assets/"):
+                match = _PIECE_PATH.fullmatch(route)
+                if not match or url.query:
+                    self._reply(404, b"Not Found", "text/plain; charset=utf-8")
+                    return
+                name, piece = match.groups()
+                try:
+                    svg = files("chesssim.data").joinpath(
+                        "pieces", name, piece + ".svg").read_bytes()
+                except (FileNotFoundError, OSError):
+                    self._reply(404, b"Not Found", "text/plain; charset=utf-8")
+                    return
+                self._reply(200, svg, "image/svg+xml")
                 return
             if route in _ASSETS:
                 filename, kind = _ASSETS[route]
