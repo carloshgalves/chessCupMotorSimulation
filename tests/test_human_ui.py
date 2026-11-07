@@ -56,6 +56,8 @@ def test_human_board_styles_reuse_current_theme_and_fixed_move_rows():
     assert '"human-board"' in prefs
     assert "window.ChessSimBoard.paint" in js
     assert "MOVE_DISPLAY_INTERVAL_MS = 650" in js
+    assert 'blackAtBottom=state.game?.config.color==="black"' in js
+    assert 'blackAtBottom?g.black:g.white' in js
     assert "setInterval(advancePlayback,100)" in js
     assert "game.states" not in js or "g.states" in js
     assert "window.prompt" not in js

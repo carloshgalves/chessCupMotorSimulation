@@ -180,6 +180,10 @@ def test_human_uci_subprocess_legal_move_pgn_clock_and_resignation(synthetic_uci
         with pytest.raises(HTTPError) as error:
             post(base,"/api/arena/human/start",GOOD,token)
         assert error.value.code==409
+        arena_status=get(base,"/api/arena")
+        assert arena_status["busy"] is True
+        assert arena_status["human_busy"] is True
+        assert arena_status["duel_busy"] is False
         with pytest.raises(HTTPError) as error:
             post(base,"/api/arena/launch",{
                 "white":"fischer","black":"tal","mode":"depth",
@@ -397,3 +401,16 @@ def test_pgndata_ahead_of_manifest_never_resumes_unsafe_clock(synthetic_uci):
             recovered.resume({"id":ident})
     finally:
         recovered.shutdown()
+
+
+def test_corrupt_nonfinite_persisted_clocks_are_rejected(synthetic_uci):
+    root,workspace=synthetic_uci
+    game=human_game.HumanGame(root,workspace)
+    ident=game.start(GOOD)["id"]
+    game.shutdown()
+    state_file=workspace/"human-games"/ident/"state.json"
+    manifest=json.loads(state_file.read_text(encoding="utf-8"))
+    manifest["clocks"]=[float("nan"),180.0]
+    state_file.write_text(json.dumps(manifest),encoding="utf-8")
+    with pytest.raises(ValueError,match="Checkpoint humano"):
+        human_game.HumanGame(root,workspace)
