@@ -42,6 +42,7 @@
   border:1px solid #637f88;border-radius:11px;padding:9px 12px;
   min-width:min(260px,100%);max-width:100%
 }
+.board-prefs[hidden]{display:none!important}
 .board-prefs summary{cursor:pointer;font-weight:700;min-height:30px;display:flex;align-items:center}
 .board-prefs summary:focus-visible,.board-prefs select:focus-visible,
 .board-prefs button:focus-visible{outline:3px solid #ffe39f;outline-offset:3px}
