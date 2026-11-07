@@ -182,11 +182,13 @@
   }
   async function load() {
     if (state.loaded) return;
+    const request = ++state.seq;
     byId("history-status").textContent = "Carregando elenco histórico…";
     try {
       const response = await fetch("/api/history/players", {cache:"no-store"});
       if (!response.ok) throw new Error("Catálogo indisponível");
       const data = await response.json();
+      if (request !== state.seq || byId("history-view").hidden) return;
       if (!data || !Array.isArray(data.players) || data.players.length !== 64 ||
           data.players.some(p => !p || typeof p.slug !== "string" ||
                                 !safeSlug(p.slug) || typeof p.name !== "string") ||
@@ -199,7 +201,10 @@
       byId("history-roster").hidden = false;
       showSelection();
     } catch (_) {
-      byId("history-status").textContent = "Não foi possível carregar o catálogo. Retorne à Arena e tente novamente.";
+      if (request === state.seq && !byId("history-view").hidden) {
+        byId("history-status").textContent =
+          "Não foi possível carregar o catálogo. Retorne à Arena e tente novamente.";
+      }
     }
   }
   function toggle(toHistory) {
