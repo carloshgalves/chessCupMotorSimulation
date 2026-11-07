@@ -102,6 +102,7 @@ class HumanGame:
         self._turn_started = monotonic()
         self._session_started = monotonic()
         self._thread: Thread | None = None
+        self._engine = None
         self._closed = False
         self._epoch = 0
         self._wall_budget = self.max_wall_seconds
@@ -132,6 +133,19 @@ class HumanGame:
                 data.get("status") not in VALID_STATES or
                 type(data.get("revision")) is not int):
             raise ValueError("Estado de jogo humano inválido")
+        config = data.get("config")
+        clocks = data.get("clocks")
+        if (not isinstance(config, dict) or
+                config.get("color") not in ("white", "black") or
+                config.get("opponent") not in {p.slug for p in load_roster()} or
+                type(config.get("depth")) is not int or
+                not 1 <= config["depth"] <= 16 or
+                not isinstance(data.get("hashes"), dict) or
+                (clocks is not None and
+                 (not isinstance(clocks, list) or len(clocks) != 2 or
+                  any(type(c) not in (int, float) or c < 0 or c > 86400
+                      for c in clocks)))):
+            raise ValueError("Checkpoint humano contém valores inválidos")
         pgn = path.parent / "game.pgn"
         if pgn.is_symlink() or not pgn.is_file() or pgn.stat().st_size > 1024 * 1024:
             raise ValueError("PGN humano inválido")
@@ -141,10 +155,18 @@ class HumanGame:
                 raise ValueError("PGN humano corrompido")
         self._folder, self._data, self._game = path.parent, data, game
         self._board, self._node = game.end().board(), game.end()
-        if (data["revision"] != self._board.ply() or data["status"] == "RUNNING"):
-            # Crash boundary: never quietly resume an engine or double-apply a ply.
-            self._data["status"] = "INTERRUPTED"
+        if data["revision"] != self._board.ply():
+            # PGN was published while manifest was not. Clock/turn metadata
+            # are no longer provable; never grant an unsafe resume.
+            self._data["status"] = "FAILED"
             self._data["revision"] = self._board.ply()
+            self._data["result"] = "*"
+            self._data["termination"] = "CheckpointMismatch"
+            self._game.headers["Result"] = "*"
+            self._game.headers["Termination"] = "CheckpointMismatch"
+            self._save_locked()
+        elif data["status"] == "RUNNING":
+            self._data["status"] = "INTERRUPTED"
             self._data["termination"] = "ServerRestart"
             self._save_locked()
 
@@ -248,6 +270,14 @@ class HumanGame:
             engine = self.engine_factory(self.root, exe, opponent,
                                          book=conf["opening_mode"] == "internal")
             try:
+                with self._lock:
+                    current = (self._data["id"] == session_id and
+                               self._epoch == epoch and
+                               self._is_engine_turn_locked())
+                    if current:
+                        self._engine = engine
+                if not current:
+                    return
                 proposed = engine.play(board, limit, game=game,
                                        info=chess.engine.INFO_NONE).move
             finally:
@@ -256,7 +286,12 @@ class HumanGame:
                 except Exception:
                     pass
                 finally:
-                    engine.close()
+                    try:
+                        engine.close()
+                    finally:
+                        with self._lock:
+                            if self._engine is engine:
+                                self._engine = None
             with self._lock:
                 if (self._data["id"] != session_id or
                         self._epoch != epoch or
@@ -428,6 +463,7 @@ class HumanGame:
     def action(self, raw: object) -> dict:
         if not isinstance(raw, dict) or set(raw) != {"id", "action"}:
             raise HumanInput("Ação inválida")
+        engine_to_cancel = None
         with self._lock:
             self._tick_locked()
             if not self._data or raw["id"] != self._data["id"]:
@@ -437,6 +473,7 @@ class HumanGame:
             kind = raw["action"]
             if kind == "resign":
                 self._epoch += 1
+                engine_to_cancel = self._engine
                 result = "0-1" if self._data["config"]["color"] == "white" else "1-0"
                 self._finish_locked(result, "HumanResignation")
             elif kind == "claim_draw":
@@ -451,11 +488,19 @@ class HumanGame:
                 self._save_locked()
             elif kind == "interrupt":
                 self._epoch += 1
+                engine_to_cancel = self._engine
                 self._finish_locked("*", "OperatorStop", "INTERRUPTED")
             else:
                 raise HumanInput("Ação não reconhecida")
-            return {"id": self._data["id"], "status": self._data["status"],
-                    "draw_offer": self._data["draw_offer"]}
+            result = {"id": self._data["id"], "status": self._data["status"],
+                      "draw_offer": self._data["draw_offer"]}
+        # Closing the previous UCI transport occurs outside the state lock.
+        if engine_to_cancel is not None:
+            try:
+                engine_to_cancel.close()
+            except Exception:
+                pass
+        return result
 
     def resume(self, raw: object, *, duel_busy: bool = False) -> dict:
         if not isinstance(raw, dict) or set(raw) != {"id"}:
@@ -500,5 +545,11 @@ class HumanGame:
             if self.busy:
                 self._finish_locked("*", "ServerShutdown", "INTERRUPTED")
             thread = self._thread
+            engine = self._engine
+        if engine is not None:
+            try:
+                engine.close()
+            except Exception:
+                pass
         if thread:
             thread.join(timeout=3.0)
