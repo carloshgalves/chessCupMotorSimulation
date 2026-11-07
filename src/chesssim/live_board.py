@@ -25,6 +25,7 @@ SCHEMA = "chesssim-live-board-v1"
 _ASSETS = {"/": ("monitor.html", "text/html; charset=utf-8"),
            "/app.js": ("monitor.js", "text/javascript; charset=utf-8"),
            "/chess-board.js": ("chess_board.js", "text/javascript; charset=utf-8"),
+           "/board-preferences.js": ("board_preferences.js", "text/javascript; charset=utf-8"),
            "/chess-board.css": ("chess_board.css", "text/css; charset=utf-8"),
            "/app.css": ("monitor.css", "text/css; charset=utf-8")}
 
