@@ -28,8 +28,15 @@
       </nav>
 
       <details id="board-prefs" class="board-prefs" aria-label="Aparência dos tabuleiros">
-        <summary>Aparência do tabuleiro</summary>
+        <summary id="board-prefs-summary">Aparência</summary>
+        <div id="board-prefs-popup" class="board-prefs-popup">
+          <div class="board-pref-tabs" role="group" aria-label="Opções de aparência">
+            <button id="board-pref-toggle-theme" type="button" aria-expanded="false" aria-controls="board-pref-panel-theme">Tabuleiro</button>
+            <button id="board-pref-toggle-pieces" type="button" aria-expanded="false" aria-controls="board-pref-panel-pieces">Peças</button>
+            <button id="board-pref-toggle-motion" type="button" aria-expanded="false" aria-controls="board-pref-panel-motion">Animação</button>
+          </div>
         <div class="board-pref-grid">
+          <section id="board-pref-panel-theme" class="board-pref-panel" aria-labelledby="board-pref-toggle-theme" hidden>
           <label for="board-pref-theme">Cores do tabuleiro
             <select id="board-pref-theme">
               <option value="classic">Clássico</option>
@@ -60,6 +67,8 @@
             <button type="button" class="board-theme-chip" data-theme="lavender" aria-label="Tema Lavanda" aria-pressed="false"><span class="board-chip-preview" aria-hidden="true"></span><span>Lavanda</span></button>
             <button type="button" class="board-theme-chip" data-theme="terracotta" aria-label="Tema Terracota" aria-pressed="false"><span class="board-chip-preview" aria-hidden="true"></span><span>Terracota</span></button>
           </div>
+          </section>
+          <section id="board-pref-panel-pieces" class="board-pref-panel" aria-labelledby="board-pref-toggle-pieces" hidden>
           <label for="board-pref-pieces">Desenho das peças
             <select id="board-pref-pieces">
               <option value="cburnett">Clássico · Cburnett</option>
@@ -81,6 +90,8 @@
             <button type="button" class="board-piece-chip" data-piece-set="rhosgfx" title="RhosGFX · CC0" aria-label="Peças RhosGFX. RhosGFX · CC0" aria-pressed="false"><img src="/piece-assets/rhosgfx/wN.svg" alt="" aria-hidden="true" loading="lazy"><span>RhosGFX</span></button>
           </div>
           <p class="board-pref-note">Arte vetorial livre, arquivada localmente. Créditos e licenças estão em NOTICE.md e docs/BOARD_APPEARANCE_2D_3D.md no repositório. Sem vínculo com Chess.com ou Lichess.</p>
+          </section>
+          <section id="board-pref-panel-motion" class="board-pref-panel" aria-labelledby="board-pref-toggle-motion" hidden>
           <label for="board-pref-motion">Destaque ao mudar lance
             <select id="board-pref-motion">
               <option value="off">Sem animação</option>
@@ -88,10 +99,12 @@
               <option value="normal">Normal (330 ms)</option>
             </select>
           </label>
+          </section>
         </div>
         <button type="button" id="board-pref-reset">Restaurar padrão</button>
         <p class="board-pref-note">Preferências só neste navegador. Não modificam lances, relógios nem força do motor. Movimento reduzido tem prioridade.</p>
         <p id="board-pref-status" role="status" aria-live="polite"></p>
+        </div>
       </details>
       <span id="connection" role="status" aria-live="polite">Conectando…</span>
     </header>

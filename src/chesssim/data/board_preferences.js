@@ -10,6 +10,7 @@
                            "spatial","celtic","rhosgfx"]),
     motion: Object.freeze(["off","fast","normal"])
   });
+  const SECTIONS = Object.freeze(["theme","pieces","motion"]);
   const BOARD_IDS = Object.freeze(["board","history-replay-board"]);
   const CONTROLS = Object.freeze({
     theme:"board-pref-theme",
@@ -17,6 +18,18 @@
     motion:"board-pref-motion"
   });
   let current = {...DEFAULTS};
+  let expanded = null;
+  function toggleSection(name) {
+    if (name !== null && !SECTIONS.includes(name)) return false;
+    expanded = name === expanded ? null : name;
+    for (const section of SECTIONS) {
+      const tab = board("board-pref-toggle-" + section);
+      const panel = board("board-pref-panel-" + section);
+      if (tab) tab.setAttribute("aria-expanded",String(expanded === section));
+      if (panel) panel.hidden = expanded !== section;
+    }
+    return true;
+  }
 
   function sanitize(value) {
     const next = {...DEFAULTS};
@@ -124,6 +137,21 @@
       option.addEventListener("click", () => set(name,option.getAttribute(attribute)));
     }
   }
+  for (const name of SECTIONS) {
+    const toggle = board("board-pref-toggle-" + name);
+    if (toggle) toggle.addEventListener("click", () => toggleSection(name));
+  }
+  // Initially expose just the three choices. Never auto-expand a large gallery.
+  toggleSection(null);
+  const popup = board("board-prefs-popup");
+  if (popup) popup.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+      const details = board("board-prefs");
+      if (details) details.open = false;
+      board("board-prefs-summary")?.focus();
+      event.preventDefault();
+    }
+  });
   const restore = board("board-pref-reset");
   if (restore) restore.addEventListener("click", reset);
   // The Arena itself owns the visible settings panel. Its same-origin
