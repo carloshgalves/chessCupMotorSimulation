@@ -288,3 +288,110 @@ def test_black_human_engine_moves_first_and_rejects_out_of_turn(synthetic_uci):
         assert state["human_turn"] is True
         assert state["clocks"] is None
         assert len(state["legal_moves"])>0
+
+
+def test_synthetic_uci_states_are_replayable_and_server_owned(synthetic_uci):
+    with server_context(synthetic_uci) as (server,base):
+        token=server.arena_token
+        with post(base,"/api/arena/human/start",GOOD,token) as response:
+            ident=json.load(response)["id"]
+        with post(base,"/api/arena/human/move",{
+            "id":ident,"revision":0,"uci":"g1f3"},token):
+            pass
+        until=time.monotonic()+8
+        while time.monotonic()<until and get(base)["game"]["revision"]<2:
+            time.sleep(.05)
+        game=get(base)["game"]
+        assert len(game["states"])==game["revision"]+1
+        assert game["states"][0]["fen"]==chess.Board().fen()
+        assert game["states"][-1]["fen"]==game["fen"]
+        previous=chess.Board()
+        for ply,uci in enumerate(m["uci"] for m in game["moves"]):
+            previous.push_uci(uci)
+            assert game["states"][ply+1]["fen"]==previous.fen()
+
+
+def test_interrupt_resume_drops_stale_engine_reply_and_closes_transport(
+        synthetic_uci):
+    from types import SimpleNamespace
+
+    started=threading.Event()
+    release=threading.Event()
+    opened=[]
+    class BlockingEngine:
+        def __init__(self):
+            self.closed=False
+            self.number=len(opened)+1
+        def play(self,board,limit,game,info):
+            if self.number==1:
+                started.set()
+                assert release.wait(timeout=10)
+            return SimpleNamespace(move=next(iter(board.legal_moves)))
+        def quit(self):
+            pass
+        def close(self):
+            self.closed=True
+    def factory(root,exe,p,*,book):
+        engine=BlockingEngine()
+        opened.append(engine)
+        return engine
+
+    root,workspace=synthetic_uci
+    game=human_game.HumanGame(root,workspace,engine_factory=factory)
+    try:
+        started_game=game.start({**GOOD,"color":"black"})
+        ident=started_game["id"]
+        assert started.wait(timeout=4)
+        interrupted=game.action({"id":ident,"action":"interrupt"})
+        assert interrupted["status"]=="INTERRUPTED"
+        assert opened[0].closed
+        assert game.resume({"id":ident})["status"]=="RUNNING"
+        release.set()
+        until=time.monotonic()+8
+        while time.monotonic()<until and game.state()["game"]["revision"]<1:
+            time.sleep(.05)
+        current=game.state()["game"]
+        assert current["revision"]==1
+        assert len(opened)>=2, "Only the fresh epoch may produce a move"
+        assert current["moves"][0]["ply"]==1
+    finally:
+        release.set()
+        game.shutdown()
+
+
+def test_classical_session_not_cut_off_by_duel_one_hour_guard(synthetic_uci):
+    root,workspace=synthetic_uci
+    game=human_game.HumanGame(root,workspace,max_wall_seconds=3600)
+    try:
+        ident=game.start({**GOOD,"preset":"classical"})["id"]
+        with game._lock:
+            assert game._wall_budget>7200
+            game._session_started-=3700
+            game._turn_started-=1
+        state=game.state()["game"]
+        assert state["id"]==ident
+        assert state["status"]=="RUNNING"
+        assert state["clocks"][0]>0
+    finally:
+        game.shutdown()
+
+
+def test_pgndata_ahead_of_manifest_never_resumes_unsafe_clock(synthetic_uci):
+    root,workspace=synthetic_uci
+    game=human_game.HumanGame(root,workspace)
+    ident=game.start(GOOD)["id"]
+    game.move({"id":ident,"revision":0,"uci":"e2e4"})
+    game.shutdown()
+    folder=workspace/"human-games"/ident
+    state_path=folder/"state.json"
+    damaged=json.loads(state_path.read_text(encoding="utf-8"))
+    damaged["revision"]=0  # stale state after successful PGN checkpoint
+    state_path.write_text(json.dumps(damaged),encoding="utf-8")
+    recovered=human_game.HumanGame(root,workspace)
+    try:
+        assert recovered.state()["game"]["status"]=="FAILED"
+        assert recovered.state()["game"]["termination"]=="CheckpointMismatch"
+        with pytest.raises(human_game.HumanBusy):
+            recovered.resume({"id":ident})
+    finally:
+        recovered.shutdown()
