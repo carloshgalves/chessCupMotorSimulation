@@ -106,7 +106,8 @@ def test_piece_assets_are_exactly_allowlisted_in_both_local_servers(tmp_path):
                     with urlopen(url + path, timeout=5) as response:
                         assert response.status == 200
                         assert response.headers["Content-Type"] == "image/svg+xml"
-                        assert response.headers["Cache-Control"] == "no-store"
+                        assert response.headers["Cache-Control"] == (
+                            "private, max-age=86400, immutable")
                         assert response.headers["X-Content-Type-Options"] == "nosniff"
                         assert response.headers["Referrer-Policy"] == "no-referrer"
                         assert response.read() == base.joinpath(
