@@ -98,6 +98,10 @@
   }
   const restore = board("board-pref-reset");
   if (restore) restore.addEventListener("click", reset);
+  // The Arena itself owns the visible settings panel. Its same-origin
+  // embedded watch must still receive storage updates but avoid two editors.
+  const panel = board("board-prefs");
+  if (panel && window.parent && window.parent !== window) panel.hidden = true;
   window.addEventListener("storage", onStorage);
   window.ChessSimBoardPreferences = Object.freeze({
     get: () => ({...current}),
