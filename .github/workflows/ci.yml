@@ -131,7 +131,7 @@ jobs:
               assert actual_photos == referenced_photos, "Orphan portraits or undisclosed photos in wheel"
               for asset in ("monitor.html", "monitor.css", "monitor.js",
                             "arena.html", "arena.css", "arena.js",
-                            "history.js", "history.css", "history_replay.js", "history_stats.js",
+                            "history.js", "history.css", "history_replay.js", "history_stats.js", "competition_rating.js",
                             "chess_board.js", "chess_board.css", "board_preferences.js"):
                   assert f"chesssim/data/{asset}" in names, f"Live-board asset missing: {asset}"
               entry_points = [

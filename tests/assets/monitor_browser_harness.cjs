@@ -194,5 +194,109 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal(squares().length,64);
   assert(squares().every(n=>n.children.length===0),
          "even a completely empty display retains 64 squares");
+  // A long game renders every numbered row, with one white/black pair each.
+  const long=browser();
+  await flush();
+  const allStates=Array.from({length:77},(_,ply)=>({
+    fen:ply%2?E4:FEN,
+    san:ply===0?"Início":(ply%2?"Nf3":"Nc6"),
+    last:ply?["g1","f3"]:null,turn:ply%2?"black":"white",clocks:[60,60]
+  }));
+  vm.runInContext("feed.duel.games[0].states=" + JSON.stringify(allStates) +
+                  "; cursor=76; render()",long.context);
+  const log=long.elements.get("moves");
+  assert.equal(log.children.length,38,"never truncate to the last 20 half-moves");
+  assert.equal(log.children[0].children[0].textContent,"1. Nf3");
+  assert.equal(log.children[0].children[1].textContent,"1... Nc6");
+  assert.equal(log.children[1].children[0].textContent,"2. Nf3");
+  assert.equal(log.children[1].children[1].textContent,"2... Nc6");
+  assert.equal(log.children.at(-1).children[1].textContent,"38... Nc6");
+  const originalMoveRow=log.children[0];
+  vm.runInContext("render()",long.context);
+  assert.strictEqual(log.children[0],originalMoveRow,
+                     "identical polls must preserve the move list DOM");
+  assert.equal(log.children.length,38);
+  log.scrollHeight=900;
+  log.clientHeight=210;
+  log.scrollTop=0;
+  log.events.scroll();
+  vm.runInContext("feed.duel.games[0].states.push(" +
+                  JSON.stringify({fen:E4,san:"h4",last:["h2","h4"],
+                                  turn:"black",clocks:[60,60]}) +
+                  "); cursor=77; render()",long.context);
+  assert.equal(log.scrollTop,0,"manual scroll must not jump back to newest move");
+  assert.equal(log.children.length,39);
+  long.elements.get("live").events.click();
+  assert.equal(log.scrollTop,900,"return to live resumes automatic following");
+  // Board nodes are stable across identical positions/PGN polls.
+  const board=long.elements.get("board");
+  const before=descendants(board).filter(n=>n.className.includes("square"));
+  vm.runInContext("render()",long.context);
+  const after=descendants(board).filter(n=>n.className.includes("square"));
+  assert.strictEqual(after[0],before[0],"no full board replacement on same FEN");
+  assert.strictEqual(after[63],before[63]);
+  // A single backend snapshot may contain many fast engine moves. Every ply
+  // must be shown in order, with a presentation-only minimum interval.
+  const paced=browser();
+  await flush();
+  const initialPly=Number(vm.runInContext("cursor",paced.context));
+  assert.equal(initialPly,1);
+  const burst=[
+    {fen:FEN,san:"e5",last:["e7","e5"],turn:"white",clocks:[598,598]},
+    {fen:E4,san:"Nf3",last:["g1","f3"],turn:"black",clocks:[597,598]},
+    {fen:FEN,san:"Nc6",last:["b8","c6"],turn:"white",clocks:[597,597]}
+  ];
+  vm.runInContext("feed.duel.games[0].states.push(..."+JSON.stringify(burst)+")",paced.context);
+  const ply=()=>Number(vm.runInContext("cursor",paced.context));
+  const advance=delay=>vm.runInContext(
+    "advanceLivePlayback(lastPresentedAt + "+delay+")",paced.context);
+  advance(649);
+  assert.equal(ply(),1,"no premove before display interval");
+  advance(650);
+  assert.equal(ply(),2,"only one half-move per presentation interval");
+  assert.equal(paced.elements.get("headline").textContent,"1... e5");
+  assert.equal(paced.elements.get("moves").children.length,1);
+  assert.equal(paced.elements.get("moves").children[0].children[1].textContent,
+               "1... e5");
+  const savedRow=paced.elements.get("moves").children[0];
+  const savedWhite=savedRow.children[0];
+  advance(650);
+  assert.strictEqual(paced.elements.get("moves").children[0],savedRow,
+                     "adding a new white move must retain all previous rows");
+  assert.strictEqual(paced.elements.get("moves").children[0].children[0],savedWhite,
+                     "incremental replay must preserve existing move nodes");
+  assert.equal(ply(),3);
+  assert.equal(paced.elements.get("headline").textContent,"2. Nf3");
+  assert.equal(paced.elements.get("moves").children.length,2);
+  const secondRow=paced.elements.get("moves").children[1];
+  const secondWhite=secondRow.children[0];
+  advance(650);
+  assert.strictEqual(paced.elements.get("moves").children[1],secondRow,
+                     "black move must fill the existing half-empty row");
+  assert.strictEqual(secondRow.children[0],secondWhite,
+                     "black move must not repaint white's button");
+  assert.equal(ply(),4);
+  assert.equal(paced.elements.get("headline").textContent,"2... Nc6");
+  assert.equal(paced.elements.get("moves").children[1].children[1].textContent,
+               "2... Nc6");
+  advance(650);
+  assert.equal(ply(),4,"never fabricate new positions");
+
+  const nextGame={...game("next","Mikhail Tal","Bobby Fischer"),
+                  states:[{...states[0]},{...states[1]}]};
+  vm.runInContext("feed.duel.games.push("+JSON.stringify(nextGame)+")",paced.context);
+  advance(650);
+  assert.equal(ply(),0,"second game starts from initial position");
+  assert.equal(paced.elements.get("headline").textContent,"Posição inicial");
+  advance(650);
+  assert.equal(ply(),1,"second game's initial move also gets its own tick");
+  paced.elements.get("pause").events.click();
+  assert.equal(paced.elements.get("pause").attributes["aria-pressed"],"true");
+  const frozen=ply();
+  advance(650);
+  assert.equal(ply(),frozen,"pausing review disables pacing");
+  paced.elements.get("live").events.click();
+  assert.equal(paced.elements.get("pause").attributes["aria-pressed"],"false");
+
   console.log("Live bracket browser smoke: PASS");
 })().catch(error=>{console.error(error);process.exitCode=1;});

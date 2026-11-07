@@ -80,6 +80,19 @@ def main(argv: list[str] | None = None) -> int:
     tournament_resolve.add_argument("--winner", required=True)
     tournament_resolve.add_argument("--reason", required=True, help="Justificativa formal registrada no manifesto")
 
+    rating = sub.add_parser("rating-export",
+                            help="Exporta ledger Elo experimental de jogos locais verificados (não altera motores)")
+    rating.add_argument("--workspace", type=Path, required=True,
+                        help="Diretório local de sessões/torneios já concluídos")
+    rating.add_argument("--out", type=Path, required=True,
+                        help="Arquivo JSON de ledger com checksum e rankings")
+    rating.add_argument("--k", default="10",
+                        help="K experimental positivo entre 0 e 100; padrão 10")
+    rating.add_argument("--replace", action="store_true",
+                        help="Autoriza substituir snapshot quando novos jogos forem descobertos")
+    rating.add_argument("--modality", choices=["classical", "rapid", "blitz", "bullet", "unclassified"],
+                        default="rapid", help="Pool isolado de Elo (padrão: rapid)")
+
     arena = sub.add_parser("arena", help="Arena local opt-in para lançar e acompanhar duelos UCI")
     arena.add_argument("--rodent", type=Path,
                        help="Raiz local da instalação Rodent IV")
@@ -505,6 +518,13 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     try:
+        if args.command == "rating-export":
+            from .competition_rating import export_rating_ledger
+            info = export_rating_ledger(args.workspace, args.out, k=args.k,
+                                        replace=args.replace,
+                                        modality=args.modality)
+            print(json.dumps(info, ensure_ascii=False, indent=2))
+            return 0
         if args.command == 'opening-build':
             from .opening_books import build_opening_book
             player = find_player(args.player)

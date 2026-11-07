@@ -14,12 +14,13 @@ import math
 import secrets
 import threading
 import uuid
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
 
 from .catalog import load_roster, find_player
 from .history_profiles import list_history_players, load_history_profile
 from .history_games import InvalidCatalogue, UnknownGame, list_games, replay
 from .history_stats import player_stats
+from .competition_rating import rating_report, RATING_POOLS
 from .live_board import SCHEMA, make_handler, snapshot
 from .matches import _atomic_text, official_book_hashes, play_duel, validate
 from .peak_windows import CLOCK_PRESETS, PROVISIONAL_PEAKS
@@ -27,8 +28,22 @@ from .peak_windows import CLOCK_PRESETS, PROVISIONAL_PEAKS
 MAX_JSON_BYTES = 4096
 PRESETS = {"official": (600, 2), **CLOCK_PRESETS}
 ALLOWED_KEYS = {"white", "black", "mode", "preset", "depth", "movetime",
-                "reverse", "opening_mode", "seed", "max_plies"}
+                "reverse", "opening_mode", "seed", "max_plies",
+                "initial_seconds", "increment_seconds"}
 STATUSES = {"STARTING", "RUNNING", "COMPLETED", "INCOMPLETE", "FAILED", "INTERRUPTED"}
+
+
+def _rating_query(query: str) -> str | None:
+    if not query:
+        return "rapid"
+    try:
+        params = parse_qs(query, strict_parsing=True, keep_blank_values=True)
+    except ValueError:
+        return None
+    if set(params) != {"modality"} or len(params["modality"]) != 1:
+        return None
+    mode = params["modality"][0]
+    return mode if mode in RATING_POOLS else None
 
 
 class BadLaunch(ValueError):
@@ -69,31 +84,51 @@ def normalize_config(raw: object) -> dict:
     result = {"white": white, "black": black, "mode": mode, "reverse": reverse,
               "opening_mode": opening, "max_plies": max_plies,
               "preset": None, "depth": None, "movetime": None, "seed": None}
-    if mode == "preset":
-        preset = raw.get("preset")
-        if not isinstance(preset, str) or preset not in PRESETS or (
-                "depth" in raw or "movetime" in raw):
-            raise BadLaunch("Escolha exclusivamente um ritmo de relógio")
-        if not reverse:
-            raise BadLaunch("Presets de torneio exigem ambas as cores")
-        if preset == "official" and opening != "internal":
-            raise BadLaunch("Protocolo official exige livro UCI interno")
-        if preset == "official" and max_plies != 600:
-            raise BadLaunch("Protocolo official exige limite de segurança 600")
-        if preset == "official" and "seed" in raw:
-            raise BadLaunch("Semente não integra o protocolo official")
-        result["preset"] = preset
-    elif mode == "depth":
-        if "movetime" in raw or "preset" in raw:
-            raise BadLaunch("Não misture limites de busca")
+    if mode == "depth":
+        if "movetime" in raw:
+            raise BadLaunch("Escolha profundidade ou tempo por lance, não ambos")
         result["depth"] = _integer(raw.get("depth", 6), 1, 16, "depth")
-    else:
-        if "depth" in raw or "preset" in raw:
-            raise BadLaunch("Não misture limites de busca")
+    elif mode == "movetime":
+        if ("depth" in raw or "preset" in raw or "initial_seconds" in raw
+                or "increment_seconds" in raw):
+            raise BadLaunch("Tempo fixo por lance não pode usar relógio simultâneo")
         seconds = raw.get("movetime")
-        if type(seconds) not in (float, int) or not math.isfinite(seconds) or not 0.05 <= seconds <= 10:
+        if (type(seconds) not in (float, int) or not math.isfinite(seconds)
+                or not 0.05 <= seconds <= 10):
             raise BadLaunch("movetime deve estar entre 0,05 e 10 segundos")
         result["movetime"] = float(seconds)
+    else:
+        # Legacy clock-only mode: official and past sessions keep their contract.
+        if "depth" in raw or "movetime" in raw:
+            raise BadLaunch("Protocolo de relógio exclusivo não aceita limite de busca")
+    preset = raw.get("preset")
+    if mode == "preset" and preset is None:
+        raise BadLaunch("Informe um ritmo de relógio")
+    if preset is not None:
+        if (mode == "movetime" or not isinstance(preset, str)
+                or preset not in (set(PRESETS) | {"custom"})):
+            raise BadLaunch("Ritmo de relógio inválido")
+        if not reverse:
+            raise BadLaunch("Confrontos com relógio exigem ambas as cores")
+        if preset == "official":
+            if mode != "preset":
+                raise BadLaunch("Protocolo official não aceita profundidade adicional")
+            if opening != "internal":
+                raise BadLaunch("Protocolo official exige livro UCI interno")
+            if max_plies != 600:
+                raise BadLaunch("Protocolo official exige limite de segurança 600")
+            if "seed" in raw:
+                raise BadLaunch("Semente não integra o protocolo official")
+        result["preset"] = preset
+        if preset == "custom":
+            result["initial_seconds"] = _integer(
+                raw.get("initial_seconds"), 60, 14400, "initial_seconds")
+            result["increment_seconds"] = _integer(
+                raw.get("increment_seconds"), 0, 120, "increment_seconds")
+        elif "initial_seconds" in raw or "increment_seconds" in raw:
+            raise BadLaunch("Relógio personalizado exige preset custom")
+    elif "initial_seconds" in raw or "increment_seconds" in raw:
+        raise BadLaunch("Relógio personalizado exige preset custom")
     if opening == "historical":
         if result["preset"] == "official":
             raise BadLaunch("Abertura externa não pertence ao protocolo official")
@@ -330,7 +365,9 @@ class ArenaManager:
         try:
             session["status"] = "RUNNING"
             self._save(folder, session)
-            clock = PRESETS[config["preset"]] if config["preset"] else None
+            clock = ((config["initial_seconds"], config["increment_seconds"])
+                     if config["preset"] == "custom" else
+                     PRESETS[config["preset"]] if config["preset"] else None)
             kwargs = {
                 "depth": config["depth"], "movetime": config["movetime"],
                 "clock": clock, "reverse": config["reverse"],
@@ -424,7 +461,35 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 self._reply(403, b"Forbidden", "text/plain; charset=utf-8")
                 return
             url = urlsplit(self.path)
-            if url.path == "/api/history/players" and not url.query:
+            if url.path == "/api/competition/ratings":
+                modality = _rating_query(url.query)
+                if modality is None:
+                    self._json(404, {"error": "Modalidade desconhecida"})
+                    return
+                try:
+                    self._json(200, rating_report(manager.workspace,
+                                                  modality=modality))
+                except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+                    self._json(503, {"error": "Elo experimental indisponível"})
+            elif url.path.startswith("/api/history/players/") and url.path.endswith("/rating"):
+                slug = url.path.removeprefix("/api/history/players/").removesuffix("/rating")
+                modality = _rating_query(url.query)
+                if modality is None or not slug or "/" in slug:
+                    self._json(404, {"error": "Jogador ou modalidade desconhecido"})
+                    return
+                if slug not in {p.slug for p in load_roster()}:
+                    self._json(404, {"error": "Jogador não encontrado"})
+                    return
+                try:
+                    report = rating_report(manager.workspace, modality=modality)
+                    row = next(x for x in report["ratings"] if x["slug"] == slug)
+                    report["ratings"] = [row]
+                    report["slug"] = slug
+                    self._json(200, report)
+                except (OSError, ValueError, KeyError, TypeError, StopIteration,
+                        json.JSONDecodeError):
+                    self._json(503, {"error": "Elo experimental indisponível"})
+            elif url.path == "/api/history/players" and not url.query:
                 try:
                     self._json(200, list_history_players())
                 except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
@@ -514,11 +579,12 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 except (ValueError, OSError, FileNotFoundError,
                         KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "Estado do duelo indisponível"})
-            elif url.path in ("/", "/arena.js", "/arena.css", "/history.js", "/history_replay.js", "/history_stats.js", "/history.css", "/chess-board.js", "/chess-board.css", "/board-preferences.js", "/viewer"):
+            elif url.path in ("/", "/arena.js", "/arena.css", "/history.js", "/history_replay.js", "/history_stats.js", "/competition_rating.js", "/history.css", "/chess-board.js", "/chess-board.css", "/board-preferences.js", "/viewer"):
                 asset = {"/": "arena.html", "/arena.js": "arena.js",
                          "/arena.css": "arena.css", "/history.js": "history.js",
                          "/history_replay.js": "history_replay.js",
                          "/history_stats.js": "history_stats.js",
+                         "/competition_rating.js": "competition_rating.js",
                          "/history.css": "history.css",
                          "/chess-board.js": "chess_board.js",
                          "/board-preferences.js": "board_preferences.js",

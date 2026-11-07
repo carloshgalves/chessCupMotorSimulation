@@ -129,7 +129,9 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             "EngineSHA256": hashes["exe"],
             "WhiteProfileSHA256": hashes[white.slug],
             "BlackProfileSHA256": hashes[black.slug],
-            "SearchLimit": (f"{clock[0]//60}+{clock[1]}" if clock else
+            "SearchLimit": (f"clock={clock[0]}+{clock[1]};depth={depth}"
+                            if clock and depth is not None else
+                            f"{clock[0]//60}+{clock[1]}" if clock else
                             f"depth={depth}" if depth is not None else f"time={movetime}s"),
             "ProtocolSHA256": (OFFICIAL.json()["sha256"] if clock == (600, 2) else
                                 "v06-experimental-clock" if clock else "development"),
@@ -164,7 +166,8 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             idx = 0 if board.turn else 1
             turn_limit = (chess.engine.Limit(white_clock=max(0.001, clocks[0]),
                          black_clock=max(0.001, clocks[1]),
-                         white_inc=clock[1], black_inc=clock[1]) if clock else limit)
+                         white_inc=clock[1], black_inc=clock[1],
+                         depth=depth) if clock else limit)
             opening_move = None
             opening_source = None
             if historical_openings:
@@ -275,8 +278,9 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
               max_wall_seconds: float | None = None) -> Path:
     root = root.expanduser().resolve()
     exe, profile_paths = validate(root, white, black)
-    if sum(x is not None for x in (depth, movetime, clock)) != 1:
-        raise ValueError("Informe exatamente um limite: --depth, --movetime ou --preset")
+    if (movetime is not None and (depth is not None or clock is not None)) or (
+            depth is None and movetime is None and clock is None):
+        raise ValueError("Use depth, movetime ou clock; depth pode limitar clock")
     if clock and (clock[0] <= 0 or clock[1] < 0):
         raise ValueError("Relógio inválido")
     if depth is not None and not 1 <= depth <= 99:

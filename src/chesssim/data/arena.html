@@ -12,6 +12,7 @@
   <script src="/board-preferences.js" defer></script>
   <script src="/history_replay.js" defer></script>
   <script src="/history_stats.js" defer></script>
+  <script src="/competition_rating.js" defer></script>
   <script src="/history.js" defer></script>
 </head>
 <body>
@@ -133,39 +134,53 @@
               </div>
             </div>
             <fieldset>
-              <legend>Limite de busca</legend>
+              <legend>Busca do motor</legend>
               <div class="field-grid">
                 <div>
-                  <label for="mode">Tipo</label>
+                  <label for="mode">Critério de busca</label>
                   <select id="mode">
-                    <option value="depth">Profundidade por lance</option>
-                    <option value="movetime">Segundos por lance</option>
-                    <option value="preset">Relógio de torneio</option>
+                    <option value="depth">Profundidade máxima por lance</option>
+                    <option value="movetime">Tempo fixo por lance (sem relógio)</option>
                   </select>
                 </div>
                 <div id="depth-wrap">
-                  <label for="depth">Profundidade (1–16)</label>
+                  <label for="depth">Profundidade máxima (1–16)</label>
                   <input type="number" id="depth" value="6" min="1" max="16" step="1">
                 </div>
                 <div id="movetime-wrap" hidden>
-                  <label for="movetime">Segundos (0,05–10)</label>
+                  <label for="movetime">Segundos por lance (0,05–10)</label>
                   <input type="number" id="movetime" value="0.5" min="0.05" max="10" step="0.05">
-                </div>
-                <div id="preset-wrap" hidden>
-                  <label for="preset">Ritmo de jogo</label>
-                  <select id="preset">
-                    <option value="official">Oficial · 10+2</option>
-                    <option value="classical">Clássico · 60+30</option>
-                    <option value="rapid">Rápido · 15+10</option>
-                    <option value="blitz">Blitz · 3+2</option>
-                    <option value="bullet">Bullet · 1+0</option>
-                  </select>
                 </div>
                 <div>
                   <label for="max-plies">Limite de meios-lances</label>
                   <input type="number" id="max-plies" value="400" min="40" max="600" step="1">
                 </div>
               </div>
+              <p id="search-note" class="note">A profundidade é um teto de busca; não define a duração da partida.</p>
+            </fieldset>
+            <fieldset>
+              <legend>Relógio da partida</legend>
+              <div class="field-grid">
+                <div id="preset-wrap">
+                  <label for="preset">Controle de tempo (por jogador)</label>
+                  <select id="preset">
+                    <option value="none">Sem relógio</option>
+                    <option value="official">Protocolo oficial do projeto · 10+2</option>
+                    <option value="classical">Clássico · 60+30</option>
+                    <option value="rapid">Rápido · 15+10</option>
+                    <option value="blitz">Blitz · 3+2</option>
+                    <option value="bullet">Bullet · 1+0</option>
+                    <option value="custom">Personalizado · minutos + incremento</option>
+                  </select>
+                </div>
+                <div id="custom-clock-wrap" hidden>
+                  <label for="custom-minutes">Minutos iniciais por jogador (1–240)</label>
+                  <input type="number" id="custom-minutes" value="30" min="1" max="240" step="1">
+                  <label for="custom-increment">Incremento em segundos (0–120)</label>
+                  <input type="number" id="custom-increment" value="5" min="0" max="120" step="1">
+                </div>
+              </div>
+              <p id="clock-note" class="note">Opcional. Profundidade e relógio podem coexistir (ex.: profundidade 16 com 1+0). O protocolo oficial mantém suas regras fixas.</p>
               <label class="checkbox">
                 <input type="checkbox" id="reverse" checked>
                 <span>Disputar também a partida com cores invertidas</span>
@@ -201,7 +216,7 @@
         </section>
         <section class="panel">
           <span class="overline">SOBRE OS PERFIS</span>
-          <p class="note">Os períodos mostrados são metadados históricos ou hipóteses de pesquisa. Um perfil Rodent IV instalado <strong>não</strong> significa personalidade historicamente validada. Essa arena não atribui Elo nem precisão.</p>
+          <p class="note">Os períodos mostrados são metadados históricos ou hipóteses de pesquisa. Um perfil Rodent IV instalado <strong>não</strong> significa personalidade historicamente validada. Esta Arena não fixa força UCI a partir de Elo; o rating competitivo experimental é calculado separadamente a partir de partidas verificadas.</p>
           <p class="note">Token de execução fornecido no endereço local do terminal. Não compartilhe a URL completa.</p>
         </section>
       </section>
@@ -224,6 +239,24 @@
         <p>Carreiras documentadas. Narrativas originais em primeira pessoa, sem simular declarações reais.</p>
       </header>
       <p id="history-status" role="status" aria-live="polite">Abra História para carregar o catálogo local.</p>
+      <details id="competition-rating-leaderboard" class="competition-rating-panel">
+        <summary>Elo ChessSimulation · ranking experimental local</summary>
+        <p class="history-stats-disclaimer">Cada ritmo possui Elo independente começando em 2500. A classificação usa tempo inicial + 60 incrementos. Não é rating FIDE, força UCI nem fidelidade histórica.</p>
+        <label for="competition-rating-mode">Modalidade do ranking</label>
+        <select id="competition-rating-mode" aria-label="Modalidade do ranking Elo">
+          <option value="rapid" selected>Rápido</option><option value="classical">Clássico</option>
+          <option value="blitz">Blitz</option><option value="bullet">Bullet</option>
+          <option value="unclassified">Sem relógio (isolado)</option>
+        </select>
+        <p id="competition-rating-status" role="status" aria-live="polite"></p>
+        <div class="competition-rating-table-wrap" tabindex="0" role="region" aria-label="Ranking experimental local">
+          <table class="competition-rating-table">
+            <thead><tr><th>Pos.</th><th>Jogador</th><th>Elo</th><th>Condição</th><th>Jogos</th><th>V/E/D</th><th>Pontos 3/1/0</th><th>Precisão</th><th>Faixa de score</th></tr></thead>
+            <tbody id="competition-rating-rows"></tbody>
+          </table>
+        </div>
+        <p id="competition-rating-meta" class="history-stats-scope"></p>
+      </details>
       <div id="history-roster" hidden>
         <div id="history-carousel" class="history-carousel" aria-label="Escolher enxadrista">
           <button id="history-prev" type="button" aria-label="Enxadrista anterior">←</button>
@@ -272,6 +305,18 @@
               </div>
             </div>
           </section>
+        </section>
+        <section id="history-rating-profile" class="history-rating-profile" aria-label="Rating experimental do simulador" hidden>
+          <h3>Elo ChessSimulation · experimental</h3>
+          <label for="history-rating-mode">Modalidade do jogador</label>
+          <select id="history-rating-mode" aria-label="Modalidade do Elo do jogador">
+            <option value="rapid" selected>Rápido</option><option value="classical">Clássico</option>
+            <option value="blitz">Blitz</option><option value="bullet">Bullet</option>
+            <option value="unclassified">Sem relógio (isolado)</option>
+          </select>
+          <p id="history-rating-status" role="status" aria-live="polite"></p>
+          <p id="history-rating-value"></p>
+          <p id="history-rating-proof" class="history-stats-disclaimer"></p>
         </section>
         <section id="history-stats-section" class="history-stats-section" aria-labelledby="history-stats-heading" hidden>
           <h3 id="history-stats-heading">No simulador</h3>
