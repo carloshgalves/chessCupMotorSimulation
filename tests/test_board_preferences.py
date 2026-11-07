@@ -76,6 +76,30 @@ def test_preferences_are_local_to_shared_8x8_board_and_reduced_motion():
     assert "url(" not in css
 
 
+def test_all_twelve_board_palettes_are_unique_and_materials_have_texture():
+    css = (DATA / "chess_board.css").read_text(encoding="utf-8")
+    palette = re.compile(
+        r'\.board\[data-board-theme="([^"]+)"\],'
+        r'\.board-theme-chip\[data-theme="[^"]+"\]\{([^}]*)\}'
+    )
+    found = {}
+    textures = []
+    for identifier, body in palette.findall(css):
+        light = re.search(r"--square-light:(#[0-9a-fA-F]{6})", body)
+        dark = re.search(r"--square-dark:(#[0-9a-fA-F]{6})", body)
+        assert light and dark, identifier
+        assert identifier not in found, "Duplicate theme declaration: " + identifier
+        found[identifier] = (light.group(1), dark.group(1))
+        if "--light-texture:" in body and "--dark-texture:" in body:
+            textures.append(identifier)
+    assert set(found) == {
+        "classic", "wood", "slate", "light", "dark", "contrast",
+        "green", "blue", "walnut", "marble", "lavender", "terracotta",
+    }
+    assert len(set(found.values())) == 12, "Theme colors must differ materially"
+    assert {"wood", "walnut", "slate", "marble", "terracotta"}.issubset(textures)
+
+
 def test_board_preferences_both_html_surfaces_have_controls():
     for page in ("arena.html", "monitor.html"):
         html = (DATA / page).read_text(encoding="utf-8")
