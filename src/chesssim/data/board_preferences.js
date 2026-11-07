@@ -2,10 +2,12 @@
 /* Presentation preferences only: no chess rules, network, tokens or engine state. */
 (() => {
   const KEY = "chesssim.board-presentation.v1";
-  const DEFAULTS = Object.freeze({theme:"classic", pieces:"solid", motion:"off"});
+  const DEFAULTS = Object.freeze({theme:"classic", pieces:"cburnett", motion:"off"});
   const CHOICES = Object.freeze({
-    theme: Object.freeze(["classic","wood","slate","light","dark","contrast"]),
-    pieces: Object.freeze(["solid","outline"]),
+    theme: Object.freeze(["classic","wood","slate","light","dark","contrast",
+                          "green","blue","walnut","marble","lavender","terracotta"]),
+    pieces: Object.freeze(["cburnett","merida","chessnut","fantasy",
+                           "spatial","celtic","rhosgfx"]),
     motion: Object.freeze(["off","fast","normal"])
   });
   const BOARD_IDS = Object.freeze(["board","history-replay-board"]);
@@ -20,7 +22,11 @@
     const next = {...DEFAULTS};
     if (value && typeof value === "object" && !Array.isArray(value)) {
       for (const name of Object.keys(CHOICES)) {
-        if (CHOICES[name].includes(value[name])) next[name] = value[name];
+        // Transparent migration of old settings: avoid broken Unicode piece glyphs.
+        const candidate = name === "pieces" && value[name] === "solid" ? "cburnett" :
+                          name === "pieces" && value[name] === "outline" ? "spatial" :
+                          value[name];
+        if (CHOICES[name].includes(candidate)) next[name] = candidate;
       }
     }
     return next;
@@ -50,12 +56,24 @@
       element.setAttribute("data-board-theme", current.theme);
       element.setAttribute("data-piece-style", current.pieces);
       element.setAttribute("data-board-motion", current.motion);
+      window.ChessSimBoard?.refreshArtwork(element);
     }
   }
   function controls() {
     for (const [name,id] of Object.entries(CONTROLS)) {
       const element = board(id);
       if (element) element.value = current[name];
+    }
+    for (const [id,attribute,selection] of [
+      ["board-theme-gallery","data-theme",current.theme],
+      ["board-piece-gallery","data-piece-set",current.pieces]
+    ]) {
+      const container = board(id);
+      if (!container) continue;
+      for (const option of container.children) {
+        option.setAttribute("aria-pressed",String(
+          option.getAttribute(attribute) === selection));
+      }
     }
   }
   function status(message) {
@@ -95,6 +113,16 @@
   for (const [name,id] of Object.entries(CONTROLS)) {
     const input = board(id);
     if (input) input.addEventListener("change", () => set(name,input.value));
+  }
+  for (const [id,name,attribute] of [
+    ["board-theme-gallery","theme","data-theme"],
+    ["board-piece-gallery","pieces","data-piece-set"]
+  ]) {
+    const gallery = board(id);
+    if (!gallery) continue;
+    for (const option of gallery.children) {
+      option.addEventListener("click", () => set(name,option.getAttribute(attribute)));
+    }
   }
   const restore = board("board-pref-reset");
   if (restore) restore.addEventListener("click", reset);
