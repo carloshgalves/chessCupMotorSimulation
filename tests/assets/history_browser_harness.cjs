@@ -187,5 +187,5 @@ function descendants(node) {
   assert.equal($("history-profile").hidden,true);
   assert.equal($("history-roster").hidden,false);
   assert($("history-selected").textContent.includes("Capablanca"));
-  console.log("History navigation, 64 players, focus, stale profile, safe links and credits: PASS");
+  console.log("History navigation, 64 players, focus, stale profile, safe links and photo credits: PASS");
 })().catch(err=>{console.error(err);process.exitCode=1;});
