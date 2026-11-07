@@ -22,7 +22,9 @@ DATA = ROOT / "src/chesssim/data"
 
 def _luminance(rgb: str) -> float:
     """sRGB relative luminance (WCAG 2.x)."""
-    assert re.fullmatch(r"#[0-9a-fA-F]{6}", rgb)
+    assert re.fullmatch(r"#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?", rgb)
+    if len(rgb) == 4:
+        rgb = "#" + "".join(ch * 2 for ch in rgb[1:])
     channels = [int(rgb[i:i + 2], 16) / 255 for i in (1, 3, 5)]
     linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
               for c in channels]
@@ -37,8 +39,8 @@ def _contrast(foreground: str, background: str) -> float:
 def test_history_primary_button_meets_aa_normal_text():
     css = (DATA / "history.css").read_text(encoding="utf-8")
     match = re.search(
-        r"#history-actions button\s*\{\s*background:(#[0-9a-fA-F]{6});"
-        r"color:(#[0-9a-fA-F]{6});min-height:44px\s*\}", css,
+        r"#history-actions button\s*\{\s*background:(#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?);"
+        r"color:(#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?);min-height:44px\s*\}", css,
     )
     assert match, "History CTA palette/target must be explicitly auditable"
     background, foreground = match.groups()
