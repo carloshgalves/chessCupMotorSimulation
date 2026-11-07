@@ -15,6 +15,7 @@ class Node {
   setAttribute(k,v){this.attributes[k]=String(v);}
   getAttribute(k){return this.attributes[k]??null;}
   addEventListener(k,cb){this.events[k]=cb;}
+  focus(){this.focused=true;}
   appendChild(element){this.children.push(element);return element;}
   replaceChildren(...items) {
     this.children=items.flatMap(x=>x.tagName==="FRAGMENT"?x.children:[x]);
@@ -29,7 +30,11 @@ const source=fs.readFileSync(process.argv[2],"utf8");
 const renderer=fs.readFileSync(process.argv[3],"utf8");
 const KEY="chesssim.board-presentation.v1";
 const names=["board","history-replay-board","board-prefs","board-theme-gallery",
-             "board-piece-gallery","board-pref-theme",
+             "board-piece-gallery","board-prefs-summary","board-prefs-popup",
+             "board-pref-toggle-theme","board-pref-toggle-pieces",
+             "board-pref-toggle-motion","board-pref-panel-theme",
+             "board-pref-panel-pieces","board-pref-panel-motion",
+             "board-pref-theme",
              "board-pref-pieces","board-pref-motion",
              "board-pref-reset","board-pref-status"];
 const shared=new Map();
@@ -82,6 +87,27 @@ shared.set(KEY,JSON.stringify({theme:"wood",pieces:"outline",motion:"fast"}));
   assert.equal(app.$("board-theme-gallery").children.length,12);
   assert.equal(app.$("board-theme-gallery").children[1].getAttribute("aria-pressed"),"true");
   assert.equal(app.$("board-pref-motion").value,"fast");
+  const sections=["theme","pieces","motion"];
+  const visibleSections=()=>sections.filter(name=>!app.$("board-pref-panel-"+name).hidden);
+  assert.deepEqual(visibleSections(),[],"all visual galleries start collapsed");
+  for(const section of sections)assert.equal(
+    app.$("board-pref-toggle-"+section).getAttribute("aria-expanded"),"false");
+  app.$("board-pref-toggle-theme").events.click();
+  assert.deepEqual(visibleSections(),["theme"]);
+  assert.equal(app.$("board-pref-toggle-theme").getAttribute("aria-expanded"),"true");
+  app.$("board-pref-toggle-pieces").events.click();
+  assert.deepEqual(visibleSections(),["pieces"],"switching tabs hides previous gallery");
+  assert.equal(app.$("board-pref-toggle-theme").getAttribute("aria-expanded"),"false");
+  app.$("board-pref-toggle-motion").events.click();
+  assert.deepEqual(visibleSections(),["motion"]);
+  app.$("board-pref-toggle-motion").events.click();
+  assert.deepEqual(visibleSections(),[],"clicking active choice collapses it");
+  app.$("board-pref-toggle-theme").events.click();
+  const escape={key:"Escape",preventDefault(){this.prevented=true}};
+  app.$("board-prefs-popup").events.keydown(escape);
+  assert.equal(app.$("board-prefs").open,false);
+  assert.equal(app.$("board-prefs-summary").focused,true);
+  assert.equal(escape.prevented,true);
   assert.equal(app.board.paint(board,{fen:INITIAL,last:null},0),true);
   assert.equal(squares(board).length,64);
   const initialSVGs=new Set(squares(board)
