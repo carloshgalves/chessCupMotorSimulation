@@ -6,7 +6,7 @@ As telas **Arena / História** e **watch** exibem o painel `Aparência do tabule
 
 | Campo | Valores permitidos | Padrão |
 | --- | --- | --- |
-| Cores | `classic` (clássico), `wood` (madeira), `slate` (azul-acizentado), `contrast` (alto contraste) | `classic` |
+| Cores | `classic` (clássico), `wood` (madeira), `slate` (azul-acizentado), `light` (claro), `dark` (escuro), `contrast` (alto contraste) | `classic` |
 | Peças | `solid` (silhueta com preenchimento e borda), `outline` (contorno) | `solid` |
 | Movimento | `off`, `fast` (160 ms), `normal` (330 ms) | `off` |
 
