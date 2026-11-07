@@ -94,7 +94,9 @@ def test_100_games_reprocess_order_snapshot_and_chain_tampering():
     assert (Decimal(by_slug(snap,"fischer")["rating"]) +
             Decimal(by_slug(snap,"tal")["rating"])) == 5000
     tampered=json.loads(json.dumps(snap))
-    tampered["rating_ledger"][42]["result"]="1-0"
+    original_result = tampered["rating_ledger"][42]["result"]
+    tampered["rating_ledger"][42]["result"] = (
+        "0-1" if original_result == "1-0" else "1-0")
     assert not verify_rating_ledger(tampered)
     truncated=json.loads(json.dumps(snap))
     truncated["rating_ledger"].pop()

@@ -35,7 +35,7 @@ function report(slug,mode="rapid"){
     ratings:slug?[players.find(x=>x.slug===slug)]:players,
     counts:{scored_games:1},coverage:{partial:false},
     scale_note:"Elo experimental não indica força UCI",
-    modalities:["rapid","blitz"],mixed_modalities_warning:true,
+    modalities:[mode],mixed_modalities_warning:false,
     ...(slug?{slug}:{})
   };
 }
