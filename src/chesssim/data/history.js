@@ -50,7 +50,10 @@
     caption.append(make("span", medium + info.author + " · " + info.event +
       " (" + info.event_date + ")"));
     caption.append(link("Origem", info.source_url));
-    caption.append(link("Licença " + info.license, info.license_url));
+    const rightsLabel = info.license === "Public Domain Mark 1.0" ?
+      "Public Domain Mark (declaração de status; não é licença)" :
+      "Licença " + info.license;
+    caption.append(link(rightsLabel, info.license_url));
     caption.append(make("span", info.derivative_note));
     figure.append(caption);
     return figure;
