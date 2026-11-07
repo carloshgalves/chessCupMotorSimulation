@@ -135,7 +135,7 @@ def test_real_verified_arena_and_tournament_and_original_files_unchanged(tmp_pat
     before={p.relative_to(tmp_path):p.read_bytes() for p in files}
     report=rating_report(tmp_path,include_ledger=True)
     assert report["schema"] == SCHEMA
-    assert report["counts"]["scored_games"] == 4
+    assert report["counts"]["scored_games"] == 4, report["coverage"]
     assert report["coverage"]["arena_verified_games"] == 2
     assert report["coverage"]["tournament_verified_games"] == 2
     assert verify_rating_ledger({
