@@ -100,6 +100,20 @@ def test_all_twelve_board_palettes_are_unique_and_materials_have_texture():
     assert {"wood", "walnut", "slate", "marble", "terracotta"}.issubset(textures)
 
 
+def test_compact_popover_and_square_theme_previews_avoid_covering_board():
+    css = (DATA / "chess_board.css").read_text(encoding="utf-8")
+    assert ".top,.topbar{position:relative;z-index:5}" in css
+    assert "position:absolute;left:0;top:calc(100% + 10px);z-index:20" in css
+    assert "max-height:min(72vh,650px);overflow-y:auto" in css
+    assert "aspect-ratio:1 / 1;height:auto;width:100%" in css
+    assert ".board-pref-panel[hidden]{display:none!important}" in css
+    script = (DATA / "board_preferences.js").read_text(encoding="utf-8")
+    assert 'toggleSection(null);' in script
+    assert 'expanded = name === expanded ? null : name' in script
+    assert 'if (panel) panel.hidden = expanded !== section' in script
+    assert 'if (event.key === "Escape")' in script
+
+
 def test_board_preferences_both_html_surfaces_have_controls():
     for page in ("arena.html", "monitor.html"):
         html = (DATA / page).read_text(encoding="utf-8")
@@ -111,6 +125,14 @@ def test_board_preferences_both_html_surfaces_have_controls():
         assert 'id="board-pref-reset"' in html
         assert 'id="board-theme-gallery"' in html
         assert 'id="board-piece-gallery"' in html
+        assert 'id="board-prefs-popup"' in html
+        assert 'id="board-prefs-summary"' in html
+        assert html.count('class="board-pref-panel"') == 3
+        for category in ("theme", "pieces", "motion"):
+            assert f'id="board-pref-toggle-{category}"' in html
+            assert f'aria-controls="board-pref-panel-{category}"' in html
+            assert f'id="board-pref-panel-{category}"' in html
+            assert f'aria-labelledby="board-pref-toggle-{category}" hidden' in html
         assert len(re.findall(r'class="board-theme-chip"', html)) == 12
         assert len(re.findall(r'class="board-piece-chip"', html)) == 7
         for name, n in (("theme", 12), ("pieces", 7), ("motion", 3)):
