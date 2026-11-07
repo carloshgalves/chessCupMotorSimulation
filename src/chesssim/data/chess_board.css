@@ -10,6 +10,8 @@
 
 /* Board palette variables never recolor Arena forms or History biography. */
 .board[data-board-theme="wood"]{--square-light:#f5e4c8;--square-dark:#89684e;--last-move:#ffda64;--outline-white:#10212c;--outline-black:#fff5df}
+.board[data-board-theme="light"]{--square-light:#fffdf3;--square-dark:#8daaa5;--last-move:#dba536;--outline-white:#13262d;--outline-black:#fafffd}
+.board[data-board-theme="dark"]{--square-light:#82939c;--square-dark:#283c47;--last-move:#f8cc59;--piece-white:#fff;--piece-black:#0b1b24;--outline-white:#12212a;--outline-black:#fff}
 .board[data-board-theme="slate"]{--square-light:#dce5ec;--square-dark:#66778d;--last-move:#fce38a;--outline-white:#14202d;--outline-black:#f5f9fb}
 .board[data-board-theme="contrast"]{--square-light:#f8fafc;--square-dark:#111827;--last-move:#ffc400;--piece-white:#fff;--piece-black:#0a1320;--outline-white:#101820;--outline-black:#fff}
 .board[data-board-theme="contrast"] .square.dark.coordinate::after{color:#fff}
