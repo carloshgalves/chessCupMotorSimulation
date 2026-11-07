@@ -70,10 +70,23 @@
                   position.last.every(x => typeof x === "string" && /^[a-h][1-8]$/.test(x)))
       ? position.last : [];
     const lastKey = last.join("|");
-    const old = boardCache.get(container);
+    // The History tab may clear the board itself when changing games.
+    // A detached cache must be discarded before attempting a new paint.
+    let old = boardCache.get(container);
+    if (old && container.children.length === 0) {
+      old = null;
+      boardCache.delete(container);
+      pieceSlots.delete(container);
+    }
     if (old && old.fen === position.fen && old.ply === ply && old.last === lastKey) {
-      // Polling the same PGN must not destroy pieces, trigger another SVG load,
-      // or restart a square animation every 1.2 seconds.
+      // Polls of an unchanged position preserve SVG nodes while retiring the
+      // one-frame motion class (the existing reduced-motion contract).
+      if (old.fresh) {
+        for (const cell of old.cells) {
+          cell.className = cell.className.replace(" fresh-last", "");
+        }
+        old.fresh = false;
+      }
       return true;
     }
     const changed = !!old && old.fen !== position.fen;
@@ -113,21 +126,21 @@
             label.textContent = glyph[piece];
             label.setAttribute("aria-hidden", "true");
             label.setAttribute("data-art-ready", "0");
-            const picture = document.createElement("img");
-            picture.className = "piece-svg";
-            picture.setAttribute("alt", "");
-            picture.setAttribute("aria-hidden", "true");
-            picture.setAttribute("decoding", "async");
-            picture.setAttribute("draggable", "false");
+            const image = document.createElement("img");
+            image.className = "piece-svg";
+            image.setAttribute("alt", "");
+            image.setAttribute("aria-hidden", "true");
+            image.setAttribute("decoding", "async");
+            image.setAttribute("draggable", "false");
             const code = (piece === piece.toUpperCase() ? "w" : "b") +
                          piece.toUpperCase();
-            picture.addEventListener("load", () =>
+            image.addEventListener("load", () =>
               label.setAttribute("data-art-ready", "1"));
-            picture.addEventListener("error", () =>
+            image.addEventListener("error", () =>
               label.setAttribute("data-art-ready", "0"));
-            label.appendChild(picture);
+            label.appendChild(image);
             square.appendChild(label);
-            slot = {label, image:picture, code};
+            slot = {label, image, code};
           }
         }
         const pieceKind = !piece ? "" :
@@ -141,7 +154,8 @@
         slots.push(slot);
       }
     }
-    boardCache.set(container, {cells,codes,slots,fen:position.fen,ply,last:lastKey});
+    boardCache.set(container, {cells,codes,slots,fen:position.fen,ply,last:lastKey,
+                              fresh:changed});
     pieceSlots.set(container, slots.filter(Boolean));
     refreshArtwork(container);
     container.setAttribute("aria-label", "Tabuleiro após " + ply + " meios-lances");
