@@ -21,7 +21,8 @@ chesssim = "chesssim.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"chesssim.data" = ["roster.json", "monitor.html", "monitor.css", "monitor.js", "arena.html", "arena.css", "arena.js", "history.js", "history_replay.js", "history_stats.js", "history.css", "chess_board.js", "chess_board.css", "board_preferences.js", "history/*.json", "history/portraits/*"]
+"chesssim.data" = ["roster.json", "monitor.html", "monitor.css", "monitor.js", "arena.html", "arena.css", "arena.js", "history.js", "history_replay.js", "history_stats.js", "history.css", "chess_board.js", "chess_board.css", "board_preferences.js", "history/*.json", "history/portraits/*", "pieces/SOURCES.json",
+                   "pieces/*/*.svg"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
