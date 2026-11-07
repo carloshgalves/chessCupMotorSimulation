@@ -342,8 +342,6 @@
         el("human-promotion").querySelector("button")?.focus();
         return;
       }
-        return;
-      }
     }
     state.selected=g.legal_moves.some(m=>m.startsWith(name))?name:null;
     decorate(g);
