@@ -1,9 +1,61 @@
 /* Canonical 8×8 board. Reused by watch, Arena viewer and History replay. */
-.board{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));aspect-ratio:1 / 1;width:100%;min-width:0;min-height:0;container-type:inline-size;overflow:hidden;border-radius:4px}
+.board{--square-light:#e5e4d1;--square-dark:#72989d;--last-move:#e2b859;--piece-white:#faf7eb;--piece-black:#15232b;--outline-white:#192933;--outline-black:#f7efdf;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));aspect-ratio:1 / 1;width:100%;min-width:0;min-height:0;container-type:inline-size;overflow:hidden;border-radius:4px}
 .square{position:relative;display:grid;place-items:center;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;user-select:none}
 .square .piece-glyph{display:grid;place-items:center;width:100%;height:100%;font-family:"DejaVu Sans","Noto Sans Symbols 2","Segoe UI Symbol",sans-serif;font-size:clamp(16px,9.4cqw,68px);line-height:1}
-.square.light{background:#e5e4d1;color:#1c2b30}.square.dark{background:#72989d;color:#162933}
-.square.last{box-shadow:inset 0 0 0 5px #e2b859}
-.square.whitepiece .piece-glyph{color:#faf7eb;-webkit-text-stroke:1.15px #192933;text-shadow:0 2px 1px #12262dcc,1px 0 1px #12262dcc}
-.square.blackpiece .piece-glyph{color:#15232b;-webkit-text-stroke:1.15px #f7efdf;text-shadow:0 2px 1px #0d1a20cc,0 0 1px #f7efdf}
+.square.light{background:var(--square-light);color:#1c2b30}.square.dark{background:var(--square-dark);color:#162933}
+.square.last{box-shadow:inset 0 0 0 5px var(--last-move)}
+.square.whitepiece .piece-glyph{color:var(--piece-white);-webkit-text-stroke:1.15px var(--outline-white);text-shadow:0 2px 1px #12262dcc,1px 0 1px #12262dcc}
+.square.blackpiece .piece-glyph{color:var(--piece-black);-webkit-text-stroke:1.15px var(--outline-black);text-shadow:0 2px 1px #0d1a20cc,0 0 1px #f7efdf}
 .square.coordinate::after{content:attr(data-coordinate);position:absolute;bottom:3px;right:4px;font:600 9px system-ui;color:#192e35a6}
+
+/* Board palette variables never recolor Arena forms or History biography. */
+.board[data-board-theme="wood"]{--square-light:#f5e4c8;--square-dark:#89684e;--last-move:#ffda64;--outline-white:#10212c;--outline-black:#fff5df}
+.board[data-board-theme="slate"]{--square-light:#dce5ec;--square-dark:#66778d;--last-move:#fce38a;--outline-white:#14202d;--outline-black:#f5f9fb}
+.board[data-board-theme="contrast"]{--square-light:#f8fafc;--square-dark:#111827;--last-move:#ffc400;--piece-white:#fff;--piece-black:#0a1320;--outline-white:#101820;--outline-black:#fff}
+.board[data-board-theme="contrast"] .square.dark.coordinate::after{color:#fff}
+.board[data-board-theme="contrast"] .square.light.coordinate::after{color:#101820}
+.board[data-piece-style="outline"] .square.whitepiece .piece-glyph{
+  color:var(--piece-white);-webkit-text-fill-color:transparent;
+  -webkit-text-stroke:2.4px var(--outline-white);text-shadow:none
+}
+.board[data-piece-style="outline"] .square.blackpiece .piece-glyph{
+  color:var(--piece-black);-webkit-text-fill-color:transparent;
+  -webkit-text-stroke:2.4px var(--outline-black);text-shadow:none
+}
+@keyframes chesssim-board-move-highlight{
+  0%{box-shadow:inset 0 0 0 0 var(--last-move)}
+  50%{box-shadow:inset 0 0 0 8px var(--last-move)}
+  100%{box-shadow:inset 0 0 0 5px var(--last-move)}
+}
+.board[data-board-motion="fast"] .square.fresh-last{
+  animation:chesssim-board-move-highlight 160ms ease-out 1
+}
+.board[data-board-motion="normal"] .square.fresh-last{
+  animation:chesssim-board-move-highlight 330ms ease-out 1
+}
+@media(prefers-reduced-motion:reduce){
+  .board .square.fresh-last{animation:none!important;transition:none!important}
+}
+/* Same-origin, accessible appearance controls for the watch and Arena. */
+.board-prefs{
+  position:relative;color:#f3f8f8;background:#172a32;
+  border:1px solid #637f88;border-radius:11px;padding:9px 12px;
+  min-width:min(260px,100%);max-width:100%
+}
+.board-prefs summary{cursor:pointer;font-weight:700;min-height:30px;display:flex;align-items:center}
+.board-prefs summary:focus-visible,.board-prefs select:focus-visible,
+.board-prefs button:focus-visible{outline:3px solid #ffe39f;outline-offset:3px}
+.board-prefs .board-pref-grid{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0}
+.board-prefs label{display:block;font-size:.82rem;color:#e0eeee}
+.board-prefs select{
+  display:block;min-width:0;width:100%;min-height:44px;
+  margin:5px 0 0;background:#243c46;color:#fff;
+  border:1px solid #829ca4;border-radius:8px;padding:9px;font:inherit
+}
+.board-prefs button{
+  min-height:44px;color:#fff;background:#355e52;
+  border:1px solid #9dbbae;border-radius:8px;padding:9px 12px;cursor:pointer
+}
+.board-prefs .board-pref-note{color:#cbdde2;font-size:.76rem;margin:8px 0 0}
+.board-prefs #board-pref-status{font-size:.76rem;color:#d6efdc;margin:6px 0 0}
+@media(max-width:580px){.board-prefs{width:100%;min-width:0}}
