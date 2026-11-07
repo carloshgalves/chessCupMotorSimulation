@@ -205,7 +205,7 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   assert.equal($("human-turn-title").textContent,"Sua vez");
   await $("human-resign").events.click();
   await flush();
-  assert.equal($("human-turn-title").textContent,"Partida completed");
+  assert.equal($("human-turn-title").textContent,"Partida concluída");
   $("arena-mode-duel").events.click();
   assert.equal($("duel-viewer").hidden,false);
   assert.equal($("human-viewer").hidden,true);

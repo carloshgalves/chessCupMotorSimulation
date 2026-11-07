@@ -12,6 +12,22 @@
   const FROM = /^[a-h][1-8]$/;
   const MOVE_DISPLAY_INTERVAL_MS = 650;
   const signed = {white:"Brancas",black:"Pretas"};
+  const humanStatus = status => ({
+    COMPLETED:"Partida concluída", INCOMPLETE:"Partida inconclusiva",
+    FAILED:"Falha na partida", INTERRUPTED:"Partida interrompida",
+    RUNNING:"Em andamento"
+  })[status] || status;
+  const humanTermination = value => ({
+    HumanResignation:"Desistência do jogador",
+    HumanDrawClaim:"Empate reivindicado",
+    TimeForfeit:"Tempo esgotado", CHECKMATE:"Xeque-mate",
+    STALEMATE:"Afogamento", INSUFFICIENT_MATERIAL:"Material insuficiente",
+    THREEFOLD_REPETITION:"Repetição de posição",
+    FIFTY_MOVES:"Regra dos 50 lances", OperatorStop:"Interrupção solicitada",
+    ServerShutdown:"Servidor encerrado", ServerRestart:"Servidor reiniciado",
+    EngineFailure:"Falha do motor", CheckpointMismatch:"Checkpoint divergente",
+    PlyLimit:"Limite de lances", WallTimeLimit:"Limite de execução",
+  })[value] || value || "Sem causa definida";
   const initial = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
   function mode(next) {
@@ -256,12 +272,12 @@
     const yours=ongoing&&g.human_turn&&!pacing;
     el("human-turn-title").textContent=!g?"Pronto para iniciar":
       pacing?"Reproduzindo os lances":
-      !ongoing?"Partida "+g.status.toLowerCase():
+      !ongoing?humanStatus(g.status):
       yours?"Sua vez":"Motor pensando";
     el("human-turn-detail").textContent=!g?
       "Selecione um adversário para jogar.":
       pacing?"O jogo continua no tempo real; o tabuleiro apresenta cada lance em sequência.":
-      !ongoing?"Resultado "+g.result+" · "+(g.termination||g.status):
+      !ongoing?"Resultado "+g.result+" · "+humanTermination(g.termination):
       yours?"Selecione uma peça e sua casa de destino.":
       "O servidor está calculando o próximo lance.";
     const selfMoved=ongoing&&!state.pending;
@@ -272,8 +288,8 @@
     el("human-resume").hidden=g?.status!=="INTERRUPTED";
     el("human-resume").disabled=state.pending;
     el("human-result-details").textContent=g?
-      ("Estado: "+g.status+" · Placar: "+g.result+
-       " · Encerramento: "+(g.termination||"ainda não definido")):
+      (humanStatus(g.status)+" · Placar: "+g.result+
+       " · Encerramento: "+humanTermination(g.termination)):
       "Nenhuma partida iniciada.";
     if(g?.draw_offer)feedback(g.draw_offer);
   }
