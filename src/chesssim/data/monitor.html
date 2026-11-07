@@ -25,19 +25,54 @@
           <label for="board-pref-theme">Cores do tabuleiro
             <select id="board-pref-theme">
               <option value="classic">Clássico</option>
-              <option value="wood">Madeira</option>
-              <option value="slate">Azul-acizentado</option>
-              <option value="light">Tema claro</option>
-              <option value="dark">Tema escuro</option>
+              <option value="wood">Madeira clara</option>
+              <option value="slate">Ardósia</option>
+              <option value="light">Claro</option>
+              <option value="dark">Escuro</option>
               <option value="contrast">Alto contraste</option>
+              <option value="green">Verde</option>
+              <option value="blue">Azul torneio</option>
+              <option value="walnut">Nogueira</option>
+              <option value="marble">Mármore</option>
+              <option value="lavender">Lavanda</option>
+              <option value="terracotta">Terracota</option>
             </select>
           </label>
+          <div id="board-theme-gallery" class="board-theme-gallery" role="group" aria-label="Escolha visual de cores">
+            <button type="button" class="board-theme-chip" data-theme="classic" aria-label="Tema Clássico" aria-pressed="false"><span class="board-chip-preview" aria-hidden="true"></span><span>Clássico</span></button>
+            <button type="button" class="board-theme-chip" data-theme="wood" aria-label="Tema Madeira clara" aria-pressed="false"><span class="board-chip-preview" aria-hidden="true" data-texture="wood"></span><span>Madeira clara</span></button>
+            <button type="button" class="board-theme-chip" data-theme="slate" aria-label="Tema Ardósia" aria-pressed="false"><span class="board-chip-preview" aria-hidden="true"></span><span>Ardósia</span></button>
+            <button type="button" class="board-theme-chip" data-theme="light" aria-label="Tema Claro" aria-pressed="false"><span class="board-chip-preview" aria-hidden="true"></span><span>Claro</span></button>
+            <button type="button" class="board-theme-chip" data-theme="dark" aria-label="Tema Escuro" aria-pressed="false"><span class="board-chip-preview" aria-hidden="true"></span><span>Escuro</span></button>
+            <button type="button" class="board-theme-chip" data-theme="contrast" aria-label="Tema Alto contraste" aria-pressed="false"><span class="board-chip-preview" aria-hidden="true"></span><span>Alto contraste</span></button>
+            <button type="button" class="board-theme-chip" data-theme="green" aria-label="Tema Verde" aria-pressed="false"><span class="board-chip-preview" aria-hidden="true"></span><span>Verde</span></button>
+            <button type="button" class="board-theme-chip" data-theme="blue" aria-label="Tema Azul torneio" aria-pressed="false"><span class="board-chip-preview" aria-hidden="true"></span><span>Azul torneio</span></button>
+            <button type="button" class="board-theme-chip" data-theme="walnut" aria-label="Tema Nogueira" aria-pressed="false"><span class="board-chip-preview" aria-hidden="true" data-texture="wood"></span><span>Nogueira</span></button>
+            <button type="button" class="board-theme-chip" data-theme="marble" aria-label="Tema Mármore" aria-pressed="false"><span class="board-chip-preview" aria-hidden="true"></span><span>Mármore</span></button>
+            <button type="button" class="board-theme-chip" data-theme="lavender" aria-label="Tema Lavanda" aria-pressed="false"><span class="board-chip-preview" aria-hidden="true"></span><span>Lavanda</span></button>
+            <button type="button" class="board-theme-chip" data-theme="terracotta" aria-label="Tema Terracota" aria-pressed="false"><span class="board-chip-preview" aria-hidden="true"></span><span>Terracota</span></button>
+          </div>
           <label for="board-pref-pieces">Desenho das peças
             <select id="board-pref-pieces">
-              <option value="solid">Sólidas (padrão)</option>
-              <option value="outline">Contornos</option>
+              <option value="cburnett">Clássico · Cburnett</option>
+              <option value="merida">Merida</option>
+              <option value="chessnut">Chessnut</option>
+              <option value="fantasy">Fantasy</option>
+              <option value="spatial">Spatial</option>
+              <option value="celtic">Celtic</option>
+              <option value="rhosgfx">RhosGFX</option>
             </select>
           </label>
+          <div id="board-piece-gallery" class="board-piece-gallery" role="group" aria-label="Escolha visual de peças">
+            <button type="button" class="board-piece-chip" data-piece-set="cburnett" title="Colin M. L. Burnett · GPLv2+" aria-label="Peças Clássico · Cburnett. Colin M. L. Burnett · GPLv2+" aria-pressed="false"><img src="/piece-assets/cburnett/wN.svg" alt="" aria-hidden="true" loading="lazy"><span>Clássico · Cburnett</span></button>
+            <button type="button" class="board-piece-chip" data-piece-set="merida" title="Armando Hernandez Marroquin · GPLv2+" aria-label="Peças Merida. Armando Hernandez Marroquin · GPLv2+" aria-pressed="false"><img src="/piece-assets/merida/wN.svg" alt="" aria-hidden="true" loading="lazy"><span>Merida</span></button>
+            <button type="button" class="board-piece-chip" data-piece-set="chessnut" title="Alexis Luengas · Apache 2.0" aria-label="Peças Chessnut. Alexis Luengas · Apache 2.0" aria-pressed="false"><img src="/piece-assets/chessnut/wN.svg" alt="" aria-hidden="true" loading="lazy"><span>Chessnut</span></button>
+            <button type="button" class="board-piece-chip" data-piece-set="fantasy" title="Maurizio Monge · MIT" aria-label="Peças Fantasy. Maurizio Monge · MIT" aria-pressed="false"><img src="/piece-assets/fantasy/wN.svg" alt="" aria-hidden="true" loading="lazy"><span>Fantasy</span></button>
+            <button type="button" class="board-piece-chip" data-piece-set="spatial" title="Maurizio Monge · MIT" aria-label="Peças Spatial. Maurizio Monge · MIT" aria-pressed="false"><img src="/piece-assets/spatial/wN.svg" alt="" aria-hidden="true" loading="lazy"><span>Spatial</span></button>
+            <button type="button" class="board-piece-chip" data-piece-set="celtic" title="Maurizio Monge · MIT" aria-label="Peças Celtic. Maurizio Monge · MIT" aria-pressed="false"><img src="/piece-assets/celtic/wN.svg" alt="" aria-hidden="true" loading="lazy"><span>Celtic</span></button>
+            <button type="button" class="board-piece-chip" data-piece-set="rhosgfx" title="RhosGFX · CC0" aria-label="Peças RhosGFX. RhosGFX · CC0" aria-pressed="false"><img src="/piece-assets/rhosgfx/wN.svg" alt="" aria-hidden="true" loading="lazy"><span>RhosGFX</span></button>
+          </div>
+          <p class="board-pref-note">Arte vetorial livre, arquivada localmente. <a href="https://github.com/lichess-org/lila/blob/104a754b35740129fade423f920ad6de965031dd/COPYING.md" rel="noopener noreferrer" target="_blank">Autores e licenças dos conjuntos</a>. Sem vínculo com Chess.com ou Lichess.</p>
           <label for="board-pref-motion">Destaque ao mudar lance
             <select id="board-pref-motion">
               <option value="off">Sem animação</option>
