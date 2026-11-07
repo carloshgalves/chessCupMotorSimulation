@@ -84,6 +84,14 @@ shared.set(KEY,JSON.stringify({theme:"wood",pieces:"outline",motion:"fast"}));
   assert.equal(app.$("board-pref-motion").value,"fast");
   assert.equal(app.board.paint(board,{fen:INITIAL,last:null},0),true);
   assert.equal(squares(board).length,64);
+  const initialSVGs=new Set(squares(board)
+    .filter(square=>square.children.length>0)
+    .map(square=>square.children[0].children[0].getAttribute("src")));
+  assert.equal(initialSVGs.size,12,"both colors and all six piece types need SVG");
+  for(const side of ["w","b"])for(const role of ["K","Q","R","B","N","P"]){
+    assert(initialSVGs.has("/piece-assets/spatial/"+side+role+".svg"),
+           "missing artwork for "+side+role);
+  }
   const firstRook=squares(board)[0].children[0];
   const firstImage=firstRook.children[0];
   assert.equal(firstImage.getAttribute("src"),"/piece-assets/spatial/bR.svg");
