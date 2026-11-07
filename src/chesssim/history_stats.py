@@ -219,7 +219,8 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
                             target = final if status == "COMPLETED" or (
                                 (root / final).exists() or (root / final).is_symlink()
                             ) else partial
-                            game = _game(_read(root, target, MAX_PGN_BYTES))
+                            pgn_bytes = _read(root, target, MAX_PGN_BYTES)
+                            game = _game(pgn_bytes)
                             white, black = (participants if idx == 1
                                             else participants[::-1])
                             result = meta.get("result") if status == "COMPLETED" else None
@@ -236,6 +237,7 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
                                     else "unclassified"
                                 ),
                                 "engine_strength_config": None,
+                                "evidence_pgn_sha256": sha256(pgn_bytes).hexdigest(),
                             })
                         except (InvalidCatalogue, OSError, ValueError, KeyError, TypeError):
                             coverage["rejected_games"] += 1
@@ -355,6 +357,7 @@ def _tournament_attempt(root: Path, run: Path, state: dict,
             "white": white, "black": black, "status": "COMPLETED",
             "result": result, "origin": "tournament", "recorded_utc": date,
             "time_control": state["preset"],
+            "evidence_pgn_sha256": attempt["pgn_sha256"],
             "engine_strength_config": {
                 "engine_sha256": resources["engine_sha256"],
                 "white_profile_sha256": hashes[white],
