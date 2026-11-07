@@ -414,3 +414,27 @@ def test_corrupt_nonfinite_persisted_clocks_are_rejected(synthetic_uci):
     state_file.write_text(json.dumps(manifest),encoding="utf-8")
     with pytest.raises(ValueError,match="Checkpoint humano"):
         human_game.HumanGame(root,workspace)
+
+
+def test_threefold_draw_is_claimable_not_auto_adjudicated(synthetic_uci):
+    root,workspace=synthetic_uci
+    human=human_game.HumanGame(root,workspace)
+    ident=human.start({**GOOD,"preset":"none"})["id"]
+    try:
+        # Two knight shuffles return to the initial position three times.
+        repeated=("g1f3","g8f6","f3g1","f6g8")*2
+        with human._lock:
+            for uci in repeated:
+                move=chess.Move.from_uci(uci)
+                assert move in human._board.legal_moves
+                human._append_locked(move)
+            assert human._board.can_claim_threefold_repetition()
+            assert human._data["status"]=="RUNNING"
+            assert human._data["result"]=="*"
+        response=human.action({"id":ident,"action":"claim_draw"})
+        assert response["status"]=="COMPLETED"
+        result=human.state()["game"]
+        assert result["result"]=="1/2-1/2"
+        assert result["termination"]=="HumanDrawClaim"
+    finally:
+        human.shutdown()
