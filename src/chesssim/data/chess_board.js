@@ -5,6 +5,7 @@
     K:"♚",Q:"♛",R:"♜",B:"♝",N:"♞",P:"♟",
     k:"♚",q:"♛",r:"♜",b:"♝",n:"♞",p:"♟"
   };
+  const lastPosition = new WeakMap();
   const names = {
     K:"rei branco",Q:"dama branca",R:"torre branca",B:"bispo branco",
     N:"cavalo branco",P:"peão branco",
@@ -40,12 +41,16 @@
       if (container) {
         container.replaceChildren();
         container.setAttribute("aria-label", "Posição do tabuleiro inválida");
+        lastPosition.delete(container);
       }
       return false;
     }
     const last = (Array.isArray(position.last) && position.last.length === 2 &&
                   position.last.every(s=>typeof s==="string" && /^[a-h][1-8]$/.test(s)))
       ? position.last : [];
+    // Only flash when the displayed position actually changes. Repeated GET
+    // polling of the same PGN may repaint the DOM, but must not reanimate.
+    const changed = lastPosition.has(container) && lastPosition.get(container) !== position.fen;
     const fragment = document.createDocumentFragment();
     for (let rank = 0; rank < 8; rank++) {
       for (let file = 0; file < 8; file++) {
@@ -53,7 +58,10 @@
         const piece = rows[rank][file];
         const square = document.createElement("div");
         square.className = "square " + ((rank + file) % 2 ? "dark" : "light");
-        if (last.includes(squareName)) square.classList.add("last");
+        if (last.includes(squareName)) {
+          square.classList.add("last");
+          if (changed) square.classList.add("fresh-last");
+        }
         if (piece) square.classList.add(piece === piece.toUpperCase() ?
                                       "whitepiece" : "blackpiece");
         if (rank === 7) {
@@ -72,6 +80,7 @@
       }
     }
     container.replaceChildren(fragment);
+    lastPosition.set(container, position.fen);
     container.setAttribute("aria-label", "Tabuleiro após " + ply + " meios-lances");
     return true;
   }
