@@ -22,9 +22,14 @@ class InvalidSelection(ValueError):
 
 
 SCHEMA = "chesssim-live-board-v1"
+_PIECE_PATH = re.compile(
+    r"/piece-assets/(cburnett|merida|chessnut|fantasy|spatial|celtic|rhosgfx)/"
+    r"([wb][KQRBNP])\.svg\Z"
+)
 _ASSETS = {"/": ("monitor.html", "text/html; charset=utf-8"),
            "/app.js": ("monitor.js", "text/javascript; charset=utf-8"),
            "/chess-board.js": ("chess_board.js", "text/javascript; charset=utf-8"),
+           "/board-preferences.js": ("board_preferences.js", "text/javascript; charset=utf-8"),
            "/chess-board.css": ("chess_board.css", "text/css; charset=utf-8"),
            "/app.css": ("monitor.css", "text/css; charset=utf-8")}
 
@@ -255,17 +260,19 @@ def make_handler(directory: Path):
         server_version = "ChessSimMonitor/1"
         sys_version = ""
 
-        def _reply(self, status: int, content: bytes, kind: str) -> None:
+        def _reply(self, status: int, content: bytes, kind: str,
+                   cache_control: str = "no-store") -> None:
             self.send_response(status)
             self.send_header("Content-Type", kind)
             self.send_header("Content-Length", str(len(content)))
-            self.send_header("Cache-Control", "no-store")
+            self.send_header("Cache-Control", cache_control)
             self.send_header("Referrer-Policy", "no-referrer")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("X-Frame-Options", "DENY")
             self.send_header("Content-Security-Policy",
                              "default-src 'none'; script-src 'self'; style-src 'self'; "
-                             "connect-src 'self'; base-uri 'none'; frame-ancestors 'none'")
+                             "connect-src 'self'; img-src 'self'; object-src 'none'; "
+                             "base-uri 'none'; frame-ancestors 'none'")
             self.end_headers()
             self.wfile.write(content)
 
@@ -293,6 +300,23 @@ def make_handler(directory: Path):
                     self._reply(503, payload, "application/json; charset=utf-8")
                     return
                 self._reply(200, payload, "application/json; charset=utf-8")
+                return
+            if route.startswith("/piece-assets/"):
+                match = _PIECE_PATH.fullmatch(route)
+                if not match or url.query:
+                    self._reply(404, b"Not Found", "text/plain; charset=utf-8")
+                    return
+                name, piece = match.groups()
+                try:
+                    svg = files("chesssim.data").joinpath(
+                        "pieces", name, piece + ".svg").read_bytes()
+                except (FileNotFoundError, OSError):
+                    self._reply(404, b"Not Found", "text/plain; charset=utf-8")
+                    return
+                # SHA-pinned, public artwork can be cached privately by browsers.
+                # Sessions, PGNs, tokens and HTML still use no-store.
+                self._reply(200, svg, "image/svg+xml",
+                            "private, max-age=86400, immutable")
                 return
             if route in _ASSETS:
                 filename, kind = _ASSETS[route]

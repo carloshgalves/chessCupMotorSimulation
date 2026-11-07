@@ -499,6 +499,9 @@ def make_arena_handler(manager: ArenaManager, token: str):
                         self._reply(200, photo, "image/jpeg")
                 except (ValueError, OSError, KeyError):
                     self._reply(404, b"Not Found", "text/plain; charset=utf-8")
+            elif url.path.startswith("/piece-assets/"):
+                # Source-pinned SVG files, allowlisted by the read-only handler.
+                super().do_GET()
             elif url.path == "/api/arena":
                 try:
                     self._json(200, manager.status())
@@ -511,13 +514,14 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 except (ValueError, OSError, FileNotFoundError,
                         KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "Estado do duelo indisponível"})
-            elif url.path in ("/", "/arena.js", "/arena.css", "/history.js", "/history_replay.js", "/history_stats.js", "/history.css", "/chess-board.js", "/chess-board.css", "/viewer"):
+            elif url.path in ("/", "/arena.js", "/arena.css", "/history.js", "/history_replay.js", "/history_stats.js", "/history.css", "/chess-board.js", "/chess-board.css", "/board-preferences.js", "/viewer"):
                 asset = {"/": "arena.html", "/arena.js": "arena.js",
                          "/arena.css": "arena.css", "/history.js": "history.js",
                          "/history_replay.js": "history_replay.js",
                          "/history_stats.js": "history_stats.js",
                          "/history.css": "history.css",
                          "/chess-board.js": "chess_board.js",
+                         "/board-preferences.js": "board_preferences.js",
                          "/chess-board.css": "chess_board.css", "/viewer": "monitor.html"}[url.path]
                 kind = ("text/html; charset=utf-8" if asset.endswith(".html") else
                         "text/javascript; charset=utf-8" if asset.endswith(".js") else
@@ -534,7 +538,8 @@ def make_arena_handler(manager: ArenaManager, token: str):
                     self.send_header("X-Frame-Options", "SAMEORIGIN")
                     self.send_header("Content-Security-Policy",
                                      "default-src 'none'; script-src 'self'; style-src 'self'; "
-                                     "connect-src 'self'; base-uri 'none'; frame-ancestors 'self'")
+                                     "connect-src 'self'; img-src 'self'; object-src 'none'; "
+                                     "base-uri 'none'; frame-ancestors 'self'")
                     self.end_headers()
                     self.wfile.write(body)
                 elif url.path == "/":
