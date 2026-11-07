@@ -46,11 +46,21 @@ const index=[
  {slug:"carlsen",name:"Magnus Carlsen",era_label:"2013–2023",
   short_bio:"Fui campeão mundial.",review_status:"pending",portrait:null}
 ];
+// Exercise the complete 64-player carousel contract without external data.
+for(let i=4; i<=64; i++){
+  index.push({slug:"fixture-"+i,name:"Jogador de teste "+i,
+              era_label:"Amostra",short_bio:"Texto de teste",
+              review_status:"pending",portrait:null});
+}
 const profile={
  ...index[0],
- highlights:[{year:2007,text:"Conquistei a coroa mundial.",source_ids:["a"]}],
+ highlights:[{year:2007,text:"Conquistei a coroa mundial.",source_ids:["a","unsafe"]}],
  timeline:[{year:2007,title:"Título",summary:"Conquistei a coroa mundial."}],
- sources:[{id:"a",title:"Histórico",publisher:"FIDE",url:"https://fide.com/example"}],
+ // A malicious source string must remain plain text even if a bad API
+ // response reaches the browser. It cannot turn into a credentialed link.
+ sources:[{id:"a",title:"Histórico",publisher:"FIDE",url:"https://fide.com/example"},
+          {id:"unsafe",title:"Credenciais em URL",publisher:"Inseguro",
+           url:"https://name:password@evil.example.test/page"}],
 };
 const fetch=async(url,options)=>{
   calls.push({url,options});
@@ -94,7 +104,7 @@ function descendants(node) {
   assert.equal($("tab-history").attributes["aria-pressed"],"true");
   assert.equal(calls.length,1);
   assert.equal(calls[0].url,"/api/history/players");
-  assert.equal($("history-position").textContent.includes("1 de 3"),true);
+  assert.equal($("history-position").textContent.includes("1 de 64"),true);
   assert.equal($("history-selected").textContent.includes("Viswanathan Anand"),true);
   const nodes=descendants($("history-selected"));
   assert(nodes.some(x=>x.tagName==="IMG"&&x.src==="/api/history/portraits/anand.jpg"));
@@ -103,9 +113,31 @@ function descendants(node) {
   assert(nodes.some(x=>x.textContent.includes("Recortada para 480")));
   assert.equal($("history-right").children[0].tagName,"FIGURE");
   assert.equal($("history-right").children[1].tagName,"BUTTON");
+  // Links and editable controls must not trigger carousel arrow navigation.
+  const linkArrow={target:{id:"",tagName:"A"},key:"ArrowRight",
+                   preventDefault(){this.prevented=true}};
+  $("history-view").events.keydown(linkArrow);
+  assert.equal(linkArrow.prevented,undefined);
+  assert($("history-position").textContent.includes("1 de 64"));
+  const modified={target:{id:"history-next",tagName:"BUTTON"},
+                  key:"ArrowRight",ctrlKey:true,
+                  preventDefault(){this.prevented=true}};
+  $("history-view").events.keydown(modified);
+  assert.equal(modified.prevented,undefined);
+  assert($("history-position").textContent.includes("1 de 64"));
+  // A side selector is rerendered; focus must land on a stable CTA.
+  $("history-right").children[1].events.click();
+  assert($("history-position").textContent.includes("2 de 64"));
+  assert.equal($("history-open").focused,true);
+  $("history-prev").events.click();
+  // Wrap around all 64 players, never a truncated subset.
+  $("history-prev").events.click();
+  assert($("history-position").textContent.includes("64 de 64"));
+  $("history-next").events.click();
+  assert($("history-position").textContent.includes("1 de 64"));
 
   $("history-next").events.click();
-  assert.equal($("history-position").textContent.includes("2 de 3"),true);
+  assert.equal($("history-position").textContent.includes("2 de 64"),true);
   assert($("history-selected").textContent.includes("Em curadoria"));
   assert($("history-selected").textContent.includes("Retrato não disponível"));
   $("history-prev").events.click();
@@ -115,6 +147,11 @@ function descendants(node) {
   assert.equal($("history-roster").hidden,true);
   assert.equal($("history-profile-name").textContent,"Viswanathan Anand");
   assert(descendants($("history-profile-body")).some(x=>x.tagName==="A"&&x.href===profile.sources[0].url));
+  assert(!descendants($("history-profile-body")).some(x=>
+    x.tagName==="A"&&String(x.href).includes("evil.example")),
+    "credentialed URLs must not become anchors");
+  assert(descendants($("history-profile-body")).some(x=>
+    x.tagName==="SPAN"&&x.textContent.includes("Credenciais em URL")));
   assert(descendants($("history-profile-body")).some(x=>x.tagName==="A"&&x.href===photo.license_url));
   await tick();
   assert.equal($("history-games-section").hidden,false);
@@ -122,7 +159,7 @@ function descendants(node) {
   assert.equal($("history-stats-section").hidden,false);
   assert($("history-stats-empty").textContent.includes("Sem partidas"));
   $("history-back").events.click();
-  assert.equal($("history-position").textContent.includes("1 de 3"),true);
+  assert.equal($("history-position").textContent.includes("1 de 64"),true);
   $("tab-arena").events.click();
   assert.equal($("arena-view").hidden,false);
   assert.equal($("history-view").hidden,true);
