@@ -183,44 +183,53 @@ function displayMoves(game) {
     game.states.slice(1, visiblePly + 1).map(x => x.san).join("|");
   if (signature !== moveSignature) {
     const priorScroll = list.scrollTop;
-    const rows = [];
-    const controls = [];
-    for (let ply = 1; ply <= visiblePly; ply += 2) {
-      const number = Math.ceil(ply / 2);
-      const row = document.createElement("li");
-      row.className = "move-row";
-      for (const side of [0, 1]) {
-        const cellPly = ply + side;
-        if (cellPly <= visiblePly) {
-          const cell = document.createElement("button");
-          cell.type = "button";
-          cell.className = "move-cell";
-          cell.textContent = number + (side ? "... " : ". ") +
-                             game.states[cellPly].san;
-          cell.setAttribute("aria-label",
-            "Lance " + number + (side ? " das pretas: " : " das brancas: ") +
-            game.states[cellPly].san);
-          cell.addEventListener("click", () => stepTo(cellPly));
-          row.appendChild(cell);
-          controls.push({ply:cellPly,cell});
-        } else {
-          const empty = document.createElement("span");
-          empty.className = "move-empty";
-          empty.textContent = "—";
-          row.appendChild(empty);
-        }
-      }
-      rows.push(row);
+    const knownPly = moveCells.length;
+    const knownPrefix = game.id + "|" + knownPly + "|" +
+      game.states.slice(1, knownPly + 1).map(x => x.san).join("|");
+    const appendOnly = moveSignature === knownPrefix && visiblePly >= knownPly;
+    if (!appendOnly || (knownPly === 0 && visiblePly > 0)) {
+      // A different game, rewind or corrected PGN needs a fresh notation.
+      // A new move in the same game never recreates previous move buttons.
+      list.replaceChildren();
+      if (!appendOnly) moveCells = [];
     }
-    if (!rows.length) {
+    const makeCell = ply => {
+      const number = Math.ceil(ply / 2);
+      const black = ply % 2 === 0;
+      const cell = document.createElement("button");
+      cell.type = "button";
+      cell.className = "move-cell";
+      cell.textContent = number + (black ? "... " : ". ") + game.states[ply].san;
+      cell.setAttribute("aria-label",
+        "Lance " + number + (black ? " das pretas: " : " das brancas: ") +
+        game.states[ply].san);
+      cell.addEventListener("click", () => stepTo(ply));
+      return cell;
+    };
+    for (let ply = moveCells.length + 1; ply <= visiblePly; ply++) {
+      const cell = makeCell(ply);
+      if (ply % 2) {
+        const row = document.createElement("li");
+        row.className = "move-row";
+        const empty = document.createElement("span");
+        empty.className = "move-empty";
+        empty.textContent = "—";
+        row.append(cell, empty);
+        list.appendChild(row);
+      } else {
+        const row = list.children[list.children.length - 1];
+        // Preserve the white button; replace only black's placeholder.
+        row.replaceChildren(row.children[0], cell);
+      }
+      moveCells.push({ply,cell});
+    }
+    if (visiblePly === 0 && !list.children.length) {
       const placeholder = document.createElement("li");
       placeholder.className = "move-empty";
       placeholder.textContent = "Aguardando lances";
-      rows.push(placeholder);
+      list.appendChild(placeholder);
     }
-    list.replaceChildren(...rows);
     moveSignature = signature;
-    moveCells = controls;
     if (!followMoves || pinned) list.scrollTop = priorScroll;
   }
   for (const item of moveCells) {

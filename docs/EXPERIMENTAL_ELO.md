@@ -94,3 +94,5 @@ A lista de lances do tabuleiro ao vivo possui **histórico completo**, com linha
 - **Revisão manual/retorno ao vivo:** controle de reprodução e seleção histórica preservados; voltar ao vivo permite salto intencional à posição mais recente.
 - **Ressalva:** um espectador que abre o monitor no meio de um confronto vê inicialmente a posição atual; o ritmo de apresentação se aplica aos lances **recebidos depois dessa entrada**. A intervenção não altera dados das partidas, PGN, duração real do jogo ou Elo.
 - **Gate:** testes de fluxo do navegador simulam rajadas, intervalo mínimo, ordem de SAN, transição para a segunda partida, pausa e retorno; validação de CSS impede regressão para linhas elásticas. Homologação Chrome/Debian com partida real continua pendente.
+
+A lista utiliza inserção incremental de elementos: a jogada das brancas cria uma linha com uma segunda célula reservada; a resposta das pretas preenche essa célula sem recriar o botão branco ou as linhas anteriores. A linha conserva os mesmos 34 px desde o primeiro lance.

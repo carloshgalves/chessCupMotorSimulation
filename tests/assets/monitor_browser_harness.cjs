@@ -258,11 +258,23 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal(paced.elements.get("moves").children.length,1);
   assert.equal(paced.elements.get("moves").children[0].children[1].textContent,
                "1... e5");
+  const savedRow=paced.elements.get("moves").children[0];
+  const savedWhite=savedRow.children[0];
   advance(650);
+  assert.strictEqual(paced.elements.get("moves").children[0],savedRow,
+                     "adding a new white move must retain all previous rows");
+  assert.strictEqual(paced.elements.get("moves").children[0].children[0],savedWhite,
+                     "incremental replay must preserve existing move nodes");
   assert.equal(ply(),3);
   assert.equal(paced.elements.get("headline").textContent,"2. Nf3");
   assert.equal(paced.elements.get("moves").children.length,2);
+  const secondRow=paced.elements.get("moves").children[1];
+  const secondWhite=secondRow.children[0];
   advance(650);
+  assert.strictEqual(paced.elements.get("moves").children[1],secondRow,
+                     "black move must fill the existing half-empty row");
+  assert.strictEqual(secondRow.children[0],secondWhite,
+                     "black move must not repaint white's button");
   assert.equal(ply(),4);
   assert.equal(paced.elements.get("headline").textContent,"2... Nc6");
   assert.equal(paced.elements.get("moves").children[1].children[1].textContent,
