@@ -102,3 +102,20 @@
 @media(max-width:650px){
   .history-carousel>button{min-width:44px;min-height:44px}
 }
+
+/* Read-only experimental competition rating; no historical or UCI strength claim. */
+.competition-rating-panel,.history-rating-profile{
+  border:1px solid #607e86;border-radius:12px;padding:13px;margin:15px 0;
+  background:#182b33;color:#edf4f5
+}
+.competition-rating-panel summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
+.competition-rating-panel summary:focus-visible,
+.competition-rating-table-wrap:focus-visible{outline:3px solid #ffe39f;outline-offset:2px}
+.competition-rating-table-wrap{max-width:100%;max-height:420px;overflow:auto}
+.competition-rating-table{width:100%;border-collapse:collapse;font-size:.8rem;white-space:nowrap}
+.competition-rating-table th,.competition-rating-table td{
+  border-bottom:1px solid #536e76;padding:8px 10px;text-align:left
+}
+.competition-rating-table th{position:sticky;top:0;background:#213b44;z-index:1}
+.history-rating-profile h3{font-size:1.05rem;margin:4px 0}
+.history-rating-profile p{overflow-wrap:anywhere}

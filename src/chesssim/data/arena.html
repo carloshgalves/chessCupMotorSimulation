@@ -12,6 +12,7 @@
   <script src="/board-preferences.js" defer></script>
   <script src="/history_replay.js" defer></script>
   <script src="/history_stats.js" defer></script>
+  <script src="/competition_rating.js" defer></script>
   <script src="/history.js" defer></script>
 </head>
 <body>
@@ -201,7 +202,7 @@
         </section>
         <section class="panel">
           <span class="overline">SOBRE OS PERFIS</span>
-          <p class="note">Os períodos mostrados são metadados históricos ou hipóteses de pesquisa. Um perfil Rodent IV instalado <strong>não</strong> significa personalidade historicamente validada. Essa arena não atribui Elo nem precisão.</p>
+          <p class="note">Os períodos mostrados são metadados históricos ou hipóteses de pesquisa. Um perfil Rodent IV instalado <strong>não</strong> significa personalidade historicamente validada. Esta Arena não fixa força UCI a partir de Elo; o rating competitivo experimental é calculado separadamente a partir de partidas verificadas.</p>
           <p class="note">Token de execução fornecido no endereço local do terminal. Não compartilhe a URL completa.</p>
         </section>
       </section>
@@ -224,6 +225,18 @@
         <p>Carreiras documentadas. Narrativas originais em primeira pessoa, sem simular declarações reais.</p>
       </header>
       <p id="history-status" role="status" aria-live="polite">Abra História para carregar o catálogo local.</p>
+      <details id="competition-rating-leaderboard" class="competition-rating-panel">
+        <summary>Elo ChessSimulation · ranking experimental local</summary>
+        <p class="history-stats-disclaimer">Todos começam em 2500. Não é rating FIDE, força UCI, precisão Stockfish nem fidelidade histórica.</p>
+        <p id="competition-rating-status" role="status" aria-live="polite"></p>
+        <div class="competition-rating-table-wrap" tabindex="0" role="region" aria-label="Ranking experimental local">
+          <table class="competition-rating-table">
+            <thead><tr><th>Pos.</th><th>Jogador</th><th>Elo</th><th>Condição</th><th>Jogos</th><th>V/E/D</th><th>Pontos 3/1/0</th><th>Precisão</th><th>Faixa de score</th></tr></thead>
+            <tbody id="competition-rating-rows"></tbody>
+          </table>
+        </div>
+        <p id="competition-rating-meta" class="history-stats-scope"></p>
+      </details>
       <div id="history-roster" hidden>
         <div id="history-carousel" class="history-carousel" aria-label="Escolher enxadrista">
           <button id="history-prev" type="button" aria-label="Enxadrista anterior">←</button>
@@ -272,6 +285,12 @@
               </div>
             </div>
           </section>
+        </section>
+        <section id="history-rating-profile" class="history-rating-profile" aria-label="Rating experimental do simulador" hidden>
+          <h3>Elo ChessSimulation · experimental</h3>
+          <p id="history-rating-status" role="status" aria-live="polite"></p>
+          <p id="history-rating-value"></p>
+          <p id="history-rating-proof" class="history-stats-disclaimer"></p>
         </section>
         <section id="history-stats-section" class="history-stats-section" aria-labelledby="history-stats-heading" hidden>
           <h3 id="history-stats-heading">No simulador</h3>
