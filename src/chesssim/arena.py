@@ -499,6 +499,9 @@ def make_arena_handler(manager: ArenaManager, token: str):
                         self._reply(200, photo, "image/jpeg")
                 except (ValueError, OSError, KeyError):
                     self._reply(404, b"Not Found", "text/plain; charset=utf-8")
+            elif url.path.startswith("/piece-assets/"):
+                # Source-pinned SVG files, allowlisted by the read-only handler.
+                super().do_GET()
             elif url.path == "/api/arena":
                 try:
                     self._json(200, manager.status())
@@ -535,7 +538,8 @@ def make_arena_handler(manager: ArenaManager, token: str):
                     self.send_header("X-Frame-Options", "SAMEORIGIN")
                     self.send_header("Content-Security-Policy",
                                      "default-src 'none'; script-src 'self'; style-src 'self'; "
-                                     "connect-src 'self'; base-uri 'none'; frame-ancestors 'self'")
+                                     "connect-src 'self'; img-src 'self'; object-src 'none'; "
+                                     "base-uri 'none'; frame-ancestors 'self'")
                     self.end_headers()
                     self.wfile.write(body)
                 elif url.path == "/":
