@@ -20,6 +20,7 @@ from .catalog import load_roster, find_player
 from .history_profiles import list_history_players, load_history_profile
 from .history_games import InvalidCatalogue, UnknownGame, list_games, replay
 from .history_stats import player_stats
+from .competition_rating import rating_report
 from .live_board import SCHEMA, make_handler, snapshot
 from .matches import _atomic_text, official_book_hashes, play_duel, validate
 from .peak_windows import CLOCK_PRESETS, PROVISIONAL_PEAKS
@@ -424,7 +425,32 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 self._reply(403, b"Forbidden", "text/plain; charset=utf-8")
                 return
             url = urlsplit(self.path)
-            if url.path == "/api/history/players" and not url.query:
+            if url.path == "/api/competition/ratings":
+                if url.query:
+                    self._json(404, {"error": "Rota desconhecida"})
+                    return
+                try:
+                    self._json(200, rating_report(manager.workspace))
+                except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+                    self._json(503, {"error": "Elo experimental indisponível"})
+            elif url.path.startswith("/api/history/players/") and url.path.endswith("/rating"):
+                slug = url.path.removeprefix("/api/history/players/").removesuffix("/rating")
+                if url.query or not slug or "/" in slug:
+                    self._json(404, {"error": "Jogador não encontrado"})
+                    return
+                if slug not in {p.slug for p in load_roster()}:
+                    self._json(404, {"error": "Jogador não encontrado"})
+                    return
+                try:
+                    report = rating_report(manager.workspace)
+                    row = next(x for x in report["ratings"] if x["slug"] == slug)
+                    report["ratings"] = [row]
+                    report["slug"] = slug
+                    self._json(200, report)
+                except (OSError, ValueError, KeyError, TypeError, StopIteration,
+                        json.JSONDecodeError):
+                    self._json(503, {"error": "Elo experimental indisponível"})
+            elif url.path == "/api/history/players" and not url.query:
                 try:
                     self._json(200, list_history_players())
                 except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
