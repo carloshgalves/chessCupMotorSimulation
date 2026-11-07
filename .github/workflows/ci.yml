@@ -85,7 +85,7 @@ jobs:
                       raw = archive.read(piece_path)
                       assert len(raw) == record["size"]
                       sha = hashlib.sha1(b"blob " + str(len(raw)).encode() +
-                                         b"\\0" + raw, usedforsecurity=False).hexdigest()
+                                         b"\0" + raw, usedforsecurity=False).hexdigest()
                       assert sha == record["sha"], "Tampered SVG: " + piece_path
                       piece_files.add(piece_path)
               assert len(piece_files) == 84
