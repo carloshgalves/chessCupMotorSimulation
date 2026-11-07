@@ -260,11 +260,12 @@ def make_handler(directory: Path):
         server_version = "ChessSimMonitor/1"
         sys_version = ""
 
-        def _reply(self, status: int, content: bytes, kind: str) -> None:
+        def _reply(self, status: int, content: bytes, kind: str,
+                   cache_control: str = "no-store") -> None:
             self.send_response(status)
             self.send_header("Content-Type", kind)
             self.send_header("Content-Length", str(len(content)))
-            self.send_header("Cache-Control", "no-store")
+            self.send_header("Cache-Control", cache_control)
             self.send_header("Referrer-Policy", "no-referrer")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("X-Frame-Options", "DENY")
@@ -312,7 +313,10 @@ def make_handler(directory: Path):
                 except (FileNotFoundError, OSError):
                     self._reply(404, b"Not Found", "text/plain; charset=utf-8")
                     return
-                self._reply(200, svg, "image/svg+xml")
+                # SHA-pinned, public artwork can be cached privately by browsers.
+                # Sessions, PGNs, tokens and HTML still use no-store.
+                self._reply(200, svg, "image/svg+xml",
+                            "private, max-age=86400, immutable")
                 return
             if route in _ASSETS:
                 filename, kind = _ASSETS[route]
