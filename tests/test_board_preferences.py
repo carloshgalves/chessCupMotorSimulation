@@ -67,7 +67,9 @@ def test_preferences_are_local_to_shared_8x8_board_and_reduced_motion():
     assert 'image.addEventListener("error"' in renderer
     assert ".board[data-piece-kind=\"svg\"] .piece-glyph[data-art-ready=\"1\"]" in css
     assert ".square .piece-glyph .piece-svg" in css
-    assert "lastPosition = new WeakMap()" in renderer
+    assert "boardCache = new WeakMap()" in renderer
+    assert "old.fen === position.fen" in renderer
+    assert "square.replaceChildren()" in renderer
     assert "position.fen" in renderer
     assert "container.replaceChildren(fragment)" in renderer
     assert "file = 0; file < 8" in renderer

@@ -132,6 +132,8 @@ shared.set(KEY,JSON.stringify({theme:"wood",pieces:"outline",motion:"fast"}));
   assert.equal(hist.getAttribute("data-board-theme"),"contrast");
   assert.equal(app.board.paint(board,{fen:E4,last:["e2","e4"]},1),true);
   assert.equal(flashes(board).length,2,"new move gets 2 highlight squares");
+  assert.strictEqual(squares(board)[0].children[0],firstRook,
+                     "unchanged rook artwork must survive another PGN position");
   assert.equal(app.board.paint(board,{fen:E4,last:["e2","e4"]},1),true);
   assert.equal(flashes(board).length,0,"repeated polling does not animate");
   assert.equal(squares(board).length,64);
