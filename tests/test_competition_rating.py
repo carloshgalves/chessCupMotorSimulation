@@ -147,6 +147,8 @@ def test_real_verified_arena_and_tournament_and_original_files_unchanged(tmp_pat
     assert set(e["source"] for e in report["rating_ledger"]) == {"arena","tournament"}
     assert any(e["engine_strength_config"] is not None for e in report["rating_ledger"])
     assert any(e["engine_strength_config"] is None for e in report["rating_ledger"])
+    assert all(len(e["evidence_pgn_sha256"]) == 64
+               for e in report["rating_ledger"])
     assert all(not e["id"].startswith("historical:") for e in report["rating_ledger"])
     assert before=={p.relative_to(tmp_path):p.read_bytes() for p in files}
 
@@ -177,7 +179,14 @@ def test_explicit_export_is_bytewise_idempotent_and_requires_replace(tmp_path):
     updated=export_rating_ledger(tmp_path,out,replace=True)
     assert updated["changed"] is True
     assert len(json.loads(out.read_text())["rating_ledger"]) == 2
-    assert "snapshot_checksum" in json.loads(out.read_text())
+    exported = json.loads(out.read_text())
+    assert "snapshot_checksum" in exported
+    assert verify_rating_ledger(exported)
+    exported["ratings"][0]["display_rating"] = "9000.0"
+    assert not verify_rating_ledger(exported)
+    protected=tmp_path/"tournament.json"
+    with pytest.raises(ValueError, match="arquivos de partida"):
+        export_rating_ledger(tmp_path,protected,replace=True)
     wrong=tmp_path/"missing"/"ledger.json"
     with pytest.raises(ValueError):
         export_rating_ledger(tmp_path,wrong)
@@ -185,6 +194,28 @@ def test_explicit_export_is_bytewise_idempotent_and_requires_replace(tmp_path):
     symlink.symlink_to(out)
     with pytest.raises(ValueError):
         export_rating_ledger(tmp_path,symlink)
+
+
+def test_rehashed_modified_result_still_fails_rating_transition_verification():
+    snap = build_rating_ledger([event(1),event(2,"0-1")])
+    assert verify_rating_ledger(snap)
+    forged = json.loads(json.dumps(snap))
+    forged["rating_ledger"][0]["white_after"] = "9999"
+    from hashlib import sha256
+    from chesssim.competition_rating import _canonical
+    first=forged["rating_ledger"][0]
+    first["checksum"]=sha256((first["previous_checksum"]+"\n").encode() +
+                             _canonical({k:v for k,v in first.items()
+                                         if k!="checksum"})).hexdigest()
+    second=forged["rating_ledger"][1]
+    second["previous_checksum"]=first["checksum"]
+    second["checksum"]=sha256((second["previous_checksum"]+"\n").encode() +
+                              _canonical({k:v for k,v in second.items()
+                                          if k!="checksum"})).hexdigest()
+    forged["ledger_checksum"]=second["checksum"]
+    assert not verify_rating_ledger(forged), (
+        "Recomputing a checksum cannot conceal impossible Elo transitions"
+    )
 
 
 def test_elo_api_local_get_only_and_no_token_leak(tmp_path):
