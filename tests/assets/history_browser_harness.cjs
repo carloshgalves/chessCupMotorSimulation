@@ -187,5 +187,38 @@ function descendants(node) {
   assert.equal($("history-profile").hidden,true);
   assert.equal($("history-roster").hidden,false);
   assert($("history-selected").textContent.includes("Capablanca"));
+
+  // A delayed roster GET cannot render after the user returns to the Arena.
+  const separate=new Map();
+  const get=id=>{
+    if(!separate.has(id)) separate.set(id,new Node("div",id));
+    return separate.get(id);
+  };
+  get("history-roster").hidden=true;
+  let releaseRoster;
+  const isolatedDoc={
+    getElementById:get,
+    createElement:tag=>new Node(tag)
+  };
+  const isolatedWindow={
+    ChessSimHistoryGames:{suspend(){},resume(){},enter(){},leave(){}},
+    ChessSimHistoryStats:{suspend(){},resume(){},enter(){},leave(){}}
+  };
+  const deferredFetch=url=>new Promise(resolve=>{
+    assert.equal(url,"/api/history/players");
+    releaseRoster=()=>resolve({ok:true,json:async()=>({players:index})});
+  });
+  const isolated=vm.createContext({
+    document:isolatedDoc,fetch:deferredFetch,console,Array,String,Math,
+    window:isolatedWindow,URL,Set
+  });
+  vm.runInContext(source,isolated,{filename:"history-delayed.js",timeout:3000});
+  get("tab-history").events.click();
+  assert.equal(typeof releaseRoster,"function");
+  get("tab-arena").events.click();
+  releaseRoster();
+  await tick();
+  assert.equal(get("history-roster").hidden,true);
+  assert.equal(get("history-selected").children.length,0);
   console.log("History navigation, 64 players, focus, stale profile, safe links and photo credits: PASS");
 })().catch(err=>{console.error(err);process.exitCode=1;});
