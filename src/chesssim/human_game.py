@@ -10,6 +10,7 @@ from pathlib import Path
 from threading import RLock, Thread
 from time import monotonic
 import json
+import math
 import re
 import secrets
 import uuid
@@ -135,15 +136,31 @@ class HumanGame:
             raise ValueError("Estado de jogo humano inválido")
         config = data.get("config")
         clocks = data.get("clocks")
+        configured_clock = config.get("clock") if isinstance(config, dict) else None
+        hashes = data.get("hashes")
         if (not isinstance(config, dict) or
                 config.get("color") not in ("white", "black") or
                 config.get("opponent") not in {p.slug for p in load_roster()} or
+                config.get("opening_mode") not in ("none", "internal") or
+                config.get("preset") not in (*CLOCKS, "custom") or
                 type(config.get("depth")) is not int or
                 not 1 <= config["depth"] <= 16 or
-                not isinstance(data.get("hashes"), dict) or
+                not isinstance(hashes, dict) or
+                any(not isinstance(hashes.get(k), str) or
+                    not re.fullmatch(r"[0-9a-f]{64}", hashes[k])
+                    for k in ("engine", "profile")) or
+                ((configured_clock is None) != (clocks is None)) or
+                (configured_clock is not None and
+                 (not isinstance(configured_clock, list) or
+                  len(configured_clock) != 2 or
+                  type(configured_clock[0]) is not int or
+                  type(configured_clock[1]) is not int or
+                  not 60 <= configured_clock[0] <= 14400 or
+                  not 0 <= configured_clock[1] <= 120)) or
                 (clocks is not None and
                  (not isinstance(clocks, list) or len(clocks) != 2 or
-                  any(type(c) not in (int, float) or c < 0 or c > 86400
+                  any(type(c) not in (int, float) or
+                      not math.isfinite(c) or c < 0 or c > 86400
                       for c in clocks)))):
             raise ValueError("Checkpoint humano contém valores inválidos")
         pgn = path.parent / "game.pgn"
