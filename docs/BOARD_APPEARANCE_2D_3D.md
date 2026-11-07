@@ -79,6 +79,35 @@ acessibilidade continuam em português.
 - Fontes completas de licenças e atribuições: `NOTICE.md`.
   A GPL do código não suprime termos específicos da arte.
 
+### Correção de ergonomia após a segunda homologação
+
+A validação identificou um problema de composição: manter as **12 amostras
+abertas ao lado das 7 amostras de peças** aumentava muito a altura do
+cabeçalho, empurrando o tabuleiro para fora da janela. Além disso, as
+prévias 2×2 tinham altura fixa de 38 px, distorcendo a proporção dos
+quadrados. As correções da mesma PR #76 são:
+
+- O controle inicial **Aparência** é compacto. Ao abri-lo, apresenta apenas
+  três botões: **Tabuleiro**, **Peças** e **Animação**, inicialmente sem
+  galeria expandida.
+- Ao clicar em uma categoria, apenas ela abre; a anterior fecha.
+  Repetir o clique recolhe a categoria. `aria-expanded`,
+  `aria-controls` e `hidden` são sincronizados; a tecla Escape
+  encerra o popover e devolve o foco ao resumo.
+- O menu ampliado fica flutuando sobre a área de controles à esquerda,
+  com altura limitada e rolagem interna. **Não altera o tamanho do
+  cabeçalho**, mantendo a Arena e seu tabuleiro visíveis à direita.
+- Cada amostra de tabuleiro é um **quadrado 1:1**, com a paleta em quatro
+  casas quadradas e o nome abaixo. Em telas estreitas, a galeria se
+  adapta de quatro para três colunas.
+- As preferências gravadas no navegador não são alteradas ao
+  abrir, recolher ou trocar categorias. Arena, replay histórico e
+  visualizador independente continuam compartilhando a aplicação visual.
+
+Revalidar visualmente a posição do popover na Arena e no `watch`,
+o alinhamento das 12 amostras e as transições entre as três categorias
+em diferentes larguras; esse aspecto **não é certificado pelo DOM simulado**.
+
 ### Gates e limitações
 
 A revisão de código exige: 84 SVGs íntegros no wheel; endpoint GET
