@@ -12,6 +12,10 @@ let attemptSignature = null;
 let bracketSignature = null;
 let fetching = false;
 let requestVersion = 0;
+let moveSignature = "";
+let moveCells = [];
+let followMoves = true;
+let automaticMoveScroll = false;
 
 function readSelection() {
   const params = new URLSearchParams(window.location.hash.slice(1));
@@ -68,6 +72,7 @@ function freezeView() {
 function resumeView() {
   pinned = null;
   activeKey = "";
+  followMoves = true;
   const game = currentGame();
   cursor = game ? game.states.length - 1 : 0;
   render();
@@ -80,6 +85,7 @@ function goLive() {
   resumeView();
 }
 function stepTo(ply) {
+  followMoves = false;
   freezeView();
   const game = currentGame();
   if (!game) return;
@@ -119,19 +125,60 @@ function paintClocks() {
 }
 function displayMoves(game) {
   const list = $("moves");
-  list.replaceChildren();
-  const start = Math.max(1, cursor - 19);
-  for (let n = start; n <= cursor; n++) {
-    const item = document.createElement("li");
-    item.textContent = Math.ceil(n / 2) + (n % 2 ? ". " : "... ") +
-                       game.states[n].san;
-    if (n === cursor) item.classList.add("selected");
-    list.appendChild(item);
+  const signature = game.id + "|" + game.states.length + "|" +
+    game.states.slice(1).map(x => x.san).join("|");
+  if (signature !== moveSignature) {
+    const priorScroll = list.scrollTop;
+    const rows = [];
+    const controls = [];
+    for (let ply = 1; ply < game.states.length; ply += 2) {
+      const number = Math.ceil(ply / 2);
+      const row = document.createElement("li");
+      row.className = "move-row";
+      for (const side of [0, 1]) {
+        const cellPly = ply + side;
+        if (cellPly < game.states.length) {
+          const cell = document.createElement("button");
+          cell.type = "button";
+          cell.className = "move-cell";
+          cell.textContent = number + (side ? "... " : ". ") +
+                             game.states[cellPly].san;
+          cell.setAttribute("aria-label",
+            "Lance " + number + (side ? " das pretas: " : " das brancas: ") +
+            game.states[cellPly].san);
+          cell.addEventListener("click", () => stepTo(cellPly));
+          row.appendChild(cell);
+          controls.push({ply:cellPly,cell});
+        } else {
+          const empty = document.createElement("span");
+          empty.className = "move-empty";
+          empty.textContent = "—";
+          row.appendChild(empty);
+        }
+      }
+      rows.push(row);
+    }
+    if (!rows.length) {
+      const placeholder = document.createElement("li");
+      placeholder.className = "move-empty";
+      placeholder.textContent = "Aguardando lances";
+      rows.push(placeholder);
+    }
+    list.replaceChildren(...rows);
+    moveSignature = signature;
+    moveCells = controls;
+    if (!followMoves || pinned) list.scrollTop = priorScroll;
   }
-  if (cursor === 0) {
-    const placeholder = document.createElement("li");
-    placeholder.textContent = "Aguardando lances";
-    list.appendChild(placeholder);
+  for (const item of moveCells) {
+    const selected = item.ply === cursor;
+    item.cell.classList.toggle("selected", selected);
+    item.cell.setAttribute("aria-current", selected ? "step" : "false");
+  }
+  // Follow new turns only in live mode and only while the user is at the end.
+  if (followMoves && !pinned && Number.isFinite(list.scrollHeight)) {
+    automaticMoveScroll = true;
+    list.scrollTop = list.scrollHeight;
+    automaticMoveScroll = false;
   }
 }
 function updateSelector() {
@@ -300,7 +347,11 @@ function render() {
     "Última atualização: " + new Date(game.updated_at * 1000).toLocaleTimeString("pt-BR") :
     "Sem atualizações de partida";
   if (game) displayMoves(game);
-  else $("moves").replaceChildren();
+  else {
+    $("moves").replaceChildren();
+    moveSignature = "";
+    moveCells = [];
+  }
 }
 async function poll() {
   if (fetching) return;
@@ -331,6 +382,13 @@ async function poll() {
     if (revision !== requestVersion) poll();
   }
 }
+$("moves").addEventListener("scroll", () => {
+  if (automaticMoveScroll) return;
+  const list = $("moves");
+  if (Number.isFinite(list.scrollHeight) && Number.isFinite(list.clientHeight)) {
+    followMoves = list.scrollHeight - list.scrollTop - list.clientHeight <= 24;
+  }
+});
 $("games").addEventListener("change", () => {
   const chosen = availableGames().find(g => g.id === $("games").value);
   if (chosen) {
