@@ -37,7 +37,8 @@ class Element {
 }
 const map=new Map();
 const defaults={
-  mode:"depth",depth:"6",movetime:"0.5",preset:"official",
+  mode:"depth",depth:"6",movetime:"0.5",preset:"none",
+  "custom-minutes":"30","custom-increment":"5",
   opening:"none",seed:"2029","max-plies":"400",
   reverse:true
 };
@@ -98,9 +99,27 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal($("black").value,"fischer");
   $("swap").events.click();
 
-  $("mode").value="preset";
+  // Depth and a selected clock must coexist without hiding either field.
+  $("depth").value="16";
+  $("preset").value="bullet";
+  $("preset").events.change();
+  assert.equal($("mode").disabled,false);
+  assert.equal($("depth-wrap").hidden,false);
+  const bullet=vm.runInContext("configFromForm()",ctx);
+  assert.equal(bullet.mode,"depth");
+  assert.equal(bullet.depth,16);
+  assert.equal(bullet.preset,"bullet");
+  $("preset").value="custom";
+  $("preset").events.change();
+  assert.equal($("custom-clock-wrap").hidden,false);
+  const custom=vm.runInContext("configFromForm()",ctx);
+  assert.equal(custom.mode,"depth");
+  assert.equal(custom.depth,16);
+  assert.equal(custom.initial_seconds,1800);
+  assert.equal(custom.increment_seconds,5);
   $("preset").value="official";
-  $("mode").events.change();
+  $("preset").events.change();
+  assert.equal($("mode").disabled,true);
   assert.equal($("opening").value,"internal");
   assert.equal($("opening").disabled,true);
   assert.equal($("reverse").checked,true);

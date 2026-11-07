@@ -435,3 +435,20 @@ def test_rating_http_pools_and_invalid_query_fail_closed(tmp_path):
         server.server_close()
         server.arena_manager.shutdown()
         thread.join(timeout=5)
+
+
+def test_arena_depth_plus_clock_is_scored_in_timed_pool(tmp_path):
+    folder,duel=session(tmp_path,7,results=("1-0",))
+    manifest=folder/"session.json"
+    data=json.loads(manifest.read_text())
+    data["config"].update({"mode":"depth","depth":16,"preset":"bullet"})
+    manifest.write_text(json.dumps(data))
+    pgn_file=duel/"jogo_1.pgn"
+    with pgn_file.open(encoding="utf-8") as stream:
+        game=chess.pgn.read_game(stream)
+    game.headers["TimeControl"]="60+0"
+    pgn_file.write_text(str(game)+"\n",encoding="utf-8")
+    bullet=rating_report(tmp_path,modality="bullet")
+    assert bullet["counts"]["scored_games"]==1
+    assert rating_report(tmp_path,modality="unclassified")["counts"]["scored_games"]==0
+    assert rating_report(tmp_path,modality="rapid")["counts"]["scored_games"]==0

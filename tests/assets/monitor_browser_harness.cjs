@@ -194,5 +194,46 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal(squares().length,64);
   assert(squares().every(n=>n.children.length===0),
          "even a completely empty display retains 64 squares");
+  // A long game renders every numbered row, with one white/black pair each.
+  const long=browser();
+  await flush();
+  const allStates=Array.from({length:77},(_,ply)=>({
+    fen:ply%2?E4:FEN,
+    san:ply===0?"Início":(ply%2?"Nf3":"Nc6"),
+    last:ply?["g1","f3"]:null,turn:ply%2?"black":"white",clocks:[60,60]
+  }));
+  vm.runInContext("feed.duel.games[0].states=" + JSON.stringify(allStates) +
+                  "; cursor=76; render()",long.context);
+  const log=long.elements.get("moves");
+  assert.equal(log.children.length,38,"never truncate to the last 20 half-moves");
+  assert.equal(log.children[0].children[0].textContent,"1. Nf3");
+  assert.equal(log.children[0].children[1].textContent,"1... Nc6");
+  assert.equal(log.children[1].children[0].textContent,"2. Nf3");
+  assert.equal(log.children[1].children[1].textContent,"2... Nc6");
+  assert.equal(log.children.at(-1).children[1].textContent,"38... Nc6");
+  const originalMoveRow=log.children[0];
+  vm.runInContext("render()",long.context);
+  assert.strictEqual(log.children[0],originalMoveRow,
+                     "identical polls must preserve the move list DOM");
+  assert.equal(log.children.length,38);
+  log.scrollHeight=900;
+  log.clientHeight=210;
+  log.scrollTop=0;
+  log.events.scroll();
+  vm.runInContext("feed.duel.games[0].states.push(" +
+                  JSON.stringify({fen:E4,san:"h4",last:["h2","h4"],
+                                  turn:"black",clocks:[60,60]}) +
+                  "); cursor=77; render()",long.context);
+  assert.equal(log.scrollTop,0,"manual scroll must not jump back to newest move");
+  assert.equal(log.children.length,39);
+  long.elements.get("live").events.click();
+  assert.equal(log.scrollTop,900,"return to live resumes automatic following");
+  // Board nodes are stable across identical positions/PGN polls.
+  const board=long.elements.get("board");
+  const before=descendants(board).filter(n=>n.className.includes("square"));
+  vm.runInContext("render()",long.context);
+  const after=descendants(board).filter(n=>n.className.includes("square"));
+  assert.strictEqual(after[0],before[0],"no full board replacement on same FEN");
+  assert.strictEqual(after[63],before[63]);
   console.log("Live bracket browser smoke: PASS");
 })().catch(error=>{console.error(error);process.exitCode=1;});

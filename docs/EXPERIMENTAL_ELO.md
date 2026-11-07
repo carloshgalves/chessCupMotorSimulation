@@ -34,7 +34,7 @@ A classificação considera **o tempo inicial por jogador mais 60 incrementos**,
 
 Exemplos: 1+0 bullet, 3+2 blitz, 10+0 blitz, **10+2 rapid**, 30+5 rapid, 30+20 rapid, 45+0 rapid, **30+30 classical**, 45+30 classical. O preset antigo `official` é 10+2 (rapid), não uma alegação de Elo FIDE. Exceções de torneios com rating FIDE em 2026 não mudam esta classificação local: https://www.fide.com/fide-updates-rating-regulations-to-include-faster-time-controls-for-major-events/.
 
-A Arena oferece relógios personalizados (1–240 minutos iniciais, incremento 0–120 segundos). Os valores persistidos na sessão devem coincidir com `TimeControl` no PGN validado, antes de pontuar. Torneios existentes usam seus `clock` explícitos; no futuro, presets customizados em torneios também serão classificados pelos números e não pelo rótulo. Modos depth e movetime não possuem relógio equivalente, portanto permanecem `unclassified`.
+A Arena exibe **Busca do motor** e **Relógio da partida** separadamente. A profundidade máxima de busca pode coexistir com relógios de partidas (ex.: depth 16 + 1+0), ambos enviados à UCI. Tempo fixo por lance (movetime) não é combinado com relógio para evitar semântica ambígua. O protocolo experimental `official` preserva os limites originais e rejeita qualquer profundidade extra. A Arena oferece relógios personalizados (1–240 minutos iniciais, incremento 0–120 segundos). Os valores persistidos na sessão devem coincidir com `TimeControl` no PGN validado, antes de pontuar. Torneios existentes usam seus `clock` explícitos; no futuro, presets customizados em torneios também serão classificados pelos números e não pelo rótulo. Modos depth e movetime não possuem relógio equivalente, portanto permanecem `unclassified`.
 
 Os contratos foram versionados para `chesssim-competition-elo-v2` e `chesssim-rating-ledger-v2`, distinguindo-os dos snapshots globais anteriores. Qualquer migração de dados antigos deve ser explícita.
 
@@ -81,3 +81,7 @@ A matriz automatizada cobre aritmética analítica, empates, offset, soma das at
 A homologação Chrome/Debian precisa comprovar ranking vazio e preenchido de **cada pool**, edição de relógio personalizado, páginas de jogador, responsividade, teclado, e migração de sessões antigas sem relógio. Os testes opcionais externos do motor não devem ser declarados aprovados se estiverem em skip.
 
 Referência de contexto, não incorporação integral da FIDE: https://handbook.fide.com/chapter/B022024.
+
+## Homologação visual do replay (PR #77)
+
+A lista de lances do tabuleiro ao vivo possui **histórico completo**, com linha numerada `1. Brancas | 1... Pretas`, botões clicáveis e rolagem vertical independente. Segue o lance mais recente enquanto o usuário está no final; quando o usuário navega ou rola para cima, a lista preserva a posição. **Voltar ao vivo** reativa o acompanhamento. O tabuleiro mantém os 64 quadrados e SVGs carregados, atualizando só as casas cujo conteúdo mudou e preservando a interface entre polls idênticos.

@@ -613,3 +613,47 @@ def test_custom_clock_validation_and_runner_receives_exact_values(rodent_stub):
         assert finished["config"]["preset"] == "custom"
         assert finished["config"]["initial_seconds"] == 1800
     assert seen == [(1800,20)]
+
+
+@pytest.mark.parametrize(("config","depth","clock"), [
+    ({"preset":"bullet","depth":16},16,"bullet"),
+    ({"preset":"blitz","depth":8},8,"blitz"),
+    ({"preset":"custom","depth":16,"initial_seconds":1800,
+      "increment_seconds":20},16,"custom"),
+])
+def test_depth_cap_and_clock_are_independent(config,depth,clock):
+    normalized=arena.normalize_config({**GOOD,**config})
+    assert normalized["mode"] == "depth"
+    assert normalized["depth"] == depth
+    assert normalized["preset"] == clock
+    assert normalized["movetime"] is None
+
+
+def test_official_protocol_remains_depth_free_and_movetime_clock_is_rejected():
+    with pytest.raises(arena.BadLaunch, match="official"):
+        arena.normalize_config({**GOOD,"preset":"official",
+                                "opening_mode":"internal","max_plies":600})
+    with pytest.raises(arena.BadLaunch, match="Tempo fixo"):
+        arena.normalize_config({
+            **{k:v for k,v in GOOD.items() if k != "depth"},
+            "mode":"movetime","movetime":0.5,"preset":"blitz",
+        })
+
+
+def test_depth_plus_bullet_is_forwarded_to_duel_without_losing_clock(rodent_stub):
+    observed=[]
+    def capture(root,destination,white,black,**kwargs):
+        observed.append(kwargs.copy())
+        return fake_duel(root,destination,white,black,**kwargs)
+    with arena_server(rodent_stub,runner=capture) as (server,base):
+        config={**GOOD,"preset":"bullet","depth":16}
+        with post(base,"/api/arena/launch",config,server.arena_token) as response:
+            assert response.status == 202
+        finished=wait_for(server.arena_manager,"COMPLETED")
+        assert finished["config"]["mode"]=="depth"
+        assert finished["config"]["depth"]==16
+        assert finished["config"]["preset"]=="bullet"
+    assert len(observed)==1
+    assert observed[0]["depth"]==16
+    assert observed[0]["clock"]==(60,0)
+    assert observed[0]["movetime"] is None
