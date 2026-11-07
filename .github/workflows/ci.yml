@@ -67,6 +67,35 @@ jobs:
               assert "chesssim/data/roster.json" in names, "Packaged roster is missing"
               import hashlib
               import json
+              pieces_root = "chesssim/data/pieces/"
+              source_pieces = json.loads(archive.read(pieces_root + "SOURCES.json"))
+              assert source_pieces["upstream_commit"] == "104a754b35740129fade423f920ad6de965031dd"
+              assert len(source_pieces["sets"]) == 7
+              piece_files = set()
+              for piece_set in source_pieces['sets']:
+                  slug = piece_set["id"]
+                  assert slug in {"cburnett", "merida", "chessnut", "fantasy",
+                                  "spatial", "celtic", "rhosgfx"}
+                  assert set(piece_set["files"]) == {
+                      color + kind + ".svg" for color in "wb" for kind in "KQRBNP"
+                  }
+                  for filename, record in piece_set["files"].items():
+                      piece_path = pieces_root + slug + "/" + filename
+                      assert piece_path in names, "Missing SVG: " + piece_path
+                      raw = archive.read(piece_path)
+                      assert len(raw) == record["size"]
+                      sha = hashlib.sha1(b"blob " + str(len(raw)).encode() +
+                                         b"\\0" + raw, usedforsecurity=False).hexdigest()
+                      assert sha == record["sha"], "Tampered SVG: " + piece_path
+                      piece_files.add(piece_path)
+              assert len(piece_files) == 84
+              assert piece_files == {
+                  name for name in names
+                  if name.startswith(pieces_root) and name.endswith(".svg")
+              }, "Orphan or missing SVGs in wheel"
+              for license_file in ("GPL-2.0.txt", "Apache-2.0.txt",
+                                   "MIT.txt", "CC0-1.0.txt"):
+                  assert pieces_root + "licenses/" + license_file in names
               root = "chesssim/data/history/"
               history_packs = sorted(name for name in names
                                      if name.startswith(root) and name.endswith(".json")
