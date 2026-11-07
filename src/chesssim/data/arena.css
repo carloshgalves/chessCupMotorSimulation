@@ -137,3 +137,11 @@ button.primary{background:#4d856f;border-color:#78b69a;color:#fff;flex:1}
   .human-custom-clock{grid-template-columns:1fr}
   .human-player-strip strong{min-width:76px;font-size:1rem}
 }
+
+.human-board-column{position:relative}
+.human-promotion{position:absolute;z-index:5;left:5%;right:5%;top:42%;
+  display:grid;grid-template-columns:repeat(2,1fr);gap:6px;
+  background:#10242ef5;border:2px solid #91cba8;border-radius:10px;
+  box-shadow:0 7px 35px #000a;padding:13px}
+.human-promotion strong{grid-column:1/-1;text-align:center}
+.human-promotion button{min-height:44px}

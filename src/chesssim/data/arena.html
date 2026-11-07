@@ -297,7 +297,14 @@
                 <span id="human-white-name">Você</span>
                 <strong id="human-white-clock">—:—</strong>
               </div>
-              <p id="human-board-hint" class="note">Selecione uma peça e depois a casa de destino. Use também Enter ou Espaço nas casas com o foco.</p>
+              <div id="human-promotion" class="human-promotion" hidden role="group" aria-label="Escolher peça de promoção">
+                <strong>Promover peão</strong>
+                <button type="button" data-promote="q">♕ Dama</button>
+                <button type="button" data-promote="r">♖ Torre</button>
+                <button type="button" data-promote="b">♗ Bispo</button>
+                <button type="button" data-promote="n">♘ Cavalo</button>
+              </div>
+              <p id="human-board-hint" class="note">Selecione uma peça e depois a casa de destino. Use Enter ou Espaço nas casas; promoções pedem uma escolha.</p>
             </section>
             <section class="human-sidebar">
               <div class="human-subtabs" role="group" aria-label="Detalhes da partida">

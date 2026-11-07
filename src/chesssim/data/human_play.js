@@ -7,8 +7,10 @@
   const state = {game:null, selected:null, side:"white", pending:false,
                  ready:false, mode:"duel", snapshotAt:0, boardId:null,
                  flipped:false, movesId:null, renderedPly:0,
-                 tab:"moves", updateSeq:0};
+                 tab:"moves", updateSeq:0, displayPly:0,
+                 displayedAt:0,displayGameId:null,promotion:null};
   const FROM = /^[a-h][1-8]$/;
+  const MOVE_DISPLAY_INTERVAL_MS = 650;
   const signed = {white:"Brancas",black:"Pretas"};
   const initial = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -110,6 +112,7 @@
       if(!state.ready)fillOpponents(arena.players);
       state.game=human.game;
       state.snapshotAt=Date.now();
+      syncPlayback();
       const active=state.game?.status==="RUNNING";
       el("human-launch").disabled=!state.ready||!capability||
         arena.busy||active;
@@ -129,14 +132,15 @@
   }
   function drawMoves(g) {
     const list=el("human-moves");
-    if(!g||g.id!==state.movesId||g.moves.length<state.renderedPly) {
+    const visiblePly=g?Math.min(state.displayPly,g.moves.length):0;
+    if(!g||g.id!==state.movesId||visiblePly<state.renderedPly) {
       list.replaceChildren();
       state.movesId=g?.id||null;
       state.renderedPly=0;
     }
     if(!g)return;
     const nearBottom=list.scrollHeight-list.scrollTop-list.clientHeight<44;
-    for(let ply=state.renderedPly+1;ply<=g.moves.length;ply++) {
+    for(let ply=state.renderedPly+1;ply<=visiblePly;ply++) {
       const move=g.moves[ply-1];
       const cell=document.createElement("span");
       cell.textContent=move.san;
@@ -154,7 +158,7 @@
         row.replaceChild(cell,row.lastElementChild);
       }
     }
-    state.renderedPly=g.moves.length;
+    state.renderedPly=visiblePly;
     if(nearBottom)list.scrollTop=list.scrollHeight;
   }
   function info(g) {
@@ -188,14 +192,16 @@
     return String.fromCharCode(97+canonical%8)+String(8-Math.floor(canonical/8));
   }
   function selectedMoves(g) {
-    if(!g||!g.human_turn||!state.selected)return [];
+    if(!g||!g.human_turn||state.displayPly!==g.revision||
+       !state.selected)return [];
     return g.legal_moves.filter(m=>m.startsWith(state.selected));
   }
   function decorate(g) {
     const allowed=selectedMoves(g);
     for(const square of board.children) {
       const name=squareName(square);
-      const isActive=!!g&&g.human_turn&&!state.pending;
+      const isActive=!!g&&g.human_turn&&!state.pending&&
+                     state.displayPly===g.revision;
       square.tabIndex=isActive?0:-1;
       square.setAttribute("role","button");
       const selectable=isActive&&g.legal_moves.some(m=>m.startsWith(name));
@@ -225,7 +231,11 @@
       state.flipped=false;
       state.selected=null;
     }
-    window.ChessSimBoard.paint(board,{fen:g.fen,last:g.last},g.revision);
+    const shown=g.states?.[Math.min(state.displayPly,g.states.length-1)];
+    if(!shown)return;
+    window.ChessSimBoard.paint(board,{
+      fen:shown.fen,last:shown.last
+    },state.displayPly);
     orientation(g);
     decorate(g);
   }
@@ -237,12 +247,15 @@
     el("human-white-name").textContent=g?.white||"Você";
     clocks();drawMoves(g);info(g);
     const ongoing=g?.status==="RUNNING";
-    const yours=ongoing&&g.human_turn;
+    const pacing=!!g&&state.displayPly<g.revision;
+    const yours=ongoing&&g.human_turn&&!pacing;
     el("human-turn-title").textContent=!g?"Pronto para iniciar":
+      pacing?"Reproduzindo os lances":
       !ongoing?"Partida "+g.status.toLowerCase():
       yours?"Sua vez":"Motor pensando";
     el("human-turn-detail").textContent=!g?
       "Selecione um adversário para jogar.":
+      pacing?"O jogo continua no tempo real; o tabuleiro apresenta cada lance em sequência.":
       !ongoing?"Resultado "+g.result+" · "+(g.termination||g.status):
       yours?"Selecione uma peça e sua casa de destino.":
       "O servidor está calculando o próximo lance.";
@@ -258,6 +271,27 @@
        " · Encerramento: "+(g.termination||"ainda não definido")):
       "Nenhuma partida iniciada.";
     if(g?.draw_offer)feedback(g.draw_offer);
+  }
+  function syncPlayback() {
+    const g=state.game;
+    if(!g){state.displayGameId=null;state.displayPly=0;return;}
+    if(state.displayGameId!==g.id) {
+      state.displayGameId=g.id;
+      // On reload enter at the current position; subsequent bursts are paced.
+      state.displayPly=g.revision;
+      state.displayedAt=Date.now();
+    } else {
+      state.displayPly=Math.min(state.displayPly,g.revision);
+    }
+  }
+  function advancePlayback() {
+    const g=state.game;
+    if(!g||state.displayPly>=g.revision)return;
+    const now=Date.now();
+    if(now-state.displayedAt<MOVE_DISPLAY_INTERVAL_MS)return;
+    state.displayPly++;
+    state.displayedAt=now;
+    render();
   }
   async function command(path,data) {
     if(state.pending)return;
@@ -280,11 +314,12 @@
     if(!r.ok)throw new Error("Falha ao atualizar a partida");
     const data=await r.json();
     state.game=data.game;state.snapshotAt=Date.now();
+    syncPlayback();
     render();
   }
   async function applyMove(uci) {
     const g=state.game;
-    if(!g||!g.human_turn)return;
+    if(!g||!g.human_turn||state.displayPly!==g.revision)return;
     state.selected=null;
     await command("/api/arena/human/move",{
       id:g.id,revision:g.revision,uci
@@ -292,7 +327,8 @@
   }
   async function clickSquare(square) {
     const g=state.game;
-    if(!g?.human_turn||state.pending)return;
+    if(!g?.human_turn||state.pending||
+       state.displayPly!==g.revision||state.promotion)return;
     const name=squareName(square);
     if(!name||!FROM.test(name))return;
     if(state.selected) {
@@ -301,18 +337,33 @@
         await applyMove(candidates[0]);return;
       }
       if(candidates.length>1) {
-        const raw=window.prompt("Promoção: escolha D (dama), T (torre), B (bispo) ou C (cavalo).","D");
-        if(raw===null)return;
-        const promo=({D:"q",T:"r",B:"b",C:"n"})[raw.trim().toUpperCase()];
-        if(promo&&candidates.includes(state.selected+name+promo)) {
-          await applyMove(state.selected+name+promo);
-        } else feedback("Peça de promoção inválida.",true);
+        state.promotion={from:state.selected,to:name,candidates};
+        el("human-promotion").hidden=false;
+        el("human-promotion").querySelector("button")?.focus();
+        return;
+      }
         return;
       }
     }
     state.selected=g.legal_moves.some(m=>m.startsWith(name))?name:null;
     decorate(g);
   }
+  const promo=el("human-promotion");
+  for(const button of promo.querySelectorAll("[data-promote]")) {
+    button.addEventListener("click",async()=>{
+      const choice=state.promotion;
+      if(!choice)return;
+      const uci=choice.from+choice.to+button.dataset.promote;
+      state.promotion=null;promo.hidden=true;
+      if(choice.candidates.includes(uci))await applyMove(uci);
+      else feedback("Promoção inválida nesta posição.",true);
+    });
+  }
+  promo.addEventListener("keydown",event=>{
+    if(event.key==="Escape"){
+      state.promotion=null;promo.hidden=true;board.focus();
+    }
+  });
   el("human-board").addEventListener("click",e=>{
     const square=e.target.closest(".square");
     if(square&&board.contains(square))clickSquare(square);
@@ -365,5 +416,6 @@
   setTab("moves");
   refresh();
   setInterval(refresh,1100);
+  setInterval(advancePlayback,100);
   setInterval(clocks,250);
 })();
