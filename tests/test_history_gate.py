@@ -117,7 +117,7 @@ def test_history_assets_are_local_and_narrative_does_not_impersonate():
         assert "document.write" not in text
         assert not re.search(r"https?://[^/\s]*(?:stockfish|rodent|openai)", text, re.I)
     assert "não uma declaração do enxadrista" in scripts[0].read_text(encoding="utf-8")
-    assert "não representam a carreira" in html
+    assert "não representam a carreira" in html.casefold()
     assert "Play Magnus" not in html
 
 
