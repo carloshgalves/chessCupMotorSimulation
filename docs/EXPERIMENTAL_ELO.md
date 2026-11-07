@@ -85,3 +85,12 @@ Referência de contexto, não incorporação integral da FIDE: https://handbook.
 ## Homologação visual do replay (PR #77)
 
 A lista de lances do tabuleiro ao vivo possui **histórico completo**, com linha numerada `1. Brancas | 1... Pretas`, botões clicáveis e rolagem vertical independente. Segue o lance mais recente enquanto o usuário está no final; quando o usuário navega ou rola para cima, a lista preserva a posição. **Voltar ao vivo** reativa o acompanhamento. O tabuleiro mantém os 64 quadrados e SVGs carregados, atualizando só as casas cujo conteúdo mudou e preservando a interface entre polls idênticos.
+
+
+### Correção de UX após gravação em Debian — 07/11/2026
+
+- **Altura das linhas da notação:** o grid da lista tem linhas fixas de 34 px (`grid-auto-rows`, `align-content: start`). Os primeiros movimentos não crescem para preencher um painel vazio, nem encolhem quando novos lances aparecem.
+- **Cadência do espectador:** o motor e os relógios continuam em velocidade real. O visualizador guarda os meios-lances entregues pelo PGN e os exibe em ordem, um a cada **650 ms**; consultas de 1,2 s que entregam vários lances não podem mais saltar diretamente ao final. A notação avança junto com o tabuleiro. Quando há atraso visual, o status o informa e os relógios refletem a posição exibida, não uma medição artificial do tempo do motor.
+- **Revisão manual/retorno ao vivo:** controle de reprodução e seleção histórica preservados; voltar ao vivo permite salto intencional à posição mais recente.
+- **Ressalva:** um espectador que abre o monitor no meio de um confronto vê inicialmente a posição atual; o ritmo de apresentação se aplica aos lances **recebidos depois dessa entrada**. A intervenção não altera dados das partidas, PGN, duração real do jogo ou Elo.
+- **Gate:** testes de fluxo do navegador simulam rajadas, intervalo mínimo, ordem de SAN, transição para a segunda partida, pausa e retorno; validação de CSS impede regressão para linhas elásticas. Homologação Chrome/Debian com partida real continua pendente.

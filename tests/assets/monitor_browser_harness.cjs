@@ -235,5 +235,56 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   const after=descendants(board).filter(n=>n.className.includes("square"));
   assert.strictEqual(after[0],before[0],"no full board replacement on same FEN");
   assert.strictEqual(after[63],before[63]);
+  // A single backend snapshot may contain many fast engine moves. Every ply
+  // must be shown in order, with a presentation-only minimum interval.
+  const paced=browser();
+  await flush();
+  const initialPly=Number(vm.runInContext("cursor",paced.context));
+  assert.equal(initialPly,1);
+  const burst=[
+    {fen:FEN,san:"e5",last:["e7","e5"],turn:"white",clocks:[598,598]},
+    {fen:E4,san:"Nf3",last:["g1","f3"],turn:"black",clocks:[597,598]},
+    {fen:FEN,san:"Nc6",last:["b8","c6"],turn:"white",clocks:[597,597]}
+  ];
+  vm.runInContext("feed.duel.games[0].states.push(..."+JSON.stringify(burst)+")",paced.context);
+  const ply=()=>Number(vm.runInContext("cursor",paced.context));
+  const advance=delay=>vm.runInContext(
+    "advanceLivePlayback(lastPresentedAt + "+delay+")",paced.context);
+  advance(649);
+  assert.equal(ply(),1,"no premove before display interval");
+  advance(650);
+  assert.equal(ply(),2,"only one half-move per presentation interval");
+  assert.equal(paced.elements.get("headline").textContent,"1... e5");
+  assert.equal(paced.elements.get("moves").children.length,1);
+  assert.equal(paced.elements.get("moves").children[0].children[1].textContent,
+               "1... e5");
+  advance(650);
+  assert.equal(ply(),3);
+  assert.equal(paced.elements.get("headline").textContent,"2. Nf3");
+  assert.equal(paced.elements.get("moves").children.length,2);
+  advance(650);
+  assert.equal(ply(),4);
+  assert.equal(paced.elements.get("headline").textContent,"2... Nc6");
+  assert.equal(paced.elements.get("moves").children[1].children[1].textContent,
+               "2... Nc6");
+  advance(650);
+  assert.equal(ply(),4,"never fabricate new positions");
+
+  const nextGame={...game("next","Mikhail Tal","Bobby Fischer"),
+                  states:[{...states[0]},{...states[1]}]};
+  vm.runInContext("feed.duel.games.push("+JSON.stringify(nextGame)+")",paced.context);
+  advance(650);
+  assert.equal(ply(),0,"second game starts from initial position");
+  assert.equal(paced.elements.get("headline").textContent,"Posição inicial");
+  advance(650);
+  assert.equal(ply(),1,"second game's initial move also gets its own tick");
+  paced.elements.get("pause").events.click();
+  assert.equal(paced.elements.get("pause").attributes["aria-pressed"],"true");
+  const frozen=ply();
+  advance(650);
+  assert.equal(ply(),frozen,"pausing review disables pacing");
+  paced.elements.get("live").events.click();
+  assert.equal(paced.elements.get("pause").attributes["aria-pressed"],"false");
+
   console.log("Live bracket browser smoke: PASS");
 })().catch(error=>{console.error(error);process.exitCode=1;});

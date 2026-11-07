@@ -517,3 +517,18 @@ def test_bracket_and_selection_use_same_manifest_read(four_player_cup, monkeypat
     report = live_board.snapshot(run)
     assert report["tournament"]["participants"] == 4
     assert len(calls) == 1
+
+
+def test_live_notation_rows_do_not_stretch_as_more_moves_arrive():
+    """Regression from Debian video: new rows must not shrink earlier rows."""
+    css = (Path(__file__).resolve().parents[1] / "src" / "chesssim" /
+           "data" / "monitor.css").read_text(encoding="utf-8")
+    js = (Path(__file__).resolve().parents[1] / "src" / "chesssim" /
+          "data" / "monitor.js").read_text(encoding="utf-8")
+    assert "grid-auto-rows:34px;align-content:start" in css
+    assert "#moves .move-row" in css and "height:34px" in css
+    assert "overflow-y:scroll" in css
+    assert "const LIVE_MOVE_INTERVAL_MS = 650" in js
+    assert "setInterval(advanceLivePlayback, 100)" in js
+    assert "cursor += 1;" in js
+    assert "cursor = game ? game.states.length - 1 : 0;" in js  # explicit resume only
