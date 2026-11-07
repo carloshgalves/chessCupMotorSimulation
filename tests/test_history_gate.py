@@ -5,7 +5,6 @@ from collections import Counter
 from hashlib import sha256
 from importlib.resources import files
 from pathlib import Path
-import json
 import re
 import threading
 from urllib.error import HTTPError
