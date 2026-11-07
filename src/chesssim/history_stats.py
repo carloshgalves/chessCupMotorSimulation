@@ -413,7 +413,7 @@ def _tournament_games(root: Path, names: dict[str, str], slug: str,
             if (not isinstance(participants, list) or
                     any(x not in names for x in participants)):
                 raise InvalidCatalogue("Participantes desconhecidos")
-            if slug not in participants:
+            if slug is not None and slug not in participants:
                 continue
             run_id = run.as_posix()
             tournaments.add(run_id)
