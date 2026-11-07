@@ -103,14 +103,16 @@ shared.set(KEY,JSON.stringify({theme:"wood",pieces:"outline",motion:"fast"}));
   assert.equal(squares(board).length,64);
   assert.equal(app.prefs.set("motion","normal"),true);
   assert.equal(board.getAttribute("data-board-motion"),"normal");
+  const currentRook=squares(board)[0].children[0];
+  const currentImage=currentRook.children[0];
   assert.equal(app.prefs.set("pieces","chessnut"),true);
   assert.equal(hist.getAttribute("data-piece-style"),"chessnut");
-  assert.equal(firstImage.getAttribute("src"),"/piece-assets/chessnut/bR.svg");
-  assert.equal(firstRook.getAttribute("data-art-ready"),"0");
-  firstImage.events.load();
-  assert.equal(firstRook.getAttribute("data-art-ready"),"1");
-  firstImage.events.error();
-  assert.equal(firstRook.getAttribute("data-art-ready"),"0",
+  assert.equal(currentImage.getAttribute("src"),"/piece-assets/chessnut/bR.svg");
+  assert.equal(currentRook.getAttribute("data-art-ready"),"0");
+  currentImage.events.load();
+  assert.equal(currentRook.getAttribute("data-art-ready"),"1");
+  currentImage.events.error();
+  assert.equal(currentRook.getAttribute("data-art-ready"),"0",
                "failed SVG must reveal Unicode fallback");
   assert.equal(app.prefs.set("pieces","outline"),false);
   assert.equal(app.prefs.set("theme","url(javascript:alert(1))"),false);
