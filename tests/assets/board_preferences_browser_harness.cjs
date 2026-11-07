@@ -28,7 +28,7 @@ const E4="rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
 const source=fs.readFileSync(process.argv[2],"utf8");
 const renderer=fs.readFileSync(process.argv[3],"utf8");
 const KEY="chesssim.board-presentation.v1";
-const names=["board","history-replay-board","board-pref-theme",
+const names=["board","history-replay-board","board-prefs","board-pref-theme",
              "board-pref-pieces","board-pref-motion",
              "board-pref-reset","board-pref-status"];
 const shared=new Map();
@@ -51,7 +51,7 @@ function browser(options={}) {
     }
   };
   const window={
-    localStorage,
+    localStorage,parent:options.embedded?{}:null,
     addEventListener:(type,handler)=>{listeners[type]=handler;}
   };
   const context=vm.createContext({document,window,console,Math,Number,String,Set,Object,Array,JSON});
@@ -96,7 +96,9 @@ shared.set(KEY,JSON.stringify({theme:"wood",pieces:"outline",motion:"fast"}));
   assert.equal(saved.motion,"normal");
   assert.equal(Object.keys(saved).length,3);
   // A second same-origin frame (the Arena viewer) receives the storage event.
-  const frame=browser();
+  const frame=browser({embedded:true});
+  assert.equal(frame.$("board-prefs").hidden,true,
+               "embedded viewer must not show duplicated settings");
   assert.equal(frame.$("board").getAttribute("data-board-theme"),"contrast");
   app.$("board-pref-theme").value="slate";
   app.$("board-pref-theme").events.change();
