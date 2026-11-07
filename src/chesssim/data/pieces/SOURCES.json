@@ -1,0 +1,393 @@
+{
+  "schema": "chesssim-piece-source-v1",
+  "upstream_repo": "lichess-org/lila",
+  "upstream_commit": "104a754b35740129fade423f920ad6de965031dd",
+  "license_index": "https://github.com/lichess-org/lila/blob/104a754b35740129fade423f920ad6de965031dd/COPYING.md",
+  "sets": [
+    {
+      "id": "cburnett",
+      "author": "Colin M. L. Burnett",
+      "license": "GPL-2.0-or-later",
+      "files": {
+        "bB.svg": {
+          "sha": "51a8751ae22da38c651de6184b369cc41b2fa831",
+          "size": 738
+        },
+        "bK.svg": {
+          "sha": "543b910beec2759f3a3b406469a30bdc45fd0daf",
+          "size": 815
+        },
+        "bN.svg": {
+          "sha": "fc29188687934dd4a3b2adeb1c1c0929b30088e1",
+          "size": 837
+        },
+        "bP.svg": {
+          "sha": "c97ccf5da13ea3543ffa2c906c4c0b82fecff13d",
+          "size": 353
+        },
+        "bQ.svg": {
+          "sha": "0bd323342a09eade878f8b8ff9ad9d413c0f000b",
+          "size": 965
+        },
+        "bR.svg": {
+          "sha": "1f87576592d69d992d22b190ebe2a0d61ea67fb8",
+          "size": 612
+        },
+        "wB.svg": {
+          "sha": "8eee13f25d7bdeb1e737e5b02254d2cfa5d3b840",
+          "size": 755
+        },
+        "wK.svg": {
+          "sha": "3370721dda45844f051b62692f301a29a862f5a6",
+          "size": 642
+        },
+        "wN.svg": {
+          "sha": "afd1fc8ca93c4028a1fbb4818f5ce68a9627407f",
+          "size": 648
+        },
+        "wP.svg": {
+          "sha": "c252c58d26cfa342aa16134836377a0155136976",
+          "size": 455
+        },
+        "wQ.svg": {
+          "sha": "c40c4e0442773a9cd56967987b988cb28b7276fb",
+          "size": 827
+        },
+        "wR.svg": {
+          "sha": "8564f6be0dc39102a078595a420f6fc77718527c",
+          "size": 531
+        }
+      }
+    },
+    {
+      "id": "merida",
+      "author": "Armando Hernandez Marroquin",
+      "license": "GPL-2.0-or-later",
+      "files": {
+        "bB.svg": {
+          "sha": "1709847fe8b1cf8c03121f85eeabf6bc053b6839",
+          "size": 3070
+        },
+        "bK.svg": {
+          "sha": "beaa21bde21c52ff913d502dc74be9aef430c6da",
+          "size": 4539
+        },
+        "bN.svg": {
+          "sha": "c5ff44195ebb7754da4ec8bda89761bdebbf5a46",
+          "size": 2991
+        },
+        "bP.svg": {
+          "sha": "2bcb5c170874838bf7ab78cd0caa25402650763f",
+          "size": 933
+        },
+        "bQ.svg": {
+          "sha": "975445156c1499879b83d9e9af532a5040ad0652",
+          "size": 2554
+        },
+        "bR.svg": {
+          "sha": "a9be8b097cf83bfe3e7485ee7288a038d022f3ed",
+          "size": 990
+        },
+        "wB.svg": {
+          "sha": "951b7954a5a3e768bcb16d912a939e8429f9da0e",
+          "size": 4500
+        },
+        "wK.svg": {
+          "sha": "5ea308f634ccd301726be57b0f2fecd00c8361b9",
+          "size": 3459
+        },
+        "wN.svg": {
+          "sha": "a3fd41489bb581ff660227e1b457472e9130335a",
+          "size": 3945
+        },
+        "wP.svg": {
+          "sha": "b255c0ec2ce58a1e19a49ac03d040f855deec4f8",
+          "size": 2026
+        },
+        "wQ.svg": {
+          "sha": "cba7551be75b050663c7d865dcf8b29fff003d81",
+          "size": 4120
+        },
+        "wR.svg": {
+          "sha": "de003a7d04ec1fc180d3c7d1858c053193a75af8",
+          "size": 977
+        }
+      }
+    },
+    {
+      "id": "chessnut",
+      "author": "Alexis Luengas",
+      "license": "Apache-2.0",
+      "files": {
+        "bB.svg": {
+          "sha": "894405574e484714e5619627961e13bd3a930640",
+          "size": 3490
+        },
+        "bK.svg": {
+          "sha": "a231ff2517c37779eea3e0bf392b57c59d7dc1d7",
+          "size": 2309
+        },
+        "bN.svg": {
+          "sha": "39126a2507ec7d47eea4455a5f51daaf36232dc9",
+          "size": 921
+        },
+        "bP.svg": {
+          "sha": "337915dd57cf22a97c8ba9189bb405d78db56023",
+          "size": 764
+        },
+        "bQ.svg": {
+          "sha": "89b1902ec3e9d366c1100ca642f49c900fac9415",
+          "size": 5090
+        },
+        "bR.svg": {
+          "sha": "3b3d47d3fe62e29ba11ce94f5fb491429df547d0",
+          "size": 2051
+        },
+        "wB.svg": {
+          "sha": "7a2fb6cee8cba0ad7582f133f0b841a0f44798dc",
+          "size": 3719
+        },
+        "wK.svg": {
+          "sha": "de4bc2906d01f315ff7ae32ce28762cb373adea0",
+          "size": 3740
+        },
+        "wN.svg": {
+          "sha": "7ccaeda6c799dfb23ad26151da574f8d0c2b17c9",
+          "size": 881
+        },
+        "wP.svg": {
+          "sha": "e27c1b94839a5adc2865b6c14205bcf9b34dd5e8",
+          "size": 658
+        },
+        "wQ.svg": {
+          "sha": "f748b8591896a8a15d21f11d775e841fab0c050b",
+          "size": 2110
+        },
+        "wR.svg": {
+          "sha": "66484063755b46619dd9fe7cfb19bd4d7816bb23",
+          "size": 2235
+        }
+      }
+    },
+    {
+      "id": "fantasy",
+      "author": "Maurizio Monge",
+      "license": "MIT",
+      "files": {
+        "bB.svg": {
+          "sha": "bc68ec8634f3d106efc3d7b873b919e26eb3b307",
+          "size": 6942
+        },
+        "bK.svg": {
+          "sha": "52e411f194f52ba70c2526c135eede10ea55501d",
+          "size": 8069
+        },
+        "bN.svg": {
+          "sha": "caaba40210bbf3407c8d04af57b72306c873473c",
+          "size": 5318
+        },
+        "bP.svg": {
+          "sha": "67d5c9e8688ba6f48799d1f5372909e3e32a3266",
+          "size": 2478
+        },
+        "bQ.svg": {
+          "sha": "246be11dc81e45936b4e37ed206521bbe85f4d2d",
+          "size": 8280
+        },
+        "bR.svg": {
+          "sha": "ca02a6aeef325859d032dab3e3759e73f325ee1e",
+          "size": 4911
+        },
+        "wB.svg": {
+          "sha": "4ca47c97a12d69579c80bb43b2619325fbf34892",
+          "size": 6936
+        },
+        "wK.svg": {
+          "sha": "7ad06f21f7aa05a3ef80b383a5bf5eba36d12fef",
+          "size": 8063
+        },
+        "wN.svg": {
+          "sha": "beaff3331430b83f9b5e61d1af06469f8e8d0d4c",
+          "size": 5315
+        },
+        "wP.svg": {
+          "sha": "7aba494c53e03db53c4e798c65b148dffe304387",
+          "size": 2475
+        },
+        "wQ.svg": {
+          "sha": "e46811ec8a66aad07aed3a4239186a1af562be75",
+          "size": 8277
+        },
+        "wR.svg": {
+          "sha": "2bc9da817a20d9334e0c72bde8aaa947739107d3",
+          "size": 4908
+        }
+      }
+    },
+    {
+      "id": "spatial",
+      "author": "Maurizio Monge",
+      "license": "MIT",
+      "files": {
+        "bB.svg": {
+          "sha": "b5734c86edaa02c25d8dd85c766123042b6eee70",
+          "size": 3928
+        },
+        "bK.svg": {
+          "sha": "ddf037c0cc7b23ee52cf05944fa2ae932a49ae91",
+          "size": 2717
+        },
+        "bN.svg": {
+          "sha": "94928ee91cb3e9d0632889b3bf6911a014b6e6bd",
+          "size": 2087
+        },
+        "bP.svg": {
+          "sha": "87be0833d265e4ba59147ee7a905eced808f287d",
+          "size": 2012
+        },
+        "bQ.svg": {
+          "sha": "a15d2697a400f9e870c8e0f8d277d1c9448f06d2",
+          "size": 2574
+        },
+        "bR.svg": {
+          "sha": "271dbcdf7cd49d643b2e172b3913b6d8d6a781bc",
+          "size": 2813
+        },
+        "wB.svg": {
+          "sha": "20345f5960d40ac3b3ce3b9829ad13341fa9a2e4",
+          "size": 3926
+        },
+        "wK.svg": {
+          "sha": "ca198d76c9c7afcd3de5fe0763de5043b73f46cd",
+          "size": 2715
+        },
+        "wN.svg": {
+          "sha": "d641bcf4c421dd6cf59cf4a2dabc32f13fe5adce",
+          "size": 2085
+        },
+        "wP.svg": {
+          "sha": "ea3cd6a2d010c579eb0a50215477ff1acb17f9f7",
+          "size": 2010
+        },
+        "wQ.svg": {
+          "sha": "1a9474925ca4314438c17fb595909314b353eead",
+          "size": 2572
+        },
+        "wR.svg": {
+          "sha": "c5f86a4a8d87ef8952210c5430b9e349f1e0e2c0",
+          "size": 2811
+        }
+      }
+    },
+    {
+      "id": "celtic",
+      "author": "Maurizio Monge",
+      "license": "MIT",
+      "files": {
+        "bB.svg": {
+          "sha": "88ed220376fbb4d9f7236655e3d41be41c697fd3",
+          "size": 2180
+        },
+        "bK.svg": {
+          "sha": "3f4e72b59e5f9757e3476b76dca7f3bd4215bb05",
+          "size": 2209
+        },
+        "bN.svg": {
+          "sha": "a85ad9d43e39c64327690da80372248aa2508088",
+          "size": 2521
+        },
+        "bP.svg": {
+          "sha": "d61bc997c40658969cdb5ef8bf9c9488169ec938",
+          "size": 2157
+        },
+        "bQ.svg": {
+          "sha": "b0e2cf2765de21727fb4249e39ef5c1745913ee6",
+          "size": 2573
+        },
+        "bR.svg": {
+          "sha": "8ac7363e8f8cc917efca5106703d5b8a7fe87cfa",
+          "size": 1842
+        },
+        "wB.svg": {
+          "sha": "180d98fea864b52570fe44c1ac56a9026a1f518d",
+          "size": 2177
+        },
+        "wK.svg": {
+          "sha": "caeb6b319a67326509f9683564107a23fbfb9225",
+          "size": 2206
+        },
+        "wN.svg": {
+          "sha": "52ab49f17b5742213f8d5e3e918204de8b31a281",
+          "size": 2518
+        },
+        "wP.svg": {
+          "sha": "0e6ac4deda4a774967c400d5bbb73666c496509c",
+          "size": 1799
+        },
+        "wQ.svg": {
+          "sha": "40be4dbb809fb4a66d3073541c782563355a94be",
+          "size": 2570
+        },
+        "wR.svg": {
+          "sha": "56f26643797b56bf27b62449db7be38aee563176",
+          "size": 1839
+        }
+      }
+    },
+    {
+      "id": "rhosgfx",
+      "author": "RhosGFX",
+      "license": "CC0-1.0",
+      "files": {
+        "bB.svg": {
+          "sha": "b2aeb13166399342d5fba9f38d773f7bf6b43301",
+          "size": 1769
+        },
+        "bK.svg": {
+          "sha": "a726621988e47742852743ecc3c0d75a6f2ad80e",
+          "size": 1573
+        },
+        "bN.svg": {
+          "sha": "0bf9be862a0a65241aaa5afc0aae5a5a38b55e54",
+          "size": 1911
+        },
+        "bP.svg": {
+          "sha": "e97fce610f9e2dc35c14061e6e28d4a1f1da005d",
+          "size": 1315
+        },
+        "bQ.svg": {
+          "sha": "cb352ffd1a3741bf72254ef39a9baa1571f622b2",
+          "size": 1909
+        },
+        "bR.svg": {
+          "sha": "5ce91a9f86301141aba7a540c4356a2138410208",
+          "size": 1398
+        },
+        "wB.svg": {
+          "sha": "16fc2ea40277d52a6cd0ab36e292834671283406",
+          "size": 1802
+        },
+        "wK.svg": {
+          "sha": "a21a5ebbf3fb4923abfd4cbd2e27a1b7e65e6ea2",
+          "size": 1573
+        },
+        "wN.svg": {
+          "sha": "9650e7496606543f9f9ceca488c89af26f33b5e5",
+          "size": 1844
+        },
+        "wP.svg": {
+          "sha": "ceb32e2aa286bac4aa5581aa230d87088d9c0cdf",
+          "size": 1315
+        },
+        "wQ.svg": {
+          "sha": "c0af0ab868e5532eb6e471b300be14a4ea695af2",
+          "size": 1909
+        },
+        "wR.svg": {
+          "sha": "ba3d4e319796699e2ff2aacc7b1a8639a7771edd",
+          "size": 1431
+        }
+      }
+    }
+  ]
+}
