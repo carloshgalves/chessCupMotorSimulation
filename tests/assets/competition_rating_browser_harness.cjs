@@ -7,6 +7,7 @@ class Node {
   constructor(tag="div",id=""){
     this.tagName=tag.toUpperCase();this.id=id;this.children=[];
     this.events={};this.open=false;this.hidden=id==="history-rating-profile";this._text="";
+    this.value=id.endsWith("rating-mode") ? "rapid" : "";
   }
   addEventListener(type,handler){this.events[type]=handler;}
   append(...children){this.children.push(...children);}
@@ -26,10 +27,11 @@ const players=[
     score_range_exploratory:null,move_accuracy:null,strength_evaluation:null
   }))
 ];
-function report(slug){
+function report(slug,mode="rapid"){
   return {
-    schema:"chesssim-competition-elo-v1",baseline:"2500",
-    universe:"local-uci-observed-v1",k:"10",
+    schema:"chesssim-competition-elo-v2",baseline:"2500",
+    universe:"local-uci-observed-v2",k:"10",modality:mode,
+    available_modalities:{rapid:1,classical:0,blitz:0,bullet:0,unclassified:0},
     ratings:slug?[players.find(x=>x.slug===slug)]:players,
     counts:{scored_games:1},coverage:{partial:false},
     scale_note:"Elo experimental não indica força UCI",
@@ -57,7 +59,10 @@ function browser(handler){
 const response=data=>({ok:true,json:async()=>data});
 (async()=>{
   {
-    const app=browser(async url=>response(url.endsWith("/rating")?report("fischer"):report()));
+    const app=browser(async url=>{
+      const mode=url.includes("modality=blitz") ? "blitz" : "rapid";
+      return response(url.includes("/rating?") ? report("fischer",mode) : report(null,mode));
+    });
     const {$,window,calls}=app;
     assert.equal($("history-rating-profile").hidden,true);
     window.ChessSimRatings.enter("fischer");
@@ -74,7 +79,15 @@ const response=data=>({ok:true,json:async()=>data});
     assert(first.textContent.includes("<img src=x onerror=alert(1)>"),
            "Names must be inserted as text");
     assert(first.children.every(c=>c.tagName==="TD"),"No injected HTML nodes");
-    assert($("competition-rating-meta").textContent.includes("modalidades misturadas"));
+    assert($("competition-rating-meta").textContent.includes("Rápido"));
+    $("competition-rating-mode").value="blitz";
+    $("competition-rating-mode").events.change();
+    await tick();await tick();
+    assert($("competition-rating-status").textContent.includes("Blitz"));
+    $("history-rating-mode").value="blitz";
+    $("history-rating-mode").events.change();
+    await tick();await tick();
+    assert($("history-rating-value").textContent.includes("Blitz"));
     assert($("competition-rating-meta").textContent.toLowerCase().includes("não"));
     assert(calls.every(x=>x.options.cache==="no-store" &&
       (x.options.method===undefined||x.options.method==="GET")));

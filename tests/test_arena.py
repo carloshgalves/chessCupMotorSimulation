@@ -584,3 +584,32 @@ def test_corrupt_completed_duel_summary_fails_closed_in_api(rodent_stub):
         message = failure.value.read().decode("utf-8")
         assert "Estado da arena indisponível" in message
         assert str(rodent_stub[1]) not in message
+
+
+def test_custom_clock_validation_and_runner_receives_exact_values(rodent_stub):
+    raw={k:v for k,v in GOOD.items() if k != "depth"}
+    raw.update({"mode":"preset","preset":"custom",
+                "initial_seconds":1800,"increment_seconds":20})
+    normalized=arena.normalize_config(raw)
+    assert normalized["initial_seconds"] == 1800
+    assert normalized["increment_seconds"] == 20
+    for changes in (
+        {"increment_seconds":-1}, {"increment_seconds":121},
+        {"increment_seconds":True}, {"initial_seconds":0},
+        {"initial_seconds":14401}, {"initial_seconds":1800.5},
+    ):
+        with pytest.raises(arena.BadLaunch):
+            arena.normalize_config({**raw,**changes})
+    with pytest.raises(arena.BadLaunch):
+        arena.normalize_config({**raw,"preset":"rapid"})
+    seen=[]
+    def capture(root,destination,white,black,**kwargs):
+        seen.append(kwargs["clock"])
+        return fake_duel(root,destination,white,black,**kwargs)
+    with arena_server(rodent_stub,runner=capture) as (server,base):
+        with post(base,"/api/arena/launch",raw,server.arena_token) as response:
+            assert response.status == 202
+        finished=wait_for(server.arena_manager,"COMPLETED")
+        assert finished["config"]["preset"] == "custom"
+        assert finished["config"]["initial_seconds"] == 1800
+    assert seen == [(1800,20)]

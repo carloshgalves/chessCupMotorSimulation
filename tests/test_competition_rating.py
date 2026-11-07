@@ -16,14 +16,14 @@ import pytest
 from chesssim import arena
 from chesssim.competition_rating import (
     BASELINE, SCHEMA, build_rating_ledger, expected_score, export_rating_ledger,
-    rating_report, verify_rating_ledger,
+    rating_report, verify_rating_ledger, classify_clock,
 )
 
 from test_history_stats import cup, session
 
 
 def event(i, result="1-0", *, first="fischer", second="tal", status="COMPLETED",
-          source="arena", date="2026-11-06T12:00:00+00:00", mode="unclassified"):
+          source="arena", date="2026-11-06T12:00:00+00:00", mode="rapid"):
     return {
         "id": f"{source}:test-{i}", "duel_id": f"{source}:duel-{i // 2}",
         "white": first, "black": second, "status": status, "result": result,
@@ -75,13 +75,18 @@ def test_100_games_reprocess_order_snapshot_and_chain_tampering():
               mode=("rapid" if i%2 else "blitz"))
         for i in range(100)
     ]
-    snap = build_rating_ledger(records)
-    assert snap == build_rating_ledger(list(reversed(records)))
-    assert len(snap["rating_ledger"]) == 100
-    assert snap["counts"]["scored_games"] == 100
-    assert snap["mixed_modalities_warning"] is True
+    snap = build_rating_ledger(records, modality="rapid")
+    blitz = build_rating_ledger(records, modality="blitz")
+    assert snap == build_rating_ledger(list(reversed(records)), modality="rapid")
+    assert len(snap["rating_ledger"]) == 50
+    assert len(blitz["rating_ledger"]) == 50
+    assert not set(x["id"] for x in snap["rating_ledger"]) & set(
+        x["id"] for x in blitz["rating_ledger"])
+    assert verify_rating_ledger(blitz)
+    assert snap["counts"]["scored_games"] == 50
+    assert snap["mixed_modalities_warning"] is False
     assert verify_rating_ledger(snap) is True
-    assert by_slug(snap,"fischer")["games"] == 100
+    assert by_slug(snap,"fischer")["games"] == 50
     assert by_slug(snap,"fischer")["status"] == "observed_experimental"
     for p in ("fischer","tal"):
         assert Decimal(by_slug(snap,p)["rating"]).is_finite()
@@ -134,22 +139,28 @@ def test_real_verified_arena_and_tournament_and_original_files_unchanged(tmp_pat
     cup(tmp_path)
     files = [p for p in tmp_path.rglob("*") if p.is_file()]
     before={p.relative_to(tmp_path):p.read_bytes() for p in files}
-    report=rating_report(tmp_path,include_ledger=True)
+    report=rating_report(tmp_path,include_ledger=True,modality="rapid")
+    unclocked=rating_report(tmp_path,include_ledger=True,modality="unclassified")
     assert report["schema"] == SCHEMA
-    assert report["counts"]["scored_games"] == 4, report["coverage"]
+    assert report["counts"]["scored_games"] == 2, report["coverage"]
+    assert unclocked["counts"]["scored_games"] == 2
+    assert report["available_modalities"]["rapid"] == 2
+    assert report["available_modalities"]["unclassified"] == 2
     assert report["coverage"]["arena_verified_games"] == 2
     assert report["coverage"]["tournament_verified_games"] == 2
     assert verify_rating_ledger({
         "schema":report["ledger_schema"],
+        "modality":report["modality"],
         "ledger_genesis":report["ledger_genesis"],
         "rating_ledger":report["rating_ledger"],
         "ledger_checksum":report["ledger_checksum"],
     })
-    assert set(e["source"] for e in report["rating_ledger"]) == {"arena","tournament"}
-    assert any(e["engine_strength_config"] is not None for e in report["rating_ledger"])
-    assert any(e["engine_strength_config"] is None for e in report["rating_ledger"])
+    assert set(e["source"] for e in report["rating_ledger"]) == {"tournament"}
+    assert set(e["source"] for e in unclocked["rating_ledger"]) == {"arena"}
+    assert all(e["engine_strength_config"] is not None for e in report["rating_ledger"])
+    assert all(e["engine_strength_config"] is None for e in unclocked["rating_ledger"])
     assert all(len(e["evidence_pgn_sha256"]) == 64
-               for e in report["rating_ledger"])
+               for e in report["rating_ledger"] + unclocked["rating_ledger"])
     assert all(not e["id"].startswith("historical:") for e in report["rating_ledger"])
     assert before=={p.relative_to(tmp_path):p.read_bytes() for p in files}
 
@@ -157,7 +168,7 @@ def test_real_verified_arena_and_tournament_and_original_files_unchanged(tmp_pat
 def test_failed_or_incomplete_and_corrupted_games_do_not_become_elo(tmp_path):
     session(tmp_path,0,results=("1-0","*"))
     session(tmp_path,1,results=("1-0",),broken=True)
-    report=rating_report(tmp_path)
+    report=rating_report(tmp_path, modality="unclassified")
     assert report["counts"]["scored_games"] == 1
     assert report["counts"]["ignored_incomplete"] == 1
     assert report["coverage"]["partial"] is True
@@ -168,16 +179,16 @@ def test_failed_or_incomplete_and_corrupted_games_do_not_become_elo(tmp_path):
 def test_explicit_export_is_bytewise_idempotent_and_requires_replace(tmp_path):
     session(tmp_path,0,results=("1-0",))
     out=tmp_path/"rating-ledger.json"
-    result=export_rating_ledger(tmp_path,out)
+    result=export_rating_ledger(tmp_path,out,modality="unclassified")
     assert result["changed"] is True
     original=out.read_bytes()
-    assert export_rating_ledger(tmp_path,out)["changed"] is False
+    assert export_rating_ledger(tmp_path,out,modality="unclassified")["changed"] is False
     assert out.read_bytes()==original
     session(tmp_path,1,results=("0-1",))
     with pytest.raises(FileExistsError):
-        export_rating_ledger(tmp_path,out)
+        export_rating_ledger(tmp_path,out,modality="unclassified")
     assert out.read_bytes()==original
-    updated=export_rating_ledger(tmp_path,out,replace=True)
+    updated=export_rating_ledger(tmp_path,out,modality="unclassified",replace=True)
     assert updated["changed"] is True
     assert len(json.loads(out.read_text())["rating_ledger"]) == 2
     exported = json.loads(out.read_text())
@@ -185,6 +196,12 @@ def test_explicit_export_is_bytewise_idempotent_and_requires_replace(tmp_path):
     assert verify_rating_ledger(exported)
     exported["ratings"][0]["display_rating"] = "9000.0"
     assert not verify_rating_ledger(exported)
+    no_checksum=json.loads(out.read_text())
+    del no_checksum["snapshot_checksum"]
+    assert not verify_rating_ledger(no_checksum)
+    changed_meta=json.loads(out.read_text())
+    changed_meta["coverage"]["partial"] = True
+    assert not verify_rating_ledger(changed_meta)
     protected=tmp_path/"tournament.json"
     with pytest.raises(ValueError, match="arquivos de partida"):
         export_rating_ledger(tmp_path,protected,replace=True)
@@ -223,7 +240,8 @@ def test_cli_ledger_export_idempotent_and_invalid_k_is_nonzero(tmp_path):
     session(tmp_path, 0, results=("1-0",))
     out=tmp_path/"elo-cli.json"
     cmd=[sys.executable,"-m","chesssim","rating-export",
-         "--workspace",str(tmp_path),"--out",str(out)]
+         "--workspace",str(tmp_path),"--out",str(out),
+         "--modality","unclassified"]
     first=subprocess.run(cmd,capture_output=True,text=True,timeout=30)
     assert first.returncode==0,first.stderr
     assert json.loads(first.stdout)["changed"] is True
@@ -312,3 +330,45 @@ def test_elo_browser_ui_no_xss_and_stale_response():
                           text=True,timeout=15,check=False)
     assert result.returncode==0,result.stdout+result.stderr
     assert "Experimental Elo browser: PASS" in result.stdout
+
+
+@pytest.mark.parametrize(("initial","increment","expected"), [
+    (60,0,"bullet"), (120,0,"bullet"), (180,0,"blitz"), (180,2,"blitz"),
+    (600,0,"blitz"), (600,2,"rapid"), (1800,5,"rapid"),
+    (1800,20,"rapid"), (2700,0,"rapid"), (1800,30,"classical"),
+    (2700,30,"classical"), (3600,0,"classical"),
+])
+def test_clock_classification_uses_initial_plus_sixty_increments(
+        initial, increment, expected):
+    assert classify_clock(initial,increment) == expected
+
+
+@pytest.mark.parametrize(("initial","increment"), [
+    (True,0), (0,0), (60,-1), (60,False), (1.5,0), (60,"2"),
+])
+def test_clock_rejects_invalid_input(initial,increment):
+    with pytest.raises(ValueError):
+        classify_clock(initial,increment)
+
+
+def test_custom_clock_changes_only_its_own_rating_pool():
+    custom_rapid={**event(0),"clock":[1800,20],"time_control":"custom"}
+    custom_classical={**event(1,"0-1"),"clock":[1800,30],
+                       "time_control":"custom"}
+    original=build_rating_ledger([custom_rapid],modality="rapid")
+    mixed=build_rating_ledger([custom_rapid,custom_classical],modality="rapid")
+    classical=build_rating_ledger([custom_rapid,custom_classical],modality="classical")
+    assert original["ratings"] == mixed["ratings"]
+    assert original["rating_ledger"] == mixed["rating_ledger"]
+    assert mixed["counts"]["scored_games"] == 1
+    assert classical["counts"]["scored_games"] == 1
+    assert by_slug(mixed,"fischer")["rating"] == "2505.0"
+    assert by_slug(classical,"fischer")["rating"] == "2495.0"
+    assert verify_rating_ledger(mixed)
+    assert verify_rating_ledger(classical)
+
+
+def test_legacy_official_10_plus_2_is_rapid_not_classical():
+    original={**event(0),"time_control":"official"}
+    assert build_rating_ledger([original],modality="rapid")["counts"]["scored_games"] == 1
+    assert build_rating_ledger([original],modality="classical")["counts"]["scored_games"] == 0
