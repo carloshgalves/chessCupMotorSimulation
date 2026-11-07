@@ -62,10 +62,19 @@ const profile={
           {id:"unsafe",title:"Credenciais em URL",publisher:"Inseguro",
            url:"https://name:password@evil.example.test/page"}],
 };
+let holdProfile = false;
+let releaseProfile = null;
 const fetch=async(url,options)=>{
   calls.push({url,options});
   if(url==="/api/history/players") return {ok:true,json:async()=>({players:index})};
-  if(url==="/api/history/players/anand") return {ok:true,json:async()=>profile};
+  if(url==="/api/history/players/anand") {
+    if (holdProfile) {
+      return new Promise(resolve=>{
+        releaseProfile=()=>resolve({ok:true,json:async()=>profile});
+      });
+    }
+    return {ok:true,json:async()=>profile};
+  }
   if(url==="/api/history/players/anand/stats") return {ok:true,json:async()=>({
     schema:"chesssim-player-stats-v1",slug:"anand",
     scope:{directory:"runs",sources:["arena_local","tournament_local"],
@@ -165,5 +174,18 @@ function descendants(node) {
   assert.equal($("history-view").hidden,true);
   assert.equal(calls.length,4);
   assert(calls.every(call=>!call.url.includes("token") && call.options.cache==="no-store"));
-  console.log("History navigation, first-person facts, safe source links and photo credits: PASS");
+  // Late profile resolution after navigating to another player must be ignored.
+  $("tab-history").events.click();
+  await tick();
+  holdProfile = true;
+  const pendingProfile = $("history-open").events.click();
+  assert.equal(typeof releaseProfile, "function");
+  $("history-next").events.click();
+  releaseProfile();
+  await pendingProfile;
+  await tick();
+  assert.equal($("history-profile").hidden,true);
+  assert.equal($("history-roster").hidden,false);
+  assert($("history-selected").textContent.includes("Capablanca"));
+  console.log("History navigation, 64 players, focus, stale profile, safe links and credits: PASS");
 })().catch(err=>{console.error(err);process.exitCode=1;});
