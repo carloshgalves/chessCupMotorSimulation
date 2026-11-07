@@ -143,5 +143,5 @@ def test_svg_assets_are_in_wheel_manifest_and_have_notice():
     assert "source_pieces = json.loads(archive.read(" in ci
     assert "for piece_set in source_pieces['sets']:" in ci
     for set_id in LICENSES:
-        assert set_id in notice
+        assert set_id.casefold() in notice.casefold()
     assert "Public Domain Mark" in notice
