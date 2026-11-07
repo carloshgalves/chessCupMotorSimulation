@@ -49,8 +49,10 @@
     return Math.max(0,seconds);
   }
   function clocks() {
-    el("human-white-clock").textContent=clockText(currentClock(0));
-    el("human-black-clock").textContent=clockText(currentClock(1));
+    const blackAtBottom=state.game?.config.color==="black";
+    // A black-side human sees the board reversed: opponent above, self below.
+    el("human-black-clock").textContent=clockText(currentClock(blackAtBottom?0:1));
+    el("human-white-clock").textContent=clockText(currentClock(blackAtBottom?1:0));
   }
   function fillOpponents(players) {
     const select=el("human-opponent");
@@ -243,8 +245,11 @@
     if(state.mode!=="human")return;
     const g=state.game;
     displayBoard(g);
-    el("human-black-name").textContent=g?.black||"Adversário (motor UCI)";
-    el("human-white-name").textContent=g?.white||"Você";
+    const blackAtBottom=g?.config.color==="black";
+    el("human-black-name").textContent=!g?"Adversário (motor UCI)":
+      blackAtBottom?g.white:g.black;
+    el("human-white-name").textContent=!g?"Você":
+      blackAtBottom?g.black:g.white;
     clocks();drawMoves(g);info(g);
     const ongoing=g?.status==="RUNNING";
     const pacing=!!g&&state.displayPly<g.revision;
