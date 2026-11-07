@@ -14,6 +14,7 @@ import json
 import math
 import os
 from pathlib import Path
+import re
 import tempfile
 
 from .catalog import load_roster
@@ -133,11 +134,16 @@ def build_rating_ledger(records: list[dict], *, k: object = DEFAULT_K,
                                   any(not isinstance(v, str) or not 0 < len(v) <= 128
                                       for v in proof.values())):
             raise ValueError("Configuração de motor não verificável")
+        evidence = record.get("evidence_pgn_sha256")
+        if evidence is not None and (not isinstance(evidence, str) or
+                                     not re.fullmatch(r"[0-9a-f]{64}", evidence)):
+            raise ValueError("Hash da evidência PGN inválido")
         payload = {
             "game_id": game_id, "white": white, "black": black,
             "source": source, "result": result, "status": status,
             "created_manifest_utc": date, "modality": modality,
             "engine_strength_config": proof,
+            "evidence_pgn_sha256": evidence,
         }
         if game_id in unique:
             if unique[game_id] != payload:
@@ -196,6 +202,7 @@ def build_rating_ledger(records: list[dict], *, k: object = DEFAULT_K,
                 "white_after": str(values[w]), "black_after": str(values[b]),
                 "k": str(k), "delta_white": str(change),
                 "engine_strength_config": game["engine_strength_config"],
+                "evidence_pgn_sha256": game["evidence_pgn_sha256"],
                 "model_version": VERSION, "previous_checksum": previous,
             }
             checksum = sha256(previous.encode("ascii") + b"\n" +
@@ -235,25 +242,71 @@ def build_rating_ledger(records: list[dict], *, k: object = DEFAULT_K,
 
 
 def verify_rating_ledger(snapshot: dict) -> bool:
-    """Detect modified/dropped/duplicated/out-of-order ledger entries."""
-    if snapshot.get("schema") != LEDGER_SCHEMA or snapshot.get("ledger_genesis") != GENESIS:
+    """Check the chain AND recompute every rating transition from its events.
+
+    For a full exported report, also verify all report fields against the
+    snapshot checksum. This is integrity, never external authenticity.
+    """
+    if not isinstance(snapshot, dict):
+        return False
+    report = snapshot.get("schema") == SCHEMA
+    if report:
+        if snapshot.get("ledger_schema") != LEDGER_SCHEMA:
+            return False
+        expected_snapshot_checksum = snapshot.get("snapshot_checksum")
+        if expected_snapshot_checksum is not None:
+            body = {k: v for k, v in snapshot.items() if k != "snapshot_checksum"}
+            try:
+                if sha256(_canonical(body)).hexdigest() != expected_snapshot_checksum:
+                    return False
+            except (TypeError, ValueError):
+                return False
+    elif snapshot.get("schema") != LEDGER_SCHEMA:
+        return False
+    if snapshot.get("ledger_genesis") != GENESIS:
         return False
     ledger = snapshot.get("rating_ledger")
-    if not isinstance(ledger, list):
+    if not isinstance(ledger, list) or len(ledger) > MAX_EVENTS:
         return False
     previous = GENESIS
-    for i, event in enumerate(ledger, 1):
-        if not isinstance(event, dict) or event.get("index") != i:
+    game_ids = set()
+    records = []
+    try:
+        for i, event in enumerate(ledger, 1):
+            if not isinstance(event, dict) or event.get("index") != i:
+                return False
+            payload = {key: val for key, val in event.items() if key != "checksum"}
+            if payload.get("previous_checksum") != previous:
+                return False
+            digest = sha256(previous.encode("ascii") + b"\n" +
+                            _canonical(payload)).hexdigest()
+            if event.get("checksum") != digest or event.get("id") in game_ids:
+                return False
+            game_ids.add(event["id"])
+            previous = digest
+            records.append({
+                "id": event["id"], "white": event["white"],
+                "black": event["black"], "status": "COMPLETED",
+                "result": event["result"], "origin": event["source"],
+                "time_control": event["modality"],
+                "recorded_utc": event["created_manifest_utc"],
+                "engine_strength_config": event["engine_strength_config"],
+                "evidence_pgn_sha256": event["evidence_pgn_sha256"],
+            })
+        if snapshot.get("ledger_checksum") != previous:
             return False
-        payload = {key: val for key, val in event.items() if key != "checksum"}
-        if payload.get("previous_checksum") != previous:
+        k = snapshot.get("k", ledger[0]["k"] if ledger else str(DEFAULT_K))
+        recalculated = build_rating_ledger(records, k=k)
+        if recalculated["rating_ledger"] != ledger:
             return False
-        digest = sha256(previous.encode("ascii") + b"\n" +
-                        _canonical(payload)).hexdigest()
-        if event.get("checksum") != digest:
+        if "ratings" in snapshot and snapshot["ratings"] != recalculated["ratings"]:
             return False
-        previous = digest
-    return snapshot.get("ledger_checksum") == previous
+        if "counts" in snapshot and snapshot["counts"].get(
+                "scored_games") != len(ledger):
+            return False
+        return True
+    except (ValueError, TypeError, KeyError, ArithmeticError, OverflowError):
+        return False
 
 
 def rating_report(workspace: Path, *, k: object = DEFAULT_K,
@@ -298,6 +351,9 @@ def export_rating_ledger(workspace: Path, out: Path, *,
                       allow_nan=False).encode("utf-8") + b"\n"
     output = out.expanduser().absolute()
     parent = output.parent
+    if output.name in {"session.json", "summary.json", "tournament.json",
+                        "duelo.pgn", "jogo_1.pgn", "jogo_2.pgn"}:
+        raise ValueError("Não é permitido substituir arquivos de partida")
     if not parent.is_dir() or parent.is_symlink() or output.is_symlink():
         raise ValueError("Destino deve ter diretório existente e não ser symlink")
     if output.exists():
