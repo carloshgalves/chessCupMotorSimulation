@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import threading
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -216,6 +217,49 @@ def test_rehashed_modified_result_still_fails_rating_transition_verification():
     assert not verify_rating_ledger(forged), (
         "Recomputing a checksum cannot conceal impossible Elo transitions"
     )
+
+
+def test_cli_ledger_export_idempotent_and_invalid_k_is_nonzero(tmp_path):
+    session(tmp_path, 0, results=("1-0",))
+    out=tmp_path/"elo-cli.json"
+    cmd=[sys.executable,"-m","chesssim","rating-export",
+         "--workspace",str(tmp_path),"--out",str(out)]
+    first=subprocess.run(cmd,capture_output=True,text=True,timeout=30)
+    assert first.returncode==0,first.stderr
+    assert json.loads(first.stdout)["changed"] is True
+    assert len(json.loads(out.read_text())["rating_ledger"])==1
+    second=subprocess.run(cmd,capture_output=True,text=True,timeout=30)
+    assert second.returncode==0,second.stderr
+    assert json.loads(second.stdout)["changed"] is False
+    invalid=subprocess.run(cmd+["--k","NaN"],capture_output=True,
+                           text=True,timeout=30)
+    assert invalid.returncode==2
+    assert "K" in invalid.stderr
+    assert len(json.loads(out.read_text())["rating_ledger"])==1
+
+
+def test_global_get_without_games_reports_initial_unranked_state(tmp_path):
+    server=arena.create_server(tmp_path,tmp_path,port=0)
+    thread=threading.Thread(target=server.serve_forever,daemon=True)
+    thread.start()
+    try:
+        base=f"http://127.0.0.1:{server.server_port}"
+        for path in ("/api/competition/ratings",
+                     "/api/history/players/fischer/rating"):
+            with urlopen(base+path,timeout=10) as response:
+                report=json.loads(response.read())
+                assert report["counts"]["scored_games"]==0
+                assert report["ledger_checksum"]
+                assert all(x["display_rating"]=="2500.0" and x["rank"] is None
+                           and x["status"]=="sem_amostra"
+                           for x in report["ratings"])
+                assert all(x["strength_evaluation"] is None and
+                           x["move_accuracy"] is None for x in report["ratings"])
+    finally:
+        server.shutdown()
+        server.server_close()
+        server.arena_manager.shutdown()
+        thread.join(timeout=5)
 
 
 def test_elo_api_local_get_only_and_no_token_leak(tmp_path):
