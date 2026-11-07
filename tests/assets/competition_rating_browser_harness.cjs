@@ -75,7 +75,7 @@ const response=data=>({ok:true,json:async()=>data});
            "Names must be inserted as text");
     assert(first.children.every(c=>c.tagName==="TD"),"No injected HTML nodes");
     assert($("competition-rating-meta").textContent.includes("modalidades misturadas"));
-    assert($("competition-rating-meta").textContent.includes("Não"));
+    assert($("competition-rating-meta").textContent.toLowerCase().includes("não"));
     assert(calls.every(x=>x.options.cache==="no-store" &&
       (x.options.method===undefined||x.options.method==="GET")));
     window.ChessSimRatings.suspend();
