@@ -13,10 +13,19 @@
   const link = (label, url) => {
     const node = make("a", label);
     // Sources are validated by the Python catalogue; defend again in the UI.
-    if (typeof url !== "string" || !url.startsWith("https://")) {
+    if (typeof url !== "string") return make("span", label);
+    // Reject credentials, malformed hosts and URL tricks before navigation.
+    let safe;
+    try {
+      safe = new URL(url);
+      if (safe.protocol !== "https:" || !safe.hostname ||
+          safe.username || safe.password || !url.startsWith("https://")) {
+        return make("span", label);
+      }
+    } catch (_) {
       return make("span", label);
     }
-    node.href = url;
+    node.href = safe.href;
     node.target = "_blank";
     node.rel = "noopener noreferrer";
     return node;
@@ -41,7 +50,10 @@
     caption.append(make("span", medium + info.author + " · " + info.event +
       " (" + info.event_date + ")"));
     caption.append(link("Origem", info.source_url));
-    caption.append(link("Licença " + info.license, info.license_url));
+    const rightsLabel = info.license === "Public Domain Mark 1.0" ?
+      "Public Domain Mark (declaração de status; não é licença)" :
+      "Licença " + info.license;
+    caption.append(link(rightsLabel, info.license_url));
     caption.append(make("span", info.derivative_note));
     figure.append(caption);
     return figure;
@@ -70,7 +82,12 @@
       const button = make("button", "Selecionar " + neighbor.name,
                           "history-side-button");
       button.type = "button";
-      button.addEventListener("click", () => move(offset));
+      button.addEventListener("click", () => {
+        move(offset);
+        // The clicked neighbor button is discarded when the cards rerender.
+        // Restore focus to a stable action for keyboard and screen-reader use.
+        byId("history-open").focus();
+      });
       slot.append(button);
     }
     byId("history-position").textContent = (state.index + 1) + " de " +
@@ -79,6 +96,9 @@
   }
   function move(offset) {
     if (!state.players.length || state.view !== "roster") return;
+    // Invalidate a profile request started before carousel selection changed.
+    ++state.seq;
+    byId("history-status").textContent = "";
     state.index = (state.index + offset + state.players.length) % state.players.length;
     showSelection();
   }
@@ -162,20 +182,29 @@
   }
   async function load() {
     if (state.loaded) return;
+    const request = ++state.seq;
     byId("history-status").textContent = "Carregando elenco histórico…";
     try {
       const response = await fetch("/api/history/players", {cache:"no-store"});
       if (!response.ok) throw new Error("Catálogo indisponível");
       const data = await response.json();
-      if (!Array.isArray(data.players) || !data.players.length) throw new Error("Sem jogadores");
-      state.players = data.players.filter(p => safeSlug(p.slug));
-      if (!state.players.length) throw new Error("Elenco inválido");
+      if (request !== state.seq || byId("history-view").hidden) return;
+      if (!data || !Array.isArray(data.players) || data.players.length !== 64 ||
+          data.players.some(p => !p || typeof p.slug !== "string" ||
+                                !safeSlug(p.slug) || typeof p.name !== "string") ||
+          new Set(data.players.map(p => p.slug)).size !== 64) {
+        throw new Error("Elenco histórico incompleto ou duplicado");
+      }
+      state.players = data.players;
       state.loaded = true;
       byId("history-status").textContent = "";
       byId("history-roster").hidden = false;
       showSelection();
     } catch (_) {
-      byId("history-status").textContent = "Não foi possível carregar o catálogo. Retorne à Arena e tente novamente.";
+      if (request === state.seq && !byId("history-view").hidden) {
+        byId("history-status").textContent =
+          "Não foi possível carregar o catálogo. Retorne à Arena e tente novamente.";
+      }
     }
   }
   function toggle(toHistory) {
@@ -209,7 +238,9 @@
   byId("history-open").addEventListener("click", openProfile);
   byId("history-back").addEventListener("click", backToRoster);
   byId("history-view").addEventListener("keydown", event => {
-    if (state.view !== "roster" || ["INPUT","SELECT","TEXTAREA"].includes(event.target.tagName)) return;
+    if (state.view !== "roster" || event.altKey || event.ctrlKey || event.metaKey ||
+        !event.target || !["history-view","history-carousel",
+          "history-prev","history-next","history-open"].includes(event.target.id)) return;
     if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
       event.preventDefault();
       move(event.key === "ArrowLeft" ? -1 : 1);

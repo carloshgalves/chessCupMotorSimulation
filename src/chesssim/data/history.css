@@ -25,7 +25,7 @@
 .history-curation{color:#f3d4a0;font-size:.86rem}
 .history-position{margin:15px}
 #history-actions{text-align:center}
-#history-actions button{background:#4d856f;color:#fff}
+#history-actions button{background:#3f705b;color:#fff;min-height:44px}
 .history-disclaimer{border-top:1px solid #3a4b51;padding-top:12px;margin:25px 0 0;font-size:.81rem;color:#b9cdd2}
 .history-profile{max-width:1100px;margin:16px auto}
 .history-detail-header{display:grid;grid-template-columns:minmax(160px,350px) minmax(0,1fr);gap:28px;align-items:start;margin:20px 0}
@@ -92,3 +92,13 @@
 .history-stats-empty{font-size:.86rem;color:#d7e5e9;margin:12px 0}
 @media(max-width:800px){.history-stats-totals{grid-template-columns:repeat(2,minmax(0,1fr))}.history-opponent-list{grid-template-columns:1fr}}
 @media(max-width:500px){.history-stats-section{padding:12px}.history-stat-card{padding:9px}.history-stat-card dd{font-size:1.4rem}}
+
+/* Gate #53: 44px targets and visible keyboard focus, confined to History. */
+.history-carousel>button{min-width:44px;min-height:44px}
+.history-side-button{min-height:44px}
+.history-shell :is(button,a,input):focus-visible{
+  outline:3px solid #ffe39f;outline-offset:3px
+}
+@media(max-width:650px){
+  .history-carousel>button{min-width:44px;min-height:44px}
+}
