@@ -11,7 +11,7 @@
     motion: Object.freeze(["off","fast","normal"])
   });
   const SECTIONS = Object.freeze(["theme","pieces","motion"]);
-  const BOARD_IDS = Object.freeze(["board","history-replay-board"]);
+  const BOARD_IDS = Object.freeze(["board","human-board","history-replay-board"]);
   const CONTROLS = Object.freeze({
     theme:"board-pref-theme",
     pieces:"board-pref-pieces",

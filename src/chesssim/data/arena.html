@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/history.css">
   <script src="/arena.js" defer></script>
   <script src="/chess-board.js" defer></script>
+  <script src="/human-play.js" defer></script>
   <script src="/board-preferences.js" defer></script>
   <script src="/history_replay.js" defer></script>
   <script src="/history_stats.js" defer></script>
@@ -20,8 +21,8 @@
     <header class="top">
       <div>
         <div class="overline">CHESSCUP MOTOR SIMULATION</div>
-        <h1>Arena de confrontos</h1>
-        <p>Configure um duelo Rodent IV e acompanhe o resultado. Execução local.</p>
+        <h1>Arena · Duelo e Jogar</h1>
+        <p>Assista a motores UCI ou jogue contra um adversário instalado. Execução local.</p>
       </div>
       <nav class="main-nav" aria-label="Áreas da aplicação">
         <button id="tab-arena" type="button" aria-pressed="true" aria-controls="arena-view">Arena</button>
@@ -119,6 +120,10 @@
             </div>
             <span class="provisional">Modelos experimentais</span>
           </div>
+          <div class="arena-mode-tabs" role="group" aria-label="Modo da Arena">
+            <button id="arena-mode-duel" type="button" class="selected" aria-pressed="true">⚔ Duelo <span>motor × motor</span></button>
+            <button id="arena-mode-human" type="button" aria-pressed="false">♟ Jogar <span>você × motor</span></button>
+          </div>
           <form id="duel-form">
             <div class="players">
               <div class="player-slot">
@@ -206,6 +211,53 @@
             </div>
             <p id="launch-feedback" role="status" aria-live="polite" class="feedback"></p>
           </form>
+          <form id="human-form" hidden>
+            <h3>Configuração da partida</h3>
+            <label for="human-opponent">Adversário (Rodent IV)</label>
+            <select id="human-opponent" required></select>
+            <p id="human-availability" class="note">Apenas perfis UCI efetivamente instalados podem jogar.</p>
+            <fieldset class="human-fieldset">
+              <legend>Você joga com</legend>
+              <div id="human-side-buttons" class="human-side-buttons" role="group" aria-label="Escolher cor">
+                <button type="button" data-side="white" aria-pressed="true" class="selected">Brancas</button>
+                <button type="button" data-side="black" aria-pressed="false">Pretas</button>
+                <button type="button" data-side="random" aria-pressed="false">Aleatória</button>
+              </div>
+            </fieldset>
+            <fieldset class="human-fieldset">
+              <legend>Relógio da partida</legend>
+              <label for="human-clock">Controle de tempo</label>
+              <select id="human-clock">
+                <option value="blitz">Blitz · 3+2</option>
+                <option value="bullet">Bullet · 1+0</option>
+                <option value="rapid">Rápido · 15+10</option>
+                <option value="classical">Clássico · 60+30</option>
+                <option value="none">Sem relógio</option>
+                <option value="custom">Personalizado</option>
+              </select>
+              <div id="human-custom-clock" class="human-custom-clock" hidden>
+                <label for="human-minutes">Minutos iniciais (1–240)
+                  <input id="human-minutes" type="number" min="1" max="240" step="1" value="10">
+                </label>
+                <label for="human-increment">Incremento em segundos (0–120)
+                  <input id="human-increment" type="number" min="0" max="120" step="1" value="2">
+                </label>
+              </div>
+            </fieldset>
+            <fieldset class="human-fieldset">
+              <legend>Busca do motor</legend>
+              <label for="human-depth">Profundidade máxima (1–16)</label>
+              <input id="human-depth" type="number" min="1" max="16" step="1" value="6" required>
+              <label for="human-opening">Repertório de abertura</label>
+              <select id="human-opening">
+                <option value="none">Sem livro</option>
+                <option value="internal">Livro interno UCI</option>
+              </select>
+              <p class="note">O relógio e a profundidade são limites independentes. A partida é validada no servidor.</p>
+            </fieldset>
+            <button id="human-launch" type="submit" class="primary" disabled>▶ Iniciar partida</button>
+            <p id="human-feedback" class="feedback" role="status" aria-live="polite"></p>
+          </form>
         </section>
         <section class="panel">
           <span class="overline">ESTADO DA EXECUÇÃO</span>
@@ -221,6 +273,7 @@
         </section>
       </section>
       <section class="viewer">
+        <div id="duel-viewer">
         <div class="viewer-head">
           <div>
             <span class="overline">TABULEIRO E REPLAY</span>
@@ -230,6 +283,50 @@
         </div>
         <iframe id="board-frame" src="/viewer" title="Tabuleiro de confronto, lances e relógios" loading="eager"></iframe>
         <p class="note">Pausar o replay não pausa o confronto. Resultados são lidos dos PGNs e resumos produzidos pelo simulador.</p>
+        </div>
+        <div id="human-viewer" hidden>
+          <div class="human-play-columns">
+            <section class="human-board-column" aria-label="Tabuleiro humano contra motor">
+              <div class="human-player-strip">
+                <span id="human-black-name">Adversário</span>
+                <strong id="human-black-clock">—:—</strong>
+              </div>
+              <div id="human-board" class="board human-board" tabindex="0"
+                   role="group" aria-label="Tabuleiro de xadrez interativo; selecione uma peça e uma casa de destino"></div>
+              <div class="human-player-strip">
+                <span id="human-white-name">Você</span>
+                <strong id="human-white-clock">—:—</strong>
+              </div>
+              <p id="human-board-hint" class="note">Selecione uma peça e depois a casa de destino. Use também Enter ou Espaço nas casas com o foco.</p>
+            </section>
+            <section class="human-sidebar">
+              <div class="human-subtabs" role="group" aria-label="Detalhes da partida">
+                <button type="button" id="human-tab-moves" aria-pressed="true" class="selected">Lances</button>
+                <button type="button" id="human-tab-info" aria-pressed="false">Informações</button>
+                <button type="button" id="human-tab-result" aria-pressed="false">Resultado</button>
+              </div>
+              <ol id="human-moves" aria-label="Movimentos da partida; brancas à esquerda e pretas à direita"></ol>
+              <div id="human-info" hidden>
+                <dl id="human-info-details" class="summary"></dl>
+              </div>
+              <div id="human-result" hidden>
+                <p id="human-result-details" role="status">Nenhuma partida iniciada.</p>
+              </div>
+              <div class="human-turn-card" id="human-turn-card" role="status" aria-live="polite">
+                <strong id="human-turn-title">Pronto para iniciar</strong>
+                <p id="human-turn-detail">Escolha o adversário e comece a partida.</p>
+              </div>
+              <div class="human-actions">
+                <button id="human-draw" type="button" disabled>Oferecer empate</button>
+                <button id="human-claim" type="button" disabled>Reivindicar empate</button>
+                <button id="human-resign" type="button" disabled>Desistir</button>
+                <button id="human-interrupt" type="button" disabled>Interromper</button>
+                <button id="human-resume" type="button" hidden>Retomar partida</button>
+              </div>
+              <p class="note">Fechar a aba não desliga o motor nem pausa o relógio. Ações e lances exigem autorização local.</p>
+            </section>
+          </div>
+        </div>
       </section>
     </div></div>
     <section id="history-view" class="history-shell" aria-labelledby="history-heading" hidden>
