@@ -20,10 +20,10 @@ import tempfile
 from .catalog import load_roster
 from .history_stats import verified_competition_games
 
-SCHEMA = "chesssim-competition-elo-v1"
-LEDGER_SCHEMA = "chesssim-rating-ledger-v1"
-VERSION = "elo-logistic-decimal-v1"
-UNIVERSE = "local-uci-observed-v1"
+SCHEMA = "chesssim-competition-elo-v2"
+LEDGER_SCHEMA = "chesssim-rating-ledger-v2"
+VERSION = "elo-logistic-decimal-pools-v2"
+UNIVERSE = "local-uci-observed-v2"
 BASELINE = Decimal("2500")
 DEFAULT_K = Decimal("10")
 MAX_EVENTS = 16384
@@ -31,7 +31,48 @@ SCORES = {"1-0": Decimal(1), "0-1": Decimal(0), "1/2-1/2": Decimal("0.5")}
 GENESIS = sha256(LEDGER_SCHEMA.encode("ascii")).hexdigest()
 # More games increase evidence, but cannot prove strength or style authenticity.
 PROVISIONAL_UNTIL = 30
-MODALITIES = {"official", "classical", "rapid", "blitz", "bullet", "unclassified"}
+# Distinct, zero-sum universes. Unclocked games never enter a timed rating.
+RATING_POOLS = ("classical", "rapid", "blitz", "bullet", "unclassified")
+MODALITIES = set(RATING_POOLS)
+CLOCK_LABELS = MODALITIES | {"official", "custom"}
+
+def classify_clock(initial_seconds: int, increment_seconds: int) -> str:
+    """Classify using the FIDE 60-move estimate; bullet is our local convention.
+
+    Not a claim of FIDE rating eligibility. Clock units are seconds per player.
+    """
+    if (type(initial_seconds) is not int or type(increment_seconds) is not int
+            or not 1 <= initial_seconds <= 86400
+            or not 0 <= increment_seconds <= 3600):
+        raise ValueError("Relógio deve conter segundos inteiros válidos")
+    effective = initial_seconds + 60 * increment_seconds
+    if effective < 180:
+        return "bullet"
+    if effective <= 600:
+        return "blitz"
+    if effective < 3600:
+        return "rapid"
+    return "classical"
+
+
+def classify_competition_record(record: dict) -> tuple[str, list[int] | None]:
+    """Persist exact clock evidence; never classify custom by its textual label."""
+    label = record.get("time_control", "unclassified") or "unclassified"
+    if label not in CLOCK_LABELS:
+        raise ValueError("Ritmo desconhecido")
+    clock = record.get("clock")
+    if clock is not None:
+        if not isinstance(clock, (list, tuple)) or len(clock) != 2:
+            raise ValueError("Relógio deve ter início e incremento")
+        normalized = list(clock)
+        return classify_clock(*normalized), normalized
+    if label == "custom":
+        raise ValueError("Relógio personalizado sem valores registrados")
+    if label == "official":
+        # Legacy named official preset is 600+2 = rapid, never a classical pool.
+        return "rapid", [600, 2]
+    # Legacy verified records without a clock remain explicitly unclocked.
+    return label, None
 
 
 def _canonical(data: object) -> bytes:
@@ -86,7 +127,8 @@ def _rating(row: dict, n: int) -> dict:
 
 
 def build_rating_ledger(records: list[dict], *, k: object = DEFAULT_K,
-                        roster: tuple[str, ...] | None = None) -> dict:
+                        roster: tuple[str, ...] | None = None,
+                        modality: str = "rapid") -> dict:
     """Recalculate deterministically from a set of evidence-validated games.
 
     IDs, not PGN similarity, identify a game. Two independently played matches
@@ -94,6 +136,8 @@ def build_rating_ledger(records: list[dict], *, k: object = DEFAULT_K,
     again. Incompatible payloads with one ID fail closed.
     """
     k = _validated_k(k)
+    if modality not in MODALITIES:
+        raise ValueError("Modalidade de Elo inválida")
     participants = tuple(p.slug for p in load_roster()) if roster is None else roster
     if (len(participants) != len(set(participants)) or not participants
             or any(not isinstance(p, str) or not p for p in participants)):
@@ -119,9 +163,9 @@ def build_rating_ledger(records: list[dict], *, k: object = DEFAULT_K,
         if status == "INCOMPLETE" and result not in (None, "*"):
             raise ValueError("Interrupção declara resultado final")
         source = record.get("origin")
-        modality = record.get("time_control", "unclassified") or "unclassified"
-        if source not in ("arena", "tournament") or modality not in MODALITIES:
-            raise ValueError("Origem ou modalidade inválida")
+        record_modality, clock = classify_competition_record(record)
+        if source not in ("arena", "tournament"):
+            raise ValueError("Origem de jogo inválida")
         date = record.get("recorded_utc")
         if date is not None and (not isinstance(date, str) or
                                  len(date) > 50 or not date.endswith("+00:00")):
@@ -141,8 +185,8 @@ def build_rating_ledger(records: list[dict], *, k: object = DEFAULT_K,
         payload = {
             "game_id": game_id, "white": white, "black": black,
             "source": source, "result": result, "status": status,
-            "created_manifest_utc": date, "modality": modality,
-            "engine_strength_config": proof,
+            "created_manifest_utc": date, "modality": record_modality,
+            "clock": clock, "engine_strength_config": proof,
             "evidence_pgn_sha256": evidence,
         }
         if game_id in unique:
@@ -153,7 +197,8 @@ def build_rating_ledger(records: list[dict], *, k: object = DEFAULT_K,
         unique[game_id] = payload
         if status == "INCOMPLETE":
             ignored_incomplete += 1
-    completed = [x for x in unique.values() if x["status"] == "COMPLETED"]
+    completed = [x for x in unique.values()
+                 if x["status"] == "COMPLETED" and x["modality"] == modality]
     if len(completed) > MAX_EVENTS:
         raise ValueError("Limite de partidas para Elo excedido")
     # Manifest timestamps are CREATION dates, not trusted play times. Missing
@@ -195,7 +240,7 @@ def build_rating_ledger(records: list[dict], *, k: object = DEFAULT_K,
                 "index": index, "id": game["game_id"],
                 "created_manifest_utc": game["created_manifest_utc"],
                 "source": game["source"], "modality": game["modality"],
-                "white": w, "black": b, "result": game["result"],
+                "clock": game["clock"], "white": w, "black": b, "result": game["result"],
                 "score_white": str(score_w),
                 "expected_white": str(exp_w),
                 "white_before": str(before_w), "black_before": str(before_b),
@@ -223,7 +268,7 @@ def build_rating_ledger(records: list[dict], *, k: object = DEFAULT_K,
             r["slug"],
         ))
     return {
-        "schema": LEDGER_SCHEMA, "universe": UNIVERSE,
+        "schema": LEDGER_SCHEMA, "universe": UNIVERSE, "modality": modality,
         "model_version": VERSION, "baseline": "2500", "k": str(k),
         "rating_ledger": ledger, "ledger_checksum": previous,
         "ledger_genesis": GENESIS, "ratings": ranking,
@@ -254,13 +299,16 @@ def verify_rating_ledger(snapshot: dict) -> bool:
         if snapshot.get("ledger_schema") != LEDGER_SCHEMA:
             return False
         expected_snapshot_checksum = snapshot.get("snapshot_checksum")
-        if expected_snapshot_checksum is not None:
-            body = {k: v for k, v in snapshot.items() if k != "snapshot_checksum"}
-            try:
-                if sha256(_canonical(body)).hexdigest() != expected_snapshot_checksum:
-                    return False
-            except (TypeError, ValueError):
+        # A full exported report without its integrity checksum is invalid.
+        if not isinstance(expected_snapshot_checksum, str) or not re.fullmatch(
+                r"[0-9a-f]{64}", expected_snapshot_checksum):
+            return False
+        body = {k: v for k, v in snapshot.items() if k != "snapshot_checksum"}
+        try:
+            if sha256(_canonical(body)).hexdigest() != expected_snapshot_checksum:
                 return False
+        except (TypeError, ValueError):
+            return False
     elif snapshot.get("schema") != LEDGER_SCHEMA:
         return False
     if snapshot.get("ledger_genesis") != GENESIS:
@@ -288,7 +336,7 @@ def verify_rating_ledger(snapshot: dict) -> bool:
                 "id": event["id"], "white": event["white"],
                 "black": event["black"], "status": "COMPLETED",
                 "result": event["result"], "origin": event["source"],
-                "time_control": event["modality"],
+                "time_control": event["modality"], "clock": event["clock"],
                 "recorded_utc": event["created_manifest_utc"],
                 "engine_strength_config": event["engine_strength_config"],
                 "evidence_pgn_sha256": event["evidence_pgn_sha256"],
@@ -296,7 +344,8 @@ def verify_rating_ledger(snapshot: dict) -> bool:
         if snapshot.get("ledger_checksum") != previous:
             return False
         k = snapshot.get("k", ledger[0]["k"] if ledger else str(DEFAULT_K))
-        recalculated = build_rating_ledger(records, k=k)
+        recalculated = build_rating_ledger(
+            records, k=k, modality=snapshot.get("modality"))
         if recalculated["rating_ledger"] != ledger:
             return False
         if "ratings" in snapshot and snapshot["ratings"] != recalculated["ratings"]:
@@ -310,12 +359,19 @@ def verify_rating_ledger(snapshot: dict) -> bool:
 
 
 def rating_report(workspace: Path, *, k: object = DEFAULT_K,
-                  include_ledger: bool = False) -> dict:
-    """Read-only report. The optional ledger is for explicit CLI export only."""
+                  include_ledger: bool = False,
+                  modality: str = "rapid") -> dict:
+    """Read-only independent pool, never a blended global Elo."""
     records, coverage = verified_competition_games(workspace)
-    snapshot = build_rating_ledger(records, k=k)
+    snapshot = build_rating_ledger(records, k=k, modality=modality)
+    available_modalities = dict.fromkeys(RATING_POOLS, 0)
+    for record in records:
+        if record["status"] == "COMPLETED":
+            category, _ = classify_competition_record(record)
+            available_modalities[category] += 1
     summary = {
         "schema": SCHEMA, "universe": snapshot["universe"],
+        "modality": modality, "available_modalities": available_modalities,
         "model_version": snapshot["model_version"], "baseline": snapshot["baseline"],
         "k": snapshot["k"], "ratings": snapshot["ratings"],
         "counts": snapshot["counts"], "coverage": coverage,
@@ -340,9 +396,10 @@ def rating_report(workspace: Path, *, k: object = DEFAULT_K,
 
 
 def export_rating_ledger(workspace: Path, out: Path, *,
-                         k: object = DEFAULT_K, replace: bool = False) -> dict:
+                         k: object = DEFAULT_K, replace: bool = False,
+                         modality: str = "rapid") -> dict:
     """Explicit CLI-only, atomic and idempotent snapshot; GET never writes."""
-    report = rating_report(workspace, k=k, include_ledger=True)
+    report = rating_report(workspace, k=k, include_ledger=True, modality=modality)
     snapshot = {
         **report,
         "snapshot_checksum": sha256(_canonical(report)).hexdigest(),

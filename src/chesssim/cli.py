@@ -90,6 +90,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="K experimental positivo entre 0 e 100; padrão 10")
     rating.add_argument("--replace", action="store_true",
                         help="Autoriza substituir snapshot quando novos jogos forem descobertos")
+    rating.add_argument("--modality", choices=["classical", "rapid", "blitz", "bullet", "unclassified"],
+                        default="rapid", help="Pool isolado de Elo (padrão: rapid)")
 
     arena = sub.add_parser("arena", help="Arena local opt-in para lançar e acompanhar duelos UCI")
     arena.add_argument("--rodent", type=Path,
@@ -519,7 +521,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "rating-export":
             from .competition_rating import export_rating_ledger
             info = export_rating_ledger(args.workspace, args.out, k=args.k,
-                                        replace=args.replace)
+                                        replace=args.replace,
+                                        modality=args.modality)
             print(json.dumps(info, ensure_ascii=False, indent=2))
             return 0
         if args.command == 'opening-build':

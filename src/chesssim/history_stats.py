@@ -21,6 +21,7 @@ import chess
 import chess.pgn
 
 from .catalog import load_roster
+from .peak_windows import CLOCK_PRESETS
 from .game_diversity import mainline_identity
 from .history_games import (
     InvalidCatalogue, MAX_MANIFEST_BYTES, MAX_PGN_BYTES, _game, _json, _read,
@@ -37,6 +38,22 @@ MAX_GAMES = 16384
 SESSION_ID = re.compile(r"session-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{12}\Z")
 ATTEMPT = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}\Z")
 RESULTS = frozenset({"1-0", "0-1", "1/2-1/2"})
+PRESET_CLOCKS = {"official": (600, 2), **CLOCK_PRESETS}
+
+
+def _arena_clock(config: dict) -> list[int] | None:
+    if config.get("mode") != "preset":
+        return None
+    if config.get("preset") == "custom":
+        start, increment = config.get("initial_seconds"), config.get("increment_seconds")
+        if (type(start) is not int or type(increment) is not int
+                or not 60 <= start <= 14400 or not 0 <= increment <= 120):
+            raise InvalidCatalogue("Relógio personalizado de sessão inválido")
+        return [start, increment]
+    clock = PRESET_CLOCKS.get(config.get("preset"))
+    if clock is None:
+        raise InvalidCatalogue("Preset de sessão desconhecido")
+    return list(clock)
 COUNTERS = ("games", "completed", "wins", "draws", "losses", "incomplete")
 
 
@@ -159,6 +176,7 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
                     or config["white"] == config["black"]):
                 raise InvalidCatalogue("Sessão inconsistente")
             participants = [config["white"], config["black"]]
+            session_clock = _arena_clock(config)
             if slug is not None and slug not in participants:
                 continue
             when = _timestamp(session.get("created_utc"))
@@ -221,6 +239,9 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
                             ) else partial
                             pgn_bytes = _read(root, target, MAX_PGN_BYTES)
                             game = _game(pgn_bytes)
+                            if session_clock is not None and game.headers.get(
+                                    "TimeControl") != f"{session_clock[0]}+{session_clock[1]}":
+                                raise InvalidCatalogue("Relógio do PGN diverge da sessão")
                             white, black = (participants if idx == 1
                                             else participants[::-1])
                             result = meta.get("result") if status == "COMPLETED" else None
@@ -233,9 +254,10 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
                                 "status": status, "result": result,
                                 "origin": "arena", "recorded_utc": when,
                                 "time_control": (
-                                    config.get("preset") if config.get("mode") == "preset"
+                                    config.get("preset") if session_clock is not None
                                     else "unclassified"
                                 ),
+                                "clock": session_clock,
                                 "engine_strength_config": None,
                                 "evidence_pgn_sha256": sha256(pgn_bytes).hexdigest(),
                             })
@@ -357,6 +379,7 @@ def _tournament_attempt(root: Path, run: Path, state: dict,
             "white": white, "black": black, "status": "COMPLETED",
             "result": result, "origin": "tournament", "recorded_utc": date,
             "time_control": state["preset"],
+            "clock": list(state["clock"]),
             "evidence_pgn_sha256": attempt["pgn_sha256"],
             "engine_strength_config": {
                 "engine_sha256": resources["engine_sha256"],
