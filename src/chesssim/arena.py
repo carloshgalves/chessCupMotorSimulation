@@ -84,19 +84,41 @@ def normalize_config(raw: object) -> dict:
     result = {"white": white, "black": black, "mode": mode, "reverse": reverse,
               "opening_mode": opening, "max_plies": max_plies,
               "preset": None, "depth": None, "movetime": None, "seed": None}
-    if mode == "preset":
-        preset = raw.get("preset")
-        if not isinstance(preset, str) or preset not in (set(PRESETS) | {"custom"}) or (
-                "depth" in raw or "movetime" in raw):
-            raise BadLaunch("Escolha exclusivamente um ritmo de relógio")
+    if mode == "depth":
+        if "movetime" in raw:
+            raise BadLaunch("Escolha profundidade ou tempo por lance, não ambos")
+        result["depth"] = _integer(raw.get("depth", 6), 1, 16, "depth")
+    elif mode == "movetime":
+        if ("depth" in raw or "preset" in raw or "initial_seconds" in raw
+                or "increment_seconds" in raw):
+            raise BadLaunch("Tempo fixo por lance não pode usar relógio simultâneo")
+        seconds = raw.get("movetime")
+        if (type(seconds) not in (float, int) or not math.isfinite(seconds)
+                or not 0.05 <= seconds <= 10):
+            raise BadLaunch("movetime deve estar entre 0,05 e 10 segundos")
+        result["movetime"] = float(seconds)
+    else:
+        # Legacy clock-only mode: official and past sessions keep their contract.
+        if "depth" in raw or "movetime" in raw:
+            raise BadLaunch("Protocolo de relógio exclusivo não aceita limite de busca")
+    preset = raw.get("preset")
+    if mode == "preset" and preset is None:
+        raise BadLaunch("Informe um ritmo de relógio")
+    if preset is not None:
+        if (mode == "movetime" or not isinstance(preset, str)
+                or preset not in (set(PRESETS) | {"custom"})):
+            raise BadLaunch("Ritmo de relógio inválido")
         if not reverse:
-            raise BadLaunch("Presets de torneio exigem ambas as cores")
-        if preset == "official" and opening != "internal":
-            raise BadLaunch("Protocolo official exige livro UCI interno")
-        if preset == "official" and max_plies != 600:
-            raise BadLaunch("Protocolo official exige limite de segurança 600")
-        if preset == "official" and "seed" in raw:
-            raise BadLaunch("Semente não integra o protocolo official")
+            raise BadLaunch("Confrontos com relógio exigem ambas as cores")
+        if preset == "official":
+            if mode != "preset":
+                raise BadLaunch("Protocolo official não aceita profundidade adicional")
+            if opening != "internal":
+                raise BadLaunch("Protocolo official exige livro UCI interno")
+            if max_plies != 600:
+                raise BadLaunch("Protocolo official exige limite de segurança 600")
+            if "seed" in raw:
+                raise BadLaunch("Semente não integra o protocolo official")
         result["preset"] = preset
         if preset == "custom":
             result["initial_seconds"] = _integer(
@@ -105,19 +127,8 @@ def normalize_config(raw: object) -> dict:
                 raw.get("increment_seconds"), 0, 120, "increment_seconds")
         elif "initial_seconds" in raw or "increment_seconds" in raw:
             raise BadLaunch("Relógio personalizado exige preset custom")
-    elif mode == "depth":
-        if "movetime" in raw or "preset" in raw or "initial_seconds" in raw or (
-                "increment_seconds" in raw):
-            raise BadLaunch("Não misture limites de busca")
-        result["depth"] = _integer(raw.get("depth", 6), 1, 16, "depth")
-    else:
-        if ("depth" in raw or "preset" in raw or "initial_seconds" in raw
-                or "increment_seconds" in raw):
-            raise BadLaunch("Não misture limites de busca")
-        seconds = raw.get("movetime")
-        if type(seconds) not in (float, int) or not math.isfinite(seconds) or not 0.05 <= seconds <= 10:
-            raise BadLaunch("movetime deve estar entre 0,05 e 10 segundos")
-        result["movetime"] = float(seconds)
+    elif "initial_seconds" in raw or "increment_seconds" in raw:
+        raise BadLaunch("Relógio personalizado exige preset custom")
     if opening == "historical":
         if result["preset"] == "official":
             raise BadLaunch("Abertura externa não pertence ao protocolo official")

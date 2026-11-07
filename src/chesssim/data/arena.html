@@ -134,28 +134,38 @@
               </div>
             </div>
             <fieldset>
-              <legend>Limite de busca</legend>
+              <legend>Busca do motor</legend>
               <div class="field-grid">
                 <div>
-                  <label for="mode">Tipo</label>
+                  <label for="mode">Critério de busca</label>
                   <select id="mode">
-                    <option value="depth">Profundidade por lance</option>
-                    <option value="movetime">Segundos por lance</option>
-                    <option value="preset">Relógio de torneio</option>
+                    <option value="depth">Profundidade máxima por lance</option>
+                    <option value="movetime">Tempo fixo por lance (sem relógio)</option>
                   </select>
                 </div>
                 <div id="depth-wrap">
-                  <label for="depth">Profundidade (1–16)</label>
+                  <label for="depth">Profundidade máxima (1–16)</label>
                   <input type="number" id="depth" value="6" min="1" max="16" step="1">
                 </div>
                 <div id="movetime-wrap" hidden>
-                  <label for="movetime">Segundos (0,05–10)</label>
+                  <label for="movetime">Segundos por lance (0,05–10)</label>
                   <input type="number" id="movetime" value="0.5" min="0.05" max="10" step="0.05">
                 </div>
-                <div id="preset-wrap" hidden>
-                  <label for="preset">Ritmo de jogo</label>
+                <div>
+                  <label for="max-plies">Limite de meios-lances</label>
+                  <input type="number" id="max-plies" value="400" min="40" max="600" step="1">
+                </div>
+              </div>
+              <p id="search-note" class="note">A profundidade é um teto de busca; não define a duração da partida.</p>
+            </fieldset>
+            <fieldset>
+              <legend>Relógio da partida</legend>
+              <div class="field-grid">
+                <div id="preset-wrap">
+                  <label for="preset">Controle de tempo (por jogador)</label>
                   <select id="preset">
-                    <option value="official">Oficial · 10+2</option>
+                    <option value="none">Sem relógio</option>
+                    <option value="official">Protocolo oficial do projeto · 10+2</option>
                     <option value="classical">Clássico · 60+30</option>
                     <option value="rapid">Rápido · 15+10</option>
                     <option value="blitz">Blitz · 3+2</option>
@@ -166,15 +176,11 @@
                 <div id="custom-clock-wrap" hidden>
                   <label for="custom-minutes">Minutos iniciais por jogador (1–240)</label>
                   <input type="number" id="custom-minutes" value="30" min="1" max="240" step="1">
-                  <label for="custom-increment">Incremento por lance em segundos (0–120)</label>
+                  <label for="custom-increment">Incremento em segundos (0–120)</label>
                   <input type="number" id="custom-increment" value="5" min="0" max="120" step="1">
-                  <p class="note">Categoria Elo: tempo inicial + 60 × incremento. Não altera força UCI.</p>
-                </div>
-                <div>
-                  <label for="max-plies">Limite de meios-lances</label>
-                  <input type="number" id="max-plies" value="400" min="40" max="600" step="1">
                 </div>
               </div>
+              <p id="clock-note" class="note">Opcional. Profundidade e relógio podem coexistir (ex.: profundidade 16 com 1+0). O protocolo oficial mantém suas regras fixas.</p>
               <label class="checkbox">
                 <input type="checkbox" id="reverse" checked>
                 <span>Disputar também a partida com cores invertidas</span>

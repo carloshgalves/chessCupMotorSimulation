@@ -49,12 +49,32 @@ function displayProfile(slot, slug) {
   el.append(title, provenance, windowNote, warning);
 }
 function updateForm() {
+  const clock = $("preset").value;
+  const official = clock === "official";
+  // A fixed per-move time and a game clock are different limits; avoid
+  // ambiguous simultaneous UCI movetime/wtime/btime behavior.
+  if (clock !== "none" && !official && $("mode").value === "movetime") {
+    $("mode").value = "depth";
+  }
   const mode = $("mode").value;
-  $("depth-wrap").hidden = mode !== "depth";
-  $("movetime-wrap").hidden = mode !== "movetime";
-  $("preset-wrap").hidden = mode !== "preset";
-  $("custom-clock-wrap").hidden = mode !== "preset" || $("preset").value !== "custom";
-  const official = mode === "preset" && $("preset").value === "official";
+  $("mode").disabled = official;
+  $("depth-wrap").hidden = mode !== "depth" || official;
+  $("movetime-wrap").hidden = mode !== "movetime" || official;
+  $("custom-clock-wrap").hidden = clock !== "custom";
+  $("search-note").textContent = official ?
+    "O protocolo oficial do projeto fixa o limite de busca; profundidade adicional não é permitida." :
+    clock !== "none" ?
+    "Profundidade: teto máximo de busca por lance. O relógio continua valendo e pode encerrar o tempo antes do teto." :
+    mode === "movetime" ?
+    "Tempo de busca por lance sem relógio de partida. Para usar relógio, selecione profundidade." :
+    "Profundidade: teto de busca por lance; não é um relógio de xadrez.";
+  $("clock-note").textContent = clock === "none" ?
+    "Sem relógio: esta partida entrará no ranking separado 'Sem relógio'." :
+    clock === "custom" ?
+    "Modalidade determinada por minutos iniciais + 60 incrementos. A profundidade pode coexistir." :
+    official ?
+    "Protocolo especial 10+2, sem profundidade adicional; rating experimental classificado como rápido." :
+    "Relógio e profundidade atuam juntos. Partidas são classificadas pelos segundos reais do controle de tempo.";
   const opening = $("opening");
   if (official) {
     opening.value = "internal";
@@ -65,8 +85,8 @@ function updateForm() {
     $("max-plies").disabled = true;
   } else {
     opening.disabled = false;
-    $("reverse").disabled = mode === "preset";
-    if (mode === "preset") $("reverse").checked = true;
+    $("reverse").disabled = clock !== "none";
+    if (clock !== "none") $("reverse").checked = true;
     $("max-plies").disabled = false;
   }
   $("seed-wrap").hidden = opening.value !== "historical";
@@ -83,17 +103,18 @@ function updateForm() {
   $("stop").disabled = !busy || !token;
 }
 function configFromForm() {
-  const mode = $("mode").value;
+  const clock = $("preset").value;
+  const mode = clock === "official" ? "preset" : $("mode").value;
   const config = {
-    white: $("white").value, black: $("black").value,
+    white:$("white").value, black:$("black").value,
     mode, reverse:$("reverse").checked, opening_mode:$("opening").value,
     max_plies:Number($("max-plies").value)
   };
   if (mode === "depth") config.depth = Number($("depth").value);
   else if (mode === "movetime") config.movetime = Number($("movetime").value);
-  else {
-    config.preset = $("preset").value;
-    if (config.preset === "custom") {
+  if (clock !== "none") {
+    config.preset = clock;
+    if (clock === "custom") {
       config.initial_seconds = Number($("custom-minutes").value) * 60;
       config.increment_seconds = Number($("custom-increment").value);
     }
@@ -115,10 +136,12 @@ function renderSession() {
   const pieces = [
     ["Brancas", player(config.white)?.name || config.white],
     ["Pretas", player(config.black)?.name || config.black],
-    ["Busca", config.mode === "preset" ?
-      (config.preset === "custom" ? (config.initial_seconds / 60) + "+" +
-       config.increment_seconds + " (personalizado)" : config.preset) :
-      config.mode === "depth" ? "depth " + config.depth : config.movetime + " s/lance"],
+    ["Busca", config.mode === "preset" ? "Protocolo oficial sem teto extra" :
+      config.mode === "depth" ? "Profundidade máxima " + config.depth :
+      config.movetime + " s/lance"],
+    ["Relógio", config.preset === "custom" ?
+      (config.initial_seconds / 60) + "+" + config.increment_seconds + " (personalizado)" :
+      config.preset || "Sem relógio"],
     ["Cores invertidas",config.reverse ? "Sim" : "Não"],
     ["Abertura", config.opening_mode +
       (config.seed !== null ? " · seed " + config.seed : " · sem seed")],
@@ -210,7 +233,7 @@ $("swap").addEventListener("click", () => {
   $("black").value = a;
   updateForm();
 });
-for (const field of ["white","black","mode","preset","custom-minutes","custom-increment","opening","reverse","max-plies"]) {
+for (const field of ["white","black","mode","depth","movetime","preset","custom-minutes","custom-increment","opening","reverse","max-plies"]) {
   $(field).addEventListener("change", updateForm);
 }
 $("launch").disabled = true;

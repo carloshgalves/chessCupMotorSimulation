@@ -42,8 +42,12 @@ PRESET_CLOCKS = {"official": (600, 2), **CLOCK_PRESETS}
 
 
 def _arena_clock(config: dict) -> list[int] | None:
-    if config.get("mode") != "preset":
+    if config.get("preset") is None:
         return None
+    if config.get("mode") not in ("preset", "depth"):
+        raise InvalidCatalogue("Modo de sessão incompatível com relógio")
+    if config.get("preset") == "official" and config.get("mode") != "preset":
+        raise InvalidCatalogue("Protocolo official não admite limite de profundidade")
     if config.get("preset") == "custom":
         start, increment = config.get("initial_seconds"), config.get("increment_seconds")
         if (type(start) is not int or type(increment) is not int
