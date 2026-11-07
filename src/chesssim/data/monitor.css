@@ -36,12 +36,15 @@ select{background:#203640;color:#fff;border:1px solid #496573;padding:10px;borde
 .headline{font-size:1.48rem;font-weight:750;margin:6px 0 12px;color:var(--highlight)}
 /* PGN convention: one move number per row, white at left and black at right. */
 #moves{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;
+  /* Never stretch sparse rows to fill the available scroll viewport. */
+  grid-auto-rows:34px;align-content:start;
   list-style:none;margin:0;padding:8px 4px;min-height:140px;
   height:clamp(205px,30vh,350px);overflow-y:scroll;overscroll-behavior:contain;
   font-variant-numeric:tabular-nums;scrollbar-width:thin;
   scrollbar-color:#719ba6 #10232c}
-#moves .move-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;min-width:0}
-#moves .move-cell{display:block;min-width:0;min-height:30px;text-align:left;
+#moves .move-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:6px;min-width:0;height:34px;align-items:center}
+#moves .move-cell{display:block;min-width:0;min-height:34px;height:34px;text-align:left;
   padding:4px 7px;border:1px solid transparent;border-radius:5px;
   background:transparent;color:#d9e8e9;font-size:.88rem;font-weight:500;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

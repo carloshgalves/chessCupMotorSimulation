@@ -16,6 +16,10 @@ let moveSignature = "";
 let moveCells = [];
 let followMoves = true;
 let automaticMoveScroll = false;
+// Presentation-only pacing: never change the engine clock or the PGN.
+const LIVE_MOVE_INTERVAL_MS = 650;
+let liveGameId = "";
+let lastPresentedAt = 0;
 
 function readSelection() {
   const params = new URLSearchParams(window.location.hash.slice(1));
@@ -47,6 +51,9 @@ function applySelection() {
   selectionSignature = null;
   attemptSignature = null;
   bracketSignature = null;
+  liveGameId = "";
+  lastPresentedAt = 0;
+  followMoves = true;
   poll();
 }
 window.addEventListener("hashchange", applySelection);
@@ -57,7 +64,48 @@ function availableGames() {
 function currentGame() {
   if (pinned) return pinned;
   const games = availableGames();
-  return games[games.length - 1] || null;
+  // A second game can start before the first one's visual queue has drained.
+  return games.find(game => game.id === liveGameId) ||
+    games[games.length - 1] || null;
+}
+function acceptLiveSnapshot() {
+  if (pinned) return;
+  const games = availableGames();
+  if (!games.length) {
+    liveGameId = "";
+    cursor = 0;
+    return;
+  }
+  const index = games.findIndex(game => game.id === liveGameId);
+  if (index < 0) {
+    const game = games[games.length - 1];
+    const isInitial = !liveGameId;
+    liveGameId = game.id;
+    // On entry show the current position. When the selected game changes,
+    // start at its initial position so its first moves aren't skipped.
+    cursor = isInitial ? game.states.length - 1 : 0;
+    lastPresentedAt = Date.now();
+  } else {
+    cursor = Math.min(cursor, games[index].states.length - 1);
+  }
+}
+function advanceLivePlayback(now = Date.now()) {
+  if (pinned || !liveGameId || now - lastPresentedAt < LIVE_MOVE_INTERVAL_MS) return;
+  const games = availableGames();
+  const index = games.findIndex(game => game.id === liveGameId);
+  if (index < 0) return;
+  const game = games[index];
+  if (cursor < game.states.length - 1) {
+    // Advance exactly one half-move per visual tick, never jump to the tail.
+    cursor += 1;
+  } else if (index + 1 < games.length) {
+    liveGameId = games[index + 1].id;
+    cursor = 0;
+  } else {
+    return;
+  }
+  lastPresentedAt = now;
+  render();
 }
 function freezeView() {
   if (!pinned) {
@@ -73,8 +121,11 @@ function resumeView() {
   pinned = null;
   activeKey = "";
   followMoves = true;
-  const game = currentGame();
+  const games = availableGames();
+  const game = games[games.length - 1] || null;
+  liveGameId = game ? game.id : "";
   cursor = game ? game.states.length - 1 : 0;
+  lastPresentedAt = Date.now();
   render();
 }
 function goLive() {
@@ -120,24 +171,27 @@ function paintClocks() {
     box.classList.toggle("low", clocks[index] !== null &&
                          clocks[index] !== undefined && clocks[index] < 30);
     box.classList.toggle("active", !!game && !pinned && game.live &&
+                         cursor === game.states.length - 1 &&
                          (state.turn === "white" ? 0 : 1) === index);
   }
 }
 function displayMoves(game) {
   const list = $("moves");
-  const signature = game.id + "|" + game.states.length + "|" +
-    game.states.slice(1).map(x => x.san).join("|");
+  // The notation must advance with the paced board, not reveal future plies.
+  const visiblePly = pinned ? game.states.length - 1 : cursor;
+  const signature = game.id + "|" + visiblePly + "|" +
+    game.states.slice(1, visiblePly + 1).map(x => x.san).join("|");
   if (signature !== moveSignature) {
     const priorScroll = list.scrollTop;
     const rows = [];
     const controls = [];
-    for (let ply = 1; ply < game.states.length; ply += 2) {
+    for (let ply = 1; ply <= visiblePly; ply += 2) {
       const number = Math.ceil(ply / 2);
       const row = document.createElement("li");
       row.className = "move-row";
       for (const side of [0, 1]) {
         const cellPly = ply + side;
-        if (cellPly < game.states.length) {
+        if (cellPly <= visiblePly) {
           const cell = document.createElement("button");
           cell.type = "button";
           cell.className = "move-cell";
@@ -339,10 +393,20 @@ function render() {
   $("games").value = pinned ? activeKey : game ? game.id : "";
   $("pause").textContent = pinned ? "▶ Continuar ao vivo" : "⏸ Pausar visualização";
   $("pause").setAttribute("aria-pressed", pinned ? "true" : "false");
+  const games = availableGames();
+  const currentIndex = game ? games.findIndex(x => x.id === game.id) : -1;
+  const remaining = !pinned && currentIndex >= 0 ?
+    Math.max(0, game.states.length - 1 - cursor) +
+      games.slice(currentIndex + 1).reduce(
+        (sum, next) => sum + Math.max(0, next.states.length - 1), 0) : 0;
   $("view-status").textContent = pinned ?
     "Visualização pausada. O torneio continua jogando." :
+    remaining ?
+    "Reprodução visual em sequência: " + remaining +
+    " meio(s)-lance aguardando. Relógios refletem o lance exibido; " +
+    "o motor continua em tempo real." :
     selection.match ? "Revisão histórica selecionada; o torneio pode seguir em outra rodada." :
-    "A visualização acompanha o lance mais recente.";
+    "Ao vivo. Cada meio-lance é apresentado separadamente.";
   $("updated").textContent = game ?
     "Última atualização: " + new Date(game.updated_at * 1000).toLocaleTimeString("pt-BR") :
     "Sem atualizações de partida";
@@ -367,10 +431,7 @@ async function poll() {
     if (revision !== requestVersion) return;
     if (next.schema !== "chesssim-live-board-v1") throw new Error("Formato inesperado");
     feed = next;
-    if (!pinned) {
-      const game = currentGame();
-      cursor = game ? game.states.length - 1 : 0;
-    }
+    acceptLiveSnapshot();
     $("connection").textContent = "● Conectado ao simulador";
     $("connection").className = "connection live";
     render();
@@ -423,4 +484,6 @@ document.addEventListener("keydown", event => {
 render();
 poll();
 setInterval(poll, 1200);
+// Independent rendering cadence: fast UCI bursts are queued for the viewer.
+setInterval(advanceLivePlayback, 100);
 setInterval(paintClocks, 250);
