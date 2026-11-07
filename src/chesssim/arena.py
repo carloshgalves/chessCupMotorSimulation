@@ -307,7 +307,7 @@ class ArenaManager:
         with self._lock:
             selected = self._status_unlocked()
             return {"session": selected, "busy": self._active or self.human.busy,
-                    "human_busy": self.human.busy,
+                    "duel_busy": self._active, "human_busy": self.human.busy,
                     "players": _profiles(self.root),
                     "presets": {name: {"initial_seconds": v[0], "increment_seconds": v[1]}
                                 for name, v in PRESETS.items()},
