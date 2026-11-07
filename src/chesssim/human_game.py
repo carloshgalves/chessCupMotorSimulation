@@ -237,7 +237,9 @@ class HumanGame:
         self._board.push(move)
         self._data["revision"] = self._board.ply()
         self._data["updated_utc"] = _utc()
-        outcome = self._board.outcome(claim_draw=True)
+        # Threefold repetition and 50-move draws require a claim by the
+        # player; fivefold/75-move draws are automatic per chess rules.
+        outcome = self._board.outcome(claim_draw=False)
         if outcome:
             self._finish_locked(outcome.result(), outcome.termination.name)
         elif self._board.ply() >= 400:
