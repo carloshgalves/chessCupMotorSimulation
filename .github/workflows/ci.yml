@@ -103,7 +103,7 @@ jobs:
               for asset in ("monitor.html", "monitor.css", "monitor.js",
                             "arena.html", "arena.css", "arena.js",
                             "history.js", "history.css", "history_replay.js", "history_stats.js",
-                            "chess_board.js", "chess_board.css"):
+                            "chess_board.js", "chess_board.css", "board_preferences.js"):
                   assert f"chesssim/data/{asset}" in names, f"Live-board asset missing: {asset}"
               entry_points = [
                   name for name in names
