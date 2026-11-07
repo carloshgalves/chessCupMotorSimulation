@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/chess-board.css">
   <link rel="stylesheet" href="/app.css">
   <script src="/chess-board.js" defer></script>
+  <script src="/board-preferences.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body>
@@ -17,6 +18,36 @@
         <h1>Copa dos Imortais <span>· Ao vivo</span></h1>
         <p>Tabuleiro local conectado aos PGNs do Rodent IV. Somente visualização.</p>
       </div>
+
+      <details class="board-prefs" aria-label="Aparência dos tabuleiros">
+        <summary>Aparência do tabuleiro</summary>
+        <div class="board-pref-grid">
+          <label for="board-pref-theme">Cores do tabuleiro
+            <select id="board-pref-theme">
+              <option value="classic">Clássico</option>
+              <option value="wood">Madeira</option>
+              <option value="slate">Azul-acizentado</option>
+              <option value="contrast">Alto contraste</option>
+            </select>
+          </label>
+          <label for="board-pref-pieces">Desenho das peças
+            <select id="board-pref-pieces">
+              <option value="solid">Sólidas (padrão)</option>
+              <option value="outline">Contornos</option>
+            </select>
+          </label>
+          <label for="board-pref-motion">Destaque ao mudar lance
+            <select id="board-pref-motion">
+              <option value="off">Sem animação</option>
+              <option value="fast">Rápido (160 ms)</option>
+              <option value="normal">Normal (330 ms)</option>
+            </select>
+          </label>
+        </div>
+        <button type="button" id="board-pref-reset">Restaurar padrão</button>
+        <p class="board-pref-note">Preferências só neste navegador. Não modificam lances, relógios nem força do motor. Movimento reduzido tem prioridade.</p>
+        <p id="board-pref-status" role="status" aria-live="polite"></p>
+      </details>
       <div class="connection" id="connection" role="status" aria-live="polite">Conectando…</div>
     </header>
     <div class="content">
