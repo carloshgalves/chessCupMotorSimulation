@@ -4,7 +4,7 @@
   const KEY = "chesssim.board-presentation.v1";
   const DEFAULTS = Object.freeze({theme:"classic", pieces:"solid", motion:"off"});
   const CHOICES = Object.freeze({
-    theme: Object.freeze(["classic","wood","slate","contrast"]),
+    theme: Object.freeze(["classic","wood","slate","light","dark","contrast"]),
     pieces: Object.freeze(["solid","outline"]),
     motion: Object.freeze(["off","fast","normal"])
   });
