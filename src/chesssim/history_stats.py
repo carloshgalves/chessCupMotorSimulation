@@ -159,7 +159,7 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
                     or config["white"] == config["black"]):
                 raise InvalidCatalogue("Sessão inconsistente")
             participants = [config["white"], config["black"]]
-            if slug not in participants:
+            if slug is not None and slug not in participants:
                 continue
             when = _timestamp(session.get("created_utc"))
             if when:
@@ -231,6 +231,11 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
                                 "duel_id": "arena:" + sid, "white": white, "black": black,
                                 "status": status, "result": result,
                                 "origin": "arena", "recorded_utc": when,
+                                "time_control": (
+                                    config.get("preset") if config.get("mode") == "preset"
+                                    else "unclassified"
+                                ),
+                                "engine_strength_config": None,
                             })
                         except (InvalidCatalogue, OSError, ValueError, KeyError, TypeError):
                             coverage["rejected_games"] += 1
@@ -349,6 +354,12 @@ def _tournament_attempt(root: Path, run: Path, state: dict,
                        match["id"] + ":" + parts[-1],
             "white": white, "black": black, "status": "COMPLETED",
             "result": result, "origin": "tournament", "recorded_utc": date,
+            "time_control": state["preset"],
+            "engine_strength_config": {
+                "engine_sha256": resources["engine_sha256"],
+                "white_profile_sha256": hashes[white],
+                "black_profile_sha256": hashes[black],
+            },
         })
     return records
 
@@ -411,7 +422,7 @@ def _tournament_games(root: Path, names: dict[str, str], slug: str,
                 dates.append(when)
             for rd in state["rounds"]:
                 for match in rd["matches"]:
-                    if slug not in match["players"]:
+                    if slug is not None and slug not in match["players"]:
                         continue
                     grouped = {}
                     conflicts = set()
@@ -569,4 +580,37 @@ def player_stats(workspace: Path, slug: str) -> dict:
             "duplicate_records": coverage["duplicate_records"],
             "partial": bool(coverage["rejected_records"] or coverage["rejected_games"]),
         },
+    }
+
+
+def verified_competition_games(workspace: Path) -> tuple[list[dict], dict]:
+    """Validate all local simulated results once, reusing the strict #52 gate.
+
+    Non-scorable attempts and historical games are never returned; all
+    diagnostics are preserved separately so Elo consumers can flag incomplete
+    coverage. This enumerates by *game*, never by player or by duel.
+    """
+    root = workspace.expanduser().resolve(strict=True)
+    if not root.is_dir():
+        raise InvalidCatalogue("Diretório de estatísticas inválido")
+    names = {p.slug: p.name for p in load_roster()}
+    coverage = Counter()
+    records: list[dict] = []
+    seen: set[str] = set()
+    dates: list[str] = []
+    tournaments: set[str] = set()
+    _arena_games(root, names, None, coverage, seen, records, dates)
+    _tournament_games(root, names, None, coverage, seen, records, dates, tournaments)
+    return records, {
+        "candidate_games": coverage["candidate_games"],
+        "verified_games": coverage["verified_games"],
+        "arena_verified_games": coverage["arena_verified_games"],
+        "tournament_verified_games": coverage["tournament_verified_games"],
+        "rejected_games": coverage["rejected_games"],
+        "rejected_records": coverage["rejected_records"],
+        "duplicate_records": coverage["duplicate_records"],
+        "excluded_attempts": coverage["excluded_attempts"],
+        "failed_attempts": coverage["failed_attempts"],
+        "incomplete_games": sum(r["status"] == "INCOMPLETE" for r in records),
+        "partial": bool(coverage["rejected_games"] or coverage["rejected_records"]),
     }
