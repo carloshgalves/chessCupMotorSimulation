@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+import chess.pgn
 import json
 from pathlib import Path
 import shutil
@@ -374,3 +375,63 @@ def test_legacy_official_10_plus_2_is_rapid_not_classical():
     original={**event(0),"time_control":"official"}
     assert build_rating_ledger([original],modality="rapid")["counts"]["scored_games"] == 1
     assert build_rating_ledger([original],modality="classical")["counts"]["scored_games"] == 0
+
+
+def test_verified_custom_clock_pgn_provenance_and_category(tmp_path):
+    folder, duel = session(tmp_path, 3, results=("1-0",))
+    manifest = folder / "session.json"
+    content = json.loads(manifest.read_text())
+    content["config"].update({
+        "mode": "preset", "preset": "custom",
+        "initial_seconds": 1800, "increment_seconds": 20,
+    })
+    manifest.write_text(json.dumps(content))
+    pgn_file = duel / "jogo_1.pgn"
+    with pgn_file.open(encoding="utf-8") as stream:
+        game = chess.pgn.read_game(stream)
+    game.headers["TimeControl"] = "1800+20"
+    pgn_file.write_text(str(game) + "\n", encoding="utf-8")
+    rapid = rating_report(tmp_path, modality="rapid")
+    classical = rating_report(tmp_path, modality="classical")
+    assert rapid["counts"]["scored_games"] == 1
+    assert classical["counts"]["scored_games"] == 0
+    assert rapid["available_modalities"]["rapid"] == 1
+    # Editing only the manifest cannot silently move a game into classical:
+    content["config"]["increment_seconds"] = 30
+    manifest.write_text(json.dumps(content))
+    rejected = rating_report(tmp_path, modality="classical")
+    assert rejected["counts"]["scored_games"] == 0
+    assert rejected["coverage"]["rejected_games"] == 1
+    # Matching PGN evidence permits classification as classical.
+    game.headers["TimeControl"] = "1800+30"
+    pgn_file.write_text(str(game) + "\n", encoding="utf-8")
+    classical = rating_report(tmp_path, modality="classical")
+    assert classical["counts"]["scored_games"] == 1
+    assert rating_report(tmp_path, modality="rapid")["counts"]["scored_games"] == 0
+
+
+def test_rating_http_pools_and_invalid_query_fail_closed(tmp_path):
+    session(tmp_path, 4, results=("1-0",))
+    server = arena.create_server(tmp_path,tmp_path,port=0)
+    thread = threading.Thread(target=server.serve_forever,daemon=True)
+    thread.start()
+    try:
+        base=f"http://127.0.0.1:{server.server_port}"
+        with urlopen(base + "/api/competition/ratings?modality=rapid", timeout=10) as response:
+            rapid=json.loads(response.read())
+        with urlopen(base + "/api/competition/ratings?modality=unclassified",
+                     timeout=10) as response:
+            unclocked=json.loads(response.read())
+        assert rapid["counts"]["scored_games"] == 0
+        assert unclocked["counts"]["scored_games"] == 1
+        assert unclocked["modality"] == "unclassified"
+        assert unclocked["available_modalities"]["unclassified"] == 1
+        for query in ("modality=invalid","modality=rapid&modality=classical","path=/tmp"):
+            with pytest.raises(HTTPError) as error:
+                urlopen(base + "/api/competition/ratings?" + query, timeout=10)
+            assert error.value.code == 404
+    finally:
+        server.shutdown()
+        server.server_close()
+        server.arena_manager.shutdown()
+        thread.join(timeout=5)
