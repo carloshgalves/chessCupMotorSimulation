@@ -13,10 +13,19 @@
   const link = (label, url) => {
     const node = make("a", label);
     // Sources are validated by the Python catalogue; defend again in the UI.
-    if (typeof url !== "string" || !url.startsWith("https://")) {
+    if (typeof url !== "string") return make("span", label);
+    // Reject credentials, malformed hosts and URL tricks before navigation.
+    let safe;
+    try {
+      safe = new URL(url);
+      if (safe.protocol !== "https:" || !safe.hostname ||
+          safe.username || safe.password || !url.startsWith("https://")) {
+        return make("span", label);
+      }
+    } catch (_) {
       return make("span", label);
     }
-    node.href = url;
+    node.href = safe.href;
     node.target = "_blank";
     node.rel = "noopener noreferrer";
     return node;
@@ -70,7 +79,12 @@
       const button = make("button", "Selecionar " + neighbor.name,
                           "history-side-button");
       button.type = "button";
-      button.addEventListener("click", () => move(offset));
+      button.addEventListener("click", () => {
+        move(offset);
+        // The clicked neighbor button is discarded when the cards rerender.
+        // Restore focus to a stable action for keyboard and screen-reader use.
+        byId("history-open").focus();
+      });
       slot.append(button);
     }
     byId("history-position").textContent = (state.index + 1) + " de " +
@@ -167,9 +181,13 @@
       const response = await fetch("/api/history/players", {cache:"no-store"});
       if (!response.ok) throw new Error("Catálogo indisponível");
       const data = await response.json();
-      if (!Array.isArray(data.players) || !data.players.length) throw new Error("Sem jogadores");
-      state.players = data.players.filter(p => safeSlug(p.slug));
-      if (!state.players.length) throw new Error("Elenco inválido");
+      if (!data || !Array.isArray(data.players) || data.players.length !== 64 ||
+          data.players.some(p => !p || typeof p.slug !== "string" ||
+                                !safeSlug(p.slug) || typeof p.name !== "string") ||
+          new Set(data.players.map(p => p.slug)).size !== 64) {
+        throw new Error("Elenco histórico incompleto ou duplicado");
+      }
+      state.players = data.players;
       state.loaded = true;
       byId("history-status").textContent = "";
       byId("history-roster").hidden = false;
@@ -209,7 +227,9 @@
   byId("history-open").addEventListener("click", openProfile);
   byId("history-back").addEventListener("click", backToRoster);
   byId("history-view").addEventListener("keydown", event => {
-    if (state.view !== "roster" || ["INPUT","SELECT","TEXTAREA"].includes(event.target.tagName)) return;
+    if (state.view !== "roster" || event.altKey || event.ctrlKey || event.metaKey ||
+        !event.target || !["history-view","history-carousel",
+          "history-prev","history-next","history-open"].includes(event.target.id)) return;
     if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
       event.preventDefault();
       move(event.key === "ArrowLeft" ? -1 : 1);
