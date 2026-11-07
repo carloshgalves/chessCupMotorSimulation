@@ -438,3 +438,24 @@ def test_threefold_draw_is_claimable_not_auto_adjudicated(synthetic_uci):
         assert result["termination"]=="HumanDrawClaim"
     finally:
         human.shutdown()
+
+
+@pytest.mark.parametrize(("field","bad"), [
+    ("TimeControl","60+0"),
+    ("EngineSlug","tal"),
+    ("White","Outro jogador"),
+    ("EngineSHA256","0"*64),
+])
+def test_restart_rejects_pgn_identity_or_clock_mismatch(synthetic_uci,field,bad):
+    root,workspace=synthetic_uci
+    started=human_game.HumanGame(root,workspace)
+    ident=started.start(GOOD)["id"]
+    started.shutdown()
+    path=workspace/"human-games"/ident/"game.pgn"
+    with path.open(encoding="utf-8") as stream:
+        pg=chess.pgn.read_game(stream)
+    assert pg is not None
+    pg.headers[field]=bad
+    path.write_text(str(pg)+"\n",encoding="utf-8")
+    with pytest.raises(ValueError,match="PGN humano diverge"):
+        human_game.HumanGame(root,workspace)
