@@ -28,13 +28,23 @@ const E4="rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
 const source=fs.readFileSync(process.argv[2],"utf8");
 const renderer=fs.readFileSync(process.argv[3],"utf8");
 const KEY="chesssim.board-presentation.v1";
-const names=["board","history-replay-board","board-prefs","board-pref-theme",
+const names=["board","history-replay-board","board-prefs","board-theme-gallery",
+             "board-piece-gallery","board-pref-theme",
              "board-pref-pieces","board-pref-motion",
              "board-pref-reset","board-pref-status"];
 const shared=new Map();
 function browser(options={}) {
   const elements=new Map(names.map(id=>[id,new Node("div",id)]));
   const listeners={};
+  for(const theme of ["classic","wood","slate","light","dark","contrast",
+                      "green","blue","walnut","marble","lavender","terracotta"]){
+    const button=new Node("button");button.setAttribute("data-theme",theme);
+    elements.get("board-theme-gallery").appendChild(button);
+  }
+  for(const set of ["cburnett","merida","chessnut","fantasy","spatial","celtic","rhosgfx"]){
+    const button=new Node("button");button.setAttribute("data-piece-set",set);
+    elements.get("board-piece-gallery").appendChild(button);
+  }
   const document={
     getElementById:id=>elements.get(id)||null,
     createElement:tag=>new Node(tag),
@@ -67,10 +77,19 @@ shared.set(KEY,JSON.stringify({theme:"wood",pieces:"outline",motion:"fast"}));
 {
   const app=browser(),board=app.$("board"),hist=app.$("history-replay-board");
   assert.equal(board.getAttribute("data-board-theme"),"wood");
-  assert.equal(hist.getAttribute("data-piece-style"),"outline");
+  assert.equal(hist.getAttribute("data-piece-style"),"spatial");
+  assert.equal(app.$("board-piece-gallery").children.length,7);
+  assert.equal(app.$("board-theme-gallery").children.length,12);
+  assert.equal(app.$("board-theme-gallery").children[1].getAttribute("aria-pressed"),"true");
   assert.equal(app.$("board-pref-motion").value,"fast");
   assert.equal(app.board.paint(board,{fen:INITIAL,last:null},0),true);
   assert.equal(squares(board).length,64);
+  const firstRook=squares(board)[0].children[0];
+  const firstImage=firstRook.children[0];
+  assert.equal(firstImage.getAttribute("src"),"/piece-assets/spatial/bR.svg");
+  assert.equal(firstRook.getAttribute("data-art-ready"),"0");
+  firstImage.events.load();
+  assert.equal(firstRook.getAttribute("data-art-ready"),"1");
   const savedNodes=board.children;
   assert.equal(app.prefs.set("theme","contrast"),true);
   assert.equal(board.getAttribute("data-board-theme"),"contrast");
@@ -84,8 +103,16 @@ shared.set(KEY,JSON.stringify({theme:"wood",pieces:"outline",motion:"fast"}));
   assert.equal(squares(board).length,64);
   assert.equal(app.prefs.set("motion","normal"),true);
   assert.equal(board.getAttribute("data-board-motion"),"normal");
-  assert.equal(app.prefs.set("pieces","outline"),true);
-  assert.equal(hist.getAttribute("data-piece-style"),"outline");
+  assert.equal(app.prefs.set("pieces","chessnut"),true);
+  assert.equal(hist.getAttribute("data-piece-style"),"chessnut");
+  assert.equal(firstImage.getAttribute("src"),"/piece-assets/chessnut/bR.svg");
+  assert.equal(firstRook.getAttribute("data-art-ready"),"0");
+  firstImage.events.load();
+  assert.equal(firstRook.getAttribute("data-art-ready"),"1");
+  firstImage.events.error();
+  assert.equal(firstRook.getAttribute("data-art-ready"),"0",
+               "failed SVG must reveal Unicode fallback");
+  assert.equal(app.prefs.set("pieces","outline"),false);
   assert.equal(app.prefs.set("theme","url(javascript:alert(1))"),false);
   assert.equal(board.getAttribute("data-board-theme"),"contrast");
   assert.equal(app.$("board-pref-theme").value,"contrast");
@@ -108,18 +135,18 @@ shared.set(KEY,JSON.stringify({theme:"wood",pieces:"outline",motion:"fast"}));
   assert.equal(frame.$("board").getAttribute("data-board-theme"),"slate");
   app.$("board-pref-reset").events.click();
   assert.equal(app.$("board").getAttribute("data-board-motion"),"off");
-  assert.equal(app.$("board-pref-pieces").value,"solid");
+  assert.equal(app.$("board-pref-pieces").value,"cburnett");
   frame.listeners.storage({key:KEY,newValue:shared.get(KEY)});
   assert.equal(frame.$("board").getAttribute("data-board-theme"),"classic");
   assert.deepEqual(JSON.parse(shared.get(KEY)),
-                   {theme:"classic",pieces:"solid",motion:"off"});
+                   {theme:"classic",pieces:"cburnett",motion:"off"});
   // Corrupt frames cannot smuggle attributes or HTML into the board.
   frame.listeners.storage({key:KEY,newValue:JSON.stringify({
     theme:"<img src=x onerror=alert(1)>",
     pieces:"evil",motion:"fast",token:"secret",
   })});
   assert.equal(frame.$("board").getAttribute("data-board-theme"),"classic");
-  assert.equal(frame.$("board").getAttribute("data-piece-style"),"solid");
+  assert.equal(frame.$("board").getAttribute("data-piece-style"),"cburnett");
   assert.equal(frame.$("board").getAttribute("data-board-motion"),"fast");
   assert.equal(frame.$("board").children.length,0);
   assert.equal(app.board.paint(board,{fen:"9/8/8/8/8/8/8/8 w - - 0 1",last:null},2),false);
@@ -127,11 +154,16 @@ shared.set(KEY,JSON.stringify({theme:"wood",pieces:"outline",motion:"fast"}));
   assert.equal(app.board.paint(board,{fen:INITIAL,last:null},0),true);
   assert.equal(flashes(board).length,0);
 }
+shared.set(KEY,JSON.stringify({theme:"blue",pieces:"solid",motion:"off"}));
+{
+  const old=browser();
+  assert.equal(old.$("board").getAttribute("data-piece-style"),"cburnett");
+}
 shared.set(KEY,"{broken json");
 {
   const app=browser();
   assert.equal(app.prefs.get().theme,"classic");
-  assert.equal(app.$("board").getAttribute("data-piece-style"),"solid");
+  assert.equal(app.$("board").getAttribute("data-piece-style"),"cburnett");
 }
 shared.set(KEY,"x".repeat(5000));
 {
@@ -142,6 +174,10 @@ shared.clear();
 {
   const app=browser({storageDenied:true});
   assert.equal(app.prefs.get().motion,"off");
+  const selected=app.$("board-piece-gallery").children[2];
+  selected.events.click();
+  assert.equal(app.$("board").getAttribute("data-piece-style"),"chessnut");
+  assert.equal(selected.getAttribute("aria-pressed"),"true");
   assert.equal(app.prefs.set("theme","wood"),true);
   assert.equal(app.$("board").getAttribute("data-board-theme"),"wood");
   assert(app.$("board-pref-status").textContent.includes("armazenamento indisponível"));
