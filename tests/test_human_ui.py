@@ -71,3 +71,14 @@ def test_human_browser_script_parses_in_node():
     result=subprocess.run([node,"--check",str(DATA/"human_play.js")],
                           capture_output=True,text=True,timeout=10,check=False)
     assert result.returncode==0,result.stderr
+
+
+def test_human_browser_interaction_paces_fast_uci_replies():
+    node=shutil.which("node")
+    if node is None:
+        pytest.skip("Node not installed")
+    harness=Path(__file__).parent/"assets"/"human_play_browser_harness.cjs"
+    result=subprocess.run([node,str(harness),str(DATA/"human_play.js")],
+                          capture_output=True,text=True,timeout=15,check=False)
+    assert result.returncode==0,result.stdout+"\n"+result.stderr
+    assert "Human play browser smoke: PASS" in result.stdout
