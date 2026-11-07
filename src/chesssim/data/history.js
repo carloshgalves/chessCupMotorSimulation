@@ -96,6 +96,9 @@
   }
   function move(offset) {
     if (!state.players.length || state.view !== "roster") return;
+    // Invalidate a profile request started before carousel selection changed.
+    ++state.seq;
+    byId("history-status").textContent = "";
     state.index = (state.index + offset + state.players.length) % state.players.length;
     showSelection();
   }
