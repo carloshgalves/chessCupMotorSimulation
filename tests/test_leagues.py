@@ -503,7 +503,14 @@ def test_64_engine_receipt_scopes_profile_hashes_to_participants(manager):
     assert manager.detail(ident)["completed_games"]==1
 
 
-@pytest.mark.parametrize("data", [None, 4, "fischer", {"fischer": 1}])
+@pytest.mark.parametrize("data", [None, 4, "fischer", {"fischer": 1},
+                                  [[], "tal"], ["fischer", {}]])
 def test_schedule_rejects_wrong_participant_collection_types(data):
     with pytest.raises(leagues.LeagueInput):
         leagues.schedule(data, "double")
+
+
+@pytest.mark.parametrize("kind", [None, [], {}, 42])
+def test_schedule_rejects_wrong_format_type(kind):
+    with pytest.raises(leagues.LeagueInput):
+        leagues.schedule(["fischer", "tal"], kind)

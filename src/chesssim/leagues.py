@@ -62,9 +62,10 @@ def schedule(participants: list[str], format: str = "single") -> list[list[dict]
     if type(participants) is not list:
         raise LeagueInput("Participantes devem formar uma lista")
     n = len(participants)
-    if (n < 2 or n > MAX_PLAYERS or
-            n % 2 or len(set(participants)) != n or
-            any(type(s) is not str for s in participants) or format not in FORMATS):
+    if (n < 2 or n > MAX_PLAYERS or n % 2 or
+            any(type(s) is not str for s in participants) or
+            len(set(participants)) != n or
+            type(format) is not str or format not in FORMATS):
         raise LeagueInput("Informe 2 a 64 participantes distintos, em número par")
     pool = participants.copy()
     first: list[list[tuple[str, str]]] = []
