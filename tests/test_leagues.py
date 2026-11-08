@@ -10,7 +10,7 @@ import chess
 import chess.pgn
 import pytest
 
-from chesssim import arena, leagues
+from chesssim import leagues
 from chesssim.catalog import find_player
 
 
