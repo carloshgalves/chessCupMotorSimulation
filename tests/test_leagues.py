@@ -372,3 +372,36 @@ def test_virtual_calendar_is_separate_from_real_utc_event_times(manager):
         assert item["started_utc"].endswith("+00:00")
         assert item["finished_utc"].endswith("+00:00")
         assert "virtual" not in item["started_utc"]
+
+
+def test_partial_append_tail_is_recovered_only_during_explicit_run(manager):
+    ident=manager.create(config())["id"]
+    manager.run(ident)
+    first=wait(manager,ident)
+    assert first["completed_games"]==2
+    ledger=manager._dir(ident)/"ledger.jsonl"
+    with ledger.open("ab") as stream:
+        stream.write(b'{"schema":"truncated"')
+    broken=ledger.read_bytes()
+    for _ in range(3):
+        assert manager.detail(ident)["completed_games"]==2
+    assert ledger.read_bytes()==broken, "GET cannot truncate a journal"
+    manager.run(ident)
+    next_state=wait(manager,ident)
+    assert next_state["completed_games"]==4
+    lines=ledger.read_bytes().splitlines()
+    assert len(lines)==4
+    assert all(json.loads(line)["schema"]==leagues.ENTRY_SCHEMA for line in lines)
+
+
+def test_completed_season_missing_all_artifacts_fails_closed(manager):
+    ident=manager.create(config())["id"]
+    for _ in range(6):
+        manager.run(ident);wait(manager,ident)
+    assert manager.detail(ident)["status"]=="COMPLETED"
+    directory=manager._dir(ident)
+    (directory/"ledger.jsonl").unlink()
+    for receipt in (directory/"receipts").glob("*.json"):
+        receipt.unlink()
+    with pytest.raises(ValueError,match="perdeu partidas comprovadas"):
+        manager.detail(ident)

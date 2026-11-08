@@ -321,18 +321,28 @@ class LeagueManager:
         if path.exists():
             if path.is_symlink() or path.stat().st_size > MAX_LEDGER_BYTES:
                 raise ValueError("Ledger ausente de integridade")
-            with path.open(encoding="utf-8") as stream:
-                for line in stream:
-                    if len(line) > 8192 or not line.endswith("\n"):
-                        raise ValueError("Ledger possui linha truncada")
-                    entry = json.loads(line)
-                    if not isinstance(entry, dict):
-                        raise ValueError("Registro de liga inválido")
-                    mid = entry.get("match_id")
-                    if mid in registered or mid not in expected:
-                        raise ValueError("Partida repetida ou fora do calendário")
-                    self._verify_entry(state, expected[mid], entry, verify=verify)
-                    registered[mid] = entry
+            raw = path.read_bytes()
+            # Journal append may be interrupted between write and fsync.
+            # Only a newline-terminated entry is committed; the receipt
+            # remains the immutable source used to recover a partial tail.
+            committed = raw if not raw or raw.endswith(b"\n") else (
+                raw[:raw.rfind(b"\n") + 1])
+            if committed != raw and reconcile:
+                with path.open("r+b") as stream:
+                    stream.truncate(len(committed))
+                    stream.flush()
+                    os.fsync(stream.fileno())
+            for line in committed.splitlines(keepends=True):
+                if len(line) > 8192 or not line.endswith(b"\n"):
+                    raise ValueError("Ledger possui linha inválida")
+                entry = json.loads(line)
+                if not isinstance(entry, dict):
+                    raise ValueError("Registro de liga inválido")
+                mid = entry.get("match_id")
+                if mid in registered or mid not in expected:
+                    raise ValueError("Partida repetida ou fora do calendário")
+                self._verify_entry(state, expected[mid], entry, verify=verify)
+                registered[mid] = entry
         receipt_dir = directory / "receipts"
         if receipt_dir.exists():
             if receipt_dir.is_symlink():
@@ -477,6 +487,8 @@ class LeagueManager:
             entries = self._ledger(state)
             complete = len(entries)
             total = sum(map(len, rounds))
+            if state["status"] == "COMPLETED" and complete != total:
+                raise ValueError("Temporada encerrada perdeu partidas comprovadas")
             current_idx = next((i for i,rd in enumerate(rounds)
                                 if any(m["id"] not in entries for m in rd)), len(rounds))
             overview = {
