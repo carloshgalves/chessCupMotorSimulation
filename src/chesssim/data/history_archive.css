@@ -208,3 +208,13 @@
 .archive-advanced-fields .archive-muted{margin:0}
 @media(max-width:650px){.archive-advanced-fields{grid-template-columns:1fr 1fr}
 .archive-advanced-fields .archive-muted{grid-column:1/-1}}
+
+/* Combined History + Representation: the laboratory action belongs to the
+   documented player header rather than a floating separate toolbar. */
+.archive-hub .archive-lab-action{margin-left:auto;min-height:34px;padding:6px 11px;
+  background:#164f41;border:1px solid #47a77d;color:#d5f5e6;
+  font-size:.73rem;font-weight:700;white-space:normal;text-align:center}
+.archive-hub .archive-lab-action:focus-visible{outline:3px solid #f5d27d;
+  outline-offset:2px}
+@media(max-width:600px){.archive-hub .archive-lab-action{margin:4px 0 0;
+  width:100%}}
