@@ -25,13 +25,14 @@ def test_history_sports_dashboard_has_no_duplicate_ids_and_expected_slots():
     html=(DATA/"arena.html").read_text(encoding="utf-8")
     parsed=IdParser();parsed.feed(html)
     assert len(parsed.ids)==len(set(parsed.ids))
-    for mark in ("ha-layout","ha-player-list","ha-tab-overview","ha-tab-games",
+    for mark in ("ha-player-list","ha-tab-overview","ha-tab-games",
                  "ha-tab-events","ha-tab-rating","ha-tab-records","ha-overview-pane",
                  "ha-games-pane","ha-filters","ha-rows","ha-prev","ha-next",
                  "ha-export-json","ha-export-csv","ha-export-pgn",
                  "ha-replay-board","ha-replay-dialog","ha-replay-moves",
                  "ha-rating-plot","ha-rating-mode","history-profile-body"):
         assert mark in parsed.ids,mark
+    assert 'class="ha-layout"' in html
     assert 'src="/game_archive.js"' in html
     assert 'href="/game_archive.css"' in html
     assert 'id="history-games-section"' in html
