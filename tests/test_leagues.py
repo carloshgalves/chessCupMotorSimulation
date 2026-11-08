@@ -225,6 +225,7 @@ def test_engine_provenance_true_pgn_and_cannot_change_profiles(manager,monkeypat
         game.headers.update({
             "White":find_player(match["white"]).name,
             "Black":find_player(match["black"]).name,
+            "Round":str(match["round"]),
             "Result":"0-1","Termination":"CHECKMATE",
             "TimeControl":f"{conf['clock'][0]}+{conf['clock'][1]}",
             "EngineSHA256":leagues.file_hash(exe),
@@ -405,3 +406,45 @@ def test_completed_season_missing_all_artifacts_fails_closed(manager):
         receipt.unlink()
     with pytest.raises(ValueError,match="perdeu partidas comprovadas"):
         manager.detail(ident)
+
+
+def test_time_forfeit_cannot_claim_result_without_clock_proof(manager,monkeypatch):
+    root=manager.root
+    exe=root/"rodent-iv-plain.exe";exe.write_bytes(b"uci synthetic")
+    for slug in config()["participants"]:
+        (root/(slug+".txt")).write_text(slug)
+    monkeypatch.setattr(leagues,"validate",lambda r,w,b:(
+        exe,{w.slug:root/(w.slug+".txt"),b.slug:root/(b.slug+".txt")}))
+    def result_by_time(root_arg,match,conf,stop_check):
+        game=chess.pgn.Game()
+        game.headers.update({
+            "White":find_player(match["white"]).name,
+            "Black":find_player(match["black"]).name,
+            "Round":str(match["round"]), "Result":"0-1",
+            "Termination":"TimeForfeit",
+            "TimeControl":f"{conf['clock'][0]}+{conf['clock'][1]}",
+            "EngineSHA256":leagues.file_hash(exe),
+            "WhiteProfileSHA256":leagues.file_hash(root/(match["white"]+".txt")),
+            "BlackProfileSHA256":leagues.file_hash(root/(match["black"]+".txt")),
+        })
+        return game,{
+            "status":"COMPLETED","result":"0-1",
+            "termination":"TimeForfeit","clock_left":[0.0,900.0]
+        }
+    manager.runner=result_by_time
+    ident=manager.create(config(execution="engine_full"))["id"]
+    manager.run(ident)
+    finished=wait(manager,ident)
+    assert finished["completed_games"]==2
+    state=manager._load(ident)
+    calendar=leagues.schedule(state["config"]["participants"],
+                              state["config"]["format"])
+    match=calendar[0][0]
+    record=manager._ledger(state)[match["id"]].copy()
+    assert record["result"]=="0-1"
+    record["clock_left"]=[1.0,900.0]
+    record["sha256"]=leagues.digest({
+        k:v for k,v in record.items() if k!="sha256"
+    })
+    with pytest.raises(ValueError,match="Queda de bandeira"):
+        manager._verify_entry(state,match,record)

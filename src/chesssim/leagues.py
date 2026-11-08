@@ -384,7 +384,8 @@ class LeagueManager:
             raise ValueError("Registro de partida adulterado")
         pgn_path = entry.get("pgn")
         if entry["source"] == "fast_statistical":
-            if pgn_path is not None or entry.get("engine") is not None or (
+            if (pgn_path is not None or entry.get("engine") is not None or
+                    entry.get("clock_left") is not None or
                     entry["result"] != projected_result(state["config"], match)):
                 raise ValueError("Projeção estatística não possui PGN ou engine")
         else:
@@ -409,6 +410,8 @@ class LeagueManager:
                             game.headers.get("White") != find_player(match["white"]).name or
                             game.headers.get("Black") != find_player(match["black"]).name or
                             game.headers.get("Result") != entry["result"] or
+                            game.headers.get("Termination") != entry["termination"] or
+                            game.headers.get("Round") != str(match["round"]) or
                             game.headers.get("EngineSHA256") != entry["engine"]["engine_sha256"] or
                             game.headers.get("WhiteProfileSHA256") !=
                             entry["engine"]["profile_sha256"][match["white"]] or
@@ -417,6 +420,23 @@ class LeagueManager:
                             game.headers.get("TimeControl") !=
                             f"{state['config']['clock'][0]}+{state['config']['clock'][1]}"):
                         raise ValueError("PGN da liga não comprova o resultado")
+                    position = game.end().board()
+                    if entry["termination"] == "TimeForfeit":
+                        clock_left = entry.get("clock_left")
+                        idx = 0 if position.turn else 1
+                        result_on_flag = ("0-1" if position.turn else "1-0")
+                        if position.has_insufficient_material(not position.turn):
+                            result_on_flag = "1/2-1/2"
+                        if (not isinstance(clock_left, list) or
+                                len(clock_left) != 2 or
+                                type(clock_left[idx]) not in (int, float) or
+                                clock_left[idx] > 0 or
+                                entry["result"] != result_on_flag):
+                            raise ValueError("Queda de bandeira não comprovada")
+                    else:
+                        outcome = position.outcome(claim_draw=True)
+                        if outcome is None or outcome.result() != entry["result"]:
+                            raise ValueError("Resultado não comprovado pelo tabuleiro")
                     self._verified_pgn[key] = signature
         receipt = self._receipt(state["id"], match["id"])
         if not receipt.is_file() or receipt.is_symlink():
@@ -432,12 +452,18 @@ class LeagueManager:
             os.fsync(stream.fileno())
 
     def _record(self, state: dict, match: dict, result: str,
-                started: str, *, pgn=None, termination: str = "StatisticalProjection") -> None:
+                started: str, *, pgn=None, meta: dict | None = None,
+                termination: str = "StatisticalProjection") -> None:
         if result not in RESULTS:
             raise ValueError("Somente partidas concluídas contam na classificação")
         directory = self._dir(state["id"])
         relative = f"games/{match['id']}.pgn" if pgn is not None else None
         if pgn is not None:
+            if (pgn.headers.get("White") != find_player(match["white"]).name or
+                    pgn.headers.get("Black") != find_player(match["black"]).name or
+                    pgn.headers.get("Result") != result or
+                    pgn.headers.get("Termination") != termination):
+                raise ValueError("Resultado ou jogadores divergentes do PGN")
             game_file = directory / relative
             if game_file.is_symlink():
                 raise ValueError("Arquivo PGN redirecionado")
@@ -457,6 +483,7 @@ class LeagueManager:
             "started_utc": started, "finished_utc": utc(),
             "virtual_round": f"Rodada {match['round']}",
             "pgn": relative, "pgn_sha256": pgn_sha,
+            "clock_left": meta.get("clock_left") if meta is not None else None,
             "engine": state["resources"] if pgn is not None else None,
         }
         item["sha256"] = digest(item)
@@ -669,10 +696,13 @@ class LeagueManager:
                 if config["execution_mode"] == "fast_statistical":
                     result = projected_result(config, m)
                     game = None
+                    meta = None
                     termination = "StatisticalProjection"
                 else:
                     game, meta = self.runner(self.root, m, config,
                                              self._shutdown.is_set)
+                    if self._shutdown.is_set() and meta.get("status") == "INCOMPLETE":
+                        break  # Graceful shutdown; leave unproven game pending.
                     if (meta.get("status") != "COMPLETED" or
                             meta.get("result") not in RESULTS):
                         raise RuntimeError("Partida não foi concluída; nenhuma pontuação aplicada")
@@ -681,7 +711,7 @@ class LeagueManager:
                 with self._lock:
                     state = self._load(ident)
                     self._ledger(state)
-                    self._record(state, m, result, began, pgn=game,
+                    self._record(state, m, result, began, pgn=game, meta=meta,
                                  termination=termination)
             with self._lock:
                 state = self._load(ident)
