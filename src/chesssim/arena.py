@@ -323,9 +323,10 @@ class ArenaManager:
         with self._lock:
             selected = self._status_unlocked()
             return {"session": selected, "busy": self._active or self.human.busy or
-                    self.leagues.busy or self.cups.busy,
+                    self.leagues.busy or self.cups.busy or self.representation.busy,
                     "duel_busy": self._active, "human_busy": self.human.busy,
                     "league_busy": self.leagues.busy, "cup_busy": self.cups.busy,
+                    "representation_busy": self.representation.busy,
                     "players": _profiles(self.root),
                     "presets": {name: {"initial_seconds": v[0], "increment_seconds": v[1]}
                                 for name, v in PRESETS.items()},
@@ -357,8 +358,9 @@ class ArenaManager:
     def launch(self, raw: object) -> dict:
         config = normalize_config(raw)
         with self._lock:
-            if self._active or self.human.busy or self.leagues.busy or self.cups.busy:
-                raise ArenaBusy("Já existe confronto, partida, liga ou Copa em andamento")
+            if (self._active or self.human.busy or self.leagues.busy or
+                    self.cups.busy or self.representation.busy):
+                raise ArenaBusy("Já existe execução de motor em andamento")
             white, black = (find_player(config[x]) for x in ("white", "black"))
             try:
                 _, files = validate(self.root, white, black)
@@ -429,20 +431,35 @@ class ArenaManager:
 
     def human_start(self, raw: object) -> dict:
         with self._lock:
-            return self.human.start(raw, duel_busy=self._active or self.leagues.busy or self.cups.busy)
+            return self.human.start(
+                raw, duel_busy=self._active or self.leagues.busy or
+                self.cups.busy or self.representation.busy)
 
     def human_resume(self, raw: object) -> dict:
         with self._lock:
-            return self.human.resume(raw, duel_busy=self._active or self.leagues.busy or self.cups.busy)
+            return self.human.resume(
+                raw, duel_busy=self._active or self.leagues.busy or
+                self.cups.busy or self.representation.busy)
 
     def league_run(self, ident: str) -> dict:
         with self._lock:
-            return self.leagues.run(ident, arena_busy=self._active or self.human.busy or self.cups.busy)
+            return self.leagues.run(ident, arena_busy=self._active or self.human.busy or
+                self.cups.busy or self.representation.busy)
 
     def cup_run(self, ident: str) -> dict:
         with self._lock:
             return self.cups.run(
-                ident, arena_busy=self._active or self.human.busy or self.leagues.busy)
+                ident, arena_busy=self._active or self.human.busy or
+                self.leagues.busy or self.representation.busy)
+
+    def representation_start(self, slug: str, raw: object) -> dict:
+        # Serialize the reservation of the shared UCI resource with every
+        # other Arena start operation, rather than racing a status() read.
+        with self._lock:
+            return self.representation.start(
+                slug, raw, simulator_busy=bool(
+                    self._active or self.human.busy or
+                    self.leagues.busy or self.cups.busy))
 
     def stop(self) -> dict:
         with self._lock:
@@ -837,9 +854,8 @@ def make_arena_handler(manager: ArenaManager, token: str):
             try:
                 data = _decode_json(body)
                 if representation_action:
-                    self._json(202,manager.representation.start(
-                        representation_action.group(1),data,
-                        simulator_busy=bool(manager.status()["busy"])))
+                    self._json(202,manager.representation_start(
+                        representation_action.group(1),data))
                 elif route.path == "/api/cups/create":
                     self._json(201, manager.cups.create(data))
                 elif cup_action:

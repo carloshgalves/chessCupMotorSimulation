@@ -182,6 +182,11 @@ class RepresentationLab:
         self._thread: threading.Thread | None = None
         self._active: dict | None = None
 
+    @property
+    def busy(self) -> bool:
+        with self._lock:
+            return self._active is not None
+
     def status(self, slug: str) -> dict:
         result = representation_status(self.root, self.workspace, slug)
         with self._lock:
@@ -233,6 +238,7 @@ class RepresentationLab:
                 raise RepresentationInput("Fonte ou motor mudou durante o teste")
             if (not isinstance(metrics, dict) or
                     type(metrics.get("decisions")) is not int or
+                    metrics["decisions"] < 1 or
                     metrics["decisions"] != len(validation) or
                     type(metrics.get("correct")) is not int or
                     not 0 <= metrics["correct"] <= metrics["decisions"]):
@@ -280,7 +286,8 @@ class RepresentationLab:
             finally:
                 temp.unlink(missing_ok=True)
             state = {"id": test_id, "slug": person.slug, "status": "COMPLETED"}
-        except (OSError, RuntimeError, ValueError, TypeError, KeyError) as exc:
+        except (OSError, RuntimeError, ValueError, TypeError, KeyError,
+                ArithmeticError) as exc:
             state = {"id": test_id, "slug": person.slug, "status": "FAILED",
                      "message": str(exc)[:280]}
         with self._lock:
@@ -297,4 +304,5 @@ class RepresentationLab:
 
     def shutdown(self) -> None:
         if self._thread is not None:
-            self._thread.join(timeout=25)
+            # Do not free the Arena's process lock while UCI work continues.
+            self._thread.join()

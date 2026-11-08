@@ -162,3 +162,46 @@ def test_persisted_report_checksum_is_mandatory_and_covers_metrics(tmp_path,monk
     target.write_text(json.dumps(corrupted),encoding="utf-8")
     with pytest.raises(rep.RepresentationInput,match="schema"):
         rep.RepresentationLab(engine,work).status("fischer")
+
+
+
+def test_evaluator_zero_decisions_never_leaves_worker_busy(tmp_path, monkeypatch):
+    engine,work=root(tmp_path)
+    folder=work/"representation_sources"
+    folder.mkdir()
+    (folder/"fischer.pgn").write_text('[Event "test"]\n',encoding="utf-8")
+    monkeypatch.setattr(rep,"extract_decisions",lambda *a,**k:(
+        [{"game":"0","fen":"start","move":"e2e4","color":"white","year":1971}],
+        {"games_accepted":1}))
+    monkeypatch.setattr(rep,"split_three_ways",lambda *a,**k:(
+        [],[],[],{"validation":{"games_sampled":0},"partition_sha256":"a"*64}))
+    lab=rep.RepresentationLab(engine,work,evaluator=lambda *a,**k:{
+        "decisions":0,"correct":0})
+    lab.start("fischer",{"match_name":"Fischer","from_year":1970,
+        "to_year":1972,"depth":4,"positions":20,"seed":2026})
+    lab.shutdown()
+    assert lab.busy is False
+    assert lab.status("fischer")["last"]["status"]=="FAILED"
+    assert lab.status("fischer")["reports"]==[]
+
+
+def test_representation_busy_flag_is_exposed_and_release_is_final(tmp_path):
+    import threading
+    engine,work=root(tmp_path)
+    lab=rep.RepresentationLab(engine,work)
+    assert lab.busy is False
+    entered=threading.Event()
+    release=threading.Event()
+    def block():
+        entered.set()
+        assert release.wait(3)
+    lab._active={"id":"test-0000000000000001","slug":"fischer"}
+    lab._thread=threading.Thread(target=block)
+    lab._thread.start()
+    assert entered.wait(2)
+    assert lab.busy is True
+    release.set()
+    lab.shutdown()
+    with lab._lock:
+        lab._active=None
+    assert lab.busy is False
