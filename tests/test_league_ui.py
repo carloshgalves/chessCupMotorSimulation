@@ -100,3 +100,13 @@ def test_league_javascript_parses_in_node():
             ["node","--check",str(DATA/name)],
             capture_output=True,text=True,timeout=10,check=False)
         assert result.returncode==0, result.stdout+"\n"+result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None,reason="Node.js not installed")
+def test_league_browser_navigation_create_rounds_and_exports():
+    harness=Path(__file__).parent/"assets"/"league_browser_harness.cjs"
+    result=subprocess.run(
+        ["node",str(harness),str(DATA/"league.js")],
+        capture_output=True,text=True,timeout=15,check=False)
+    assert result.returncode==0,result.stdout+"\n"+result.stderr
+    assert "League browser smoke: PASS" in result.stdout
