@@ -39,7 +39,7 @@ def test_preferences_are_local_to_shared_8x8_board_and_reduced_motion():
     css = (DATA / "chess_board.css").read_text(encoding="utf-8")
     renderer = (DATA / "chess_board.js").read_text(encoding="utf-8")
     assert "chesssim.board-presentation.v1" in js
-    assert '["board","human-board","history-replay-board"]' in js
+    assert '["board","human-board","cup-replay-board","history-replay-board"]' in js
     assert "window.localStorage" in js and "addEventListener(\"storage\"" in js
     for word in ("innerHTML", "eval(", "fetch(", "WebSocket", "document.write"):
         assert word not in js

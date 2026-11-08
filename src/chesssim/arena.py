@@ -24,6 +24,8 @@ from .history_stats import player_stats
 from .competition_rating import rating_report, RATING_POOLS
 from .human_game import HumanGame, HumanInput, HumanBusy
 from .leagues import LeagueManager, LeagueInput, LeagueBusy
+from .cups import CupManager, CupBusy
+from .cup_rules import CupInput, presets as cup_presets
 from .live_board import SCHEMA, make_handler, snapshot
 from .matches import _atomic_text, official_book_hashes, play_duel, validate
 from .peak_windows import CLOCK_PRESETS, PROVISIONAL_PEAKS
@@ -259,6 +261,11 @@ class ArenaManager:
                                    max_wall_seconds=self.max_game_wall_seconds)
             try:
                 self.leagues = LeagueManager(self.root, self.workspace)
+                try:
+                    self.cups = CupManager(self.root, self.workspace)
+                except BaseException:
+                    self.leagues.shutdown()
+                    raise
             except BaseException:
                 self.human.shutdown()
                 raise
@@ -313,9 +320,10 @@ class ArenaManager:
     def status(self) -> dict:
         with self._lock:
             selected = self._status_unlocked()
-            return {"session": selected, "busy": self._active or self.human.busy or self.leagues.busy,
+            return {"session": selected, "busy": self._active or self.human.busy or
+                    self.leagues.busy or self.cups.busy,
                     "duel_busy": self._active, "human_busy": self.human.busy,
-                    "league_busy": self.leagues.busy,
+                    "league_busy": self.leagues.busy, "cup_busy": self.cups.busy,
                     "players": _profiles(self.root),
                     "presets": {name: {"initial_seconds": v[0], "increment_seconds": v[1]}
                                 for name, v in PRESETS.items()},
@@ -347,8 +355,8 @@ class ArenaManager:
     def launch(self, raw: object) -> dict:
         config = normalize_config(raw)
         with self._lock:
-            if self._active or self.human.busy or self.leagues.busy:
-                raise ArenaBusy("Já existe confronto, partida ou liga em andamento")
+            if self._active or self.human.busy or self.leagues.busy or self.cups.busy:
+                raise ArenaBusy("Já existe confronto, partida, liga ou Copa em andamento")
             white, black = (find_player(config[x]) for x in ("white", "black"))
             try:
                 _, files = validate(self.root, white, black)
@@ -419,15 +427,20 @@ class ArenaManager:
 
     def human_start(self, raw: object) -> dict:
         with self._lock:
-            return self.human.start(raw, duel_busy=self._active or self.leagues.busy)
+            return self.human.start(raw, duel_busy=self._active or self.leagues.busy or self.cups.busy)
 
     def human_resume(self, raw: object) -> dict:
         with self._lock:
-            return self.human.resume(raw, duel_busy=self._active or self.leagues.busy)
+            return self.human.resume(raw, duel_busy=self._active or self.leagues.busy or self.cups.busy)
 
     def league_run(self, ident: str) -> dict:
         with self._lock:
-            return self.leagues.run(ident, arena_busy=self._active or self.human.busy)
+            return self.leagues.run(ident, arena_busy=self._active or self.human.busy or self.cups.busy)
+
+    def cup_run(self, ident: str) -> dict:
+        with self._lock:
+            return self.cups.run(
+                ident, arena_busy=self._active or self.human.busy or self.leagues.busy)
 
     def stop(self) -> dict:
         with self._lock:
@@ -437,6 +450,7 @@ class ArenaManager:
             return {"stop_requested": True}
 
     def shutdown(self) -> None:
+        self.cups.shutdown()
         self.leagues.shutdown()
         self.human.shutdown()
         with self._lock:
@@ -492,7 +506,50 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 self._reply(403, b"Forbidden", "text/plain; charset=utf-8")
                 return
             url = urlsplit(self.path)
-            if url.path == "/api/leagues" and not url.query:
+            if url.path == "/api/cups/presets" and not url.query:
+                self._json(200, cup_presets())
+            elif url.path == "/api/cups" and not url.query:
+                try:
+                    self._json(200, manager.cups.list())
+                except (ValueError, OSError, KeyError, TypeError, json.JSONDecodeError):
+                    self._json(503, {"error": "Catálogo de Copas indisponível"})
+            elif re.fullmatch(
+                    r"/api/cups/cup-[0-9a-f]{16}/games/"
+                    r"(?:r[0-9]{2}-m[0-9]{2}-s[0-5]-g[12]|w[0-9]{2}-g0[12])/replay",
+                    url.path) and not url.query:
+                parts=url.path.split("/")
+                try:
+                    self._json(200, manager.cups.replay(parts[3],parts[5]))
+                except CupInput as exc:
+                    self._json(404, {"error": str(exc)})
+                except (ValueError, OSError, KeyError, TypeError,
+                        json.JSONDecodeError):
+                    self._json(503, {"error": "Replay da Copa indisponível"})
+            elif url.path.startswith("/api/cups/") and not url.query:
+                suffix=url.path.removeprefix("/api/cups/")
+                export=re.fullmatch(r"(cup-[a-f0-9]{16})/export/(json|pgn)",suffix)
+                try:
+                    if export:
+                        payload,kind=manager.cups.export(export.group(1),export.group(2))
+                        self.send_response(200)
+                        self.send_header("Content-Type",kind)
+                        self.send_header("Content-Length",str(len(payload)))
+                        self.send_header("Content-Disposition",
+                                         'attachment; filename="chesssim-'+
+                                         export.group(1)+'.'+export.group(2)+'"')
+                        self.send_header("Cache-Control","no-store")
+                        self.send_header("X-Content-Type-Options","nosniff")
+                        self.end_headers()
+                        self.wfile.write(payload)
+                    elif re.fullmatch(r"cup-[a-f0-9]{16}",suffix):
+                        self._json(200,manager.cups.detail(suffix))
+                    else:
+                        self._json(404,{"error":"Copa não encontrada"})
+                except CupInput as exc:
+                    self._json(404, {"error": str(exc)})
+                except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+                    self._json(503, {"error": "Dados da Copa inconsistentes"})
+            elif url.path == "/api/leagues" and not url.query:
                 try:
                     self._json(200, manager.leagues.list())
                 except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
@@ -669,7 +726,8 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 except (ValueError, OSError, FileNotFoundError,
                         KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "Estado do duelo indisponível"})
-            elif url.path in ("/", "/arena.js", "/arena.css", "/history.js", "/history_replay.js", "/history_stats.js", "/competition_rating.js", "/history.css", "/chess-board.js", "/chess-board.css", "/board-preferences.js", "/human-play.js", "/league.js", "/league.css", "/viewer"):
+            elif url.path in ("/", "/arena.js", "/arena.css", "/history.js", "/history_replay.js", "/history_stats.js", "/competition_rating.js", "/history.css", "/chess-board.js", "/chess-board.css", "/board-preferences.js", "/human-play.js", "/league.js", "/league.css",
+                              "/cup.js", "/cup.css", "/viewer"):
                 asset = {"/": "arena.html", "/arena.js": "arena.js",
                          "/arena.css": "arena.css", "/history.js": "history.js",
                          "/history_replay.js": "history_replay.js",
@@ -681,6 +739,7 @@ def make_arena_handler(manager: ArenaManager, token: str):
                          "/human-play.js": "human_play.js",
                          "/league.js": "league.js",
                          "/league.css": "league.css",
+                         "/cup.js": "cup.js", "/cup.css": "cup.css",
                          "/chess-board.css": "chess_board.css", "/viewer": "monitor.html"}[url.path]
                 kind = ("text/html; charset=utf-8" if asset.endswith(".html") else
                         "text/javascript; charset=utf-8" if asset.endswith(".js") else
@@ -728,12 +787,14 @@ def make_arena_handler(manager: ArenaManager, token: str):
             route = urlsplit(self.path)
             league_action = re.fullmatch(
                 r"/api/leagues/(league-[a-f0-9]{16})/(run|pause)", route.path)
+            cup_action = re.fullmatch(
+                r"/api/cups/(cup-[a-f0-9]{16})/(run|pause)",route.path)
             if (route.path not in (
                 "/api/arena/launch", "/api/arena/stop",
                 "/api/arena/human/start", "/api/arena/human/move",
                 "/api/arena/human/action", "/api/arena/human/resume",
-                "/api/leagues/create",
-            ) and league_action is None) or route.query:
+                "/api/leagues/create", "/api/cups/create",
+            ) and league_action is None and cup_action is None) or route.query:
                 self._json(404, {"error": "Rota desconhecida"})
                 return
             origins = {f"http://127.0.0.1:{self.server.server_port}",
@@ -759,7 +820,16 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 return
             try:
                 data = _decode_json(body)
-                if route.path == "/api/leagues/create":
+                if route.path == "/api/cups/create":
+                    self._json(201, manager.cups.create(data))
+                elif cup_action:
+                    if data:
+                        raise CupInput("Ação da Copa não recebe parâmetros")
+                    if cup_action.group(2)=="run":
+                        self._json(202,manager.cup_run(cup_action.group(1)))
+                    else:
+                        self._json(202,manager.cups.pause(cup_action.group(1)))
+                elif route.path == "/api/leagues/create":
                     self._json(201, manager.leagues.create(data))
                 elif league_action:
                     if data:
@@ -782,9 +852,9 @@ def make_arena_handler(manager: ArenaManager, token: str):
                     self._json(200, manager.human.action(data))
                 else:
                     self._json(200, manager.human_resume(data))
-            except (BadLaunch, HumanInput, LeagueInput) as exc:
+            except (BadLaunch, HumanInput, LeagueInput, CupInput) as exc:
                 self._json(400, {"error": str(exc)})
-            except (ArenaBusy, HumanBusy, LeagueBusy) as exc:
+            except (ArenaBusy, HumanBusy, LeagueBusy, CupBusy) as exc:
                 self._json(409, {"error": str(exc)})
             except (OSError, RuntimeError, ValueError) as exc:
                 print(f"Falha operacional local: {type(exc).__name__}: {exc}",

@@ -1,7 +1,7 @@
 """Read-only, bounded local competition statistics for the history profile.
 
-Only canonical local Arena sessions and tournament checkpoint ledgers are
-eligible. Every counted result is reconciled with a legal PGN; historical
+Only canonical local Arena sessions, tournament checkpoint ledgers and
+verified real-UCI Cup receipts are eligible. Every counted result is reconciled with a legal PGN; historical
 curated games are explicitly excluded. Corrupt records fail independently
 and are reported as excluded coverage rather than fabricated outcomes.
 """
@@ -29,10 +29,12 @@ from .history_games import (
 )
 from .history_profiles import _player
 from .tournament import SCHEMA as CUP_SCHEMA, _check_bracket
+from .cups import CupManager
 
 SCHEMA = "chesssim-player-stats-v1"
 MAX_SESSIONS = 8192
 MAX_TOURNAMENTS = 100
+MAX_LOCAL_CUPS = 100
 MAX_SUMMARIES = 16384
 MAX_GAMES = 16384
 SESSION_ID = re.compile(r"session-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{12}\Z")
@@ -525,6 +527,99 @@ def _tournament_games(root: Path, names: dict[str, str], slug: str,
             _mark(coverage, "tournament_manifest")
 
 
+def _cup_games(root: Path, names: dict[str, str], slug: str | None,
+               coverage: Counter, seen: set[str], records: list[dict],
+               dates: list[str], tournaments: set[str]) -> None:
+    """Count verified UCI Cup matches without creating files or changing cups.
+
+    The Cup manager's dedicated read-only verifier reconstructs every score
+    from receipts and legal PGNs. Synthetic projections remain visible in Cup
+    screens but cannot enter History, Elo or local win/loss statistics.
+    """
+    folder = root / "cups"
+    if folder.is_symlink():
+        _mark(coverage, "cup_directory")
+        return
+    if not folder.exists():
+        return
+    if not folder.is_dir():
+        _mark(coverage, "cup_directory")
+        return
+    paths = sorted(islice(folder.glob("cup-*/cup.json"), MAX_LOCAL_CUPS + 1))
+    if len(paths) > MAX_LOCAL_CUPS:
+        raise StatisticsCapacityExceeded("Limite de Copas locais excedido")
+    verifier = CupManager.readonly(root)
+    for path in paths:
+        ident = path.parent.name
+        coverage["cup_manifests"] += 1
+        try:
+            state = verifier._manifest(ident)
+            cfg = state["config"]
+            if cfg["execution_mode"] == "fast_statistical":
+                coverage["cup_synthetic_excluded"] += 1
+                continue
+            if cfg["execution_mode"] != "engine_full":
+                raise InvalidCatalogue("Método de Copa incompatível")
+            participants = cfg["participants"]
+            if slug is not None and slug not in participants:
+                continue
+            # Verify the complete Cup, not only entries advantageous to the
+            # requested player. One corrupt receipt invalidates the Cup scan.
+            summary = verifier._state(state, force=True)
+            rows = summary["game_receipts"]
+            when = _timestamp(state.get("created_utc"))
+            if when:
+                dates.append(when)
+            tournaments.add("cup:" + ident)
+            snapshot = state["resources"]
+            for game_id, row in sorted(rows.items()):
+                if slug is not None and slug not in (row["white"], row["black"]):
+                    continue
+                coverage["candidate_games"] += 1
+                stage = row["stage"]
+                if stage == "classical":
+                    modality = "classical"
+                elif stage in {"rapid15", "rapid10", "women_double_round_robin"}:
+                    modality = "rapid"
+                elif stage in {"blitz5", "blitz3"}:
+                    modality = "blitz"
+                elif stage == "armageddon":
+                    modality = "unclassified"
+                else:
+                    raise InvalidCatalogue("Ritmo de Copa desconhecido")
+                raw_clock = row["clock"]
+                clock = list(raw_clock) if len(raw_clock) == 2 else None
+                # The Armageddon clock is asymmetric. Count its actual PGN
+                # in player History, but do not use it to shift any Elo pool.
+                eligible = stage != "armageddon"
+                duel = (game_id.split("-s", 1)[0]
+                        if stage != "women_double_round_robin" else
+                        "-".join(sorted((row["white"], row["black"]))))
+                record = {
+                    "id": "cup:" + ident + ":" + game_id,
+                    "duel_id": "cup:" + ident + ":" + duel,
+                    "white": row["white"], "black": row["black"],
+                    "status": "COMPLETED", "result": row["result"],
+                    "origin": "cup", "recorded_utc": when,
+                    "time_control": modality, "clock": clock,
+                    "rating_eligible": eligible,
+                    "engine_strength_config": {
+                        "engine_sha256": snapshot["engine_sha256"],
+                        "white_profile_sha256":
+                            snapshot["profile_sha256"][row["white"]],
+                        "black_profile_sha256":
+                            snapshot["profile_sha256"][row["black"]],
+                    },
+                    "evidence_pgn_sha256": row["pgn_sha256"],
+                }
+                _record(record, seen, records, coverage)
+        except StatisticsCapacityExceeded:
+            raise
+        except (InvalidCatalogue, OSError, ValueError, TypeError, KeyError,
+                IndexError, AttributeError):
+            _mark(coverage, "cup_manifest")
+
+
 def _record(game: dict, seen: set[str], records: list[dict],
             coverage: Counter) -> None:
     if game["id"] in seen:
@@ -585,12 +680,13 @@ def player_stats(workspace: Path, slug: str) -> dict:
     tournaments = set()
     _arena_games(root, names, slug, coverage, seen, records, dates)
     _tournament_games(root, names, slug, coverage, seen, records, dates, tournaments)
+    _cup_games(root, names, slug, coverage, seen, records, dates, tournaments)
     totals, opponents = _tally(slug, records, tournaments)
     return {
         "schema": SCHEMA, "slug": slug,
         "scope": {
             "directory": root.name,
-            "sources": ["arena_local", "tournament_local"],
+            "sources": ["arena_local", "tournament_local", "cup_local"],
             "from_utc": min(dates) if dates else None,
             "to_utc": max(dates) if dates else None,
             "date_basis": "created_utc from persisted manifest, not game duration",
@@ -599,10 +695,13 @@ def player_stats(workspace: Path, slug: str) -> dict:
         "coverage": {
             "sessions_seen": coverage["session_manifests"],
             "tournaments_seen": coverage["tournament_manifests"],
+            "cups_seen": coverage["cup_manifests"],
+            "cup_synthetic_excluded": coverage["cup_synthetic_excluded"],
             "candidate_games": coverage["candidate_games"],
             "verified_games": coverage["verified_games"],
             "arena_verified_games": coverage["arena_verified_games"],
             "tournament_verified_games": coverage["tournament_verified_games"],
+            "cup_verified_games": coverage["cup_verified_games"],
             "rejected_games": coverage["rejected_games"],
             "rejected_records": coverage["rejected_records"],
             "excluded_attempts": coverage["excluded_attempts"],
@@ -631,11 +730,15 @@ def verified_competition_games(workspace: Path) -> tuple[list[dict], dict]:
     tournaments: set[str] = set()
     _arena_games(root, names, None, coverage, seen, records, dates)
     _tournament_games(root, names, None, coverage, seen, records, dates, tournaments)
+    _cup_games(root, names, None, coverage, seen, records, dates, tournaments)
     return records, {
         "candidate_games": coverage["candidate_games"],
         "verified_games": coverage["verified_games"],
         "arena_verified_games": coverage["arena_verified_games"],
         "tournament_verified_games": coverage["tournament_verified_games"],
+        "cup_verified_games": coverage["cup_verified_games"],
+        "cups_seen": coverage["cup_manifests"],
+        "cup_synthetic_excluded": coverage["cup_synthetic_excluded"],
         "rejected_games": coverage["rejected_games"],
         "rejected_records": coverage["rejected_records"],
         "duplicate_records": coverage["duplicate_records"],

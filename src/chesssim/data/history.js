@@ -211,6 +211,7 @@
   }
   function toggle(toHistory) {
     window.ChessSimLeagueNavigation?.hide();
+    window.ChessSimCupNavigation?.hide();
     byId("league-view").hidden = true;
     byId("tab-leagues").setAttribute("aria-pressed", "false");
     byId("arena-view").hidden = toHistory;
@@ -218,7 +219,7 @@
     byId("tab-history").setAttribute("aria-pressed", String(toHistory));
     byId("tab-arena").setAttribute("aria-pressed", String(!toHistory));
     if (toHistory) {
-      load();
+      const loading = load();
       if (state.view === "profile") {
         window.ChessSimHistoryGames.resume();
         window.ChessSimHistoryStats.resume();
@@ -226,6 +227,7 @@
       }
       byId("history-heading").setAttribute("tabindex", "-1");
       byId("history-heading").focus();
+      return loading;
     } else {
       ++state.seq;
       window.ChessSimHistoryGames.suspend();
@@ -234,7 +236,25 @@
       byId("tab-arena").focus();
     }
   }
-  window.ChessSimHistoryNavigation = Object.freeze({leave:()=>toggle(false)});
+  async function openBySlug(slug) {
+    if (!safeSlug(slug)) return;
+    // Navigate to History first and wait for the real roster; a direct jump
+    // must not silently open a different player's currently selected profile.
+    await toggle(true);
+    if (byId("history-view").hidden) return;
+    const index = state.players.findIndex(player=>player.slug===slug);
+    if (index<0) {
+      byId("history-status").textContent = "Jogador não encontrado no catálogo histórico.";
+      return;
+    }
+    state.index = index;
+    showSelection();
+    await openProfile();
+  }
+  window.ChessSimHistoryNavigation = Object.freeze({
+    leave:()=>toggle(false),
+    open:openBySlug,
+  });
   window.ChessSimHistoryPlayerName = slug => {
     const item = state.players.find(p => p.slug === slug);
     return item ? item.name : slug;

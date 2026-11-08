@@ -48,6 +48,7 @@
     return !$view.hidden;
   }
   function showLeague(){
+    window.ChessSimCupNavigation?.hide();
     // The History module preserves its own navigation/replay state.
     window.ChessSimHistoryNavigation?.leave();
     $("arena-view").hidden=true;
