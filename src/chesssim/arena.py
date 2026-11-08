@@ -661,7 +661,6 @@ def make_arena_handler(manager: ArenaManager, token: str):
                         json.JSONDecodeError):
                     self._json(503,{"error":"Arquivo de partidas indisponível"})
             elif url.path == "/api/history/archive/replay":
-                from urllib.parse import parse_qs
                 query=parse_qs(url.query,keep_blank_values=True)
                 if (set(query)!={"slug","id"} or len(query["slug"])!=1 or
                         len(query["id"])!=1):

@@ -18,7 +18,7 @@ import chess.pgn
 from .catalog import load_roster
 from .competition_rating import classify_competition_record
 from .cups import CupManager
-from .history_games import MAX_PGN_BYTES, InvalidCatalogue, _game, _read
+from .history_games import MAX_PGN_BYTES, _game, _read
 from .history_profiles import _player
 from .history_stats import verified_competition_games, _tournament_game_stream
 from .live_board import _states
