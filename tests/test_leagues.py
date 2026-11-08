@@ -201,7 +201,8 @@ def test_receipt_reconciliation_does_not_reexecute_or_double_count(manager,monke
     manager.run(ident)
     failed=wait(manager,ident)
     assert failed["completed_games"]==1  # receipt was recovered on next read
-    assert len((manager._dir(ident)/"ledger.jsonl").read_text().splitlines())==1
+    assert not (manager._dir(ident)/"ledger.jsonl").exists(), (
+        "GET must not append recovered receipt into the journal")
     monkeypatch.setattr(manager,"_append",original)
     assert manager.run(ident)["round"]==1
     recovered=wait(manager,ident)
@@ -313,3 +314,45 @@ def test_pause_and_busy_between_rounds(manager,monkeypatch):
     finally:
         release.set()
         wait(manager,ident)
+
+
+def test_restart_recovers_incomplete_round_at_server_start_not_get(manager):
+    ident=manager.create(config())["id"]
+    state=manager._load(ident)
+    state["status"]="RUNNING"
+    state["current_match"]="r001-g01"
+    manager._save(state)
+    restarted=leagues.LeagueManager(manager.root,manager.workspace)
+    try:
+        manifest=restarted._dir(ident)/"league.json"
+        first=manifest.read_bytes()
+        data=restarted.detail(ident)
+        assert data["status"]=="PAUSED"
+        assert data["current_match"] is None
+        assert data["message"] and "Retomar" in data["message"]
+        for _ in range(3):
+            restarted.list()
+            restarted.detail(ident)
+        assert manifest.read_bytes()==first, "GET must never mutate the manifest"
+    finally:
+        restarted.shutdown()
+
+
+def test_virtual_calendar_is_separate_from_real_utc_event_times(manager):
+    ident=manager.create(config(n=4,fmt="double"))["id"]
+    before=manager.round_detail(ident,1)
+    after=manager.round_detail(ident,4)
+    assert before["games"][0]["virtual_day"]==1
+    assert after["games"][0]["virtual_day"]==22
+    assert before["games"][0]["virtual_week"]==1
+    assert after["games"][0]["virtual_week"]==4
+    manager.run(ident)
+    wait(manager,ident)
+    recorded=manager.history(ident)["games"]
+    assert recorded
+    for item in recorded:
+        assert item["virtual_week"]==1
+        assert item["virtual_day"]==1
+        assert item["started_utc"].endswith("+00:00")
+        assert item["finished_utc"].endswith("+00:00")
+        assert "virtual" not in item["started_utc"]

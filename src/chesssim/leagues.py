@@ -80,6 +80,7 @@ def schedule(participants: list[str], format: str = "single") -> list[list[dict]
         pool = [pool[0], pool[-1], *pool[1:-1]]
     legs = first + [[(b, a) for a, b in row] for row in first] if format == "double" else first
     return [[{"id": f"r{r:03d}-g{j:02d}", "round": r,
+              "virtual_week": r, "virtual_day": (r - 1) * 7 + 1,
               "white": w, "black": b, "status": "PENDING"}
              for j, (w, b) in enumerate(pairs, 1)]
             for r, pairs in enumerate(legs, 1)]
@@ -234,6 +235,20 @@ class LeagueManager:
         self._active: str | None = None
         self._stop = Event()
         self._shutdown = Event()
+        self._recover_interrupted()
+
+    def _recover_interrupted(self) -> None:
+        """Startup-only transition: GET handlers never mutate season files."""
+        for source in sorted(self.folder.glob("league-*/league.json")):
+            if not ID_RX.fullmatch(source.parent.name):
+                continue
+            state = self._load(source.parent.name)
+            if state["status"] == "RUNNING":
+                state["status"] = "PAUSED"
+                state["message"] = "Execução interrompida; selecione Retomar rodada"
+                state["current_match"] = None
+                state["updated_utc"] = utc()
+                self._save(state)
 
     @property
     def busy(self) -> bool:
@@ -261,11 +276,6 @@ class LeagueManager:
                                   if k != "clock"}) != data["config"] or
                 data.get("status") not in {"READY", "RUNNING", "PAUSED", "COMPLETED", "FAILED"}):
             raise ValueError("Manifesto de liga incompatível")
-        # A new process cannot claim the old worker is still alive.
-        if data["status"] == "RUNNING" and self._active != ident:
-            data["status"] = "PAUSED"
-            data["message"] = "Execução interrompida; é possível retomar"
-            self._save(data)
         return data
 
     def _save(self, state: dict) -> None:
@@ -298,7 +308,8 @@ class LeagueManager:
             raise ValueError("Recibos redirecionados")
         return root / (match_id + ".json")
 
-    def _ledger(self, state: dict, verify: bool = True) -> dict[str, dict]:
+    def _ledger(self, state: dict, verify: bool = True,
+                reconcile: bool = False) -> dict[str, dict]:
         directory = self._dir(state["id"])
         path = directory / "ledger.jsonl"
         rounds = schedule(state["config"]["participants"], state["config"]["format"])
@@ -335,7 +346,10 @@ class LeagueManager:
                     if registered[mid] != entry:
                         raise ValueError("Ledger e recibo divergentes")
                 else:
-                    self._append(directory, entry)
+                    if reconcile:
+                        # Only a POST run operation commits the receipt back
+                        # into the append-only journal. GET remains read-only.
+                        self._append(directory, entry)
                     registered[mid] = entry
         return registered
 
@@ -346,6 +360,8 @@ class LeagueManager:
                 entry.get("league_id") != state["id"] or
                 entry.get("match_id") != match["id"] or
                 entry.get("round") != match["round"] or
+                entry.get("virtual_week") != match["virtual_week"] or
+                entry.get("virtual_day") != match["virtual_day"] or
                 entry.get("white") != match["white"] or
                 entry.get("black") != match["black"] or
                 entry.get("result") not in RESULTS or
@@ -414,6 +430,8 @@ class LeagueManager:
         item = {
             "schema": ENTRY_SCHEMA, "league_id": state["id"],
             "match_id": match["id"], "round": match["round"],
+            "virtual_week": match["virtual_week"],
+            "virtual_day": match["virtual_day"],
             "white": match["white"], "black": match["black"],
             "result": result, "termination": termination,
             "source": state["config"]["execution_mode"],
@@ -475,7 +493,9 @@ class LeagueManager:
                 entry["name_white"] = find_player(entry["white"]).name
                 entry["name_black"] = find_player(entry["black"]).name
             round_progress = [
-                {"round": idx, "completed": sum(m["id"] in entries for m in rd),
+                {"round": idx, "virtual_week": idx,
+                 "virtual_day": (idx - 1) * 7 + 1,
+                 "completed": sum(m["id"] in entries for m in rd),
                  "total": len(rd)}
                 for idx, rd in enumerate(rounds, 1)
             ]
@@ -577,7 +597,7 @@ class LeagueManager:
             state = self._load(ident)
             if state["status"] == "COMPLETED":
                 raise LeagueInput("Temporada já concluída")
-            completed = self._ledger(state)
+            completed = self._ledger(state, reconcile=True)
             config = state["config"]
             if config["execution_mode"] == "engine_full":
                 resources = self._resources(config)
@@ -617,7 +637,7 @@ class LeagueManager:
                     break
                 with self._lock:
                     state = self._load(ident)
-                    completed = self._ledger(state)
+                    completed = self._ledger(state, reconcile=True)
                     if m["id"] in completed:
                         continue
                     state["current_match"] = m["id"]
