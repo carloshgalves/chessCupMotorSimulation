@@ -220,3 +220,86 @@ def test_replay_refuses_synthetic_and_no_engine_profile(manager):
     with pytest.raises(CupInput,match="Perfis Rodent"):
         manager.run(real)
     assert manager.detail(real)["completed_games"]==0
+
+
+def test_armageddon_draw_advances_black_after_all_paired_draws(manager,monkeypatch):
+    from chesssim.cup_rules import stage_game, STAGES
+    cfg=settings(armageddon_min_black_seconds=210,
+                 armageddon_max_black_seconds=210)
+    ident=manager.create(cfg)["id"]
+    state=manager._manifest(ident)
+    match={"id":"r01-m01","round":1,
+           "players":[x for x in seed_slots(state["config"]) if x]}
+    rows={}
+    for stage,phase in enumerate(STAGES):
+        for index in range(phase["games"]):
+            spec=stage_game(match,state["config"],stage,index)
+            rows[spec["id"]]={
+                "result":"1/2-1/2","source":"fast_statistical",
+                "pgn":None,"finished_utc":cups.utc(),
+                "bid_proof":spec.get("bid_proof"),
+                "white":spec["white"],"black":spec["black"],
+            }
+    # Isolate the knockout mathematics: game provenance is independently
+    # guarded by _verify_game in all public paths and other tests.
+    monkeypatch.setattr(manager,"_verify_game",lambda *args,**kw:None)
+    derived=manager._knockout(state,rows)
+    expected=stage_game(match,state["config"],5,0)["black"]
+    assert derived["champion"]==expected
+    assert derived["completed_matches"]==1
+    assert derived["completed_games"]==11
+    assert derived["next_game"] is None
+    final=derived["bracket"][0]["matches"][0]
+    assert final["winner"]==expected
+    assert final["stage"]=="armageddon"
+    assert final["games"][-1]["bid_proof"]["winning_black_seconds"]==210
+
+
+def test_women_tie_breaks_stable_and_not_chess_fidelity(manager,monkeypatch):
+    from chesssim.cup_rules import FEMALE_ROSTER, women_schedule
+    ident=manager.create(settings("women",FEMALE_ROSTER))["id"]
+    state=manager._manifest(ident)
+    schedules=women_schedule(state["config"])
+    row={}
+    for rnd in schedules:
+        for spec in rnd["games"]:
+            row[spec["id"]]={
+                "result":"1/2-1/2","white":spec["white"],
+                "black":spec["black"],"source":"fast_statistical","pgn":None,
+            }
+    monkeypatch.setattr(manager,"_verify_game",lambda *args,**kw:None)
+    computed=manager._women(state,row)
+    assert computed["completed_games"]==20
+    assert computed["champion"]==sorted(FEMALE_ROSTER)[0]
+    assert all(p["played"]==8 and p["points"]==8
+               for p in computed["standings"])
+    assert all(p["h2h"]==2 and p["sb"]==32
+               for p in computed["standings"] if p["h2h"] is not None)
+
+
+def test_completed_cup_rejects_forged_champion_in_manifest(manager):
+    ident=manager.create(settings())["id"]
+    finished=run_to_completion(manager,ident)
+    assert finished["status"]=="COMPLETED"
+    path=manager._dir(ident)/"cup.json"
+    state=json.loads(path.read_text(encoding="utf-8"))
+    state["champion"]=next(x for x in ("fischer","tal")
+                           if x!=finished["champion"])
+    path.write_text(json.dumps(state),encoding="utf-8")
+    with pytest.raises(ValueError,match="Campeão persistido"):
+        manager.detail(ident)
+
+
+def test_synthetic_receipt_cannot_impersonate_real_uci_game(manager):
+    ident=manager.create(settings())["id"]
+    manager.run(ident)
+    await_game(manager,ident)
+    path=next((manager._dir(ident)/"receipts").glob("*.json"))
+    row=json.loads(path.read_text(encoding="utf-8"))
+    row["termination"]="TimeForfeit"
+    row["sha256"]=cups.checksum({
+        k:v for k,v in row.items() if k!="sha256"
+    })
+    path.write_text(json.dumps(row),encoding="utf-8")
+    with pytest.raises(ValueError,match="Projeção sintética"):
+        manager.detail(ident)
