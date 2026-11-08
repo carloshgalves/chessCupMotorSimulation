@@ -165,7 +165,7 @@ def test_fast_statistical_round_restarts_without_duplicate_scoring(manager):
         assert final["rounds_total"]==6
         assert sum(r["played"] for r in final["standings"])==24
         assert sum(r["points"] for r in final["standings"])==sum(
-            6 if item["result"]!="1/2-1/2" else 2
+            3 if item["result"]!="1/2-1/2" else 2
             for item in manager2._ledger(manager2._load(ident)).values())
         assert len(manager2._ledger(manager2._load(ident)))==12
         with pytest.raises(leagues.LeagueInput,match="concluída"):
