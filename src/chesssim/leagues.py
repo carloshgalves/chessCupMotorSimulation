@@ -59,8 +59,10 @@ def schedule(participants: list[str], format: str = "single") -> list[list[dict]
 
     Reverse colors in the second leg; 64 double has 126 x 32 = 4032 games.
     """
+    if type(participants) is not list:
+        raise LeagueInput("Participantes devem formar uma lista")
     n = len(participants)
-    if (type(participants) is not list or n < 2 or n > MAX_PLAYERS or
+    if (n < 2 or n > MAX_PLAYERS or
             n % 2 or len(set(participants)) != n or
             any(type(s) is not str for s in participants) or format not in FORMATS):
         raise LeagueInput("Informe 2 a 64 participantes distintos, em número par")
@@ -99,7 +101,8 @@ def normalize_config(raw: object) -> dict:
             any(ord(ch) < 32 for ch in season)):
         raise LeagueInput("Identificação de temporada inválida")
     fmt, modality = raw.get("format", "single"), raw.get("modality", "rapid")
-    if fmt not in FORMATS or modality not in CLOCK_PRESETS:
+    if (type(fmt) is not str or type(modality) is not str or
+            fmt not in FORMATS or modality not in CLOCK_PRESETS):
         raise LeagueInput("Formato ou modalidade indisponível")
     participants = raw.get("participants")
     if type(participants) is not list:
@@ -109,7 +112,7 @@ def normalize_config(raw: object) -> dict:
         raise LeagueInput("Liga contém enxadrista fora do catálogo")
     schedule(participants, fmt)
     execution = raw.get("execution_mode", "engine_full")
-    if execution not in EXECUTIONS:
+    if type(execution) is not str or execution not in EXECUTIONS:
         raise LeagueInput("Tipo de execução inválido")
     depth = raw.get("depth", 6)
     if type(depth) is not int or not 1 <= depth <= 16:

@@ -72,6 +72,7 @@ def test_round_robin_has_exact_pairs_and_reverse_colors(n,fmt,rounds,total):
     {"points":{"win":3,"draw":1,"loss":-1}},
     {"depth":True},{"depth":17},{"seed":False},
     {"name":"  "},{"season":"x\ninjected"},
+    {"format":[]},{"modality":{}},{"execution_mode":[]},
     {"path":"../../etc/passwd"},
 ])
 def test_config_rejects_invalid_or_untrusted_input(change):
@@ -500,3 +501,9 @@ def test_64_engine_receipt_scopes_profile_hashes_to_participants(manager):
     assert len(leagues.canonical(entry))<2048
     assert len(leagues.canonical(entry))*4032<leagues.MAX_LEDGER_BYTES
     assert manager.detail(ident)["completed_games"]==1
+
+
+@pytest.mark.parametrize("data", [None, 4, "fischer", {"fischer": 1}])
+def test_schedule_rejects_wrong_participant_collection_types(data):
+    with pytest.raises(leagues.LeagueInput):
+        leagues.schedule(data, "double")
