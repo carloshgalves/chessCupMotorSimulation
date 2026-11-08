@@ -363,6 +363,15 @@ def test_verified_uci_cup_round_trip_pgn_replay_and_tamper_detection(manager,mon
     json_export,kind=manager.export(ident,"json")
     assert json.loads(json_export)["completed_games"][0]["pgn"]
     path=manager._dir(ident)/"games"/(game_id+".pgn")
+    # A directory redirect after a verified result must not be hidden by
+    # the digest/mtime cache or leak reads outside the Cup workspace.
+    relocated=manager.folder.parent/"relocated-cup-games"
+    path.parent.rename(relocated)
+    path.parent.symlink_to(relocated,target_is_directory=True)
+    with pytest.raises(ValueError,match="PGN ausente"):
+        manager.detail(ident)
+    path.parent.unlink()
+    relocated.rename(path.parent)
     path.write_bytes(path.read_bytes()+b"\\n")
     with pytest.raises(ValueError,match="PGN mudou desde o recibo"):
         manager.detail(ident)
@@ -406,3 +415,30 @@ def test_crash_after_final_receipt_recovers_champion_without_replay(manager):
         assert (folder/"cup.json").read_bytes()==manifest
     finally:
         again.shutdown()
+
+
+def test_cup_game_directory_symlink_is_rejected_before_write(manager,tmp_path):
+    import chess.pgn
+    from chesssim.cup_rules import stage_game
+    ident=manager.create(settings(execution_mode="engine_full"))["id"]
+    state=manager._manifest(ident)
+    state["resources"]={
+        "engine_sha256":"a"*64,
+        "profile_sha256":{p:"b"*64 for p in state["config"]["participants"]},
+    }
+    slots=[p for p in seed_slots(state["config"]) if p]
+    spec=stage_game({"id":"r01-m01","round":1,"players":slots},
+                    state["config"],0,0)
+    outside=tmp_path/"outside-games"
+    outside.mkdir()
+    games_dir=manager._dir(ident)/"games"
+    games_dir.symlink_to(outside,target_is_directory=True)
+    game=chess.pgn.Game()
+    game.headers["Result"]="1-0"
+    with pytest.raises(ValueError,match="redirecionado"):
+        manager._persist_game(state,spec,game,{
+            "status":"COMPLETED","result":"1-0",
+            "termination":"CHECKMATE",
+        },started_utc=cups.utc())
+    assert list(outside.iterdir())==[]
+    assert not (manager._dir(ident)/"receipts").exists()

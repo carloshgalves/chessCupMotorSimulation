@@ -218,7 +218,7 @@ class CupManager:
         if row.get("pgn") != relative or not HEXSHA.fullmatch(str(row.get("pgn_sha256"))):
             raise ValueError("PGN obrigatório ausente ou incompatível")
         path=self._dir(state["id"])/relative
-        if path.is_symlink() or not path.is_file():
+        if path.parent.is_symlink() or path.is_symlink() or not path.is_file():
             raise ValueError("PGN ausente")
         stat=path.stat()
         signature=(stat.st_ino,stat.st_size,stat.st_mtime_ns)
@@ -512,8 +512,8 @@ class CupManager:
                 raise ValueError("Jogo UCI não apresenta resultado comprovado")
             pgn_rel="games/"+spec["id"]+".pgn"
             pgn_file=directory/pgn_rel
-            if pgn_file.is_symlink():
-                raise ValueError("PGN foi redirecionado")
+            if pgn_file.parent.is_symlink() or pgn_file.is_symlink():
+                raise ValueError("PGN ou diretório de jogos foi redirecionado")
             pgn_file.parent.mkdir(exist_ok=True)
             if pgn_file.exists():
                 # Old orphan after a crash is never silently treated as a game.
@@ -709,6 +709,8 @@ class CupManager:
             content=[]
             for entry in games:
                 p=self._dir(ident)/entry["pgn"]
+                if p.parent.is_symlink() or p.is_symlink():
+                    raise ValueError("PGN redirecionado após auditoria")
                 content.append(p.read_text(encoding="utf-8"))
             return ("\n".join(content).encode("utf-8"),
                     "application/x-chess-pgn; charset=utf-8")
@@ -723,6 +725,8 @@ class CupManager:
             if not entry or not entry["pgn"]:
                 raise CupInput("Partida real não disponível para replay")
             path=self._dir(ident)/entry["pgn"]
+            if path.parent.is_symlink() or path.is_symlink():
+                raise ValueError("PGN redirecionado após auditoria")
             with path.open(encoding="utf-8") as stream:
                 game=chess.pgn.read_game(stream)
             board=game.board()
