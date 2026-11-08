@@ -497,6 +497,30 @@ def make_arena_handler(manager: ArenaManager, token: str):
                     self._json(200, manager.leagues.list())
                 except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "Catálogo de ligas indisponível"})
+            elif re.fullmatch(r"/api/leagues/league-[a-f0-9]{16}/games", url.path):
+                ident = url.path.split("/")[3]
+                try:
+                    qs = parse_qs(url.query, strict_parsing=True, keep_blank_values=True) if url.query else {}
+                    if set(qs) - {"player", "offset", "limit"} or any(
+                            len(items) != 1 for items in qs.values()):
+                        raise LeagueInput("Filtro de partidas inválido")
+                    player = qs.get("player", [None])[0]
+                    offset = int(qs.get("offset", ["0"])[0])
+                    limit = int(qs.get("limit", ["50"])[0])
+                    self._json(200, manager.leagues.history(
+                        ident, player=player, offset=offset, limit=limit))
+                except (LeagueInput, ValueError):
+                    self._json(400, {"error": "Filtro de partidas inválido"})
+                except (OSError, KeyError, TypeError, json.JSONDecodeError):
+                    self._json(503, {"error": "Histórico da liga indisponível"})
+            elif re.fullmatch(r"/api/leagues/league-[a-f0-9]{16}/round/[0-9]{1,3}", url.path) and not url.query:
+                try:
+                    parts = url.path.split("/")
+                    self._json(200, manager.leagues.round_detail(parts[3], int(parts[5])))
+                except LeagueInput as exc:
+                    self._json(404, {"error": str(exc)})
+                except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+                    self._json(503, {"error": "Rodada indisponível"})
             elif url.path.startswith("/api/leagues/") and not url.query:
                 league_part = url.path.removeprefix("/api/leagues/")
                 export = re.fullmatch(r"(league-[a-f0-9]{16})/export/(json|pgn)", league_part)

@@ -210,6 +210,9 @@
     }
   }
   function toggle(toHistory) {
+    window.ChessSimLeagueNavigation?.hide();
+    byId("league-view").hidden = true;
+    byId("tab-leagues").setAttribute("aria-pressed", "false");
     byId("arena-view").hidden = toHistory;
     byId("history-view").hidden = !toHistory;
     byId("tab-history").setAttribute("aria-pressed", String(toHistory));
@@ -231,6 +234,7 @@
       byId("tab-arena").focus();
     }
   }
+  window.ChessSimHistoryNavigation = Object.freeze({leave:()=>toggle(false)});
   window.ChessSimHistoryPlayerName = slug => {
     const item = state.players.find(p => p.slug === slug);
     return item ? item.name : slug;

@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/arena.css">
   <link rel="stylesheet" href="/chess-board.css">
   <link rel="stylesheet" href="/history.css">
+  <link rel="stylesheet" href="/league.css">
   <script src="/arena.js" defer></script>
   <script src="/chess-board.js" defer></script>
   <script src="/human-play.js" defer></script>
@@ -15,6 +16,7 @@
   <script src="/history_stats.js" defer></script>
   <script src="/competition_rating.js" defer></script>
   <script src="/history.js" defer></script>
+  <script src="/league.js" defer></script>
 </head>
 <body>
   <main class="layout">
@@ -25,8 +27,10 @@
         <p>Assista a motores UCI ou jogue contra um adversário instalado. Execução local.</p>
       </div>
       <nav class="main-nav" aria-label="Áreas da aplicação">
-        <button id="tab-arena" type="button" aria-pressed="true" aria-controls="arena-view">Arena</button>
-        <button id="tab-history" type="button" aria-pressed="false" aria-controls="history-view">História</button>
+        <span class="league-nav-brand" aria-label="ChessCup Motor Simulation">♛ ChessCup Motor Simulation <small>v0.1.0</small></span>
+        <button id="tab-arena" type="button" aria-pressed="true" aria-controls="arena-view">⌂ Arena</button>
+        <button id="tab-leagues" type="button" aria-pressed="false" aria-controls="league-view">♜ Ligas</button>
+        <button id="tab-history" type="button" aria-pressed="false" aria-controls="history-view">▥ História</button>
       </nav>
 
       <details id="board-prefs" class="board-prefs" aria-label="Aparência dos tabuleiros">
@@ -336,6 +340,166 @@
         </div>
       </section>
     </div></div>
+
+    <section id="league-view" class="league-shell" aria-labelledby="league-heading" hidden>
+      <header class="league-page-heading">
+        <div>
+          <h2 id="league-heading">♜ Ligas</h2>
+          <p>Organize e acompanhe temporadas entre os enxadristas do catálogo.</p>
+        </div>
+        <button id="league-new-shortcut" type="button" class="primary">＋ Nova liga</button>
+      </header>
+      <p id="league-alert" class="league-alert" role="status" aria-live="polite"></p>
+      <div class="league-overview">
+        <aside class="league-list-panel">
+          <span class="league-overline">MINHAS LIGAS</span>
+          <div id="league-list" role="group" aria-label="Selecionar liga"></div>
+          <p id="league-list-empty" class="league-muted">Nenhuma liga criada. Use o formulário abaixo.</p>
+        </aside>
+        <section class="league-center-panel" aria-label="Dados da temporada">
+          <div id="league-selection-empty" class="league-empty">
+            <h3>Escolha ou crie uma liga</h3>
+            <p>As tabelas serão construídas a partir das partidas comprovadas da temporada.</p>
+          </div>
+          <div id="league-selection" hidden>
+            <header class="league-season-heading">
+              <div>
+                <h3 id="league-season-name">Temporada</h3>
+                <div id="league-season-tags" class="league-tags"></div>
+              </div>
+              <span id="league-season-state" class="league-status-tag">Aguardando</span>
+            </header>
+            <div class="league-tabs" role="group" aria-label="Áreas da liga">
+              <button type="button" id="league-tab-standings" class="selected" aria-pressed="true">▥ Classificação</button>
+              <button type="button" id="league-tab-rounds" aria-pressed="false">▦ Rodadas</button>
+              <button type="button" id="league-tab-games" aria-pressed="false">☷ Partidas</button>
+              <button type="button" id="league-tab-details" aria-pressed="false">ⓘ Detalhes</button>
+            </div>
+            <div id="league-pane-standings" class="league-pane">
+              <label for="league-player-search" class="league-search-label">Buscar enxadrista</label>
+              <input type="search" id="league-player-search" placeholder="Buscar enxadrista..." autocomplete="off">
+              <div class="league-table-scroll" role="region" aria-label="Classificação da temporada" tabindex="0">
+                <table class="league-standings-table">
+                  <thead><tr><th>Pos</th><th>Enxadrista</th><th>J</th><th>V</th><th>E</th><th>D</th><th>Pts</th><th title="Elo experimental externo à temporada">Elo exp.</th></tr></thead>
+                  <tbody id="league-standings-body"></tbody>
+                </table>
+              </div>
+              <p class="league-tiny">Desempate: pontos, vitórias, confronto direto (2 empatados com confrontos completos), Sonneborn–Berger e ordem canônica.</p>
+            </div>
+            <div id="league-pane-rounds" class="league-pane" hidden>
+              <div class="league-inline">
+                <label for="league-round-selector">Rodada</label>
+                <select id="league-round-selector"></select>
+              </div>
+              <div id="league-round-matches" class="league-match-list"></div>
+            </div>
+            <div id="league-pane-games" class="league-pane" hidden>
+              <div class="league-inline">
+                <label for="league-game-player">Enxadrista</label>
+                <select id="league-game-player"><option value="">Todos</option></select>
+              </div>
+              <div id="league-games-list" class="league-match-list"></div>
+              <div class="league-history-nav">
+                <button type="button" id="league-games-prev">← Anteriores</button>
+                <span id="league-games-page" class="league-muted"></span>
+                <button type="button" id="league-games-next">Próximos →</button>
+              </div>
+            </div>
+            <div id="league-pane-details" class="league-pane" hidden>
+              <dl id="league-detail-facts" class="league-facts"></dl>
+              <p id="league-source-warning" class="league-muted"></p>
+              <p class="league-muted">Temporada e rodadas são rótulos virtuais; datas reais de execução são registradas em UTC e exibidas no seu fuso local.</p>
+            </div>
+          </div>
+        </section>
+        <aside class="league-side-panel" aria-label="Progresso e ações da temporada">
+          <section class="league-mini-panel">
+            <h3>Progresso da temporada</h3>
+            <div class="league-progress-track"><div id="league-progress-bar" class="league-progress-fill"></div></div>
+            <p id="league-progress-caption" class="league-small">Aguardando temporada</p>
+            <div class="league-stats-grid">
+              <div><span>Partidas</span><strong id="league-progress-games">0/0</strong></div>
+              <div><span>Concluídas</span><strong id="league-progress-complete">0</strong></div>
+              <div><span>Em execução</span><strong id="league-progress-running">0</strong></div>
+            </div>
+          </section>
+          <section class="league-mini-panel">
+            <h3>▣ Próxima rodada</h3>
+            <p id="league-next-round" class="league-small">Aguardando liga</p>
+            <p id="league-next-match" class="league-next-match">—</p>
+            <button type="button" id="league-view-matches" class="league-wide">Ver confrontos</button>
+            <button type="button" id="league-run" class="primary league-wide" disabled>▶ Executar rodada</button>
+            <p id="league-run-note" class="league-small"></p>
+          </section>
+          <section class="league-mini-panel">
+            <h3>Ações da liga</h3>
+            <div class="league-export-actions">
+              <button type="button" id="league-export-pgn" disabled>⇩ Exportar PGN</button>
+              <button type="button" id="league-export-json" disabled>⇩ Exportar JSON</button>
+            </div>
+            <button type="button" id="league-pause" class="league-wide" disabled>Ⅱ Pausar temporada</button>
+          </section>
+        </aside>
+      </div>
+      <section id="league-create-panel" class="league-create-panel" aria-label="Criar nova liga">
+        <h3>✚ Criar nova liga</h3>
+        <form id="league-create-form">
+          <div class="league-create-row">
+            <label>Nome da liga<input id="league-create-name" type="text" maxlength="80" minlength="3" required value="Liga dos Imortais"></label>
+            <label>Modalidade (rating)
+              <select id="league-create-modality">
+                <option value="rapid">Rápido · 15+10</option>
+                <option value="classical">Clássico · 60+30</option>
+                <option value="blitz">Blitz · 3+2</option>
+                <option value="bullet">Bullet · 1+0</option>
+              </select>
+            </label>
+            <label>Formato
+              <select id="league-create-format">
+                <option value="double">Turno e returno</option>
+                <option value="single">Turno único</option>
+              </select>
+            </label>
+            <label>Temporada (rótulo)<input id="league-create-season" type="text" maxlength="40" required value="Temporada 1"></label>
+            <button id="league-create-submit" type="submit" class="primary">Criar liga</button>
+          </div>
+          <details id="league-advanced">
+            <summary>Configurar participantes e tipo de execução</summary>
+            <div class="league-advanced-fields">
+              <label>Número de enxadristas
+                <select id="league-create-count">
+                  <option value="4">4 jogadores</option><option value="8" selected>8 jogadores</option>
+                  <option value="16">16 jogadores</option><option value="32">32 jogadores</option>
+                  <option value="64">64 jogadores</option>
+                </select>
+              </label>
+              <label>Execução
+                <select id="league-create-execution">
+                  <option value="engine_full">Motor UCI real — PGN verificável</option>
+                  <option value="fast_statistical">Simulação estatística — sem PGN/Elo</option>
+                </select>
+              </label>
+              <label>Profundidade UCI (1–16)
+                <input id="league-create-depth" type="number" min="1" max="16" value="6" required>
+              </label>
+              <label>Pontos por vitória
+                <input id="league-points-win" type="number" min="1" max="9" value="3" required>
+              </label>
+              <label>Pontos por empate
+                <input id="league-points-draw" type="number" min="0" max="9" value="1" required>
+              </label>
+              <label>Pontos por derrota
+                <input id="league-points-loss" type="number" min="0" max="9" value="0" required>
+              </label>
+            </div>
+            <p class="league-small">Perfis ausentes no Rodent IV impedem jogos reais; a projeção estatística não simula lances, não produz PGN e não modifica o Elo.</p>
+            <div id="league-participant-options" class="league-participant-options" role="group" aria-label="Participantes da temporada"></div>
+            <p id="league-participant-caption" class="league-small"></p>
+          </details>
+        </form>
+      </section>
+      <footer class="league-disclaimer">ⓘ Resultados gerados pelo simulador. Elo competitivo experimental separado por ritmo; projeções sem motor nunca são apresentadas como PGNs reais.</footer>
+    </section>
     <section id="history-view" class="history-shell" aria-labelledby="history-heading" hidden>
       <header class="history-heading">
         <span class="overline">ACERVO HISTÓRICO · 64 ENXADRISTAS</span>

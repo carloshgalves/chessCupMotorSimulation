@@ -474,6 +474,11 @@ class LeagueManager:
             for entry in recent:
                 entry["name_white"] = find_player(entry["white"]).name
                 entry["name_black"] = find_player(entry["black"]).name
+            round_progress = [
+                {"round": idx, "completed": sum(m["id"] in entries for m in rd),
+                 "total": len(rd)}
+                for idx, rd in enumerate(rounds, 1)
+            ]
             games_round = [{
                 **m,
                 "status": "COMPLETED" if m["id"] in entries else
@@ -488,6 +493,7 @@ class LeagueManager:
                     "players": [{"slug": slug, "name": find_player(slug).name}
                                 for slug in config["participants"]],
                     "standings": standings(config, rounds, entries),
+                    "round_progress": round_progress,
                     "games": games_round, "recent": recent[-40:],
                     "created_utc": state["created_utc"],
                     "execution_started_utc": state.get("execution_started_utc"),
@@ -500,6 +506,56 @@ class LeagueManager:
                         if config["execution_mode"] == "fast_statistical" else
                         "Partidas efetivas do Rodent IV; rating histórico não é validado."),
                     }
+
+    def round_detail(self, ident: str, round_number: int) -> dict:
+        with self._lock:
+            state = self._load(ident)
+            rounds = schedule(state["config"]["participants"],
+                              state["config"]["format"])
+            if type(round_number) is not int or not 1 <= round_number <= len(rounds):
+                raise LeagueInput("Rodada desconhecida")
+            records = self._ledger(state)
+            games = []
+            for match in rounds[round_number-1]:
+                entry = records.get(match["id"])
+                games.append({
+                    **match,
+                    "white_name": find_player(match["white"]).name,
+                    "black_name": find_player(match["black"]).name,
+                    "status": ("COMPLETED" if entry else "RUNNING"
+                               if self._active == ident and
+                               state["current_match"] == match["id"] else "PENDING"),
+                    "result": entry["result"] if entry else None,
+                    "source": entry["source"] if entry else None,
+                    "pgn": bool(entry and entry["pgn"]),
+                    "finished_utc": entry["finished_utc"] if entry else None,
+                })
+            return {"id": ident, "round": round_number,
+                    "rounds_total": len(rounds), "games": games}
+
+    def history(self, ident: str, *, player: str | None = None,
+                offset: int = 0, limit: int = 50) -> dict:
+        with self._lock:
+            state = self._load(ident)
+            if player is not None and player not in state["config"]["participants"]:
+                raise LeagueInput("Jogador não pertence à temporada")
+            if (type(offset) is not int or offset < 0 or offset > 10000 or
+                    type(limit) is not int or not 1 <= limit <= 100):
+                raise LeagueInput("Paginação inválida")
+            records = self._ledger(state)
+            completed = list(records.values())
+            if player:
+                completed = [r for r in completed
+                             if player in (r["white"], r["black"])]
+            completed.sort(key=lambda r: (r["round"], r["match_id"]), reverse=True)
+            page = completed[offset:offset+limit]
+            return {"id": ident, "total": len(completed), "offset": offset,
+                    "limit": limit,
+                    "games": [{
+                        **r,
+                        "white_name": find_player(r["white"]).name,
+                        "black_name": find_player(r["black"]).name,
+                    } for r in page]}
 
     def _resources(self, config: dict) -> dict:
         profiles = {}
