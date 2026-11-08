@@ -366,3 +366,43 @@ def test_verified_uci_cup_round_trip_pgn_replay_and_tamper_detection(manager,mon
     path.write_bytes(path.read_bytes()+b"\\n")
     with pytest.raises(ValueError,match="PGN mudou desde o recibo"):
         manager.detail(ident)
+
+
+def test_crash_after_final_receipt_recovers_champion_without_replay(manager):
+    """Last receipt is durable, but process dies before final manifest save."""
+    ident=manager.create(settings())["id"]
+    completed=run_to_completion(manager,ident,max_steps=11)
+    assert completed["champion"] in ("fischer","tal")
+    folder=manager._dir(ident)
+    saved={p.name:p.read_bytes() for p in (folder/"receipts").glob("*.json")}
+    assert len(saved)>=2
+    stale=manager._manifest(ident)
+    stale["status"]="RUNNING"
+    stale["champion"]=None
+    stale["current_game"]="r01-m01-s5-g1"
+    manager._save(stale)
+    reloaded=cups.CupManager(manager.root,manager.folder.parent)
+    try:
+        state=reloaded.detail(ident)
+        assert state["status"]=="COMPLETED"
+        assert state["champion"]==completed["champion"]
+        assert state["completed_games"]==completed["completed_games"]
+        assert reloaded._manifest(ident)["current_game"] is None
+        assert set(p.name for p in (folder/"receipts").glob("*.json"))==set(saved)
+        assert all((folder/"receipts"/name).read_bytes()==content
+                   for name,content in saved.items())
+        with pytest.raises(CupInput,match="não possui partida pendente"):
+            reloaded.run(ident)
+        # Read-only endpoints and repeated startup cannot rewrite the result.
+        manifest=(folder/"cup.json").read_bytes()
+        reloaded.detail(ident)
+        reloaded.list()
+        assert (folder/"cup.json").read_bytes()==manifest
+    finally:
+        reloaded.shutdown()
+    again=cups.CupManager(manager.root,manager.folder.parent)
+    try:
+        assert again.detail(ident)["champion"]==completed["champion"]
+        assert (folder/"cup.json").read_bytes()==manifest
+    finally:
+        again.shutdown()

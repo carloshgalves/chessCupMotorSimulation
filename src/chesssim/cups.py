@@ -125,8 +125,20 @@ class CupManager:
             if not CUP_RX.fullmatch(manifest.parent.name):
                 continue
             data = self._manifest(manifest.parent.name)
-            if data["status"] == "RUNNING":
+            # A crash may happen between persisting the last immutable receipt
+            # and updating cup.json. Recompute the winner from verified receipts
+            # before deciding whether the interrupted season must be resumed.
+            computed = self._state(data)
+            if computed["champion"] is not None and data["status"] != "COMPLETED":
+                data["status"] = "COMPLETED"
+                data["champion"] = computed["champion"]
+                data["current_game"] = None
+                data["message"] = "Resultado final recuperado de recibos verificados"
+                data["updated_utc"] = utc()
+                self._save(data)
+            elif data["status"] == "RUNNING":
                 data["status"] = "PAUSED"
+                data["current_game"] = None
                 data["message"] = "Execução interrompida; retome manualmente"
                 data["updated_utc"] = utc()
                 self._save(data)
