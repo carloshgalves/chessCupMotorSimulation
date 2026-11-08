@@ -10,6 +10,7 @@
     selection:[],view:"none",busy:false,loading:false,
     commandPending:false,version:0,playback:null,
     seedFromPreset:[],lastRun:null,
+    listSignature:null,detailSignature:null,renderedId:null,
     focusedPlayer:null,profileCache:new Map(),profilePending:new Set(),
   };
   const labels={
@@ -133,6 +134,7 @@
         get("/api/cups"),get("/api/arena")
       ]);
       if(version!==state.version||state.view==="none")return;
+      const oldBusy=state.busy;
       state.cups=listing.cups;
       state.busy=Boolean(arena.busy);
       if(!state.id||!state.cups.some(x=>x.id===state.id)){
@@ -141,10 +143,22 @@
         state.selectedRound=1;state.pane="bracket";
       }
       if(state.view==="create")return;
-      drawList();
-      if(!state.id){state.detail=null;empty();return;}
+      const listingSignature=JSON.stringify([state.id,state.cups]);
+      if(force||listingSignature!==state.listSignature){
+        drawList();
+        state.listSignature=listingSignature;
+      }
+      if(!state.id){
+        state.detail=null;
+        state.detailSignature=null;
+        state.renderedId=null;
+        empty();return;
+      }
       const detail=await get("/api/cups/"+state.id);
       if(version!==state.version||state.view!=="main")return;
+      const detailSignature=JSON.stringify(detail);
+      const changed=force||detailSignature!==state.detailSignature||
+        state.renderedId!==state.id||oldBusy!==state.busy;
       state.detail=detail;
       if(state.lastRun?.id===detail.id&&detail.status!=="RUNNING"){
         if(detail.completed_games>state.lastRun.games){
@@ -170,7 +184,11 @@
         state.selectedMatch=detail.next_game?.match_id||
           detail.bracket?.[0]?.matches?.find(m=>m.status==="PENDING")?.id||null;
       }
-      render();
+      if(changed){
+        render();
+        state.detailSignature=detailSignature;
+        state.renderedId=state.id;
+      }
     }catch(error){note(error.message,true);}
     finally{state.loading=false;}
   }

@@ -243,6 +243,11 @@ async function flush(){
   assert.equal($("cup-selection").hidden,false);
   assert.equal($("cup-bracket").children.length,1);
   assert.equal($("cup-bracket").children[0].children.length,2);
+  const bracketColumn=$("cup-bracket").children[0];
+  timers.find(x=>x.ms===2500).fn();
+  await flush();
+  assert.strictEqual($("cup-bracket").children[0],bracketColumn,
+    "Polling unchanged data must preserve bracket DOM and scroll position");
   assert.equal($("cup-run").disabled,false);
   assert.equal($("cup-progress-games").textContent,"0");
   assert.equal($("cup-progress-matches").textContent,"0/1");
@@ -283,6 +288,10 @@ async function flush(){
   assert.equal(expanded.children.length,2);
   assert(expanded.children[1].children.length>=1);
   assert(expanded.children[1].children[0].textContent!==undefined);
+  timers.find(x=>x.ms===2500).fn();
+  await flush();
+  assert.strictEqual($("cup-calendar").children[0],expanded,
+    "Polling unchanged data must preserve expanded rounds and keyboard focus");
   $("cup-tab-rules").events.click();
   assert.equal($("cup-pane-rules").hidden,false);
   assert($("cup-rules-content").children.length>=8);

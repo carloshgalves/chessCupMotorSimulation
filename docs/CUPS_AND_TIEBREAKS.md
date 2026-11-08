@@ -88,3 +88,5 @@ Os testes CI usam motores sintéticos e contratos de UI, mas **não substituem**
 - O feedback informa quando a última partida terminou, foi interrompida ou falhou; não deve continuar exibindo "Executando..." após o retorno do estado concluído ou pausado.
 
 Os dados observados do simulador não descrevem as vitórias de Lasker, Steinitz ou quaisquer outros na carreira real, nem atestam a força/fidelidade de seu perfil UCI. O uso de um diretório \`--out\` diferente gera outra amostra estatística, e não migra resultados automaticamente.
+
+- A atualização automática consulta o estado a cada 2,5 segundos, mas somente redesenha o chaveamento, o calendário e a lista quando os dados de fato mudam; a rolagem e o foco permanecem estáveis entre consultas idênticas.
