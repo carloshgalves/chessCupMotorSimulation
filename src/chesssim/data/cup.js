@@ -9,7 +9,7 @@
     selectedMatch:null,selectedWomanGameId:null,selectedRound:1,pane:"bracket",createPreset:"standard",
     selection:[],view:"none",busy:false,loading:false,
     commandPending:false,version:0,playback:null,
-    seedFromPreset:[],pictureFailures:new Set(),
+    seedFromPreset:[],lastRun:null,
     focusedPlayer:null,profileCache:new Map(),profilePending:new Set(),
   };
   const labels={
@@ -146,6 +146,21 @@
       const detail=await get("/api/cups/"+state.id);
       if(version!==state.version||state.view!=="main")return;
       state.detail=detail;
+      if(state.lastRun?.id===detail.id&&detail.status!=="RUNNING"){
+        if(detail.completed_games>state.lastRun.games){
+          note("Partida concluída e resultado registrado. "+
+               "Confira o placar; replay disponível apenas para jogos UCI.");
+        }else if(detail.status==="FAILED"){
+          note("Falha na execução. Nenhum resultado inconclusivo foi pontuado.",true);
+        }else{
+          note("Execução interrompida sem novo resultado contabilizado.");
+        }
+        state.lastRun=null;
+      }
+      if(detail.format==="double_round_robin"&&!state.selectedWomanGameId&&
+         detail.recent?.length){
+        state.selectedWomanGameId=detail.recent.at(-1).id;
+      }
       const available=new Set(
         (detail.bracket||[]).flatMap(r=>r.matches.map(m=>m.id))
       );
@@ -252,8 +267,10 @@
     $("cup-pause").disabled=state.commandPending||data.status!=="RUNNING"||!token;
     const selectedWomen=data.format==="double_round_robin"&&
       data.rounds.flatMap(round=>round.games).find(g=>g.id===state.selectedWomanGameId);
-    const selectedHasGame=Boolean(selectedMatch()?.games?.length||
-      selectedWomen?.result||data.recent?.some(x=>x.pgn));
+    const selectedHasGame=Boolean(
+      data.format==="double_round_robin"
+       ?selectedWomen?.result
+       :selectedMatch()?.games?.length);
     $("cup-open-match").disabled=!selectedHasGame;
     $("cup-open-match").textContent=data.execution_mode==="fast_statistical"
       ?"▦ Ver placares (sem tabuleiro)"
@@ -844,7 +861,10 @@
   });
   $("cup-run").addEventListener("click",()=>action(async()=>{
     if(!state.id)return;
-    const start=await post("/api/cups/"+state.id+"/run");
+    const id=state.id;
+    const priorGames=state.detail?.completed_games||0;
+    const start=await post("/api/cups/"+id+"/run");
+    state.lastRun={id,games:priorGames};
     note("Executando "+start.game+" · "+(stageLabel[start.stage]||start.stage));
   }));
   $("cup-pause").addEventListener("click",()=>action(async()=>{

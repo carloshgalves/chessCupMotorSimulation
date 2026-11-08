@@ -75,3 +75,16 @@ Uma execução de Copa é mutuamente exclusiva com Duelo, Jogar e Liga no worksp
 8. Teste navegação Copas↔Ligas↔Arena↔História, visual mobile, recarregar navegador e reiniciar servidor. Decisão de merge sempre humana.
 
 Os testes CI usam motores sintéticos e contratos de UI, mas **não substituem** o gate de um Rodent IV real no Chrome/Debian do mantenedor.
+
+
+## Revisão de aceite visual e integração de estatísticas (8/11/2026)
+
+- **Fotografias removidas exclusivamente da interface de Copas**, incluindo seleção de participantes, painel do confronto e cartão compacto de desempenho. Os packs e créditos da aba História permanecem intactos para eventual reutilização futura.
+- **Rodadas 1, 2 e 3** agora têm cabeçalhos numerados, contagem de confrontos, diferenciação de fundo e separadores visíveis, da mesma forma que as rodadas posteriores. A chave mantém rolagem nos dois eixos.
+- O **Calendário** funciona como lista expansível por rodada: clicar na rodada mostra todos os confrontos, os estados e os placares; partidas UCI concluídas oferecem replay. Jogar uma projeção abre apenas os resultados, nunca um tabuleiro fictício.
+- **Desempenho do jogador** é clicável e leva diretamente ao perfil correto na aba História, onde estão as estatísticas e o Elo do simulador.
+- O perfil em História considera as Copas reais que estejam no **mesmo workspace** usado em \`--out\`. Cada jogo UCI da Copa entra uma única vez nos dados de confronto, vitória, empate, derrota e torneio. Sua trilha PGN, cabeçalhos e hash são validados novamente sem modificar arquivos.
+- Jogos UCI clássicos, rápidos e blitz da Copa entram nos **pools experimentais de Elo correspondentes**. **Armagedom** tem relógios desiguais, então entra no histórico real de partidas, mas **não** altera o Elo. Resultados \`fast_statistical\` permanecem apenas nas telas da Copa, **não** contam em estatísticas de partidas verificadas nem em Elo.
+- O feedback informa quando a última partida terminou, foi interrompida ou falhou; não deve continuar exibindo "Executando..." após o retorno do estado concluído ou pausado.
+
+Os dados observados do simulador não descrevem as vitórias de Lasker, Steinitz ou quaisquer outros na carreira real, nem atestam a força/fidelidade de seu perfil UCI. O uso de um diretório \`--out\` diferente gera outra amostra estatística, e não migra resultados automaticamente.

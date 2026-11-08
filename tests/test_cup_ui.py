@@ -59,6 +59,9 @@ def test_cup_theme_matches_approved_league_and_responsive_layout():
     css=(DATA/"cup.css").read_text(encoding="utf-8")
     assert "grid-template-columns:minmax(175px,21%)" in css
     assert ".cup-bracket-game" in css
+    assert ".cup-bracket-round-heading" in css
+    assert ".cup-calendar-toggle" in css
+    assert ".cup-player-summary" in css
     assert ".cup-selected-player img" in css
     assert ".cup-creation-right" in css
     assert ".cup-preset-list" in css

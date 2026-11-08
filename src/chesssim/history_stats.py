@@ -1,7 +1,7 @@
 """Read-only, bounded local competition statistics for the history profile.
 
-Only canonical local Arena sessions and tournament checkpoint ledgers are
-eligible. Every counted result is reconciled with a legal PGN; historical
+Only canonical local Arena sessions, tournament checkpoint ledgers and
+verified real-UCI Cup receipts are eligible. Every counted result is reconciled with a legal PGN; historical
 curated games are explicitly excluded. Corrupt records fail independently
 and are reported as excluded coverage rather than fabricated outcomes.
 """

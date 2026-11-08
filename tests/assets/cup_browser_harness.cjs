@@ -258,6 +258,7 @@ async function flush(){
   await $("cup-run").events.click();
   await flush();
   assert.equal(sequence,1);
+  assert($("cup-feedback").textContent.includes("Partida concluída"));
   assert.equal($("cup-progress-games").textContent,"1");
   assert($("cup-performance-record").textContent.includes("1 partidas"));
   assert.equal($("cup-export-pgn").disabled,true);
