@@ -1,8 +1,6 @@
 """Representation lab: evidence-only, opt-in PGN, no artificial accuracy."""
 from __future__ import annotations
 
-import json
-from pathlib import Path
 
 import pytest
 
