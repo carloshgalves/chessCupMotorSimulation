@@ -158,6 +158,7 @@
       const profile = await response.json();
       if (id !== state.seq || profile.slug !== selected.slug) return;
       renderProfile(profile);
+      window.ChessSimRepresentation?.leave();
       state.view = "profile";
       byId("history-roster").hidden = true;
       byId("history-profile").hidden = false;
@@ -173,6 +174,7 @@
     }
   }
   function backToRoster() {
+    window.ChessSimRepresentation?.leave();
     window.ChessSimHistoryGames.leave();
     window.ChessSimHistoryStats.leave();
     window.ChessSimRatings?.leave();
@@ -227,12 +229,15 @@
         window.ChessSimHistoryStats.resume();
         window.ChessSimRatings?.resume();
         window.ChessSimHistoryArchive?.resume();
+      } else if (state.view === "representation"){
+        window.ChessSimRepresentation?.resume();
       }
       byId("history-heading").setAttribute("tabindex", "-1");
       byId("history-heading").focus();
       return loading;
     } else {
       ++state.seq;
+      window.ChessSimRepresentation?.suspend();
       window.ChessSimHistoryGames.suspend();
       window.ChessSimHistoryStats.suspend();
       window.ChessSimRatings?.suspend();
@@ -255,9 +260,33 @@
     showSelection();
     await openProfile();
   }
+  function openRepresentation(){
+    if(state.view!=="profile"||!state.players.length)return;
+    const selected=playerAt(state.index);
+    if(!safeSlug(selected.slug))return;
+    state.view="representation";
+    byId("history-profile").hidden=true;
+    window.ChessSimHistoryGames.suspend();
+    window.ChessSimHistoryStats.suspend();
+    window.ChessSimRatings?.suspend();
+    window.ChessSimHistoryArchive?.suspend();
+    window.ChessSimRepresentation?.enter(selected.slug);
+  }
+  function closeRepresentation(){
+    if(state.view!=="representation")return;
+    window.ChessSimRepresentation?.leave();
+    state.view="profile";
+    byId("history-profile").hidden=false;
+    window.ChessSimHistoryGames.resume();
+    window.ChessSimHistoryStats.resume();
+    window.ChessSimRatings?.resume();
+    window.ChessSimHistoryArchive?.resume();
+    byId("history-representation-open").focus();
+  }
   window.ChessSimHistoryNavigation = Object.freeze({
     leave:()=>toggle(false),
     open:openBySlug,
+    representation:openRepresentation,
   });
   window.ChessSimHistoryPlayerName = slug => {
     const item = state.players.find(p => p.slug === slug);
@@ -269,6 +298,8 @@
   byId("history-next").addEventListener("click", () => move(1));
   byId("history-open").addEventListener("click", openProfile);
   byId("history-back").addEventListener("click", backToRoster);
+  byId("history-representation-open").addEventListener("click",openRepresentation);
+  byId("rep-back").addEventListener("click",closeRepresentation);
   byId("history-view").addEventListener("keydown", event => {
     if (state.view !== "roster" || event.altKey || event.ctrlKey || event.metaKey ||
         !event.target || !["history-view","history-carousel",

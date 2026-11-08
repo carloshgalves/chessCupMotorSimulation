@@ -22,6 +22,7 @@ from .history_profiles import list_history_players, load_history_profile
 from .history_games import InvalidCatalogue, UnknownGame, list_games, replay
 from .history_stats import player_stats
 from .history_archive import archive as player_archive, replay as archive_replay, export_page as archive_export, ArchiveInput
+from .representation import RepresentationLab, RepresentationInput
 from .competition_rating import rating_report, RATING_POOLS
 from .human_game import HumanGame, HumanInput, HumanBusy
 from .leagues import LeagueManager, LeagueInput, LeagueBusy
@@ -264,6 +265,7 @@ class ArenaManager:
                 self.leagues = LeagueManager(self.root, self.workspace)
                 try:
                     self.cups = CupManager(self.root, self.workspace)
+                    self.representation = RepresentationLab(self.root, self.workspace)
                 except BaseException:
                     self.leagues.shutdown()
                     raise
@@ -322,9 +324,10 @@ class ArenaManager:
         with self._lock:
             selected = self._status_unlocked()
             return {"session": selected, "busy": self._active or self.human.busy or
-                    self.leagues.busy or self.cups.busy,
+                    self.leagues.busy or self.cups.busy or self.representation.busy,
                     "duel_busy": self._active, "human_busy": self.human.busy,
                     "league_busy": self.leagues.busy, "cup_busy": self.cups.busy,
+                    "representation_busy": self.representation.busy,
                     "players": _profiles(self.root),
                     "presets": {name: {"initial_seconds": v[0], "increment_seconds": v[1]}
                                 for name, v in PRESETS.items()},
@@ -356,8 +359,9 @@ class ArenaManager:
     def launch(self, raw: object) -> dict:
         config = normalize_config(raw)
         with self._lock:
-            if self._active or self.human.busy or self.leagues.busy or self.cups.busy:
-                raise ArenaBusy("Já existe confronto, partida, liga ou Copa em andamento")
+            if (self._active or self.human.busy or self.leagues.busy or
+                    self.cups.busy or self.representation.busy):
+                raise ArenaBusy("Já existe execução de motor em andamento")
             white, black = (find_player(config[x]) for x in ("white", "black"))
             try:
                 _, files = validate(self.root, white, black)
@@ -428,20 +432,35 @@ class ArenaManager:
 
     def human_start(self, raw: object) -> dict:
         with self._lock:
-            return self.human.start(raw, duel_busy=self._active or self.leagues.busy or self.cups.busy)
+            return self.human.start(
+                raw, duel_busy=self._active or self.leagues.busy or
+                self.cups.busy or self.representation.busy)
 
     def human_resume(self, raw: object) -> dict:
         with self._lock:
-            return self.human.resume(raw, duel_busy=self._active or self.leagues.busy or self.cups.busy)
+            return self.human.resume(
+                raw, duel_busy=self._active or self.leagues.busy or
+                self.cups.busy or self.representation.busy)
 
     def league_run(self, ident: str) -> dict:
         with self._lock:
-            return self.leagues.run(ident, arena_busy=self._active or self.human.busy or self.cups.busy)
+            return self.leagues.run(ident, arena_busy=self._active or self.human.busy or
+                self.cups.busy or self.representation.busy)
 
     def cup_run(self, ident: str) -> dict:
         with self._lock:
             return self.cups.run(
-                ident, arena_busy=self._active or self.human.busy or self.leagues.busy)
+                ident, arena_busy=self._active or self.human.busy or
+                self.leagues.busy or self.representation.busy)
+
+    def representation_start(self, slug: str, raw: object) -> dict:
+        # Serialize the reservation of the shared UCI resource with every
+        # other Arena start operation, rather than racing a status() read.
+        with self._lock:
+            return self.representation.start(
+                slug, raw, simulator_busy=bool(
+                    self._active or self.human.busy or
+                    self.leagues.busy or self.cups.busy))
 
     def stop(self) -> dict:
         with self._lock:
@@ -451,6 +470,7 @@ class ArenaManager:
             return {"stop_requested": True}
 
     def shutdown(self) -> None:
+        self.representation.shutdown()
         self.cups.shutdown()
         self.leagues.shutdown()
         self.human.shutdown()
@@ -674,6 +694,14 @@ def make_arena_handler(manager: ArenaManager, token: str):
                     except (OSError, ValueError, KeyError, TypeError,
                             json.JSONDecodeError):
                         self._json(503,{"error":"Replay indisponível"})
+            elif re.fullmatch(r"/api/history/representation/[a-z0-9-]{2,48}",url.path) and not url.query:
+                slug=url.path.rsplit("/",1)[1]
+                try:
+                    self._json(200,manager.representation.status(slug))
+                except RepresentationInput as exc:
+                    self._json(404,{"error":str(exc)})
+                except (OSError,ValueError,TypeError,KeyError,json.JSONDecodeError):
+                    self._json(503,{"error":"Laboratório de representação indisponível"})
             elif url.path == "/api/history/players" and not url.query:
                 try:
                     self._json(200, list_history_players())
@@ -770,7 +798,8 @@ def make_arena_handler(manager: ArenaManager, token: str):
                         KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "Estado do duelo indisponível"})
             elif url.path in ("/", "/arena.js", "/arena.css", "/history.js", "/history_replay.js", "/history_stats.js", "/competition_rating.js", "/history.css", "/chess-board.js", "/chess-board.css", "/board-preferences.js", "/human-play.js", "/league.js", "/league.css",
-                              "/cup.js", "/cup.css", "/history_archive.js", "/history_archive.css", "/viewer"):
+                              "/cup.js", "/cup.css", "/representation.js", "/representation.css",
+                              "/history_archive.js", "/history_archive.css", "/viewer"):
                 asset = {"/": "arena.html", "/arena.js": "arena.js",
                          "/arena.css": "arena.css", "/history.js": "history.js",
                          "/history_replay.js": "history_replay.js",
@@ -783,6 +812,8 @@ def make_arena_handler(manager: ArenaManager, token: str):
                          "/league.js": "league.js",
                          "/league.css": "league.css",
                          "/cup.js": "cup.js", "/cup.css": "cup.css",
+                         "/representation.js": "representation.js",
+                         "/representation.css": "representation.css",
                          "/history_archive.js": "history_archive.js",
                          "/history_archive.css": "history_archive.css",
                          "/chess-board.css": "chess_board.css", "/viewer": "monitor.html"}[url.path]
@@ -834,12 +865,15 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 r"/api/leagues/(league-[a-f0-9]{16})/(run|pause)", route.path)
             cup_action = re.fullmatch(
                 r"/api/cups/(cup-[a-f0-9]{16})/(run|pause)",route.path)
+            representation_action = re.fullmatch(
+                r"/api/history/representation/([a-z0-9-]{2,48})/run",route.path)
             if (route.path not in (
                 "/api/arena/launch", "/api/arena/stop",
                 "/api/arena/human/start", "/api/arena/human/move",
                 "/api/arena/human/action", "/api/arena/human/resume",
                 "/api/leagues/create", "/api/cups/create",
-            ) and league_action is None and cup_action is None) or route.query:
+            ) and league_action is None and cup_action is None and
+                    representation_action is None) or route.query:
                 self._json(404, {"error": "Rota desconhecida"})
                 return
             origins = {f"http://127.0.0.1:{self.server.server_port}",
@@ -865,7 +899,10 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 return
             try:
                 data = _decode_json(body)
-                if route.path == "/api/cups/create":
+                if representation_action:
+                    self._json(202,manager.representation_start(
+                        representation_action.group(1),data))
+                elif route.path == "/api/cups/create":
                     self._json(201, manager.cups.create(data))
                 elif cup_action:
                     if data:
@@ -897,7 +934,7 @@ def make_arena_handler(manager: ArenaManager, token: str):
                     self._json(200, manager.human.action(data))
                 else:
                     self._json(200, manager.human_resume(data))
-            except (BadLaunch, HumanInput, LeagueInput, CupInput) as exc:
+            except (BadLaunch, HumanInput, LeagueInput, CupInput, RepresentationInput) as exc:
                 self._json(400, {"error": str(exc)})
             except (ArenaBusy, HumanBusy, LeagueBusy, CupBusy) as exc:
                 self._json(409, {"error": str(exc)})
