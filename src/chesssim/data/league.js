@@ -301,6 +301,9 @@
     $("league-progress-games").textContent=g.completed_games+"/"+g.total_games;
     $("league-progress-complete").textContent=String(g.completed_games);
     $("league-progress-running").textContent=String(g.running_games);
+    const missingProfiles=g.execution_mode==="engine_full" ?
+      g.config.participants.filter(slug=>
+        !state.players.find(p=>p.slug===slug)?.installed):[];
     const next=g.games.find(m=>m.status!=="COMPLETED");
     $("league-next-round").textContent=g.status==="COMPLETED"?
       "Temporada concluída":"Rodada "+g.round_current;
@@ -308,14 +311,16 @@
       (next.name_white+" × "+next.name_black):"Nenhuma partida pendente";
     $("league-run").disabled=state.pending||
       g.status==="COMPLETED"||g.status==="RUNNING"||
-      (state.arenaBusy&&g.status!=="RUNNING")||!token;
+      (state.arenaBusy&&g.status!=="RUNNING")||!token||
+      missingProfiles.length>0;
     $("league-run").textContent=g.status==="PAUSED"||g.status==="FAILED"?
       "▶ Retomar rodada":"▶ Executar rodada";
     $("league-pause").disabled=state.pending||g.status!=="RUNNING"||!token;
     $("league-export-json").disabled=state.pending;
     $("league-export-pgn").disabled=state.pending||g.available_pgn===0;
-    $("league-run-note").textContent=g.message||
-      (g.execution_mode==="fast_statistical"?
+    $("league-run-note").textContent=missingProfiles.length?
+      missingProfiles.length+" perfil(is) Rodent IV indisponível(is). Instale os motores para executar.":
+      g.message||(g.execution_mode==="fast_statistical"?
        "Projeção, sem lances UCI nem PGN.":"Execução real: 1 partida por vez");
     updateTabs();
     if(state.tab==="standings")drawTable();

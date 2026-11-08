@@ -648,7 +648,12 @@ class LeagueManager:
             completed = self._ledger(state, reconcile=True)
             config = state["config"]
             if config["execution_mode"] == "engine_full":
-                resources = self._resources(config)
+                try:
+                    resources = self._resources(config)
+                except (FileNotFoundError, OSError, ValueError) as exc:
+                    raise LeagueInput(
+                        "Perfis Rodent IV indisponíveis. Instale e registre todos "
+                        "os enxadristas selecionados antes de executar.") from exc
                 if state["resources"] is not None and resources != state["resources"]:
                     raise LeagueInput("Motor ou perfis mudaram desde o início da temporada")
                 state["resources"] = resources

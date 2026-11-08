@@ -448,3 +448,10 @@ def test_time_forfeit_cannot_claim_result_without_clock_proof(manager,monkeypatc
     })
     with pytest.raises(ValueError,match="Queda de bandeira"):
         manager._verify_entry(state,match,record)
+
+
+def test_engine_mode_without_registered_profiles_fails_with_clear_reason(manager):
+    ident=manager.create(config(execution="engine_full"))["id"]
+    with pytest.raises(leagues.LeagueInput,match="Perfis Rodent IV indisponíveis"):
+        manager.run(ident)
+    assert manager.detail(ident)["completed_games"]==0

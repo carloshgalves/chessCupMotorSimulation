@@ -62,6 +62,7 @@ def test_league_approved_screen_is_wired_and_has_no_reset_control():
     assert "/league.js" in doc.scripts
     assert "/league.css" in doc.styles
     assert "league-clear" not in doc.ids
+    assert '<h2 id="league-heading" tabindex="-1">' in html
     assert "limpar liga" not in html.lower()
 
 

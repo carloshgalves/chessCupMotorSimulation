@@ -237,5 +237,14 @@ const flush=async()=>{
   $("league-tab-standings").events.click();
   assert.equal($("league-standings-body").children.length,1);
   assert(!map.has("league-clear"));
+  // A full 64-player engine league cannot start with only 21 installed profiles.
+  league.execution_mode="engine_full";
+  lastConfig.execution_mode="engine_full";
+  lastConfig.participants=players.map(p=>p.slug);
+  league.participants_count=64;
+  timers.find(t=>t.ms===2500).fn();
+  await flush();
+  assert.equal($("league-run").disabled,true);
+  assert($("league-run-note").textContent.includes("43 perfil"));
   console.log("League browser smoke: PASS");
 })().catch(error=>{console.error(error);process.exitCode=1;});
