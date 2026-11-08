@@ -303,3 +303,66 @@ def test_synthetic_receipt_cannot_impersonate_real_uci_game(manager):
     path.write_text(json.dumps(row),encoding="utf-8")
     with pytest.raises(ValueError,match="Projeção sintética"):
         manager.detail(ident)
+
+
+def test_verified_uci_cup_round_trip_pgn_replay_and_tamper_detection(manager,monkeypatch):
+    """A real move sequence is the only way to produce an exportable PGN."""
+    import chess
+    from types import SimpleNamespace
+    from chesssim import cup_games
+
+    exe=manager.root/"rodent-iv-plain.exe"
+    exe.write_bytes(b"synthetic controlled-UCI")
+    profiles={}
+    for slug in ("fischer","tal"):
+        profile=manager.root/(slug+".txt")
+        profile.write_text("profile "+slug,encoding="utf-8")
+        profiles[slug]=profile
+    def installed(root,white,black):
+        assert root==manager.root
+        return exe,{white.slug:profiles[white.slug],
+                    black.slug:profiles[black.slug]}
+    monkeypatch.setattr(cups,"validate",installed)
+
+    class ForcedLegalUCI:
+        def __init__(self):
+            self.closed=False
+        def play(self,board,limit,game,info):
+            uci=("f2f3","e7e5","g2g4","d8h4")[board.ply()]
+            mv=chess.Move.from_uci(uci)
+            assert mv in board.legal_moves
+            return SimpleNamespace(move=mv)
+        def quit(self):
+            pass
+        def close(self):
+            self.closed=True
+    created=[]
+    def factory(root,exe,profile,*,book):
+        instance=ForcedLegalUCI()
+        created.append(instance)
+        return instance
+    manager.runner=lambda root,spec,cfg,resources,stop: (
+        cup_games.play_cup_game(
+            root,spec,cfg,resources,stop,factory=factory))
+    ident=manager.create(settings(execution_mode="engine_full"))["id"]
+    started=manager.run(ident)
+    assert started["status"]=="RUNNING"
+    final=await_game(manager,ident)
+    assert final["completed_games"]==1
+    assert final["available_pgn"]==1
+    assert final["recent"][0]["source"]=="engine_full"
+    assert all(engine.closed for engine in created)
+    game_id=final["recent"][0]["id"]
+    details=manager.replay(ident,game_id)
+    assert len(details["states"])==5
+    assert len(details["moves"])==4
+    assert details["moves"][-1]["san"].endswith("#")
+    assert details["game"]["result"]=="0-1"
+    pgn,kind=manager.export(ident,"pgn")
+    assert "chess-pgn" in kind and b'[Termination "CHECKMATE"]' in pgn
+    json_export,kind=manager.export(ident,"json")
+    assert json.loads(json_export)["completed_games"][0]["pgn"]
+    path=manager._dir(ident)/"games"/(game_id+".pgn")
+    path.write_bytes(path.read_bytes()+b"\\n")
+    with pytest.raises(ValueError,match="PGN mudou desde o recibo"):
+        manager.detail(ident)

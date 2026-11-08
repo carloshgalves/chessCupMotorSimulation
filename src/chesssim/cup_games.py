@@ -58,6 +58,9 @@ def play_cup_game(root, spec: dict, config: dict, resources: dict,
             "RulesVersion": config["rules_version"],
             "SearchLimit": f"depth={config['depth']}",
         })
+        if spec.get("color_draw"):
+            game.headers["ColorDrawSHA256"] = spec["color_draw"]["sha256"]
+            game.headers["ColorDrawPolicy"] = spec["color_draw"]["policy"]
         if spec["bid_proof"]:
             game.headers["ArmageddonBlackBid"] = str(
                 spec["bid_proof"]["winning_black_seconds"])

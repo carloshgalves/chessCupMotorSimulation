@@ -18,6 +18,8 @@ Fonte primária: [FIDE World Cup 2025 — Regulamento oficial](https://calendar.
 
 Para cada confronto mata-mata:
 1. **Duas partidas clássicas** com cores invertidas: 90 minutos para os primeiros 40 lances, acréscimo de 30 minutos após o 40º lance de cada lado; 30 segundos de incremento por lance desde o primeiro.
+A cor inicial da série clássica e de cada nova fase de desempate é sorteada de maneira **independente por etapa**, com derivação SHA-256 da semente da Copa, ID do confronto e fase; as cores são invertidas no segundo jogo. Esse sorteio reproduz a exigência de novo sorteio da FIDE de forma determinística e verificável, sem afirmar que ocorreu um sorteio físico externo.
+
 2. Se empatado, **duas partidas em 15+10**.
 3. Se empatado, **duas partidas em 10+10**.
 4. Se empatado, **duas partidas em 5+3**.

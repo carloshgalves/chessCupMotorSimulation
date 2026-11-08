@@ -98,6 +98,24 @@ def test_2025_stages_and_armageddon_clocks_no_bullet():
     assert FIDE_CUP_2025.endswith(".pdf")
 
 
+def test_each_tiebreak_stage_has_independent_seeded_color_draw():
+    cfg=setup()
+    match={"id":"r01-m01","round":1,"players":["fischer","tal"]}
+    proofs=set()
+    for stage in range(5):
+        first=stage_game(match,cfg,stage,0)
+        second=stage_game(match,cfg,stage,1)
+        assert first["white"]==second["black"]
+        assert first["black"]==second["white"]
+        assert first["color_draw"]==second["color_draw"]
+        assert first["color_draw"]["first_white"]==first["white"]
+        assert first["color_draw"]["policy"]=="independent-seeded-stage-lottery-v1"
+        assert first==stage_game(match,cfg,stage,0)
+        proofs.add(first["color_draw"]["sha256"])
+    assert len(proofs)==5, "New color draw for each stage"
+    assert stage_game(match,cfg,5,0)["color_draw"] is None
+
+
 def test_sealed_bidding_is_reproducible_and_not_UCI_claim():
     config=setup()
     a,b="fischer","tal"

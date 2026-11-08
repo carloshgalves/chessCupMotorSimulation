@@ -61,8 +61,10 @@ def test_real_uci_fide_classical_metadata_and_checkmate(tmp_path):
     assert game.headers["CupStage"]=="classical"
     assert game.headers["CupMatch"]=="r01-m01"
     assert game.headers["CupGame"]=="r01-m01-s0-g1"
-    assert game.headers["WhiteProfileSHA256"]=="b"*64
-    assert game.headers["BlackProfileSHA256"]=="c"*64
+    assert game.headers["WhiteProfileSHA256"]==resources()["profile_sha256"][spec["white"]]
+    assert game.headers["BlackProfileSHA256"]==resources()["profile_sha256"][spec["black"]]
+    assert game.headers["ColorDrawSHA256"]==spec["color_draw"]["sha256"]
+    assert game.headers["ColorDrawPolicy"]=="independent-seeded-stage-lottery-v1"
     assert all(eng.closed for eng in created)
     assert sorted(len(eng.calls) for eng in created)==[2,2]
     assert all(c[1]==4 and c[4]==30 and c[5]==30

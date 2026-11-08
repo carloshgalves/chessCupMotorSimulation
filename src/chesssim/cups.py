@@ -182,6 +182,7 @@ class CupManager:
                 row.get("black") != spec["black"] or
                 row.get("stage") != spec["stage"] or
                 row.get("clock") != spec["clock"] or
+                row.get("color_draw") != spec.get("color_draw") or
                 row.get("bid_proof") != spec.get("bid_proof") or
                 row.get("source") != cfg["execution_mode"] or
                 row.get("result") not in ("1-0","0-1","1/2-1/2")):
@@ -234,6 +235,12 @@ class CupManager:
                 pg.headers.get("BlackProfileSHA256") !=
                 snapshot["profile_sha256"][spec["black"]]):
             raise ValueError("Cabeçalhos ou trajetória de PGN inválidos")
+        if spec.get("color_draw") and (
+                pg.headers.get("ColorDrawSHA256") !=
+                spec["color_draw"]["sha256"] or
+                pg.headers.get("ColorDrawPolicy") !=
+                spec["color_draw"]["policy"]):
+            raise ValueError("Sorteio independente de cores sem proveniência")
         if spec.get("bid_proof") and (
                 pg.headers.get("ArmageddonBlackBid") !=
                 str(spec["bid_proof"]["winning_black_seconds"]) or
@@ -313,6 +320,7 @@ class CupManager:
                                     "result":entry["result"],
                                     "source":entry["source"],"pgn":entry["pgn"],
                                     "bid_proof":entry.get("bid_proof"),
+                                    "color_draw":entry.get("color_draw"),
                                     "finished_utc":entry["finished_utc"],
                                 })
                                 scored=_format_result(entry["result"],spec["white"],spec["black"])
@@ -513,6 +521,7 @@ class CupManager:
             "id":spec["id"],"round":spec["round"],"stage":spec["stage"],
             "white":spec["white"],"black":spec["black"],
             "clock":spec["clock"],"bid_proof":spec.get("bid_proof"),
+            "color_draw":spec.get("color_draw"),
             "source":method,"result":result,"termination":meta["termination"],
             "clock_left":meta.get("clock_left"),"pgn":pgn_rel,
             "pgn_sha256":pgn_sha,"resources":resources,

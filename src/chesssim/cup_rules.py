@@ -248,6 +248,7 @@ def stage_game(match: dict, config: dict, stage: int, game_index: int) -> dict:
     }
     a,b = match["players"]
     if stage == len(STAGES)-1:
+        base["color_draw"] = None
         bid = sealed_bid(config, match["id"], a, b)
         base.update({
             "white": bid["white"], "black": bid["black"],
@@ -257,10 +258,22 @@ def stage_game(match: dict, config: dict, stage: int, game_index: int) -> dict:
             "bid_proof": bid,
         })
     else:
+        # FIDE 2025 §4.7 draws the initial color again for each tie-break
+        # series. A reproducible independently hashed draw per stage is
+        # recorded rather than recycling the classical colors.
+        color_sha = checksum(["stage-color-draw-v1", config["seed"],
+                              match["id"], stage])
+        draw_index = int(color_sha[:16], 16) % 2
+        first_white = (a,b)[draw_index]
+        first_black = b if first_white == a else a
         base.update({
-            "white": a if game_index % 2 == 0 else b,
-            "black": b if game_index % 2 == 0 else a,
+            "white": first_white if game_index == 0 else first_black,
+            "black": first_black if game_index == 0 else first_white,
             "clock": phase["clock"].copy(), "bid_proof": None,
+            "color_draw": {
+                "policy": "independent-seeded-stage-lottery-v1",
+                "sha256": color_sha, "first_white": first_white,
+            },
         })
     return base
 
