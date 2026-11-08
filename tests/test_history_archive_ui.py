@@ -70,3 +70,13 @@ def test_history_archive_js_syntax():
         result=subprocess.run(["node","--check",str(DATA/path)],
             timeout=10,capture_output=True,text=True)
         assert result.returncode==0,result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node unavailable")
+def test_archive_dashboard_filters_replay_and_profile_navigation():
+    harness=Path(__file__).parent/"assets"/"history_archive_harness.cjs"
+    result=subprocess.run(
+        ["node",str(harness),str(DATA/"history_archive.js")],
+        timeout=20,capture_output=True,text=True)
+    assert result.returncode==0,result.stdout+"\n"+result.stderr
+    assert "History archive DOM smoke: PASS" in result.stdout
