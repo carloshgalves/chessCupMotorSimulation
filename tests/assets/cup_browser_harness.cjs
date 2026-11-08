@@ -80,7 +80,7 @@ const document={
 };
 const $=id=>document.getElementById(id);
 const players=Array.from({length:64},(_,i)=>({
-  slug:"player"+i,name:"Jogador "+(i+1),installed:i<21,
+  slug:i===58?"mequinho":"player"+i,name:i===58?"Henrique Mecking":"Jogador "+(i+1),installed:i<21,
 }));
 const women=["player60","player61","player62","player63","player59"];
 const presets={
@@ -88,6 +88,10 @@ const presets={
   world_champions:{participants:players.slice(0,18).map(x=>x.slug),format:"knockout"},
   women:{participants:women,format:"double_round_robin"},
   custom:{participants:[],format:"knockout"},
+  country_filters:{brazil:{
+    label:"Brasil",participants:["mequinho"],
+    source:"https://ratings.fide.com/profile/2100010"
+  }},
 };
 for(const kind of ["standard","world_champions","women","custom"]){
   const b=new Elem("button");
