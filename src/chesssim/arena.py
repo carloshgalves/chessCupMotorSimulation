@@ -21,6 +21,7 @@ from .catalog import load_roster, find_player
 from .history_profiles import list_history_players, load_history_profile
 from .history_games import InvalidCatalogue, UnknownGame, list_games, replay
 from .history_stats import player_stats
+from .representation import RepresentationLab, RepresentationInput
 from .competition_rating import rating_report, RATING_POOLS
 from .human_game import HumanGame, HumanInput, HumanBusy
 from .leagues import LeagueManager, LeagueInput, LeagueBusy
@@ -263,6 +264,7 @@ class ArenaManager:
                 self.leagues = LeagueManager(self.root, self.workspace)
                 try:
                     self.cups = CupManager(self.root, self.workspace)
+                    self.representation = RepresentationLab(self.root, self.workspace)
                 except BaseException:
                     self.leagues.shutdown()
                     raise
@@ -450,6 +452,7 @@ class ArenaManager:
             return {"stop_requested": True}
 
     def shutdown(self) -> None:
+        self.representation.shutdown()
         self.cups.shutdown()
         self.leagues.shutdown()
         self.human.shutdown()
@@ -631,6 +634,14 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 except (OSError, ValueError, KeyError, TypeError, StopIteration,
                         json.JSONDecodeError):
                     self._json(503, {"error": "Elo experimental indisponível"})
+            elif re.fullmatch(r"/api/history/representation/[a-z0-9-]{2,48}",url.path) and not url.query:
+                slug=url.path.rsplit("/",1)[1]
+                try:
+                    self._json(200,manager.representation.status(slug))
+                except RepresentationInput as exc:
+                    self._json(404,{"error":str(exc)})
+                except (OSError,ValueError,TypeError,KeyError,json.JSONDecodeError):
+                    self._json(503,{"error":"Laboratório de representação indisponível"})
             elif url.path == "/api/history/players" and not url.query:
                 try:
                     self._json(200, list_history_players())
@@ -727,7 +738,7 @@ def make_arena_handler(manager: ArenaManager, token: str):
                         KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "Estado do duelo indisponível"})
             elif url.path in ("/", "/arena.js", "/arena.css", "/history.js", "/history_replay.js", "/history_stats.js", "/competition_rating.js", "/history.css", "/chess-board.js", "/chess-board.css", "/board-preferences.js", "/human-play.js", "/league.js", "/league.css",
-                              "/cup.js", "/cup.css", "/viewer"):
+                              "/cup.js", "/cup.css", "/representation.js", "/representation.css", "/viewer"):
                 asset = {"/": "arena.html", "/arena.js": "arena.js",
                          "/arena.css": "arena.css", "/history.js": "history.js",
                          "/history_replay.js": "history_replay.js",
@@ -740,6 +751,8 @@ def make_arena_handler(manager: ArenaManager, token: str):
                          "/league.js": "league.js",
                          "/league.css": "league.css",
                          "/cup.js": "cup.js", "/cup.css": "cup.css",
+                         "/representation.js": "representation.js",
+                         "/representation.css": "representation.css",
                          "/chess-board.css": "chess_board.css", "/viewer": "monitor.html"}[url.path]
                 kind = ("text/html; charset=utf-8" if asset.endswith(".html") else
                         "text/javascript; charset=utf-8" if asset.endswith(".js") else
@@ -789,12 +802,15 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 r"/api/leagues/(league-[a-f0-9]{16})/(run|pause)", route.path)
             cup_action = re.fullmatch(
                 r"/api/cups/(cup-[a-f0-9]{16})/(run|pause)",route.path)
+            representation_action = re.fullmatch(
+                r"/api/history/representation/([a-z0-9-]{2,48})/run",route.path)
             if (route.path not in (
                 "/api/arena/launch", "/api/arena/stop",
                 "/api/arena/human/start", "/api/arena/human/move",
                 "/api/arena/human/action", "/api/arena/human/resume",
                 "/api/leagues/create", "/api/cups/create",
-            ) and league_action is None and cup_action is None) or route.query:
+            ) and league_action is None and cup_action is None and
+                    representation_action is None) or route.query:
                 self._json(404, {"error": "Rota desconhecida"})
                 return
             origins = {f"http://127.0.0.1:{self.server.server_port}",
@@ -820,7 +836,11 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 return
             try:
                 data = _decode_json(body)
-                if route.path == "/api/cups/create":
+                if representation_action:
+                    self._json(202,manager.representation.start(
+                        representation_action.group(1),data,
+                        simulator_busy=bool(manager.status()["busy"])))
+                elif route.path == "/api/cups/create":
                     self._json(201, manager.cups.create(data))
                 elif cup_action:
                     if data:
@@ -852,7 +872,7 @@ def make_arena_handler(manager: ArenaManager, token: str):
                     self._json(200, manager.human.action(data))
                 else:
                     self._json(200, manager.human_resume(data))
-            except (BadLaunch, HumanInput, LeagueInput, CupInput) as exc:
+            except (BadLaunch, HumanInput, LeagueInput, CupInput, RepresentationInput) as exc:
                 self._json(400, {"error": str(exc)})
             except (ArenaBusy, HumanBusy, LeagueBusy, CupBusy) as exc:
                 self._json(409, {"error": str(exc)})

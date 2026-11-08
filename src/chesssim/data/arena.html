@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/arena.css">
   <link rel="stylesheet" href="/chess-board.css">
   <link rel="stylesheet" href="/history.css">
+  <link rel="stylesheet" href="/representation.css">
   <link rel="stylesheet" href="/league.css">
   <link rel="stylesheet" href="/cup.css">
   <script src="/arena.js" defer></script>
@@ -17,6 +18,7 @@
   <script src="/history_stats.js" defer></script>
   <script src="/competition_rating.js" defer></script>
   <script src="/history.js" defer></script>
+  <script src="/representation.js" defer></script>
   <script src="/league.js" defer></script>
   <script src="/cup.js" defer></script>
 </head>
@@ -797,8 +799,93 @@
           <button id="history-open" type="button" class="primary">Ver perfil histórico</button>
         </div>
       </div>
+      <section id="representation-view" class="rep-view" hidden aria-labelledby="rep-heading">
+        <header class="rep-heading"><div><h2 id="rep-heading" tabindex="-1">♟ Perfis Históricos · Representação</h2>
+          <p>Teste experimental do Rodent IV com decisões históricas fornecidas localmente. Sem percentuais fictícios.</p></div>
+          <button id="rep-back" type="button">← Voltar ao perfil</button></header>
+        <p id="rep-feedback" role="status" aria-live="polite"></p>
+        <div class="rep-grid">
+          <aside class="rep-sidebar">
+            <h3>Objetivos</h3>
+            <p>Comparar lances do perfil UCI com decisões históricas reais, separando concordância top-1, força e estilo.</p>
+            <h3>Etapas do teste</h3>
+            <ol><li>Escolher enxadrista e período.</li><li>Disponibilizar PGN local documentado.</li>
+              <li>Executar avaliação pareada, sem modificar o motor.</li>
+              <li>Analisar limites da amostra e resultados.</li></ol>
+            <label for="rep-search">Perfis disponíveis (64)</label>
+            <input id="rep-search" type="search" placeholder="Buscar enxadrista…" autocomplete="off">
+            <div id="rep-roster" class="rep-roster" role="group" aria-label="Perfis históricos"></div>
+          </aside>
+          <div class="rep-main">
+            <section class="rep-card rep-person">
+              <h3 id="rep-name">Selecione um perfil</h3>
+              <p id="rep-period"></p>
+              <div id="rep-state-tags" class="rep-tags"></div>
+              <p class="rep-muted">O nome do enxadrista e o período são dados do catálogo; não representam uma reconstrução científica do motor.</p>
+            </section>
+            <nav class="rep-tabs" aria-label="Informações da representação">
+              <button id="rep-tab-representation" type="button" aria-pressed="true">Representação</button>
+              <button id="rep-tab-tests" type="button" aria-pressed="false">Testes</button>
+              <button id="rep-tab-analysis" type="button" aria-pressed="false">Análise</button>
+            </nav>
+            <div id="rep-pane-representation">
+              <section class="rep-card">
+                <h3>Evolução histórica do rating</h3>
+                <div class="rep-no-chart"><strong id="rep-historical-rating">Curva indisponível</strong>
+                  <p>Não existem séries anuais de Elo verificadas e atribuídas às fontes neste catálogo. O Elo 2500 do simulador não é Elo histórico.</p></div>
+              </section>
+              <section class="rep-card">
+                <h3>Força do motor (Rodent IV)</h3>
+                <p id="rep-motor-status"></p>
+                <p class="rep-muted">Profundidade de busca é uma limitação técnica, não um percentual de força ou rating estimado.</p>
+                <label for="rep-depth">Profundidade de busca (1–16)</label>
+                <input id="rep-depth" type="range" min="1" max="16" value="4">
+                <output id="rep-depth-label" for="rep-depth">4</output>
+                <p id="rep-source-status" class="rep-muted"></p>
+              </section>
+            </div>
+            <section id="rep-pane-tests" class="rep-card" hidden>
+              <h3>Testes de representação</h3>
+              <p class="rep-muted">Avalia decisões de validação sem tocar o conjunto de teste final lacrado. Não altera os perfis Rodent.</p>
+              <div class="rep-form">
+                <label>Nome nos cabeçalhos PGN<input id="rep-match" maxlength="70" value=""></label>
+                <label>De (ano)<input id="rep-from" type="number" min="1750" max="2026" value="1957"></label>
+                <label>Até (ano)<input id="rep-to" type="number" min="1750" max="2026" value="1961"></label>
+                <label>Posições de validação<input id="rep-positions" type="number" min="5" max="40" value="20"></label>
+                <label>Semente<input id="rep-seed" type="number" min="0" max="2147483647" value="2026"></label>
+                <div><button id="rep-run" type="button" class="primary" disabled>▶ Executar teste de representação</button>
+                  <p class="rep-muted">Exige perfil instalado, corpus local e ao menos 15 jogos independentes com posições utilizáveis.</p></div>
+              </div>
+              <h4>Últimos testes</h4><div id="rep-tests" class="rep-tests"></div>
+            </section>
+            <section id="rep-pane-analysis" class="rep-card" hidden>
+              <h3>O que podemos afirmar?</h3>
+              <p>Somente a <strong>concordância top-1 em posições de validação</strong> será calculada quando houver evidência.
+              Identidade estilística, força relativa, semelhança de aberturas e precisão global permanecem <strong>não avaliadas</strong>.</p>
+              <div id="rep-analysis" class="rep-analysis"></div>
+              <p class="rep-muted">Dados de treinamento, validação e teste são separados por partida. A seleção de posições e o hash do corpus são registrados.</p>
+            </section>
+          </div>
+          <aside class="rep-sidebar">
+            <section class="rep-card"><h3>Acurácia histórica</h3>
+              <dl class="rep-metrics"><div><dt>Força (Elo real)</dt><dd>Não medida</dd></div>
+                <div><dt>Estilo</dt><dd>Não validado</dd></div>
+                <div><dt>Aberturas</dt><dd>Não avaliadas</dd></div>
+                <div><dt>Distribuição de resultados</dt><dd>Não avaliada</dd></div>
+                <div><dt>Fidelidade geral</dt><dd>Sem evidência suficiente</dd></div></dl>
+            </section>
+            <section class="rep-card"><h3>Perfil do motor</h3><p id="rep-identity"></p>
+              <label>Nível de detalhe<select id="rep-detail"><option>Resumido</option><option selected>Padrão</option><option>Detalhado</option></select></label>
+              <label><input type="checkbox" disabled> Usar livro de aberturas da época</label>
+              <p class="rep-muted">Indisponível sem acervo curado; um livro fictício distorceria o teste.</p>
+              <button id="rep-go-tests" type="button">Ver últimos testes e configurar</button>
+            </section>
+          </aside>
+        </div>
+      </section>
       <section id="history-profile" class="history-profile" aria-labelledby="history-profile-name" hidden>
         <button id="history-back" type="button">← Todos os jogadores</button>
+        <button id="history-representation-open" type="button">⚙ Representação histórica · laboratório UCI</button>
         <h2 id="history-profile-name"></h2>
         <div id="history-profile-body"></div>
         <section id="history-games-section" class="history-games" aria-labelledby="history-games-heading" hidden>
