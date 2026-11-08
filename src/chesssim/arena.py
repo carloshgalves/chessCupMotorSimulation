@@ -515,7 +515,7 @@ def make_arena_handler(manager: ArenaManager, token: str):
                     self._json(503, {"error": "Catálogo de Copas indisponível"})
             elif re.fullmatch(
                     r"/api/cups/cup-[0-9a-f]{16}/games/"
-                    r"(?:r[0-9]{2}-m[0-9]{2}-s[0-5]-g[12]|w[0-9]{2}-g[12])/replay",
+                    r"(?:r[0-9]{2}-m[0-9]{2}-s[0-5]-g[12]|w[0-9]{2}-g0[12])/replay",
                     url.path) and not url.query:
                 parts=url.path.split("/")
                 try:

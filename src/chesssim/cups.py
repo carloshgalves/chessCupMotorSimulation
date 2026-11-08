@@ -25,7 +25,7 @@ from .matches import _atomic_text, file_hash, validate
 SCHEMA = "chesssim-cup-v1"
 RECEIPT_SCHEMA = "chesssim-cup-game-v1"
 CUP_RX = re.compile(r"cup-[0-9a-f]{16}\Z")
-GAME_RX = re.compile(r"(?:r[0-9]{2}-m[0-9]{2}-s[0-5]-g[12]|w[0-9]{2}-g[12])\Z")
+GAME_RX = re.compile(r"(?:r[0-9]{2}-m[0-9]{2}-s[0-5]-g[12]|w[0-9]{2}-g0[12])\Z")
 HEXSHA = re.compile(r"[0-9a-f]{64}\Z")
 SOURCE_URL = "https://handbook.fide.com/files/handbook/WorldCup2025Regulations.pdf"
 
