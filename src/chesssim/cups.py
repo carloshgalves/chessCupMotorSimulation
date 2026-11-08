@@ -27,7 +27,7 @@ RECEIPT_SCHEMA = "chesssim-cup-game-v1"
 CUP_RX = re.compile(r"cup-[0-9a-f]{16}\Z")
 GAME_RX = re.compile(r"(?:r[0-9]{2}-m[0-9]{2}-s[0-5]-g[12]|w[0-9]{2}-g0[12])\Z")
 HEXSHA = re.compile(r"[0-9a-f]{64}\Z")
-SOURCE_URL = "https://handbook.fide.com/files/handbook/WorldCup2025Regulations.pdf"
+SOURCE_URL = "https://calendar.fide.com/event_files/2644/WorldCup2025Regulations.pdf"
 
 
 class CupBusy(RuntimeError):
@@ -312,6 +312,7 @@ class CupManager:
                                     "white":spec["white"],"black":spec["black"],
                                     "result":entry["result"],
                                     "source":entry["source"],"pgn":entry["pgn"],
+                                    "bid_proof":entry.get("bid_proof"),
                                     "finished_utc":entry["finished_utc"],
                                 })
                                 scored=_format_result(entry["result"],spec["white"],spec["black"])
@@ -364,6 +365,7 @@ class CupManager:
             for slug in config["participants"]
         }
         details=[]
+        results=[]
         next_game=None
         for rnd in rounds:
             games=[]
@@ -372,6 +374,7 @@ class CupManager:
                 if entry:
                     self._verify_game(state,spec,entry,force=force)
                     used.add(spec["id"])
+                    results.append((spec,entry))
                     scores=_format_result(entry["result"],spec["white"],spec["black"])
                     for slug,value in scores.items():
                         item=standings[slug]
@@ -391,8 +394,42 @@ class CupManager:
             details.append({"round":rnd["round"],"bye":rnd["bye"],"games":games})
         if set(rows)!=used:
             raise ValueError("Jogos femininos fora do calendário")
-        table=sorted(standings.values(),
-                     key=lambda x:(-x["points"],-x["wins"],x["slug"]))
+        # Every ranked row uses completed results only. Head-to-head is
+        # meaningful for two tied players only after BOTH encounters ended.
+        for item in standings.values():
+            item["sb"] = 0.0
+            item["h2h"] = None
+        h2h = {}
+        for spec,entry in results:
+            pair = frozenset((spec["white"],spec["black"]))
+            h2h.setdefault(pair,[]).append((spec,entry))
+            points = _format_result(entry["result"],spec["white"],spec["black"])
+            for slug, opponent in ((spec["white"],spec["black"]),
+                                   (spec["black"],spec["white"])):
+                standings[slug]["sb"] += points[slug]*standings[opponent]["points"]
+        groups = {}
+        for item in standings.values():
+            groups.setdefault((item["points"],item["wins"]),[]).append(item)
+        table=[]
+        for group_key in sorted(groups,reverse=True):
+            members=groups[group_key]
+            if len(members)==2:
+                pair=frozenset(x["slug"] for x in members)
+                encounters=h2h.get(pair,[])
+                if len(encounters)==2:
+                    for member in members:
+                        member["h2h"]=sum(
+                            3 if _format_result(e["result"],sp["white"],sp["black"])[
+                                member["slug"]]==1 else
+                            1 if _format_result(e["result"],sp["white"],sp["black"])[
+                                member["slug"]]==.5 else 0
+                            for sp,e in encounters)
+                    members.sort(key=lambda x:(-x["h2h"],-x["sb"],x["slug"]))
+                else:
+                    members.sort(key=lambda x:(-x["sb"],x["slug"]))
+            else:
+                members.sort(key=lambda x:(-x["sb"],x["slug"]))
+            table.extend(members)
         for rank,item in enumerate(table,1):
             item["rank"]=rank
         champion=table[0]["slug"] if next_game is None else None

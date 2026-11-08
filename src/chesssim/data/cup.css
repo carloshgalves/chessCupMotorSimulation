@@ -258,3 +258,23 @@ body:has(#cup-create-view:not([hidden])) #tab-cups{background:#145743;
   .cup-tabs button{font-size:.7rem;padding:7px}
 }
 @media(prefers-reduced-motion:reduce){#cup-progress-bar{transition:none}}
+
+/* Profile detail from reviewed History packs; statistics are Cup-only. */
+.cup-player-summary{padding-top:8px;padding-bottom:9px}
+.cup-player-summary h3{margin-bottom:7px}
+.cup-performance-person{display:grid;grid-template-columns:52px minmax(0,1fr);
+  gap:9px;align-items:center}
+.cup-performance-portrait{width:52px;height:52px;border-radius:8px;
+  overflow:hidden;background:#264958;display:grid;place-items:center}
+.cup-performance-portrait img{display:block;width:100%;height:100%;
+  object-fit:cover}
+.cup-performance-person strong{display:block;font-size:.77rem;line-height:1.25;
+  overflow-wrap:anywhere}
+.cup-performance-person small{display:block;font-size:.69rem;color:#b5d1d9;
+  line-height:1.3}
+.cup-player-summary p{margin:5px 0;font-size:.69rem}
+.cup-selected-player{color:#e7f2f5;text-align:left;cursor:pointer;width:100%}
+.cup-selected-player[aria-pressed=true]{border-color:#5cce97;background:#215b46}
+#cup-bid-proof{color:#f6db9d;border-top:1px solid #64714f;
+  margin-top:8px;padding-top:6px}
+.cup-right-panel{max-height:760px;overflow-y:auto;scrollbar-width:thin}

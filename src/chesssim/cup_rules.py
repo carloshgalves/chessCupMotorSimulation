@@ -13,7 +13,7 @@ from typing import Any
 
 from .catalog import load_roster
 
-FIDE_CUP_2025 = "https://handbook.fide.com/files/handbook/WorldCup2025Regulations.pdf"
+FIDE_CUP_2025 = "https://calendar.fide.com/event_files/2644/WorldCup2025Regulations.pdf"
 FIDE_TITLE_LIST = "https://museum.fide.com/champions"
 FIDE_SPLIT_TITLES = "https://worldchesschampionship2023.fide.com/chess-champions"
 RULES_VERSION = "fide-world-cup-2025-4.7+chesssim-sealed-bid-v1"

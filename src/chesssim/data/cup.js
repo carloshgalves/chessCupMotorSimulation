@@ -10,6 +10,7 @@
     selection:[],view:"none",busy:false,loading:false,
     commandPending:false,version:0,playback:null,
     seedFromPreset:[],pictureFailures:new Set(),
+    focusedPlayer:null,profileCache:new Map(),profilePending:new Set(),
   };
   const labels={
     standard:"Standard",world_champions:"Campeões Mundiais",
@@ -273,9 +274,15 @@
       $("cup-next-stage").textContent=
         data.execution_mode==="fast_statistical"?
         "Projeção auditável, sem lances UCI":"Motor real · uma partida por vez";
+      $("cup-bid-proof").hidden=true;
+      if(!state.focusedPlayer||!data.config.participants.includes(state.focusedPlayer))
+        state.focusedPlayer=next?.white||data.champion||
+          data.config.participants[0];
+      renderPerformance();
       return;
     }
     if(!match){
+      $("cup-bid-proof").hidden=true;
       $("cup-selected-round").textContent="Nenhum confronto disponível";
       replace("cup-selected-players",node("span",null,"Aguardando chaveamento"));
       $("cup-selected-score").textContent="—";
@@ -284,15 +291,29 @@
     }
     $("cup-selected-round").textContent="Rodada "+match.round+" · "+match.id;
     const cells=[];
+    const matchedPlayers=match.players.filter(Boolean);
+    if(!matchedPlayers.includes(state.focusedPlayer)){
+      state.focusedPlayer=matchedPlayers[0]||null;
+    }
     for(const slug of match.players){
-      const line=node("div","cup-selected-player");
+      const line=node("button","cup-selected-player");
+      line.type="button";
+      line.disabled=!slug;
+      line.setAttribute("aria-pressed",String(state.focusedPlayer===slug));
       if(slug)line.appendChild(portrait(slug));
       else line.appendChild(node("span",null,"♟"));
       const desc=node("div");
       desc.append(node("strong",null,name(slug)),
         node("small",null,slug?
           (data.config.preset==="world_champions"?"Elegível por título":"Perfil do catálogo"):"Posição pendente"));
-      line.append(desc);cells.push(line);
+      line.append(desc);
+      if(slug){
+        line.addEventListener("click",()=>{
+          state.focusedPlayer=slug;
+          drawSelected();
+        });
+      }
+      cells.push(line);
     }
     replace("cup-selected-players",...cells);
     const scores=matchScores(match);
@@ -304,6 +325,63 @@
       :match.next_game
        ?"Próxima etapa: "+(stageLabel[match.next_game.stage]||match.next_game.stage)
        :"Confronto ainda não definido";
+    const arm=match.games?.find(g=>g.stage==="armageddon"&&g.bid_proof);
+    $("cup-bid-proof").hidden=!arm;
+    if(arm){
+      const proof=arm.bid_proof;
+      const offers=Object.entries(proof.offers).map(([slug,bid])=>
+        name(slug)+": "+bid.seconds+" s").join(" · ");
+      $("cup-bid-proof").textContent="Ofertas sintéticas registradas: "+offers+
+        ". Pretas: "+name(proof.black)+" ("+proof.winning_black_seconds+
+        " s)."+(proof.tie?" Empate nos lances: sorteio registrado.":"");
+    }
+    renderPerformance();
+  }
+  function recordFor(slug){
+    const data=state.detail;
+    if(!data||!slug)return {games:0,wins:0,draws:0,losses:0};
+    const all=data.format==="double_round_robin"?
+      data.rounds.flatMap(r=>r.games):
+      data.bracket.flatMap(r=>r.matches.flatMap(m=>m.games));
+    const record={games:0,wins:0,draws:0,losses:0};
+    for(const game of all){
+      if(!game.result||![game.white,game.black].includes(slug))continue;
+      record.games++;
+      if(game.result==="1/2-1/2")record.draws++;
+      else if((game.result==="1-0"&&game.white===slug)||
+              (game.result==="0-1"&&game.black===slug))record.wins++;
+      else record.losses++;
+    }
+    return record;
+  }
+  function renderPerformance(){
+    const data=state.detail;
+    const slug=data?.format==="double_round_robin"?
+      state.focusedPlayer||data.next_game?.white||data.champion:
+      state.focusedPlayer;
+    $("cup-performance-name").textContent=slug?name(slug):
+      "Selecione um enxadrista";
+    replace("cup-performance-portrait",slug?portrait(slug):
+      node("span",null,"♟"));
+    const record=recordFor(slug);
+    $("cup-performance-record").textContent=
+      "Na Copa: "+record.games+" partidas · "+record.wins+
+      " vitórias · "+record.draws+" empates · "+record.losses+" derrotas.";
+    const pack=slug?state.profileCache.get(slug):null;
+    $("cup-performance-era").textContent=pack?.era_label||
+      "Perfil histórico do catálogo";
+    $("cup-performance-biography").textContent=pack?.short_bio||
+      "Dados históricos revisados disponíveis na História. "+
+      "Esses dados não medem fidelidade da simulação.";
+    if(slug&&!pack&&!state.profilePending.has(slug)){
+      state.profilePending.add(slug);
+      get("/api/history/players/"+slug).then(profile=>{
+        state.profileCache.set(slug,profile);
+        if(state.view==="main"&&state.focusedPlayer===slug){
+          renderPerformance();
+        }
+      }).catch(()=>{}).finally(()=>state.profilePending.delete(slug));
+    }
   }
   function drawStages(){
     const data=state.detail;if(!data)return;
@@ -349,6 +427,7 @@
     $("cup-tab-"+pane).addEventListener("click",()=>setPane(pane));
   function selectMatch(id){
     state.selectedMatch=id;
+    state.focusedPlayer=null;
     drawSelected();drawStages();
     if(state.pane==="bracket")bracket();
     if(state.pane==="matches")matches();
@@ -493,7 +572,7 @@
       box.append(node("h4",null,title),node("p",null,desc));
     }
     const a=node("a",null,"Consultar regulamento primário da FIDE");
-    a.href="https://handbook.fide.com/files/handbook/WorldCup2025Regulations.pdf";
+    a.href="https://calendar.fide.com/event_files/2644/WorldCup2025Regulations.pdf";
     a.target="_blank";a.rel="noopener noreferrer";
     box.appendChild(a);
   }
