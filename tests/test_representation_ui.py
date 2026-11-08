@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 import shutil
 import subprocess
+import tomllib
 
 import pytest
 
@@ -52,3 +53,11 @@ def test_representations_have_no_claimed_unverified_elo_curve():
     assert "93,6" not in js
     assert "2705" not in js
     assert ".toFixed(1)" in js  # Real measured top-1 only
+
+
+def test_published_wheel_includes_representation_assets():
+    project=tomllib.loads(
+        (DATA.parents[2]/"pyproject.toml").read_text(encoding="utf-8"))
+    bundled=project["tool"]["setuptools"]["package-data"]["chesssim.data"]
+    assert "representation.js" in bundled
+    assert "representation.css" in bundled
