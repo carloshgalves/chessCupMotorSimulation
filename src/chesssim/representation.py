@@ -255,10 +255,17 @@ class RepresentationLab:
                               allow_nan=False) + "\n").encode("utf-8")
             if len(raw) > MAX_REPORT_BYTES:
                 raise RepresentationInput("Relatório excedeu limite")
-            with target.open("xb") as file:
-                file.write(raw)
-                file.flush()
-                os.fsync(file.fileno())
+            temp = folder / (test_id + ".tmp")
+            if target.exists() or target.is_symlink():
+                raise RepresentationInput("ID de relatório já existe")
+            try:
+                with temp.open("xb") as file:
+                    file.write(raw)
+                    file.flush()
+                    os.fsync(file.fileno())
+                os.replace(temp, target)
+            finally:
+                temp.unlink(missing_ok=True)
             state = {"id": test_id, "slug": person.slug, "status": "COMPLETED"}
         except (OSError, RuntimeError, ValueError, TypeError, KeyError) as exc:
             state = {"id": test_id, "slug": person.slug, "status": "FAILED",
