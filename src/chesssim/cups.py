@@ -189,6 +189,8 @@ class CupManager:
         if cfg["execution_mode"] == "fast_statistical":
             if (row.get("pgn") is not None or row.get("pgn_sha256") is not None
                     or row.get("resources") is not None or
+                    row.get("clock_left") is not None or
+                    row.get("termination") != "SyntheticProjection" or
                     row["result"] != projected_game(cfg,spec)):
                 raise ValueError("Projeção sintética adulterada ou fingindo PGN")
             return
@@ -224,12 +226,20 @@ class CupManager:
                 pg.headers.get("CupStage") != spec["stage"] or
                 pg.headers.get("TimeControl") != _spec_time(spec) or
                 pg.headers.get("RulesVersion") != cfg["rules_version"] or
+                pg.headers.get("CupMatch") != spec.get("match_id") or
+                pg.headers.get("Round") != str(spec["round"]) or
                 pg.headers.get("EngineSHA256") != snapshot["engine_sha256"] or
                 pg.headers.get("WhiteProfileSHA256") !=
                 snapshot["profile_sha256"][spec["white"]] or
                 pg.headers.get("BlackProfileSHA256") !=
                 snapshot["profile_sha256"][spec["black"]]):
             raise ValueError("Cabeçalhos ou trajetória de PGN inválidos")
+        if spec.get("bid_proof") and (
+                pg.headers.get("ArmageddonBlackBid") !=
+                str(spec["bid_proof"]["winning_black_seconds"]) or
+                pg.headers.get("ArmageddonBlackDrawOdds") != "true" or
+                pg.headers.get("BidPolicy") != "synthetic-deterministic-no-UCI-bid"):
+            raise ValueError("Proveniência do Armagedom inválida")
         board=pg.end().board()
         if row["termination"]=="TimeForfeit":
             clocks=row.get("clock_left")
@@ -399,8 +409,10 @@ class CupManager:
             computed=self._women(state,rows,force=force)
         else:
             computed=self._knockout(state,rows,force=force)
-        if state["status"]=="COMPLETED" and computed["champion"] is None:
-            raise ValueError("Finalização sem campeão comprovado")
+        if state["status"] == "COMPLETED" and (
+                computed["champion"] is None or
+                state.get("champion") != computed["champion"]):
+            raise ValueError("Campeão persistido diverge dos resultados comprovados")
         return {**computed,"game_receipts":rows}
 
     def _preflight(self,config:dict) -> dict:
@@ -674,4 +686,6 @@ class CupManager:
             self._stop.set()
             worker=self._worker
         if worker is not None:
-            worker.join(timeout=5)
+            # Keep the workspace execution lock until the UCI worker stops.
+            # Releasing the lock while an old worker writes receipts is unsafe.
+            worker.join()

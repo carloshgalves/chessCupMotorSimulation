@@ -49,6 +49,9 @@ def run_to_completion(manager,ident,max_steps=32):
             return detail
         manager.run(ident)
         await_game(manager,ident)
+    final = manager.detail(ident)
+    if final["champion"]:
+        return final
     raise AssertionError("Copa não elegeu campeão")
 
 
