@@ -4,6 +4,7 @@ const $ = id => document.getElementById(id);
 const token = new URLSearchParams(window.location.hash.slice(1)).get("token");
 let roster = [];
 let busy = false;
+let duelBusy = false;
 let currentSession = null;
 let initialized = false;
 let loading = false;
@@ -100,7 +101,7 @@ function updateForm() {
   displayProfile("black", $("black").value);
   $("launch").disabled = busy || !token || !player($("white").value)?.installed ||
     !player($("black").value)?.installed || $("white").value === $("black").value;
-  $("stop").disabled = !busy || !token;
+  $("stop").disabled = !duelBusy || !token;
 }
 function configFromForm() {
   const clock = $("preset").value;
@@ -177,6 +178,7 @@ async function refresh() {
     }
     currentSession = data.session;
     busy = data.busy;
+    duelBusy = data.duel_busy;
     $("connection").textContent = "● Arena local conectada";
     $("connection").className = "online";
     updateForm();

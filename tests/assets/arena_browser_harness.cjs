@@ -60,7 +60,7 @@ const $=id=>document.getElementById(id);
 const fetch=async(path,request={})=>{
   if(path==="/api/arena"){
     return {ok:true,json:async()=>({
-      busy:!!current,session:current,players,opening_books_configured:false
+      busy:!!current,duel_busy:!!current,human_busy:false,session:current,players,opening_books_configured:false
     })};
   }
   calls.push({path,request});
