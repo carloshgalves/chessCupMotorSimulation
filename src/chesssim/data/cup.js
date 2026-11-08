@@ -6,7 +6,7 @@
   const token=new URLSearchParams(location.hash.slice(1)).get("token");
   const state={
     cups:[],detail:null,presets:null,players:[],id:null,
-    selectedMatch:null,pane:"bracket",createPreset:"standard",
+    selectedMatch:null,selectedWomanGameId:null,selectedRound:1,pane:"bracket",createPreset:"standard",
     selection:[],view:"none",busy:false,loading:false,
     commandPending:false,version:0,playback:null,
     seedFromPreset:[],pictureFailures:new Set(),
@@ -60,16 +60,6 @@
   }
   function name(slug){
     return slug?(player(slug)?.name||slug):"A definir";
-  }
-  function portrait(slug){
-    if(!slug||!/^[a-z0-9-]+$/.test(slug))return node("span",null,"♟");
-    const img=node("img");
-    img.loading="lazy";
-    img.decoding="async";
-    img.alt="Retrato de "+name(slug);
-    img.src="/api/history/portraits/"+slug+".jpg";
-    img.onerror=()=>img.replaceWith(node("span",null,"♟"));
-    return img;
   }
   async function get(path){
     const response=await fetch(path,{cache:"no-store"});
@@ -147,7 +137,8 @@
       state.busy=Boolean(arena.busy);
       if(!state.id||!state.cups.some(x=>x.id===state.id)){
         state.id=state.cups[0]?.id||null;
-        state.selectedMatch=null;state.pane="bracket";
+        state.selectedMatch=null;state.selectedWomanGameId=null;
+        state.selectedRound=1;state.pane="bracket";
       }
       if(state.view==="create")return;
       drawList();
@@ -199,7 +190,8 @@
       );
       button.append(icon,desc,node("span",null,"›"));
       button.addEventListener("click",()=>{
-        state.id=item.id;state.selectedMatch=null;state.pane="bracket";
+        state.id=item.id;state.selectedMatch=null;state.selectedWomanGameId=null;
+        state.selectedRound=1;state.pane="bracket";
         load(true);
       });
       list.appendChild(button);
@@ -258,9 +250,14 @@
        :"▶ Executar "+(data.next_game?.stage&&data.next_game.stage!=="classical"
                         ?"desempate":"próxima partida");
     $("cup-pause").disabled=state.commandPending||data.status!=="RUNNING"||!token;
-    $("cup-open-match").disabled=
-      !Boolean(selectedMatch()?.games?.length||
-               data.recent?.some(x=>x.pgn));
+    const selectedWomen=data.format==="double_round_robin"&&
+      data.rounds.flatMap(round=>round.games).find(g=>g.id===state.selectedWomanGameId);
+    const selectedHasGame=Boolean(selectedMatch()?.games?.length||
+      selectedWomen?.result||data.recent?.some(x=>x.pgn));
+    $("cup-open-match").disabled=!selectedHasGame;
+    $("cup-open-match").textContent=data.execution_mode==="fast_statistical"
+      ?"▦ Ver placares (sem tabuleiro)"
+      :"▣ Abrir confronto / replay";
     drawSelected();
     drawStages();
     setPane(state.pane,true);
@@ -270,19 +267,23 @@
     const match=selectedMatch();
     const next=data.next_game;
     if(data.format==="double_round_robin"){
+      const chosen=data.rounds.flatMap(round=>round.games).find(
+        g=>g.id===state.selectedWomanGameId);
+      const game=chosen||next;
       $("cup-selected-round").textContent="Torneio feminino · "+
-        (next?"Rodada "+next.round:"Temporada concluída");
+        (game?"Rodada "+game.round:"Temporada concluída");
       replace("cup-selected-players",node("span",null,
-        next?name(next.white)+" × "+name(next.black):
+        game?name(game.white)+" × "+name(game.black):
         "Campeã: "+name(data.champion)));
-      $("cup-selected-score").textContent=next?"Próxima partida · 15+10":
-        "Classificação final concluída";
+      $("cup-selected-score").textContent=chosen?
+        (chosen.result||"Pendente")+" · 15+10":
+        next?"Próxima partida · 15+10":"Classificação final concluída";
       $("cup-next-stage").textContent=
         data.execution_mode==="fast_statistical"?
         "Projeção auditável, sem lances UCI":"Motor real · uma partida por vez";
       $("cup-bid-proof").hidden=true;
       if(!state.focusedPlayer||!data.config.participants.includes(state.focusedPlayer))
-        state.focusedPlayer=next?.white||data.champion||
+        state.focusedPlayer=game?.white||data.champion||
           data.config.participants[0];
       renderPerformance();
       return;
@@ -306,8 +307,6 @@
       line.type="button";
       line.disabled=!slug;
       line.setAttribute("aria-pressed",String(state.focusedPlayer===slug));
-      if(slug)line.appendChild(portrait(slug));
-      else line.appendChild(node("span",null,"♟"));
       const desc=node("div");
       desc.append(node("strong",null,name(slug)),
         node("small",null,slug?
@@ -367,11 +366,13 @@
       state.focusedPlayer;
     $("cup-performance-name").textContent=slug?name(slug):
       "Selecione um enxadrista";
-    replace("cup-performance-portrait",slug?portrait(slug):
-      node("span",null,"♟"));
+    $("cup-performance-link").disabled=!slug;
+    $("cup-performance-link").dataset.player=slug||"";
     const record=recordFor(slug);
     $("cup-performance-record").textContent=
-      "Na Copa: "+record.games+" partidas · "+record.wins+
+      (data?.execution_mode==="fast_statistical"
+        ?"Nesta Copa (projeção de placar, não registrada na História): "
+        :"Na Copa (partidas UCI): ")+record.games+" partidas · "+record.wins+
       " vitórias · "+record.draws+" empates · "+record.losses+" derrotas.";
     const pack=slug?state.profileCache.get(slug):null;
     $("cup-performance-era").textContent=pack?.era_label||
@@ -449,9 +450,12 @@
     for(const round of rounds){
       const col=node("div","cup-bracket-col");
       const count=round.matches.length;
-      col.appendChild(node("strong",null,
-        count===1?"Final":count===2?"Semifinais":
-        count===4?"Quartas de final":names[round.round]||"Rodada "+round.round));
+      const header=node("div","cup-bracket-round-heading");
+      header.append(node("span","cup-bracket-round-number",String(round.round)),
+        node("strong",null,count===1?"Final":count===2?"Semifinais":
+          count===4?"Quartas de final":names[round.round]||"Rodada "+round.round),
+        node("small",null,count+" "+(count===1?"confronto":"confrontos")));
+      col.appendChild(header);
       const group=node("div","cup-bracket-games");
       for(const match of round.matches){
         const card=node("button","cup-bracket-game");
@@ -527,24 +531,86 @@
     }
   }
   function calendar(){
-    const data=state.detail;const box=$("cup-calendar");box.replaceChildren();
-    if(data?.format==="double_round_robin"){
-      for(const round of data.rounds){
-        const item=node("div","cup-calendar-row");
-        item.append(node("small",null,"Rodada "+round.round),
-          node("span",null,"Folga: "+name(round.bye)),
-          node("strong",null,round.games.filter(g=>g.status==="COMPLETED").length+"/2"));
-        box.appendChild(item);
+    const data=state.detail;
+    const box=$("cup-calendar");box.replaceChildren();
+    if(!data)return;
+    const female=data.format==="double_round_robin";
+    const rounds=female?data.rounds:data.bracket;
+    for(const round of rounds){
+      const wrap=node("section","cup-calendar-round");
+      const expanded=state.selectedRound===round.round;
+      const header=node("button","cup-calendar-toggle");
+      header.type="button";
+      header.setAttribute("aria-expanded",String(expanded));
+      const entries=female?round.games:round.matches;
+      const completed=female?
+        entries.filter(g=>g.status==="COMPLETED").length:
+        entries.filter(m=>["COMPLETED","BYE"].includes(m.status)).length;
+      header.append(node("strong",null,"Rodada "+round.round),
+        node("span",null,entries.length+
+          (entries.length===1?" confronto":" confrontos")+
+          (female?" · Folga: "+name(round.bye):"")),
+        node("small",null,completed+"/"+entries.length+" concluídos"),
+        node("span","cup-calendar-chevron",expanded?"▾":"▸"));
+      header.addEventListener("click",()=>{
+        state.selectedRound=expanded?null:round.round;
+        calendar();
+      });
+      wrap.appendChild(header);
+      if(expanded){
+        const matches=node("div","cup-calendar-entries");
+        for(const entry of entries){
+          const chosen=female?state.selectedWomanGameId===entry.id:
+            state.selectedMatch===entry.id;
+          const row=node("button","cup-calendar-game");
+          row.type="button";
+          row.setAttribute("aria-pressed",String(chosen));
+          const a=female?entry.white:entry.players[0];
+          const b=female?entry.black:entry.players[1];
+          const result=female?entry.result:
+            entry.status==="BYE"?"BYE":
+            entry.winner?"Classificado: "+name(entry.winner):
+            entry.games.length+" partidas · "+entry.status;
+          row.append(node("span","cup-calendar-game-name",
+            name(a)+" × "+name(b)),
+            node("span","cup-calendar-game-result",result||"Aguardando"));
+          row.addEventListener("click",()=>{
+            if(female){
+              state.selectedWomanGameId=entry.id;
+              state.focusedPlayer=entry.white;
+              drawSelected();
+              render();
+            }else{
+              selectMatch(entry.id);
+              calendar();
+            }
+          });
+          matches.appendChild(row);
+          if(female&&entry.pgn){
+            const replay=node("button","cup-calendar-replay","♟ Abrir replay verificado");
+            replay.type="button";
+            replay.addEventListener("click",()=>openReplay(entry.id));
+            matches.appendChild(replay);
+          }
+          if(!female&&entry.games?.length){
+            for(const game of entry.games){
+              const detail=node("button","cup-calendar-replay",
+                (stageLabel[game.stage]||game.stage)+": "+name(game.white)+
+                " × "+name(game.black)+" · "+game.result+
+                (game.pgn?" · Ver lances":" · Projeção, sem PGN"));
+              detail.type="button";
+              detail.addEventListener("click",()=>{
+                selectMatch(entry.id);
+                if(game.pgn)openReplay(game.id);
+                else note("Projeção estatística: o placar é auditável, mas não existem lances nem tabuleiro de replay.");
+              });
+              matches.appendChild(detail);
+            }
+          }
+        }
+        wrap.appendChild(matches);
       }
-      return;
-    }
-    for(const round of data.bracket){
-      const item=node("div","cup-calendar-row");
-      const complete=round.matches.filter(m=>["COMPLETED","BYE"].includes(m.status)).length;
-      item.append(node("small",null,"Rodada "+round.round),
-                  node("span",null,"Confrontos · "+round.matches.length),
-                  node("strong",null,complete+"/"+round.matches.length));
-      box.appendChild(item);
+      box.appendChild(wrap);
     }
   }
   function womenTable(){
@@ -666,7 +732,7 @@
       });
       const text=node("span",null,name(slug)+
         (player(slug)?.installed?"":" · perfil UCI ausente"));
-      label.append(input,portrait(slug),text);
+      label.append(input,text);
       box.appendChild(label);
     }
     updateSummary();
@@ -793,20 +859,34 @@
     });
   }
   function viewMatch(){
-    const match=selectedMatch();
     const data=state.detail;
     if(!data)return;
-    if(!match){
+    if(data.format==="double_round_robin"){
+      const game=data.rounds.flatMap(r=>r.games).find(
+        x=>x.id===state.selectedWomanGameId)||
+        data.rounds.flatMap(r=>r.games).find(x=>x.pgn);
+      if(game?.pgn){openReplay(game.id);return;}
+      note("A projeção feminina registra placares, não lances de xadrez.");
       setPane("matches");return;
     }
-    const real=match.games?.findLast(game=>game.pgn);
-    if(!real){
-      note("Este confronto ainda não possui PGN UCI comprovado para replay.");
-      setPane("matches");return;
-    }
-    openReplay(real.id);
+    const match=selectedMatch();
+    const real=match?.games?.findLast(game=>game.pgn);
+    if(real){openReplay(real.id);return;}
+    note("Projeção estatística: os placares são visíveis em Confrontos, mas não existe tabuleiro nem PGN.");
+    setPane("matches");
   }
   $("cup-open-match").addEventListener("click",viewMatch);
+  $("cup-performance-link").addEventListener("click",()=>{
+    const slug=$("cup-performance-link").dataset.player;
+    if(slug&&/^[a-z0-9-]+$/.test(slug)){
+      window.ChessSimHistoryNavigation?.open(slug);
+    }
+  });
+  $("cup-performance-link").closest?.(".cup-player-summary")?.addEventListener("click",event=>{
+    if(event.target.closest?.("button"))return;
+    const slug=$("cup-performance-link").dataset.player;
+    if(slug)window.ChessSimHistoryNavigation?.open(slug);
+  });
   async function openReplay(id){
     try{
       const data=await get("/api/cups/"+state.id+"/games/"+id+"/replay");

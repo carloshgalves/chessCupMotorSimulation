@@ -148,6 +148,7 @@ def build_rating_ledger(records: list[dict], *, k: object = DEFAULT_K,
     unique: dict[str, dict] = {}
     duplicate_records = 0
     ignored_incomplete = 0
+    ignored_ineligible = 0
     for record in records:
         if not isinstance(record, dict):
             raise ValueError("Registro de competição inválido")
@@ -164,8 +165,11 @@ def build_rating_ledger(records: list[dict], *, k: object = DEFAULT_K,
             raise ValueError("Interrupção declara resultado final")
         source = record.get("origin")
         record_modality, clock = classify_competition_record(record)
-        if source not in ("arena", "tournament"):
+        if source not in ("arena", "tournament", "cup"):
             raise ValueError("Origem de jogo inválida")
+        rating_eligible = record.get("rating_eligible", True)
+        if type(rating_eligible) is not bool:
+            raise ValueError("Elegibilidade de Elo deve ser booleana")
         date = record.get("recorded_utc")
         if date is not None and (not isinstance(date, str) or
                                  len(date) > 50 or not date.endswith("+00:00")):
@@ -188,6 +192,7 @@ def build_rating_ledger(records: list[dict], *, k: object = DEFAULT_K,
             "created_manifest_utc": date, "modality": record_modality,
             "clock": clock, "engine_strength_config": proof,
             "evidence_pgn_sha256": evidence,
+            "rating_eligible": rating_eligible,
         }
         if game_id in unique:
             if unique[game_id] != payload:
@@ -197,8 +202,11 @@ def build_rating_ledger(records: list[dict], *, k: object = DEFAULT_K,
         unique[game_id] = payload
         if status == "INCOMPLETE":
             ignored_incomplete += 1
+        elif not rating_eligible:
+            ignored_ineligible += 1
     completed = [x for x in unique.values()
-                 if x["status"] == "COMPLETED" and x["modality"] == modality]
+                 if x["status"] == "COMPLETED" and x["rating_eligible"] and
+                 x["modality"] == modality]
     if len(completed) > MAX_EVENTS:
         raise ValueError("Limite de partidas para Elo excedido")
     # Manifest timestamps are CREATION dates, not trusted play times. Missing
@@ -274,6 +282,7 @@ def build_rating_ledger(records: list[dict], *, k: object = DEFAULT_K,
         "ledger_genesis": GENESIS, "ratings": ranking,
         "counts": {
             "scored_games": len(ledger), "ignored_incomplete": ignored_incomplete,
+            "ignored_ineligible": ignored_ineligible,
             "duplicate_records": duplicate_records, "participants": len(participants),
         },
         "modalities": sorted(modalities),
@@ -366,7 +375,7 @@ def rating_report(workspace: Path, *, k: object = DEFAULT_K,
     snapshot = build_rating_ledger(records, k=k, modality=modality)
     available_modalities = dict.fromkeys(RATING_POOLS, 0)
     for record in records:
-        if record["status"] == "COMPLETED":
+        if record["status"] == "COMPLETED" and record.get("rating_eligible", True):
             category, _ = classify_competition_record(record)
             available_modalities[category] += 1
     summary = {

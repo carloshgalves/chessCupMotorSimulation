@@ -363,7 +363,7 @@
             <button id="cup-preset-shortcut-women" type="button">♕ Torneio Feminino <small>5 jogadoras · turno e returno</small></button>
             <button id="cup-preset-shortcut-custom" type="button">◇ Personalizada <small>Elenco e regras próprios</small></button>
           </div>
-          <p class="cup-mini-note">Perfis históricos não são equivalentes a motores historicamente validados. Dados de Copa nunca alteram o Elo.</p>
+          <p class="cup-mini-note">Perfis históricos não são equivalentes a motores historicamente validados. Projeções não alteram estatísticas nem Elo; somente partidas UCI comprovadas são registradas.</p>
         </aside>
         <section class="cup-central" aria-label="Acompanhamento da Copa">
           <div id="cup-no-selection" class="cup-welcome">
@@ -390,6 +390,7 @@
               <div id="cup-matches" class="cup-match-list"></div>
             </section>
             <section id="cup-pane-calendar" class="cup-pane" hidden>
+              <p class="cup-muted">Selecione uma rodada para listar todos os confrontos e seus resultados.</p>
               <div id="cup-calendar" class="cup-match-list"></div>
             </section>
             <section id="cup-pane-rules" class="cup-pane" hidden>
@@ -426,12 +427,13 @@
           <section class="cup-mini-panel cup-player-summary" aria-label="Desempenho do jogador selecionado">
             <h3>♟ Desempenho do jogador</h3>
             <div class="cup-performance-person">
-              <div id="cup-performance-portrait" class="cup-performance-portrait"></div>
+              
               <div><strong id="cup-performance-name">Selecione um confronto</strong>
                 <small id="cup-performance-era">Catálogo ChessSim</small></div>
             </div>
             <p id="cup-performance-record" class="cup-muted">Os resultados serão apresentados por competição.</p>
             <p id="cup-performance-biography" class="cup-muted">Dados biográficos revisados, quando disponíveis. Sem inferir fidelidade do motor.</p>
+            <button type="button" id="cup-performance-link" class="cup-full" disabled>↗ Ver perfil histórico e estatísticas</button>
           </section>
           <section class="cup-mini-panel">
             <h3>Fases do desempate</h3>

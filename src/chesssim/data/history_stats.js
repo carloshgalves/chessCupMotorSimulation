@@ -32,11 +32,13 @@
         data.slug !== slug || !consistentTotals(data.totals) ||
         !data.scope || !data.coverage ||
         !Array.isArray(data.opponents) || data.opponents.length > 63 ||
-        !["arena_local", "tournament_local"].every(s=>
+        !["arena_local", "tournament_local", "cup_local"].every(s=>
           Array.isArray(data.scope.sources) && data.scope.sources.includes(s))) return false;
     const coverage = data.coverage;
-    for (const key of ["sessions_seen","tournaments_seen","candidate_games",
+    for (const key of ["sessions_seen","tournaments_seen","cups_seen",
+                       "cup_synthetic_excluded","candidate_games",
                        "verified_games","arena_verified_games","tournament_verified_games",
+                       "cup_verified_games",
                        "rejected_games","rejected_records",
                        "excluded_attempts","failed_attempts","duplicate_records"]) {
       if (!isCount(coverage[key])) return false;
@@ -51,8 +53,8 @@
           item.completed === item.wins + item.draws + item.losses)) {
       return false;
     }
-    if(coverage.arena_verified_games + coverage.tournament_verified_games !==
-           coverage.verified_games ||
+    if(coverage.arena_verified_games + coverage.tournament_verified_games +
+          coverage.cup_verified_games !== coverage.verified_games ||
        coverage.verified_games !== data.totals.games ||
        coverage.candidate_games < coverage.verified_games + coverage.rejected_games ||
        coverage.partial !== Boolean(coverage.rejected_records || coverage.rejected_games)) {
@@ -107,7 +109,7 @@
     const first = scope.from_utc || "sem data registrada";
     const last = scope.to_utc || "sem data registrada";
     $("history-stats-scope").textContent =
-      "Fonte: sessões da Arena e torneios locais em “" + directory +
+      "Fonte: sessões da Arena, torneios e Copas UCI locais em “" + directory +
       "”. Período documentado dos manifestos: " + first + " a " + last +
       ". Datas de criação, não duração das partidas.";
     const coverage = report.coverage;
@@ -117,7 +119,10 @@
       coverage.rejected_games + " partidas e " +
       coverage.rejected_records + " registros rejeitados. " +
       "Origem verificada: " + coverage.arena_verified_games + " jogos da Arena e " +
-      coverage.tournament_verified_games + " jogos de torneios. " +
+      coverage.tournament_verified_games + " jogos de torneios e " +
+      coverage.cup_verified_games + " jogos UCI de Copas (" +
+      coverage.cups_seen + " Copas encontradas; " +
+      coverage.cup_synthetic_excluded + " projeções excluídas). " +
       coverage.excluded_attempts + " tentativas excluídas; " +
       coverage.failed_attempts + " tentativas falhas.";
     $("history-stats-warning").textContent = coverage.partial ?

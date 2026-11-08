@@ -17,6 +17,7 @@ let fakeReal=false;
 let assigned="";
 let rendered=[];
 let replayCount=0;
+const openedProfiles=[];
 const seen=[];
 const timers=[];
 class ClassList{
@@ -196,7 +197,10 @@ const fetch=async(path,options={})=>{
 };
 const window={
   location:{hash:"#token="+TOKEN,assign(path){assigned=path;}},
-  ChessSimHistoryNavigation:{leave(){ $("history-view").hidden=true; }},
+  ChessSimHistoryNavigation:{
+    leave(){ $("history-view").hidden=true; },
+    open(slug){ openedProfiles.push(slug); }
+  },
   ChessSimLeagueNavigation:{hide(){$("league-view").hidden=true;}},
   ChessSimBoard:{paint(element,view,ply){rendered.push({element,fen:view.fen,ply});}}
 };
@@ -223,6 +227,8 @@ async function flush(){
   assert.equal($("cup-view").hidden,true);
   assert.equal($("cup-summary-players").textContent,"8");
   assert.equal($("cup-participants").children.length,64);
+  assert($("cup-participants").children.every(
+    label=>label.children.every(child=>child.tagName!=="IMG")));
   $("cup-count").value="2";
   $("cup-count").events.change();
   assert.equal($("cup-summary-players").textContent,"2");
@@ -243,6 +249,11 @@ async function flush(){
   assert($("cup-performance-name").textContent.includes("Jogador 1"));
   await flush();
   assert.equal($("cup-performance-era").textContent,"Século XX");
+  assert.equal($("cup-performance-link").disabled,false);
+  $("cup-performance-link").events.click();
+  assert.deepEqual(openedProfiles,["player0"]);
+  assert.equal($("cup-selected-players").children.some(
+    button=>button.children.some(child=>child.tagName==="IMG")),false);
 
   await $("cup-run").events.click();
   await flush();
@@ -250,6 +261,10 @@ async function flush(){
   assert.equal($("cup-progress-games").textContent,"1");
   assert($("cup-performance-record").textContent.includes("1 partidas"));
   assert.equal($("cup-export-pgn").disabled,true);
+  assert($("cup-open-match").textContent.includes("sem tabuleiro"));
+  $("cup-open-match").events.click();
+  assert.equal($("cup-pane-matches").hidden,false);
+  assert.equal(replayCount,0,"Synthetic projections must never invent a replay");
   $("cup-export-json").events.click();
   assert.equal(assigned,"/api/cups/"+cid+"/export/json");
 
@@ -258,6 +273,15 @@ async function flush(){
   assert($("cup-matches").children.length>=2);
   $("cup-tab-calendar").events.click();
   assert.equal($("cup-calendar").children.length,1);
+  const round=$("cup-calendar").children[0];
+  assert.equal(round.children[0].attributes["aria-expanded"],"true");
+  round.children[0].events.click();
+  assert.equal($("cup-calendar").children[0].children.length,1);
+  $("cup-calendar").children[0].children[0].events.click();
+  const expanded=$("cup-calendar").children[0];
+  assert.equal(expanded.children.length,2);
+  assert(expanded.children[1].children.length>=1);
+  assert(expanded.children[1].children[0].textContent!==undefined);
   $("cup-tab-rules").events.click();
   assert.equal($("cup-pane-rules").hidden,false);
   assert($("cup-rules-content").children.length>=8);

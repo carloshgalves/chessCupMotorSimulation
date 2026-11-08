@@ -285,3 +285,73 @@ body:has(#cup-create-view:not([hidden])) #tab-cups{background:#145743;
 .cup-country-control select{min-height:36px;width:100%;font-size:.77rem}
 .cup-country-control p{margin:0}
 @media(max-width:710px){.cup-country-control{grid-template-columns:1fr}}
+
+/* Acceptance pass: leave Cup photographs for a future separate feature. */
+#cup-new{flex:none;min-width:130px;width:auto;align-self:center}
+.cup-participants{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.cup-participants label{min-height:37px;padding:7px 10px}
+.cup-participants label span{font-size:.76rem}
+.cup-selected-player{display:block;text-align:left;min-height:43px;padding:7px 10px}
+.cup-selected-player div{display:block}
+.cup-performance-person{display:block}
+.cup-performance-person strong{font-size:.9rem}
+.cup-performance-person small{font-size:.74rem}
+.cup-player-summary{cursor:pointer}
+.cup-player-summary:hover{border-color:#53b691}
+#cup-performance-link{color:#c4f8db;background:#173f36;border-color:#397d63;
+  font-weight:720;text-align:center}
+#cup-performance-link:disabled{opacity:.55;cursor:not-allowed}
+
+/* Readable, explicitly differentiated round headers for all 6 columns,
+   including rounds 1/2/3 at high tournament participant counts. */
+.cup-bracket{gap:12px}
+.cup-bracket-col{min-width:225px;padding:0 5px 5px;
+  border-left:1px solid #3d6472;background:#112c39;border-radius:8px}
+.cup-bracket-col:nth-child(even){background:#102938}
+.cup-bracket-round-heading{position:sticky;top:0;z-index:2;display:grid;
+  grid-template-columns:29px minmax(0,1fr);grid-template-rows:21px 18px;
+  align-items:center;gap:0 8px;min-height:50px;margin:0 -5px 12px;
+  padding:6px 10px;background:#1b4654;border:1px solid #447585;
+  border-radius:8px;box-shadow:0 3px 10px #03131b9c}
+.cup-bracket-col:nth-child(2) .cup-bracket-round-heading{background:#254656}
+.cup-bracket-col:nth-child(3) .cup-bracket-round-heading{background:#263d55}
+.cup-bracket-round-number{grid-row:1/3;display:grid;place-items:center;
+  width:29px;height:29px;border-radius:8px;
+  font-size:1.02rem;font-weight:800;background:#114f49;color:#abf0d0;
+  border:1px solid #4aaf8b}
+.cup-bracket-round-heading strong{font-size:.79rem;letter-spacing:.02em;
+  text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cup-bracket-round-heading small{font-size:.68rem;color:#b9d3db}
+.cup-calendar-round{border:1px solid #3c6572;border-radius:9px;
+  overflow:hidden;background:#112b38;margin-bottom:7px}
+.cup-calendar-toggle{display:grid!important;
+  grid-template-columns:80px minmax(0,1fr) 100px 20px!important;
+  align-items:center;gap:8px;padding:11px 13px!important;
+  width:100%;min-height:46px!important;border:0!important;
+  text-align:left;background:#183a48!important;color:#e8f4f7}
+.cup-calendar-toggle[aria-expanded=true]{background:#204d4b!important;
+  border-bottom:1px solid #398c71!important}
+.cup-calendar-toggle strong{font-size:.85rem}
+.cup-calendar-toggle span{font-size:.76rem;white-space:normal}
+.cup-calendar-toggle small{font-size:.7rem;text-align:right;color:#b5d4de}
+.cup-calendar-chevron{text-align:right;color:#70e2aa;font-weight:800}
+.cup-calendar-entries{padding:8px;display:grid;gap:5px}
+.cup-calendar-game{display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  text-align:left;align-items:center;width:100%;gap:10px;
+  padding:9px 10px!important;border:1px solid #345e6a!important;
+  border-radius:7px;background:#15323f!important;color:#e4f0f4}
+.cup-calendar-game[aria-pressed=true]{background:#1b513f!important;
+  border-color:#48bc89!important}
+.cup-calendar-game-name{font-weight:660;font-size:.76rem}
+.cup-calendar-game-result{font-size:.72rem;color:#dfd09b}
+.cup-calendar-replay{display:block!important;text-align:left;
+  width:100%;padding:7px 12px!important;min-height:35px!important;
+  margin-left:0;color:#a9ead1!important;background:#153d37!important;
+  border:1px solid #39735f!important;font-size:.72rem}
+@media(max-width:720px){
+  .cup-calendar-toggle{grid-template-columns:72px minmax(0,1fr) 26px!important}
+  .cup-calendar-toggle small{display:none}
+  .cup-calendar-game{grid-template-columns:1fr!important;gap:3px}
+  .cup-participants{grid-template-columns:1fr}
+}

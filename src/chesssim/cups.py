@@ -24,6 +24,8 @@ from .matches import _atomic_text, file_hash, validate
 
 SCHEMA = "chesssim-cup-v1"
 RECEIPT_SCHEMA = "chesssim-cup-game-v1"
+MAX_CUP_GAMES = 4096
+MAX_CUP_PGN_BYTES = 2_000_000
 CUP_RX = re.compile(r"cup-[0-9a-f]{16}\Z")
 GAME_RX = re.compile(r"(?:r[0-9]{2}-m[0-9]{2}-s[0-5]-g[12]|w[0-9]{2}-g0[12])\Z")
 HEXSHA = re.compile(r"[0-9a-f]{64}\Z")
@@ -69,6 +71,18 @@ class CupManager:
         self._closed = Event()
         self._pgn_cache: dict[tuple[str,str,str], tuple[int,int,int]] = {}
         self._recover_crashed_sessions()
+
+    @classmethod
+    def readonly(cls, workspace: Path) -> "CupManager":
+        """Stateless verifier for historical statistics; no mkdir or recovery.
+
+        This intentionally exposes only _manifest/_state/_verify_game and
+        never runs __init__, which would mutate the workspace on startup.
+        """
+        observer = object.__new__(cls)
+        observer.folder = workspace / "cups"
+        observer._pgn_cache = {}
+        return observer
 
     @property
     def busy(self) -> bool:
@@ -183,6 +197,8 @@ class CupManager:
             if path.stem in entries:
                 raise ValueError("Jogo repetido no histórico")
             entries[path.stem]=row
+            if len(entries)>MAX_CUP_GAMES:
+                raise ValueError("Quantidade de recibos da Copa excedida")
         return entries
 
     def _verify_game(self, state: dict, spec: dict, row: dict,
@@ -221,6 +237,8 @@ class CupManager:
         if path.parent.is_symlink() or path.is_symlink() or not path.is_file():
             raise ValueError("PGN ausente")
         stat=path.stat()
+        if stat.st_size > MAX_CUP_PGN_BYTES:
+            raise ValueError("PGN excede limite de segurança")
         signature=(stat.st_ino,stat.st_size,stat.st_mtime_ns)
         key=(state["id"],spec["id"],row["sha256"])
         if not force and self._pgn_cache.get(key)==signature:

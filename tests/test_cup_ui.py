@@ -77,7 +77,11 @@ def test_cup_safety_requires_no_html_injection_or_arbitrary_files():
     assert '"X-Chesssim-Token"' in js
     assert "CupNavigation" in js
     assert "window.ChessSimBoard.paint" in js
-    assert "/api/history/portraits/" in js
+    assert "/api/history/portraits/" not in js
+    assert "portrait(" not in js
+    assert "cup-calendar-toggle" in js
+    assert "cup-performance-link" in js
+    assert "ChessSimHistoryNavigation?.open" in js
     assert "fast_statistical" in js
     assert "state.commandPending" in js
     history=(DATA/"history.js").read_text(encoding="utf-8")
