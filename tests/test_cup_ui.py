@@ -37,7 +37,7 @@ def test_approved_cup_dashboard_and_creation_are_in_arena():
         "cup-bracket","cup-title","cup-status-pill",
         "cup-progress-bar","cup-progress-games","cup-progress-matches",
         "cup-progress-running","cup-selected-players",
-        "cup-next-stage","cup-run","cup-open-match",
+        "cup-next-stage","cup-run","cup-run-warning","cup-open-match",
         "cup-tiebreak-list","cup-export-json","cup-export-pgn",
         "cup-pause","cup-quick-configure",
         "cup-creation-presets","cup-create-form","cup-seed",

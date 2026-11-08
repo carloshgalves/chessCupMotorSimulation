@@ -242,9 +242,15 @@
     $("cup-progress-running").textContent=String(data.status==="RUNNING"?1:0);
     $("cup-export-json").disabled=state.commandPending;
     $("cup-export-pgn").disabled=state.commandPending||data.available_pgn===0;
+    const missingProfiles=data.execution_mode==="engine_full"?
+      data.config.participants.filter(slug=>!player(slug)?.installed):[];
     const mayRun=Boolean(data.next_game)&&!state.commandPending&&
-      data.status!=="RUNNING"&&!state.busy&&Boolean(token);
+      data.status!=="RUNNING"&&!state.busy&&Boolean(token)&&
+      missingProfiles.length===0;
     $("cup-run").disabled=!mayRun;
+    $("cup-run-warning").textContent=missingProfiles.length?
+      missingProfiles.length+" perfil(is) Rodent IV ausente(s). "+
+      "Instale e registre os motores antes de executar partidas reais.":"";
     $("cup-run").textContent=data.next_game?.stage==="armageddon"
       ?"▶ Executar Armagedom"
       :data.next_game?.stage==="women_double_round_robin"

@@ -278,6 +278,11 @@ async function flush(){
   assert.equal(rendered.at(-1).fen,FEN2);
   $("cup-replay-close").events.click();
   assert.equal($("cup-replay-dialog").open,false);
+  original.participants=["player0","mequinho"];
+  timers.find(t=>t.ms===2500).fn();
+  await flush();
+  assert.equal($("cup-run").disabled,true);
+  assert($("cup-run-warning").textContent.includes("1 perfil"));
   $("cup-new").events.click();
   await flush();
   const custom=$("cup-creation-presets").children.find(
