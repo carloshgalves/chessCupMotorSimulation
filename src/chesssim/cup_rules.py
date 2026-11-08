@@ -28,6 +28,14 @@ FEMALE_ROSTER = (
     "menchik", "gaprindashvili", "chiburdanidze", "judit-polgar",
     "hou-yifan",
 )
+# Country filters use separately sourced federation facts, not roster groups.
+# Existing roster has only one verified Brazilian candidate; no fake opponent.
+COUNTRY_FILTERS = {
+    "brazil": {
+        "label": "Brasil", "participants": ["mequinho"],
+        "source": "https://ratings.fide.com/profile/2100010",
+    },
+}
 PRESETS = ("standard", "world_champions", "women", "custom")
 METHODS = ("engine_full", "fast_statistical")
 STAGES = (
@@ -93,6 +101,7 @@ def presets() -> dict:
                   "byes": "one explicit BYE per round",
                   "source": "curated_women_roster_not_womens_world_title"},
         "custom": {"participants": [], "format": "knockout"},
+        "country_filters": COUNTRY_FILTERS,
     }
 
 

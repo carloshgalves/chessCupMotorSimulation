@@ -47,6 +47,9 @@ def test_world_champions_eligibility_is_documented_not_roster_group():
     assert "morphy" not in eligible
     assert "short" not in eligible
     assert "judit-polgar" not in eligible
+    assert presets()["country_filters"]["brazil"]["participants"]==["mequinho"]
+    assert presets()["country_filters"]["brazil"]["source"]==(
+        "https://ratings.fide.com/profile/2100010")
     assert "gukesh" not in eligible # Not present in the 64-person roster
     assert len(presets()["world_champions"]["participants"])==18
     assert all(eligible[x]["source"].startswith("https://")

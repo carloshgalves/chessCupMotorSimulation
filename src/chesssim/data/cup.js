@@ -578,7 +578,7 @@
   }
   function choosePresetCount(available,requested){
     const allow=available.length;
-    return Math.min(Math.max(2,requested),allow);
+    return Math.max(2,Math.min(Math.max(2,requested),Math.max(2,allow)));
   }
   function setPreset(preset,initial=false){
     if(!["standard","world_champions","women","custom"].includes(preset))return;
@@ -589,7 +589,14 @@
     }
     if(!state.presets||!state.players.length)return;
     let eligible=state.presets[preset].participants.slice();
-    if(preset==="custom")eligible=state.players.map(p=>p.slug);
+    const countrySelect=$("cup-country-filter");
+    $("cup-country-control").hidden=preset!=="custom";
+    if(preset!=="custom")countrySelect.value="";
+    if(preset==="custom"){
+      const country=state.presets.country_filters?.[countrySelect.value];
+      eligible=country?.participants.slice()||
+        state.players.map(p=>p.slug);
+    }
     if(preset==="standard")eligible=state.players.map(p=>p.slug);
     const count=$("cup-count");
     const oldCount=num(count.value)||8;
@@ -659,6 +666,7 @@
     updateSummary();
   }
   $("cup-count").addEventListener("change",()=>fillParticipants(true));
+  $("cup-country-filter").addEventListener("change",()=>setPreset("custom"));
   function updateSummary(){
     if(!state.players.length)return;
     const n=num($("cup-count").value)||8;
@@ -672,7 +680,15 @@
     $("cup-summary-matches").textContent=String(matches);
     const missing=state.selection.filter(slug=>!player(slug)?.installed);
     const engine=$("cup-execution").value==="engine_full";
-    $("cup-roster-note").textContent=missing.length
+    const country=state.createPreset==="custom"?
+      state.presets.country_filters?.[$("cup-country-filter").value]:null;
+    const insufficient=country&&country.participants.length<2;
+    $("cup-country-warning").textContent=insufficient?
+      country.label+": apenas "+country.participants.length+
+      " enxadrista documentado no catálogo. Mínimo de 2 para Copa; não serão criados participantes fictícios.":"";
+    $("cup-roster-note").textContent=insufficient?
+      "Copa por país indisponível com o elenco atual. Fonte: Federação FIDE.":
+      missing.length
       ?missing.length+" perfil(is) Rodent IV ausente(s) na seleção. "+
         (engine?"Execução UCI real será bloqueada.":"Projeção será identificada como sintética.")
       :"Todos os perfis selecionados possuem alias cadastrado; a instalação real será comprovada ao executar.";

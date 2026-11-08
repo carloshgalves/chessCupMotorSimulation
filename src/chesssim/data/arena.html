@@ -509,6 +509,15 @@
             </fieldset>
             <fieldset>
               <legend>Participantes <span id="cup-count-label">0/8</span></legend>
+              <div id="cup-country-control" class="cup-country-control" hidden>
+                <label>Filtrar seleção por país
+                  <select id="cup-country-filter">
+                    <option value="">Todos os enxadristas do catálogo</option>
+                    <option value="brazil">Brasil — 1 perfil documentado</option>
+                  </select>
+                </label>
+                <p id="cup-country-warning" class="cup-muted"></p>
+              </div>
               <p id="cup-roster-note" class="cup-muted">Perfis não instalados impedem a execução UCI real.</p>
               <div id="cup-participants" class="cup-participants" role="group" aria-label="Seleção de participantes da Copa"></div>
             </fieldset>

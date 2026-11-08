@@ -41,7 +41,7 @@ def test_approved_cup_dashboard_and_creation_are_in_arena():
         "cup-tiebreak-list","cup-export-json","cup-export-pgn",
         "cup-pause","cup-quick-configure",
         "cup-creation-presets","cup-create-form","cup-seed",
-        "cup-participants","cup-depth","cup-execution",
+        "cup-participants","cup-country-filter","cup-depth","cup-execution",
         "cup-white-seconds","cup-increment",
         "cup-bid-min","cup-bid-max","cup-save","cup-back",
         "cup-replay-board","cup-replay-dialog",

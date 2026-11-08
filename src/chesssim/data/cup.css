@@ -278,3 +278,10 @@ body:has(#cup-create-view:not([hidden])) #tab-cups{background:#145743;
 #cup-bid-proof{color:#f6db9d;border-top:1px solid #64714f;
   margin-top:8px;padding-top:6px}
 .cup-right-panel{max-height:760px;overflow-y:auto;scrollbar-width:thin}
+
+.cup-country-control{display:grid;grid-template-columns:minmax(210px,1fr) 1fr;
+  gap:9px;align-items:end;padding:7px 0 9px}
+.cup-country-control label{font-size:.76rem}
+.cup-country-control select{min-height:36px;width:100%;font-size:.77rem}
+.cup-country-control p{margin:0}
+@media(max-width:710px){.cup-country-control{grid-template-columns:1fr}}

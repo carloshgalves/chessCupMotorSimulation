@@ -274,6 +274,18 @@ async function flush(){
   assert.equal(rendered.at(-1).fen,FEN2);
   $("cup-replay-close").events.click();
   assert.equal($("cup-replay-dialog").open,false);
+  $("cup-new").events.click();
+  await flush();
+  const custom=$("cup-creation-presets").children.find(
+    button=>button.dataset.cupPreset==="custom");
+  custom.events.click();
+  $("cup-country-filter").value="brazil";
+  $("cup-country-filter").events.change();
+  assert.equal($("cup-country-control").hidden,false);
+  assert.equal($("cup-participants").children.length,1);
+  assert.equal($("cup-count-label").textContent,"1/2");
+  assert.equal($("cup-save").disabled,true);
+  assert($("cup-country-warning").textContent.includes("Mínimo de 2"));
   assert(!ids.has("cup-clear"));
   console.log("Cup browser smoke: PASS");
 })().catch(e=>{console.error(e);process.exitCode=1;});
