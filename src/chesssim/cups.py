@@ -6,10 +6,8 @@ historical-strength promises. Persist only verified completed games.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from hashlib import sha256
 from pathlib import Path
 from threading import Event, RLock, Thread
-from typing import Callable
 import json
 import re
 import secrets
@@ -18,8 +16,8 @@ import chess.pgn
 
 from .catalog import find_player
 from .cup_rules import (
-    CupInput, RULES_VERSION, STAGES, canonical, checksum,
-    normalize, presets, projected_game, seed_slots, stage_game, women_schedule,
+    CupInput, RULES_VERSION, STAGES, checksum,
+    normalize, projected_game, seed_slots, stage_game, women_schedule,
 )
 from .cup_games import play_cup_game
 from .matches import _atomic_text, file_hash, validate

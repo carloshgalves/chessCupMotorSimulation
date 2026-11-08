@@ -1,18 +1,14 @@
 """#58: persistent Cup engine, bracket, replay, byes and fail-closed results."""
 from __future__ import annotations
 
-from collections import Counter
 import json
-from pathlib import Path
-import threading
 import time
 
 import chess
-import chess.pgn
 import pytest
 
 from chesssim import cups
-from chesssim.catalog import find_player, load_roster
+from chesssim.catalog import load_roster
 from chesssim.cup_rules import CupInput, seed_slots
 
 

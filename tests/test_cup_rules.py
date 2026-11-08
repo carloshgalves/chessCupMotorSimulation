@@ -6,7 +6,7 @@ import pytest
 
 from chesssim.cup_rules import (
     CLASSICAL, FEMALE_ROSTER, FIDE_CUP_2025, RULES_VERSION,
-    STAGES, CupInput, canonical, champion_eligibility, checksum, normalize,
+    STAGES, CupInput, champion_eligibility, checksum, normalize,
     presets, projected_game, sealed_bid, seed_slots, stage_game, women_schedule,
 )
 

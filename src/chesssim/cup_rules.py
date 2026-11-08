@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from hashlib import sha256
 import json
-import math
 import random
 from typing import Any
 
