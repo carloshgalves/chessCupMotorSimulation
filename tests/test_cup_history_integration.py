@@ -1,9 +1,7 @@
 """Cup #58 acceptance: verified UCI outcomes enter History/Elo, projections do not."""
 from __future__ import annotations
 
-import json
 import time
-from pathlib import Path
 from types import SimpleNamespace
 
 import chess
@@ -188,7 +186,7 @@ def test_armageddon_record_counts_in_history_but_not_elo():
                             modality="unclassified", roster=("fischer", "tal"))
 
 
-def test_cup_root_symlink_never_leaks_external_pg_ns(tmp_path):
+def test_cup_root_symlink_never_leaks_external_pgns(tmp_path):
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     external = tmp_path / "external"
