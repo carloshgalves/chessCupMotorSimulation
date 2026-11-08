@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/arena.css">
   <link rel="stylesheet" href="/chess-board.css">
   <link rel="stylesheet" href="/history.css">
+  <link rel="stylesheet" href="/history_archive.css">
   <link rel="stylesheet" href="/league.css">
   <link rel="stylesheet" href="/cup.css">
   <script src="/arena.js" defer></script>
@@ -17,6 +18,7 @@
   <script src="/history_stats.js" defer></script>
   <script src="/competition_rating.js" defer></script>
   <script src="/history.js" defer></script>
+  <script src="/history_archive.js" defer></script>
   <script src="/league.js" defer></script>
   <script src="/cup.js" defer></script>
 </head>
@@ -800,6 +802,167 @@
       <section id="history-profile" class="history-profile" aria-labelledby="history-profile-name" hidden>
         <button id="history-back" type="button">← Todos os jogadores</button>
         <h2 id="history-profile-name"></h2>
+
+        <section id="history-modern" class="archive-hub" aria-label="Histórico do enxadrista e arquivo de partidas">
+          <aside class="archive-sidebar">
+            <h3>📖 História</h3>
+            <p>Perfis, carreira e partidas registradas dos 64 enxadristas.</p>
+            <label for="archive-roster-search">Buscar enxadrista</label>
+            <input id="archive-roster-search" type="search" placeholder="Buscar enxadrista...">
+            <label for="archive-roster-mode">Modalidade de análise</label>
+            <select id="archive-roster-mode">
+              <option value="all">Todas as modalidades</option>
+              <option value="classical">Clássico</option>
+              <option value="rapid">Rápido</option>
+              <option value="blitz">Blitz</option>
+              <option value="bullet">Bullet</option>
+              <option value="unclassified">Sem ritmo definido</option>
+            </select>
+            <div id="archive-player-roster" class="archive-player-roster" role="group" aria-label="Selecione outro enxadrista"></div>
+            <p class="archive-sidebar-footer">64 enxadristas no catálogo histórico.</p>
+          </aside>
+          <div class="archive-main">
+            <header class="archive-profile-hero">
+              <div class="archive-hero-heading">
+                <h2 id="archive-player-name">Enxadrista</h2>
+                <span id="archive-player-era" class="archive-hero-era">Período histórico documentado</span>
+                <span id="archive-player-status" class="archive-green-pill">Perfil histórico</span>
+              </div>
+              <p id="archive-player-bio">Biografia documental e resultados do simulador são independentes.</p>
+              <div class="archive-hero-tags" id="archive-profile-tags"></div>
+            </header>
+            <nav class="archive-tabs" aria-label="Seções do histórico">
+              <button id="archive-tab-overview" type="button" aria-pressed="true">▥ Visão geral</button>
+              <button id="archive-tab-games" type="button" aria-pressed="false">♙ Partidas</button>
+              <button id="archive-tab-tournaments" type="button" aria-pressed="false">♜ Torneios</button>
+              <button id="archive-tab-elo" type="button" aria-pressed="false">▥ Elo experimental</button>
+              <button id="archive-tab-records" type="button" aria-pressed="false">♧ Registros</button>
+            </nav>
+            <p id="archive-hub-status" role="status" aria-live="polite"></p>
+            <section id="archive-pane-overview" class="archive-pane">
+              <div class="archive-overview-grid">
+                <section class="archive-card">
+                  <h3>▥ Estatísticas no simulador</h3>
+                  <p class="archive-muted">Somente partidas UCI verificadas. Projeções não são incluídas.</p>
+                  <div id="archive-overview-stats" class="archive-overview-stats"></div>
+                </section>
+                <section class="archive-card">
+                  <h3>⌁ Linha do tempo da carreira</h3>
+                  <ol id="archive-career-timeline" class="archive-career-timeline"></ol>
+                  <p class="archive-muted">Marcos documentais, não resultados produzidos pelo motor.</p>
+                </section>
+                <section class="archive-card">
+                  <h3>▣ Últimas partidas · simulador</h3>
+                  <div id="archive-recent-games" class="archive-recent-games"></div>
+                  <button id="archive-all-games" type="button">☰ Ver todas as partidas</button>
+                </section>
+                <section class="archive-card">
+                  <h3>▥ Desempenho por modalidade</h3>
+                  <div id="archive-mode-performance"></div>
+                </section>
+                <section class="archive-card archive-wide">
+                  <h3>♜ Partidas marcantes do acervo documental</h3>
+                  <p id="archive-curated-note" class="archive-muted">Apenas partidas com PGN histórico documentado disponível localmente.</p>
+                  <div id="archive-curated-games"></div>
+                  <button id="archive-curated-open" type="button">◈ Consultar acervo histórico</button>
+                </section>
+              </div>
+            </section>
+            <section id="archive-pane-games" class="archive-pane" hidden>
+              <header class="archive-card archive-archive-heading">
+                <div><h3>Partidas no ChessSimulation</h3>
+                  <p class="archive-muted">Arquivo pesquisável de jogos UCI, projeções e tentativas incompletas.</p></div>
+                <span id="archive-total-count" class="archive-green-pill">0 registros</span>
+              </header>
+              <div id="archive-source-cards" class="archive-source-cards"></div>
+              <form id="archive-filters" class="archive-filters">
+                <label>Buscar partidas<input id="archive-search" name="q" type="search" placeholder="Adversário, competição ou ID"></label>
+                <label>Origem<select id="archive-origin" name="origin">
+                  <option value="all">Todas</option><option value="arena">Arena</option>
+                  <option value="tournament">Liga/Torneio</option><option value="cup">Copa UCI</option>
+                  <option value="projection">Projeção sintética</option>
+                </select></label>
+                <label>Modalidade<select id="archive-modality" name="modality">
+                  <option value="all">Todas</option><option value="classical">Clássico</option>
+                  <option value="rapid">Rápido</option><option value="blitz">Blitz</option>
+                  <option value="bullet">Bullet</option><option value="unclassified">Sem ritmo</option>
+                </select></label>
+                <label>Resultado<select id="archive-result" name="result">
+                  <option value="all">Todos</option><option value="win">Vitórias</option>
+                  <option value="draw">Empates</option><option value="loss">Derrotas</option>
+                  <option value="incomplete">Incompletas</option>
+                </select></label>
+                <button type="submit" class="archive-primary">Pesquisar</button>
+              </form>
+              <p id="archive-search-status" role="status" aria-live="polite"></p>
+              <div class="archive-table-scroll" role="region" tabindex="0" aria-label="Tabela paginada de partidas">
+                <table class="archive-games-table">
+                  <thead><tr>
+                    <th>Registro</th><th>Competição</th><th>Adversário</th><th>Cor</th>
+                    <th>Ritmo</th><th>Resultado</th><th>Origem</th><th>Ação</th>
+                  </tr></thead>
+                  <tbody id="archive-games-table-body"></tbody>
+                </table>
+              </div>
+              <footer class="archive-table-footer">
+                <span id="archive-page-status"></span>
+                <div class="archive-page-buttons">
+                  <button id="archive-prev-page" type="button" aria-label="Página anterior">‹ Anterior</button>
+                  <span id="archive-current-page"></span>
+                  <button id="archive-next-page" type="button" aria-label="Próxima página">Próxima ›</button>
+                </div>
+              </footer>
+              <section class="archive-export-panel">
+                <strong>Exportar página filtrada</strong>
+                <button id="archive-export-csv" type="button">⇩ CSV</button>
+                <button id="archive-export-json" type="button">⇩ JSON</button>
+                <button id="archive-export-pgn" type="button">⇩ PGN UCI</button>
+              </section>
+              <p class="archive-source-note">Sem busca de PGNs externos. Os registros exibidos são lidos do workspace atual. Nenhum lance é inventado para projeções.</p>
+            </section>
+            <section id="archive-pane-tournaments" class="archive-pane" hidden>
+              <section class="archive-card"><h3>♜ Participações no simulador</h3>
+                <p class="archive-muted">Agrupadas por fonte local verificada; títulos históricos não são derivados desta tabela.</p>
+                <div id="archive-tournament-list"></div>
+              </section>
+            </section>
+            <section id="archive-pane-elo" class="archive-pane" hidden>
+              <section class="archive-card"><h3>▥ Elo experimental do simulador</h3>
+                <p class="archive-muted">Cada modalidade tem um rating isolado a partir de 2500. Não é Elo FIDE nem força histórica comprovada.</p>
+                <label for="archive-rating-modality">Modalidade</label>
+                <select id="archive-rating-modality">
+                  <option value="classical">Clássico</option><option value="rapid">Rápido</option>
+                  <option value="blitz">Blitz</option><option value="bullet">Bullet</option>
+                  <option value="unclassified">Sem relógio</option>
+                </select>
+                <div id="archive-rating-info"></div>
+                <p class="archive-muted">Sem curva histórica fabricada: o Elo experimental só é calculado com jogos UCI validados.</p>
+              </section>
+            </section>
+            <section id="archive-pane-records" class="archive-pane" hidden>
+              <p class="archive-muted">Biografia, conquistas, fontes, partidas documentadas e transparência dos resultados do simulador.</p>
+            </section>
+          </div>
+        </section>
+        <dialog id="archive-replay-dialog" class="archive-replay-dialog" aria-labelledby="archive-replay-title">
+          <header><h3 id="archive-replay-title">Replay verificado</h3>
+            <button type="button" id="archive-replay-close" aria-label="Fechar replay">✕</button></header>
+          <p id="archive-replay-metadata" class="archive-muted"></p>
+          <div class="archive-replay-layout">
+            <div id="archive-replay-board" class="board" role="img" aria-label="Posição da partida"></div>
+            <div class="archive-replay-side">
+              <ol id="archive-replay-moves"></ol>
+              <div class="archive-replay-controls">
+                <button id="archive-replay-first" type="button">⇤</button>
+                <button id="archive-replay-prev" type="button">‹</button>
+                <span id="archive-replay-counter">0/0</span>
+                <button id="archive-replay-next" type="button">›</button>
+                <button id="archive-replay-last" type="button">⇥</button>
+              </div>
+            </div>
+          </div>
+        </dialog>
+        <div id="history-original" hidden>
         <div id="history-profile-body"></div>
         <section id="history-games-section" class="history-games" aria-labelledby="history-games-heading" hidden>
           <h3 id="history-games-heading">Partidas para explorar</h3>
@@ -857,6 +1020,7 @@
           <p id="history-stats-coverage" class="history-stats-scope"></p>
           <p id="history-stats-warning" class="history-stats-warning" role="status"></p>
         </section>
+        </div>
       </section>
       <p class="history-disclaimer">Os resultados de motores são experimentais e não representam partidas ou feitos dos jogadores reais. Fotografias documentais não implicam aprovação deste projeto pelas pessoas retratadas.</p>
     </section>

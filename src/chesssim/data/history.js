@@ -164,6 +164,7 @@
       window.ChessSimHistoryGames.enter(selected.slug);
       window.ChessSimHistoryStats.enter(selected.slug);
       window.ChessSimRatings?.enter(selected.slug);
+      window.ChessSimHistoryArchive?.enter(profile,state.players);
       byId("history-status").textContent = "";
       byId("history-back").focus();
     } catch (_) {
@@ -175,6 +176,7 @@
     window.ChessSimHistoryGames.leave();
     window.ChessSimHistoryStats.leave();
     window.ChessSimRatings?.leave();
+    window.ChessSimHistoryArchive?.leave();
     ++state.seq;
     state.view = "roster";
     byId("history-profile").hidden = true;
@@ -224,6 +226,7 @@
         window.ChessSimHistoryGames.resume();
         window.ChessSimHistoryStats.resume();
         window.ChessSimRatings?.resume();
+        window.ChessSimHistoryArchive?.resume();
       }
       byId("history-heading").setAttribute("tabindex", "-1");
       byId("history-heading").focus();
@@ -233,6 +236,7 @@
       window.ChessSimHistoryGames.suspend();
       window.ChessSimHistoryStats.suspend();
       window.ChessSimRatings?.suspend();
+      window.ChessSimHistoryArchive?.suspend();
       byId("tab-arena").focus();
     }
   }

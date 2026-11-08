@@ -21,6 +21,7 @@ from .catalog import load_roster, find_player
 from .history_profiles import list_history_players, load_history_profile
 from .history_games import InvalidCatalogue, UnknownGame, list_games, replay
 from .history_stats import player_stats
+from .history_archive import archive as player_archive, replay as archive_replay, export_page as archive_export, ArchiveInput
 from .competition_rating import rating_report, RATING_POOLS
 from .human_game import HumanGame, HumanInput, HumanBusy
 from .leagues import LeagueManager, LeagueInput, LeagueBusy
@@ -631,6 +632,49 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 except (OSError, ValueError, KeyError, TypeError, StopIteration,
                         json.JSONDecodeError):
                     self._json(503, {"error": "Elo experimental indisponível"})
+            elif re.fullmatch(r"/api/history/players/[a-z0-9-]{2,48}/archive/export/(json|csv|pgn)",url.path):
+                match = re.fullmatch(
+                    r"/api/history/players/([a-z0-9-]{2,48})/archive/export/(json|csv|pgn)",url.path)
+                try:
+                    body, kind, ext = archive_export(
+                        manager.workspace, match.group(1), url.query, match.group(2))
+                    self.send_response(200)
+                    self.send_header("Content-Type",kind)
+                    self.send_header("Content-Length",str(len(body)))
+                    self.send_header("Content-Disposition",
+                        'attachment; filename="chesssim-'+match.group(1)+'-archive.'+ext+'"')
+                    self.send_header("Cache-Control","no-store")
+                    self.send_header("X-Content-Type-Options","nosniff")
+                    self.end_headers()
+                    self.wfile.write(body)
+                except ArchiveInput as exc:
+                    self._json(400,{"error":str(exc)})
+                except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+                    self._json(503,{"error":"Exportação do arquivo indisponível"})
+            elif re.fullmatch(r"/api/history/players/[a-z0-9-]{2,48}/archive",url.path):
+                slug=url.path.split("/")[4]
+                try:
+                    self._json(200,player_archive(manager.workspace,slug,url.query))
+                except ArchiveInput as exc:
+                    self._json(400,{"error":str(exc)})
+                except (OSError, ValueError, KeyError, TypeError,
+                        json.JSONDecodeError):
+                    self._json(503,{"error":"Arquivo de partidas indisponível"})
+            elif url.path == "/api/history/archive/replay":
+                from urllib.parse import parse_qs
+                query=parse_qs(url.query,keep_blank_values=True)
+                if (set(query)!={"slug","id"} or len(query["slug"])!=1 or
+                        len(query["id"])!=1):
+                    self._json(400,{"error":"Identificação de replay inválida"})
+                else:
+                    try:
+                        self._json(200,archive_replay(manager.workspace,
+                                                    query["slug"][0],query["id"][0]))
+                    except ArchiveInput as exc:
+                        self._json(404,{"error":str(exc)})
+                    except (OSError, ValueError, KeyError, TypeError,
+                            json.JSONDecodeError):
+                        self._json(503,{"error":"Replay indisponível"})
             elif url.path == "/api/history/players" and not url.query:
                 try:
                     self._json(200, list_history_players())
@@ -727,7 +771,7 @@ def make_arena_handler(manager: ArenaManager, token: str):
                         KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "Estado do duelo indisponível"})
             elif url.path in ("/", "/arena.js", "/arena.css", "/history.js", "/history_replay.js", "/history_stats.js", "/competition_rating.js", "/history.css", "/chess-board.js", "/chess-board.css", "/board-preferences.js", "/human-play.js", "/league.js", "/league.css",
-                              "/cup.js", "/cup.css", "/viewer"):
+                              "/cup.js", "/cup.css", "/history_archive.js", "/history_archive.css", "/viewer"):
                 asset = {"/": "arena.html", "/arena.js": "arena.js",
                          "/arena.css": "arena.css", "/history.js": "history.js",
                          "/history_replay.js": "history_replay.js",
@@ -740,6 +784,8 @@ def make_arena_handler(manager: ArenaManager, token: str):
                          "/league.js": "league.js",
                          "/league.css": "league.css",
                          "/cup.js": "cup.js", "/cup.css": "cup.css",
+                         "/history_archive.js": "history_archive.js",
+                         "/history_archive.css": "history_archive.css",
                          "/chess-board.css": "chess_board.css", "/viewer": "monitor.html"}[url.path]
                 kind = ("text/html; charset=utf-8" if asset.endswith(".html") else
                         "text/javascript; charset=utf-8" if asset.endswith(".js") else
