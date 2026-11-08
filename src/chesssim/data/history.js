@@ -211,6 +211,7 @@
   }
   function toggle(toHistory) {
     window.ChessSimLeagueNavigation?.hide();
+    window.ChessSimCupNavigation?.hide();
     byId("league-view").hidden = true;
     byId("tab-leagues").setAttribute("aria-pressed", "false");
     byId("arena-view").hidden = toHistory;

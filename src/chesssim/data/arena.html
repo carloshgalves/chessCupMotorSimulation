@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/chess-board.css">
   <link rel="stylesheet" href="/history.css">
   <link rel="stylesheet" href="/league.css">
+  <link rel="stylesheet" href="/cup.css">
   <script src="/arena.js" defer></script>
   <script src="/chess-board.js" defer></script>
   <script src="/human-play.js" defer></script>
@@ -17,6 +18,7 @@
   <script src="/competition_rating.js" defer></script>
   <script src="/history.js" defer></script>
   <script src="/league.js" defer></script>
+  <script src="/cup.js" defer></script>
 </head>
 <body>
   <main class="layout">
@@ -30,6 +32,7 @@
         <span class="league-nav-brand" aria-label="ChessCup Motor Simulation">♛ ChessCup Motor Simulation <small>v0.1.0</small></span>
         <button id="tab-arena" type="button" aria-pressed="true" aria-controls="arena-view">⌂ Arena</button>
         <button id="tab-leagues" type="button" aria-pressed="false" aria-controls="league-view">♜ Ligas</button>
+        <button id="tab-cups" type="button" aria-pressed="false" aria-controls="cup-view">🏆 Copas</button>
         <button id="tab-history" type="button" aria-pressed="false" aria-controls="history-view">▥ História</button>
       </nav>
 
@@ -341,6 +344,239 @@
       </section>
     </div></div>
 
+
+    <section id="cup-view" class="cup-shell" aria-labelledby="cup-heading" hidden>
+      <header class="cup-header">
+        <div><h2 id="cup-heading" tabindex="-1">🏆 Copas</h2>
+          <p>Eliminatórias, confrontos, desempates e campeões do universo ChessSim.</p></div>
+        <button id="cup-new" type="button" class="primary">＋ Nova copa</button>
+      </header>
+      <p id="cup-feedback" class="cup-feedback" role="status" aria-live="polite"></p>
+      <div class="cup-overview">
+        <aside class="cup-list-panel" aria-label="Minhas Copas">
+          <span class="cup-label">MINHAS COPAS</span>
+          <div id="cup-list"></div>
+          <p id="cup-empty-list" class="cup-muted">Nenhuma Copa criada. Escolha um preset ou configure uma nova competição.</p>
+          <div class="cup-quick-presets" aria-label="Presets disponíveis">
+            <button id="cup-preset-shortcut-standard" type="button">🏆 Standard <small>Eliminatória personalizável</small></button>
+            <button id="cup-preset-shortcut-world_champions" type="button">♛ Campeões Mundiais <small>Títulos documentados</small></button>
+            <button id="cup-preset-shortcut-women" type="button">♕ Torneio Feminino <small>5 jogadoras · turno e returno</small></button>
+            <button id="cup-preset-shortcut-custom" type="button">◇ Personalizada <small>Elenco e regras próprios</small></button>
+          </div>
+          <p class="cup-mini-note">Perfis históricos não são equivalentes a motores historicamente validados. Dados de Copa nunca alteram o Elo.</p>
+        </aside>
+        <section class="cup-central" aria-label="Acompanhamento da Copa">
+          <div id="cup-no-selection" class="cup-welcome">
+            <h3>Selecione uma Copa</h3>
+            <p>O chaveamento exibirá apenas participantes e partidas registrados, sem placares ilustrativos.</p>
+          </div>
+          <div id="cup-selection" hidden>
+            <header class="cup-season-heading">
+              <div><h3 id="cup-title">Copa</h3><div id="cup-tags" class="cup-tags"></div></div>
+              <span id="cup-status-pill" class="cup-status">Não iniciada</span>
+            </header>
+            <nav class="cup-tabs" aria-label="Áreas da Copa">
+              <button type="button" id="cup-tab-bracket" aria-pressed="true" class="active">♜ Chaveamento</button>
+              <button type="button" id="cup-tab-matches" aria-pressed="false">▦ Confrontos</button>
+              <button type="button" id="cup-tab-calendar" aria-pressed="false">◷ Calendário</button>
+              <button type="button" id="cup-tab-rules" aria-pressed="false">ⓘ Regras</button>
+            </nav>
+            <section id="cup-pane-bracket" class="cup-pane" aria-label="Chaveamento">
+              <div class="cup-bracket-title"><span id="cup-stage-heading">Quadro eliminatório</span><small id="cup-stage-caption">Participantes e confrontos</small></div>
+              <div id="cup-bracket" class="cup-bracket" role="region" tabindex="0" aria-label="Chaveamento por rodadas; role horizontal"></div>
+              <p id="cup-bracket-hint" class="cup-muted">Selecione um confronto para conhecer detalhes e acompanhar as partidas.</p>
+            </section>
+            <section id="cup-pane-matches" class="cup-pane" hidden>
+              <div id="cup-matches" class="cup-match-list"></div>
+            </section>
+            <section id="cup-pane-calendar" class="cup-pane" hidden>
+              <div id="cup-calendar" class="cup-match-list"></div>
+            </section>
+            <section id="cup-pane-rules" class="cup-pane" hidden>
+              <div id="cup-rules-content" class="cup-rules-content"></div>
+            </section>
+            <section id="cup-women-standings" class="cup-pane" hidden aria-label="Classificação do torneio feminino">
+              <div class="cup-bracket-title">♕ Classificação do torneio feminino <small>20 partidas, 10 rodadas</small></div>
+              <table class="cup-standings"><thead><tr><th>Pos</th><th>Enxadrista</th><th>J</th><th>V</th><th>E</th><th>D</th><th>Pts</th></tr></thead><tbody id="cup-women-table"></tbody></table>
+            </section>
+          </div>
+        </section>
+        <aside class="cup-right-panel" aria-label="Progresso e ações da Copa">
+          <section class="cup-mini-panel">
+            <h3>Progresso da Copa</h3>
+            <div class="cup-progress-track"><div id="cup-progress-bar"></div></div>
+            <p id="cup-progress-description" class="cup-muted">Aguardando Copa</p>
+            <div class="cup-stat-grid">
+              <div><span>Confrontos</span><strong id="cup-progress-matches">0/0</strong></div>
+              <div><span>Jogos</span><strong id="cup-progress-games">0</strong></div>
+              <div><span>Em execução</span><strong id="cup-progress-running">0</strong></div>
+            </div>
+          </section>
+          <section class="cup-mini-panel">
+            <h3>⚔ Confronto selecionado</h3>
+            <p id="cup-selected-round" class="cup-muted">Nenhum confronto selecionado</p>
+            <div id="cup-selected-players" class="cup-selected-players"><span>Selecione um confronto na chave</span></div>
+            <p id="cup-selected-score" class="cup-score">—</p>
+            <p id="cup-next-stage" class="cup-muted">Fase ainda não iniciada</p>
+            <button type="button" id="cup-run" class="primary cup-full" disabled>▶ Executar próxima partida</button>
+            <button type="button" id="cup-open-match" class="cup-full" disabled>▣ Abrir confronto / replay</button>
+          </section>
+          <section class="cup-mini-panel">
+            <h3>Fases do desempate</h3>
+            <ol id="cup-tiebreak-list" class="cup-tiebreak-list"></ol>
+          </section>
+          <section class="cup-mini-panel">
+            <h3>Ações da Copa</h3>
+            <div class="cup-export-row">
+              <button type="button" id="cup-export-pgn" disabled>⇩ Exportar PGN</button>
+              <button type="button" id="cup-export-json" disabled>⇩ Exportar JSON</button>
+            </div>
+            <button type="button" id="cup-pause" class="cup-full" disabled>Ⅱ Pausar Copa</button>
+            <p class="cup-muted">Um jogo por vez. Resultados comprovados são preservados após retomada.</p>
+          </section>
+        </aside>
+      </div>
+      <section class="cup-quick-create">
+        <h3>✚ Criar nova copa</h3>
+        <div class="cup-quick-create-row">
+          <label>Nome da Copa<input type="text" id="cup-quick-name" maxlength="80" value="Copa dos Imortais II"></label>
+          <label>Preset<select id="cup-quick-preset">
+            <option value="standard">Standard</option><option value="world_champions">Campeões Mundiais</option>
+            <option value="women">Feminino</option><option value="custom">Personalizada</option>
+          </select></label>
+          <label>Participantes<select id="cup-quick-count">
+            <option value="2">2 jogadores</option><option value="4">4 jogadores</option>
+            <option value="8" selected>8 jogadores</option><option value="16">16 jogadores</option>
+            <option value="32">32 jogadores</option><option value="64">64 jogadores</option>
+          </select></label>
+          <label>Edição (rótulo)<input type="text" id="cup-quick-edition" maxlength="40" value="Edição 2"></label>
+          <button type="button" id="cup-quick-configure" class="primary">Configurar Copa</button>
+        </div>
+      </section>
+      <footer class="cup-footer">ⓘ Competições e resultados simulados localmente. Títulos e perfis documentados não atestam fidelidade histórica do motor. Lances de tempo Armagedom são política sintética auditável.</footer>
+    </section>
+
+    <section id="cup-create-view" class="cup-shell cup-creation" aria-labelledby="cup-create-heading" hidden>
+      <header class="cup-header">
+        <div><h2 id="cup-create-heading" tabindex="-1">🏆 Criar Copa</h2>
+          <p>Escolha o formato, os participantes e as regras antes de iniciar a competição.</p></div>
+        <button type="button" id="cup-back" class="cup-back">← Voltar às Copas</button>
+      </header>
+      <p id="cup-create-feedback" class="cup-feedback" role="status" aria-live="polite"></p>
+      <div class="cup-create-grid">
+        <aside class="cup-list-panel">
+          <span class="cup-label">PRESETS DE COPA</span>
+          <div id="cup-creation-presets" class="cup-preset-list">
+            <button data-cup-preset="standard" type="button" class="active">🏆 <strong>Standard</strong><small>Eliminatória de 2 a 64 participantes</small></button>
+            <button data-cup-preset="world_champions" type="button">♛ <strong>Campeões Mundiais</strong><small>Coroa clássica e divisão FIDE 1993–2006</small></button>
+            <button data-cup-preset="women" type="button">♕ <strong>Feminino</strong><small>5 perfis, 10 rodadas em dupla volta</small></button>
+            <button data-cup-preset="custom" type="button">◇ <strong>Personalizada</strong><small>Seleção e regras de sua preferência</small></button>
+          </div>
+          <p class="cup-mini-note">Campeões são selecionados por títulos documentados. Jogadoras do catálogo não são apresentadas como campeãs do Mundial Feminino.</p>
+        </aside>
+        <section class="cup-config-panel">
+          <h3>Configurar competição</h3>
+          <p id="cup-preset-description" class="cup-muted">Uma Copa virtual com duas partidas clássicas e desempates.</p>
+          <form id="cup-create-form">
+            <fieldset>
+              <legend>Identificação e chaveamento</legend>
+              <div class="cup-config-fields">
+                <label>Nome da Copa<input id="cup-name" maxlength="80" minlength="3" required value="Copa dos Imortais"></label>
+                <label>Edição<input id="cup-edition" maxlength="40" required value="Edição 1"></label>
+                <label>Tamanho da chave
+                  <select id="cup-count">
+                    <option value="2">2 participantes</option><option value="4">4 participantes</option>
+                    <option value="8" selected>8 participantes</option><option value="16">16 participantes</option>
+                    <option value="32">32 participantes</option><option value="64">64 participantes</option>
+                  </select></label>
+                <label>Semeadura<select id="cup-seed-method">
+                  <option value="deterministic_draw">Sorteio determinístico</option>
+                </select></label>
+                <label>Semente registrada<input id="cup-seed" type="number" min="0" max="2147483647" step="1" required value="20251107"></label>
+                <label>Formato<input id="cup-format" readonly value="Mata-mata com byes explícitos"></label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Participantes <span id="cup-count-label">0/8</span></legend>
+              <p id="cup-roster-note" class="cup-muted">Perfis não instalados impedem a execução UCI real.</p>
+              <div id="cup-participants" class="cup-participants" role="group" aria-label="Seleção de participantes da Copa"></div>
+            </fieldset>
+            <fieldset>
+              <legend>Configuração de execução</legend>
+              <div class="cup-config-fields cup-three">
+                <label>Tipo de execução<select id="cup-execution">
+                  <option value="engine_full">Motor UCI real · PGN verificável</option>
+                  <option value="fast_statistical">Projeção sintética · sem PGN/Elo</option>
+                </select></label>
+                <label>Profundidade máxima<input id="cup-depth" type="number" min="1" max="16" value="6"></label>
+                <label>Ordem de execução<input readonly value="Serial · 1 partida por vez"></label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Armagedom · lances de tempo sintéticos e auditáveis</legend>
+              <p class="cup-muted">Padrão FIDE 2025: brancas 4+2; pretas recebem o menor lance de tempo. Empate dá a vitória às pretas. O protocolo UCI não produz ofertas: o simulador usa uma política determinística identificada.</p>
+              <div class="cup-config-fields cup-four">
+                <label>Brancas · segundos<input id="cup-white-seconds" type="number" min="60" max="3600" step="1" value="240"></label>
+                <label>Incremento · segundos<input id="cup-increment" type="number" min="0" max="30" step="1" value="2"></label>
+                <label>Lance mínimo das pretas<input id="cup-bid-min" type="number" min="30" max="3600" step="1" value="60"></label>
+                <label>Lance máximo das pretas<input id="cup-bid-max" type="number" min="30" max="3600" step="1" value="240"></label>
+              </div>
+            </fieldset>
+            <div class="cup-form-actions">
+              <button type="button" id="cup-cancel">Cancelar</button>
+              <button type="submit" id="cup-save" class="primary">✓ Criar Copa</button>
+            </div>
+          </form>
+        </section>
+        <aside class="cup-creation-right">
+          <section class="cup-mini-panel">
+            <h3>⚒ Regras do confronto</h3>
+            <p class="cup-muted">Passar à próxima etapa apenas se a série anterior terminar empatada.</p>
+            <ol id="cup-creation-stages" class="cup-tiebreak-list">
+              <li>2 partidas clássicas · 90 min para 40 lances, depois 30 min + 30 s/lance</li>
+              <li>Rápido 15+10 · 2 partidas</li>
+              <li>Rápido 10+10 · 2 partidas</li>
+              <li>Blitz 5+3 · 2 partidas</li>
+              <li>Blitz 3+2 · 2 partidas</li>
+              <li>Armagedom · 4+2 · lances de tempo auditáveis</li>
+            </ol>
+          </section>
+          <section class="cup-mini-panel cup-explainer">
+            <h3>ⓘ Sobre os dados</h3>
+            <p>A elegibilidade pelo título mundial e o elenco feminino são documentados; não representam a força histórica dos perfis.</p>
+            <p>Em caso de bye, ninguém recebe um PGN fictício. Partidas incompletas não pontuam.</p>
+          </section>
+          <section class="cup-mini-panel">
+            <h3>Resumo do calendário</h3>
+            <div class="cup-stat-grid">
+              <div><span>Participantes</span><strong id="cup-summary-players">8</strong></div>
+              <div><span>Rodadas</span><strong id="cup-summary-rounds">3</strong></div>
+              <div><span>Confrontos</span><strong id="cup-summary-matches">7</strong></div>
+            </div>
+            <p id="cup-summary-note" class="cup-muted">Resultados dependerão apenas dos jogos comprovados.</p>
+          </section>
+        </aside>
+      </div>
+      <footer class="cup-footer">ⓘ FIDE World Cup 2025, §§ 4.7.1–4.7.5. Lances sintéticos são política de simulação rotulada e registrada, não ofertas feitas pelos motores UCI.</footer>
+    </section>
+
+    <dialog id="cup-replay-dialog" class="cup-replay-dialog" aria-labelledby="cup-replay-heading">
+      <header><h2 id="cup-replay-heading">Replay da Copa</h2><button type="button" id="cup-replay-close" aria-label="Fechar replay">✕</button></header>
+      <p id="cup-replay-meta" class="cup-muted"></p>
+      <div class="cup-replay-body">
+        <div id="cup-replay-board" class="board" aria-label="Tabuleiro de replay"></div>
+        <div>
+          <ol id="cup-replay-moves" class="cup-replay-moves"></ol>
+          <div class="cup-replay-controls">
+            <button id="cup-replay-first" type="button">⇤</button>
+            <button id="cup-replay-prev" type="button">‹</button>
+            <span id="cup-replay-ply">0/0</span>
+            <button id="cup-replay-next" type="button">›</button>
+            <button id="cup-replay-last" type="button">⇥</button>
+          </div>
+        </div>
+      </div>
+    </dialog>
     <section id="league-view" class="league-shell" aria-labelledby="league-heading" hidden>
       <header class="league-page-heading">
         <div>
