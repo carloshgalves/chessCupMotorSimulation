@@ -455,3 +455,48 @@ def test_engine_mode_without_registered_profiles_fails_with_clear_reason(manager
     with pytest.raises(leagues.LeagueInput,match="Perfis Rodent IV indisponíveis"):
         manager.run(ident)
     assert manager.detail(ident)["completed_games"]==0
+
+
+def test_64_engine_receipt_scopes_profile_hashes_to_participants(manager):
+    """A 4,032-game ledger must not repeat the 64-profile catalog per game."""
+    cfg=config(n=64,fmt="double",execution="engine_full")
+    ident=manager.create(cfg)["id"]
+    state=manager._load(ident)
+    state["resources"]={
+        "engine_sha256":"a"*64,
+        "profile_sha256":{slug:format(i,"064x")
+                          for i,slug in enumerate(cfg["participants"],1)},
+    }
+    manager._save(state)
+    game_match=leagues.schedule(cfg["participants"],"double")[0][0]
+    white=game_match["white"]
+    black=game_match["black"]
+    game=chess.pgn.Game()
+    game.headers.update({
+        "White":find_player(white).name,
+        "Black":find_player(black).name,
+        "Round":str(game_match["round"]),
+        "Result":"0-1",
+        "Termination":"CHECKMATE",
+        "TimeControl":"900+10",
+        "EngineSHA256":state["resources"]["engine_sha256"],
+        "WhiteProfileSHA256":state["resources"]["profile_sha256"][white],
+        "BlackProfileSHA256":state["resources"]["profile_sha256"][black],
+    })
+    node=game
+    position=game.board()
+    for uci in ("f2f3","e7e5","g2g4","d8h4"):
+        move=chess.Move.from_uci(uci)
+        assert move in position.legal_moves
+        node=node.add_variation(move)
+        position.push(move)
+    assert position.is_checkmate()
+    manager._record(state,game_match,"0-1",leagues.utc(),
+                    pgn=game,termination="CHECKMATE")
+    ledger=manager._ledger(state)
+    entry=ledger[game_match["id"]]
+    assert set(entry["engine"]["profile_sha256"])=={white,black}
+    assert entry["engine"]["engine_sha256"]=="a"*64
+    assert len(leagues.canonical(entry))<2048
+    assert len(leagues.canonical(entry))*4032<leagues.MAX_LEDGER_BYTES
+    assert manager.detail(ident)["completed_games"]==1

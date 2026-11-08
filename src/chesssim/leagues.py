@@ -389,9 +389,17 @@ class LeagueManager:
                     entry["result"] != projected_result(state["config"], match)):
                 raise ValueError("Projeção estatística não possui PGN ou engine")
         else:
+            resources = state.get("resources")
+            expected_engine = ({
+                "engine_sha256": resources["engine_sha256"],
+                "profile_sha256": {
+                    slug: resources["profile_sha256"][slug]
+                    for slug in (match["white"], match["black"])
+                },
+            } if isinstance(resources, dict) else None)
             if (pgn_path != f"games/{match['id']}.pgn" or
                     not isinstance(entry.get("engine"), dict) or
-                    entry["engine"] != state.get("resources")):
+                    entry["engine"] != expected_engine):
                 raise ValueError("Proveniência do motor divergente")
             if verify:
                 pgn = self._dir(state["id"]) / pgn_path
@@ -484,7 +492,13 @@ class LeagueManager:
             "virtual_round": f"Rodada {match['round']}",
             "pgn": relative, "pgn_sha256": pgn_sha,
             "clock_left": meta.get("clock_left") if meta is not None else None,
-            "engine": state["resources"] if pgn is not None else None,
+            "engine": ({
+                "engine_sha256": state["resources"]["engine_sha256"],
+                "profile_sha256": {
+                    slug: state["resources"]["profile_sha256"][slug]
+                    for slug in (match["white"], match["black"])
+                },
+            } if pgn is not None else None),
         }
         item["sha256"] = digest(item)
         receipt = self._receipt(state["id"], match["id"])
