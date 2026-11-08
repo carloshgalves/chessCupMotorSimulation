@@ -747,8 +747,7 @@
         state.selection=[...selected];
         updateSummary();
       });
-      const text=node("span",null,name(slug)+
-        (player(slug)?.installed?"":" · perfil UCI ausente"));
+      const text=node("span",null,name(slug));
       label.append(input,text);
       box.appendChild(label);
     }
