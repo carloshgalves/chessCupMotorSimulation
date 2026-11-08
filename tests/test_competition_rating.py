@@ -112,7 +112,7 @@ def test_resume_duplicate_incomplete_and_conflicting_identity_fail_closed():
     two=event(1,status="INCOMPLETE",result=None)
     report=build_rating_ledger([one,one,two,two])
     assert report["counts"] == {
-        "scored_games":1,"ignored_incomplete":1,
+        "scored_games":1,"ignored_incomplete":1,"ignored_ineligible":0,
         "duplicate_records":2,"participants":64}
     assert by_slug(report,"fischer")["games"] == 1
     assert by_slug(report,"tal")["losses"] == 1

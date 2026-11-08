@@ -92,12 +92,19 @@ def test_cup_uci_game_updates_profile_history_and_classical_rating(local_cups):
               for p in (workspace / "cups" / ident).rglob("*") if p.is_file()}
     fischer = player_stats(workspace, "fischer")
     tal = player_stats(workspace, "tal")
+    # The seeded stage lottery decides colors independently; Fool's Mate
+    # is always a Black victory, not necessarily Tal's victory.
+    played = result["recent"][0]
+    assert played["result"] == "0-1"
+    winner = played["black"]
     assert fischer["totals"] == {
-        "games": 1, "completed": 1, "wins": 0, "draws": 0,
-        "losses": 1, "incomplete": 0, "tournaments": 1, "duels": 1,
+        "games": 1, "completed": 1,
+        "wins": int(winner == "fischer"), "draws": 0,
+        "losses": int(winner != "fischer"),
+        "incomplete": 0, "tournaments": 1, "duels": 1,
     }
     assert tal["totals"]["games"] == 1
-    assert tal["totals"]["wins"] == 1
+    assert tal["totals"]["wins"] == int(winner == "tal")
     assert tal["totals"]["duels"] == 1
     assert fischer["coverage"]["cup_verified_games"] == 1
     assert fischer["coverage"]["arena_verified_games"] == 0
