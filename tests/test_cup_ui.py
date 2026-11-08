@@ -92,3 +92,13 @@ def test_cup_js_and_navigation_are_syntax_valid():
         r=subprocess.run(["node","--check",str(DATA/asset)],
                          capture_output=True,text=True,timeout=10)
         assert r.returncode==0,r.stdout+"\n"+r.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js unavailable")
+def test_cup_browser_navigation_creation_progress_profile_and_replay():
+    harness=Path(__file__).parent/"assets"/"cup_browser_harness.cjs"
+    result=subprocess.run(
+        ["node",str(harness),str(DATA/"cup.js")],
+        capture_output=True,text=True,timeout=20,check=False)
+    assert result.returncode==0,result.stdout+"\n"+result.stderr
+    assert "Cup browser smoke: PASS" in result.stdout
