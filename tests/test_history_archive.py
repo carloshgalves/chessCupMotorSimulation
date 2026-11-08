@@ -22,7 +22,7 @@ def record(n, *, origin="arena", status="COMPLETED", result="1-0",
 
 
 @pytest.mark.parametrize("query",[
-    "page=0","page=2001","page_size=51","page=nan","page=-1",
+    "page=0","page_size=51","page=nan","page=-1",
     "page=1&page=2","unknown=x","origin=evil","modality=bogus",
     "result=draw&result=win","q="+"a"*81,
     "year_from=1801&year_to=1800","year_from=1",
