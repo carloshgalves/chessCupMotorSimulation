@@ -9,7 +9,7 @@ DATA = Path(__file__).resolve().parents[1] / "src" / "chesssim" / "data"
 
 def test_history_and_representation_share_one_document_with_unique_ids():
     html = (DATA / "arena.html").read_text(encoding="utf-8")
-    ids = re.findall(r'\\bid="([^"]+)"', html)
+    ids = re.findall(r'\bid="([^"]+)"', html)
     assert len(ids) == len(set(ids)), "Duplicated History HTML IDs"
     assert {"history-modern", "representation-view", "history-original",
             "archive-pane-games", "rep-run", "archive-replay-dialog",
