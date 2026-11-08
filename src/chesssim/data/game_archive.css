@@ -1,0 +1,118 @@
+/* Issue #70 — approved sports-management history dashboard and archive. */
+.ha-layout{--ha-line:#3c6070;display:grid;grid-template-columns:minmax(190px,24%) minmax(0,1fr);
+  gap:11px;align-items:start;margin-top:10px}
+.ha-layout [hidden],.ha-replay-dialog[hidden]{display:none!important}
+.ha-layout :is(button,input,select){font:inherit}
+.ha-layout button{min-height:36px;padding:7px 10px;background:#1a3a48;border:1px solid #476b78;
+  border-radius:7px;color:#eff8f9;cursor:pointer}
+.ha-layout button:hover{border-color:#69c4a4}
+.ha-layout :is(button,input,select):focus-visible{outline:3px solid #f0dca1;outline-offset:2px}
+.ha-layout button:disabled{opacity:.5;cursor:not-allowed}
+.ha-layout button.primary,.ha-row-replay{border-color:#40c98c;background:#176349;color:#ddffe9}
+.ha-layout h3{font-size:1.04rem;line-height:1.2;margin:0 0 10px}
+.ha-layout p{font-size:.82rem;line-height:1.45}
+.ha-muted{font-size:.74rem;color:#b8ced6}
+.ha-players{border:1px solid var(--ha-line);border-radius:10px;background:#112b37;
+  padding:12px;max-height:790px;overflow-y:auto;scrollbar-width:thin}
+.ha-players h3{font-size:1.3rem}
+.ha-players label{display:block;font-size:.75rem;margin:10px 0 6px}
+.ha-players input{width:100%;padding:9px;background:#1a3845;color:#f3f5f5;
+  border:1px solid #56798a;border-radius:7px}
+.ha-player-list{display:grid;gap:6px;margin-top:11px}
+.ha-player-choice{min-height:52px!important;text-align:left;width:100%}
+.ha-player-choice[aria-pressed=true]{background:#15583f;border-color:#4cdf9c}
+.ha-player-choice strong,.ha-player-choice small{display:block}
+.ha-player-choice strong{font-size:.82rem}
+.ha-player-choice small{font-size:.71rem;color:#bdd2d8}
+.ha-main{min-width:0}
+.ha-profile-identity{padding:13px 17px;background:#102b38;border:1px solid var(--ha-line);
+  border-radius:10px;margin-bottom:9px}
+.ha-profile-identity h3{font-size:1.35rem;margin:0 0 5px}
+.ha-profile-identity p{margin:4px 0;color:#bfd0d7}
+.ha-tabs{display:flex;overflow-x:auto;gap:3px;background:#0e2733;border:1px solid #345566;
+  border-radius:9px 9px 0 0;margin-bottom:9px}
+.ha-tabs button{background:transparent;border:0;border-radius:0!important;
+  min-width:102px;white-space:nowrap;font-size:.81rem}
+.ha-tabs button[aria-pressed=true]{border-bottom:3px solid #50dda0;color:#cafbde;
+  background:#16483d;font-weight:700}
+.ha-pane{min-width:0}
+.ha-overview-tiles{display:grid;grid-template-columns:1.05fr .95fr;gap:9px}
+.ha-card{padding:13px;border:1px solid var(--ha-line);border-radius:10px;
+  background:#102d39;margin-bottom:10px;min-width:0}
+.ha-card h3{border-bottom:1px solid #365e6a;padding-bottom:8px}
+.ha-stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.ha-stat{padding:9px;background:#193945;border:1px solid #3a6877;border-radius:8px}
+.ha-stat small,.ha-stat strong{display:block}
+.ha-stat small{color:#bcd3da;font-size:.7rem}
+.ha-stat strong{font-size:1.32rem;margin-top:4px;color:#e8f3ed;font-variant-numeric:tabular-nums}
+.ha-recent{display:grid;gap:5px}
+.ha-recent-row{display:grid;grid-template-columns:63px minmax(0,1fr) 60px auto;
+  gap:7px;align-items:center;border-bottom:1px solid #325563;
+  padding:6px 0;font-size:.72rem}
+.ha-recent-row button{font-size:.72rem;min-height:30px;padding:4px}
+#ha-view-all{margin-top:10px;width:100%;border-color:#4fae95}
+.ha-original-profile{border:1px solid #345b6c;background:#102631;border-radius:9px;
+  padding:13px;margin-top:10px}
+.ha-section-heading{display:flex;justify-content:space-between;gap:10px}
+.ha-section-heading h3{font-size:1.18rem}
+.ha-section-heading p{font-size:.81rem;color:#bacfd6;margin:0 0 10px}
+.ha-counter-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px;margin-bottom:10px}
+.ha-counter-grid>div{background:#193844;border:1px solid #385e70;
+  border-radius:9px;padding:12px}
+.ha-counter-grid small{display:block;font-size:.72rem;color:#c1d1d8}
+.ha-counter-grid strong{font-size:1.31rem;color:#85f1bd}
+.ha-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;align-items:end;margin-bottom:10px}
+.ha-filters label{min-width:0;font-size:.73rem}
+.ha-filters :is(input,select){width:100%;display:block;padding:7px;
+  min-height:37px;color:#eff6f7;background:#1b3b49;
+  border:1px solid #567989;border-radius:7px;margin-top:5px;font-size:.79rem}
+.ha-filters button{min-height:37px;font-size:.78rem}
+.ha-filters button.primary{background:#166949;border-color:#43c98e}
+#ha-status.ha-error{color:#ffb5a6}
+.ha-table-wrap{max-width:100%;max-height:510px;overflow:auto;scrollbar-width:thin;
+  border-radius:9px;border:1px solid #3d6472}
+.ha-table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:.77rem}
+.ha-table th{position:sticky;top:0;background:#234858;color:#e2f2f4;z-index:1}
+.ha-table th,.ha-table td{padding:9px;border-bottom:1px solid #355968;text-align:left}
+.ha-table tbody tr:nth-child(odd){background:#153743}
+.ha-table tbody tr:nth-child(even){background:#112e3a}
+.ha-table tbody tr:hover{background:#1f4b50}
+.ha-source-real{color:#7ae5ad;font-weight:700}
+.ha-source-synthetic{color:#e6c177}
+.ha-table .ha-row-replay{font-size:.74rem;padding:5px 9px;min-height:31px}
+.ha-pagination{display:flex;justify-content:space-between;align-items:center;
+  padding:11px 1px;gap:7px;font-size:.75rem}
+.ha-pagination>div{display:flex;align-items:center;gap:7px}
+.ha-pagination button{font-size:.74rem}
+.ha-exports{display:flex;gap:7px;flex-wrap:wrap}
+.ha-exports button{font-size:.75rem}
+.ha-event-row{display:flex;justify-content:space-between;gap:10px;
+  border-bottom:1px solid #325867;padding:10px 4px;font-size:.82rem}
+.ha-rating-plot{min-height:170px;display:grid;align-items:center;background:#14303c;
+  border:1px solid #3a6271;border-radius:9px;margin:12px 0;padding:9px}
+.ha-rating-plot svg{width:100%;max-height:210px}
+.ha-replay-dialog{max-width:min(95vw,1040px);background:#0f2935;color:#eff5f6;
+  border:1px solid #5a8798;padding:15px;border-radius:12px}
+.ha-replay-dialog::backdrop{background:#000b}
+.ha-replay-dialog>header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ha-replay-dialog h3{margin:0}
+.ha-replay-layout{display:grid;grid-template-columns:minmax(320px,1fr) minmax(205px,.8fr);gap:13px}
+#ha-replay-board{width:100%;max-width:540px;margin:auto}
+.ha-replay-moves{display:flex;flex-wrap:wrap;gap:5px;max-height:430px;overflow-y:auto;
+  background:#173643;border:1px solid #416575;padding:8px;border-radius:8px}
+.ha-replay-moves li{list-style:none}
+.ha-replay-moves button,.ha-replay-controls button{padding:5px 8px;min-height:34px;
+  background:#244550;color:#f2f5f3;border:1px solid #517889;border-radius:7px}
+.ha-replay-controls{display:flex;align-items:center;justify-content:center;gap:7px}
+@media(max-width:1180px){.ha-overview-tiles{grid-template-columns:1fr}
+.ha-filters{grid-template-columns:repeat(3,minmax(0,1fr))}
+.ha-layout{grid-template-columns:190px minmax(0,1fr)}}
+@media(max-width:850px){.ha-layout{grid-template-columns:1fr}
+.ha-players{max-height:210px}.ha-player-list{display:flex;overflow-x:auto;max-height:115px}
+.ha-player-choice{min-width:130px}.ha-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ha-replay-layout{grid-template-columns:1fr}}
+@media(max-width:480px){.ha-filters{grid-template-columns:1fr}.ha-counter-grid{gap:4px}
+.ha-counter-grid>div{padding:8px}.ha-tabs button{min-width:95px}.ha-stats-grid{grid-template-columns:repeat(2,1fr)}
+.ha-pagination{display:block}.ha-pagination>div{margin-top:8px}}

@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/arena.css">
   <link rel="stylesheet" href="/chess-board.css">
   <link rel="stylesheet" href="/history.css">
+  <link rel="stylesheet" href="/game_archive.css">
   <link rel="stylesheet" href="/league.css">
   <link rel="stylesheet" href="/cup.css">
   <script src="/arena.js" defer></script>
@@ -17,6 +18,7 @@
   <script src="/history_stats.js" defer></script>
   <script src="/competition_rating.js" defer></script>
   <script src="/history.js" defer></script>
+  <script src="/game_archive.js" defer></script>
   <script src="/league.js" defer></script>
   <script src="/cup.js" defer></script>
 </head>
@@ -800,7 +802,41 @@
       <section id="history-profile" class="history-profile" aria-labelledby="history-profile-name" hidden>
         <button id="history-back" type="button">← Todos os jogadores</button>
         <h2 id="history-profile-name"></h2>
-        <div id="history-profile-body"></div>
+        <div class="ha-layout">
+          <aside class="ha-players">
+            <h3>História</h3>
+            <p>Perfis, carreira, partidas e estatísticas dos enxadristas.</p>
+            <label for="ha-player-search">Buscar enxadrista</label>
+            <input id="ha-player-search" type="search" placeholder="Nome do jogador…" autocomplete="off">
+            <div id="ha-player-list" class="ha-player-list" role="group" aria-label="Selecionar jogador"></div>
+          </aside>
+          <div class="ha-main">
+            <section class="ha-profile-identity">
+              <h3 id="ha-identity-name">Perfil histórico</h3>
+              <p id="ha-identity-era"></p>
+              <p class="ha-muted">Dados documentados e resultados do ChessSimulation são apresentados separadamente. Nenhum número do mockup é presumido.</p>
+            </section>
+            <nav class="ha-tabs" aria-label="Seções do perfil">
+              <button id="ha-tab-overview" aria-pressed="true" type="button">▥ Visão geral</button>
+              <button id="ha-tab-games" aria-pressed="false" type="button">♟ Partidas</button>
+              <button id="ha-tab-events" aria-pressed="false" type="button">🏆 Torneios</button>
+              <button id="ha-tab-rating" aria-pressed="false" type="button">▤ Gráfico de Elo</button>
+              <button id="ha-tab-records" aria-pressed="false" type="button">♜ Registros</button>
+            </nav>
+            <section id="ha-overview-pane" class="ha-pane">
+              <div class="ha-overview-tiles">
+                <section class="ha-card"><h3>Estatísticas no simulador · UCI verificado</h3>
+                  <div id="ha-overview-stats" class="ha-stats-grid"></div>
+                  <p class="ha-muted">Projeções sintéticas não são partidas observadas nem alteram o Elo.</p>
+                </section>
+                <section class="ha-card"><h3>Últimas partidas (simulador)</h3>
+                  <div id="ha-recent" class="ha-recent"></div>
+                  <button id="ha-view-all" type="button">☷ Ver todas as partidas</button>
+                </section>
+              </div>
+              <div class="ha-original-profile">
+                <h3>Carreira e conquistas históricas documentadas</h3>
+                <div id="history-profile-body"></div>
         <section id="history-games-section" class="history-games" aria-labelledby="history-games-heading" hidden>
           <h3 id="history-games-heading">Partidas para explorar</h3>
           <p id="history-games-status" role="status" aria-live="polite"></p>
@@ -857,6 +893,96 @@
           <p id="history-stats-coverage" class="history-stats-scope"></p>
           <p id="history-stats-warning" class="history-stats-warning" role="status"></p>
         </section>
+              </div>
+            </section>
+            <section id="ha-games-pane" class="ha-pane" hidden>
+              <header class="ha-section-heading">
+                <div><h3>Partidas no ChessSimulation</h3>
+                  <p>Arquivo pesquisável de jogos UCI, projeções e registros incompletos. Históricos reais documentados ficam separados.</p></div>
+              </header>
+              <div class="ha-counter-grid">
+                <div><small>Partidas UCI verificadas</small><strong id="ha-total-real">—</strong></div>
+                <div><small>Projeções sintéticas</small><strong id="ha-total-projected">—</strong></div>
+                <div><small>Incompletas</small><strong id="ha-total-incomplete">—</strong></div>
+              </div>
+              <section class="ha-card">
+                <form id="ha-filters" class="ha-filters">
+                  <label>Buscar<input id="ha-query" placeholder="Adversário, Copa, ID…" autocomplete="off"></label>
+                  <label>Competição<input id="ha-competition" placeholder="Todas" autocomplete="off"></label>
+                  <label>Adversário<select id="ha-opponent"><option value="">Todos</option></select></label>
+                  <label>Modalidade<select id="ha-mode"><option value="">Todas</option>
+                    <option value="classical">Clássico</option><option value="rapid">Rápido</option>
+                    <option value="blitz">Blitz</option><option value="bullet">Bullet</option>
+                    <option value="unclassified">Sem relógio/Armagedom</option></select></label>
+                  <label>Cor<select id="ha-color"><option value="">Ambas</option>
+                    <option value="white">Brancas</option><option value="black">Pretas</option></select></label>
+                  <label>Resultado<select id="ha-result"><option value="">Todos</option>
+                    <option value="win">Vitória</option><option value="draw">Empate</option>
+                    <option value="loss">Derrota</option><option value="incomplete">Incompleta</option></select></label>
+                  <label>Origem<select id="ha-source"><option value="">Todas</option>
+                    <option value="engine_full">UCI verificado</option>
+                    <option value="fast_statistical">Projeção estatística</option></select></label>
+                  <label>De<input id="ha-date-from" type="date"></label>
+                  <label>Até<input id="ha-date-to" type="date"></label>
+                  <button class="primary" type="submit">Filtrar</button>
+                  <button type="button" id="ha-reset">Restaurar filtros</button>
+                </form>
+                <p id="ha-status" role="status" aria-live="polite"></p>
+                <div class="ha-table-wrap" tabindex="0" role="region" aria-label="Tabela de partidas por jogador">
+                  <table class="ha-table">
+                    <thead><tr><th>Data verificada</th><th>Competição / fase</th>
+                      <th>Adversário</th><th>Cor</th><th>Ritmo</th>
+                      <th>Resultado</th><th>Origem</th><th>Ação</th></tr></thead>
+                    <tbody id="ha-rows"></tbody>
+                  </table>
+                </div>
+                <footer class="ha-pagination">
+                  <span id="ha-page-meta">0 partidas</span>
+                  <div><button id="ha-prev" type="button">← Anterior</button>
+                    <span id="ha-page-index">1</span>
+                    <button id="ha-next" type="button">Próxima →</button></div>
+                </footer>
+                <div class="ha-exports"><button id="ha-export-json" type="button">Exportar JSON</button>
+                  <button id="ha-export-csv" type="button">Exportar CSV</button>
+                  <button id="ha-export-pgn" type="button">Exportar PGNs disponíveis</button></div>
+                <p class="ha-muted">Dados demonstrativos do mockup não foram usados. PGNs só para partidas realmente geradas por motor; projeções não têm tabuleiro.</p>
+              </section>
+            </section>
+            <section id="ha-events-pane" class="ha-pane ha-card" hidden>
+              <h3>Torneios e competições do simulador</h3>
+              <div id="ha-event-list"></div>
+            </section>
+            <section id="ha-rating-pane" class="ha-pane ha-card" hidden>
+              <h3>Curva de Elo experimental · por modalidade</h3>
+              <p class="ha-muted">Somente partidas UCI verificadas; 2500 é o ponto inicial deste universo, não Elo histórico ou força do motor.</p>
+              <label>Modalidade<select id="ha-rating-mode"><option value="classical">Clássico</option>
+                <option value="rapid">Rápido</option><option value="blitz">Blitz</option>
+                <option value="bullet">Bullet</option></select></label>
+              <div id="ha-rating-plot" class="ha-rating-plot"></div>
+              <p id="ha-rating-status" role="status"></p>
+            </section>
+            <section id="ha-records-pane" class="ha-pane ha-card" hidden>
+              <h3>Registros do enxadrista</h3>
+              <p id="ha-records-summary">Consulte a biografia e os marcos documentados na Visão geral.</p>
+              <p>As conquistas históricas não são computadas a partir de partidas fictícias do simulador.</p>
+              <button id="ha-back-to-overview" type="button">Abrir conquistas documentadas</button>
+            </section>
+          </div>
+        </div>
+        <dialog id="ha-replay-dialog" class="ha-replay-dialog" aria-labelledby="ha-replay-title">
+          <header><h3 id="ha-replay-title">Replay · partida UCI</h3>
+            <button id="ha-replay-close" type="button" aria-label="Fechar replay">✕</button></header>
+          <p id="ha-replay-meta" class="ha-muted"></p>
+          <div class="ha-replay-layout">
+            <div id="ha-replay-board" class="board" role="img" aria-label="Posição do tabuleiro" tabindex="0"></div>
+            <div><ol id="ha-replay-moves" class="ha-replay-moves"></ol>
+              <div class="ha-replay-controls"><button id="ha-replay-first" type="button">⇤</button>
+                <button id="ha-replay-prev" type="button">◀</button>
+                <span id="ha-replay-progress">0/0</span>
+                <button id="ha-replay-next" type="button">▶</button>
+                <button id="ha-replay-last" type="button">⇥</button></div></div>
+          </div>
+        </dialog>
       </section>
       <p class="history-disclaimer">Os resultados de motores são experimentais e não representam partidas ou feitos dos jogadores reais. Fotografias documentais não implicam aprovação deste projeto pelas pessoas retratadas.</p>
     </section>

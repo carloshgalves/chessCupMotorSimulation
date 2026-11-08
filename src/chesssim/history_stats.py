@@ -30,6 +30,8 @@ from .history_games import (
 from .history_profiles import _player
 from .tournament import SCHEMA as CUP_SCHEMA, _check_bracket
 from .cups import CupManager
+from .leagues import LeagueManager
+from threading import RLock
 
 SCHEMA = "chesssim-player-stats-v1"
 MAX_SESSIONS = 8192
@@ -527,6 +529,74 @@ def _tournament_games(root: Path, names: dict[str, str], slug: str,
             _mark(coverage, "tournament_manifest")
 
 
+def _league_games(root: Path, names: dict[str,str], slug: str | None,
+                  coverage: Counter, seen: set[str], records: list[dict],
+                  dates: list[str], tournaments: set[str]) -> None:
+    """Read-only verification of UCI League games; synthetic projections excluded."""
+    base=root/"leagues"
+    if base.is_symlink() or (base.exists() and not base.is_dir()):
+        _mark(coverage,"league_directory")
+        return
+    if not base.exists():
+        return
+    manifests=sorted(base.glob("league-*/league.json"))
+    if len(manifests)>100:
+        raise StatisticsCapacityExceeded("Limite de ligas excedido")
+    reader=object.__new__(LeagueManager)
+    reader.folder=base
+    reader.workspace=root
+    reader._verified_pgn={}
+    reader._lock=RLock()
+    reader._active=None
+    for manifest in manifests:
+        coverage["league_manifests"]+=1
+        try:
+            ident=manifest.parent.name
+            if not re.fullmatch(r"league-[a-f0-9]{16}",ident):
+                raise InvalidCatalogue("ID de Liga inválido")
+            state=reader._load(ident)
+            cfg=state["config"]
+            if slug is not None and slug not in cfg["participants"]:
+                continue
+            verified=reader._ledger(state)
+            when=_timestamp(state.get("created_utc"))
+            if when:
+                dates.append(when)
+            included=0
+            for row in verified.values():
+                if slug is not None and slug not in (row["white"],row["black"]):
+                    continue
+                if row["source"]=="fast_statistical":
+                    coverage["league_synthetic_excluded"]+=1
+                    continue
+                if row["source"]!="engine_full" or not row.get("pgn"):
+                    raise InvalidCatalogue("Partida UCI sem PGN")
+                proof=row["engine"]
+                game={
+                    "id":"league:"+ident+":"+row["match_id"],
+                    "duel_id":"league:"+ident+":"+row["match_id"],
+                    "white":row["white"],"black":row["black"],
+                    "status":"COMPLETED","result":row["result"],
+                    "origin":"league","recorded_utc":when,
+                    "time_control":cfg["modality"],"clock":cfg["clock"],
+                    "engine_strength_config":{
+                        "engine_sha256":proof["engine_sha256"],
+                        "white_profile_sha256":proof["profile_sha256"][row["white"]],
+                        "black_profile_sha256":proof["profile_sha256"][row["black"]],
+                    },
+                    "evidence_pgn_sha256":row["pgn_sha256"],
+                }
+                coverage["candidate_games"]+=1
+                _record(game,seen,records,coverage)
+                included+=1
+            if included:
+                tournaments.add("league:"+ident)
+        except StatisticsCapacityExceeded:
+            raise
+        except (InvalidCatalogue,OSError,ValueError,KeyError,TypeError,AttributeError):
+            _mark(coverage,"league_manifest")
+
+
 def _cup_games(root: Path, names: dict[str, str], slug: str | None,
                coverage: Counter, seen: set[str], records: list[dict],
                dates: list[str], tournaments: set[str]) -> None:
@@ -680,13 +750,14 @@ def player_stats(workspace: Path, slug: str) -> dict:
     tournaments = set()
     _arena_games(root, names, slug, coverage, seen, records, dates)
     _tournament_games(root, names, slug, coverage, seen, records, dates, tournaments)
+    _league_games(root, names, slug, coverage, seen, records, dates, tournaments)
     _cup_games(root, names, slug, coverage, seen, records, dates, tournaments)
     totals, opponents = _tally(slug, records, tournaments)
     return {
         "schema": SCHEMA, "slug": slug,
         "scope": {
             "directory": root.name,
-            "sources": ["arena_local", "tournament_local", "cup_local"],
+            "sources": ["arena_local", "tournament_local", "league_local", "cup_local"],
             "from_utc": min(dates) if dates else None,
             "to_utc": max(dates) if dates else None,
             "date_basis": "created_utc from persisted manifest, not game duration",
@@ -696,12 +767,15 @@ def player_stats(workspace: Path, slug: str) -> dict:
             "sessions_seen": coverage["session_manifests"],
             "tournaments_seen": coverage["tournament_manifests"],
             "cups_seen": coverage["cup_manifests"],
+            "leagues_seen": coverage["league_manifests"],
+            "league_synthetic_excluded": coverage["league_synthetic_excluded"],
             "cup_synthetic_excluded": coverage["cup_synthetic_excluded"],
             "candidate_games": coverage["candidate_games"],
             "verified_games": coverage["verified_games"],
             "arena_verified_games": coverage["arena_verified_games"],
             "tournament_verified_games": coverage["tournament_verified_games"],
             "cup_verified_games": coverage["cup_verified_games"],
+            "league_verified_games": coverage["league_verified_games"],
             "rejected_games": coverage["rejected_games"],
             "rejected_records": coverage["rejected_records"],
             "excluded_attempts": coverage["excluded_attempts"],
@@ -730,6 +804,7 @@ def verified_competition_games(workspace: Path) -> tuple[list[dict], dict]:
     tournaments: set[str] = set()
     _arena_games(root, names, None, coverage, seen, records, dates)
     _tournament_games(root, names, None, coverage, seen, records, dates, tournaments)
+    _league_games(root, names, None, coverage, seen, records, dates, tournaments)
     _cup_games(root, names, None, coverage, seen, records, dates, tournaments)
     return records, {
         "candidate_games": coverage["candidate_games"],
@@ -737,7 +812,10 @@ def verified_competition_games(workspace: Path) -> tuple[list[dict], dict]:
         "arena_verified_games": coverage["arena_verified_games"],
         "tournament_verified_games": coverage["tournament_verified_games"],
         "cup_verified_games": coverage["cup_verified_games"],
+        "league_verified_games": coverage["league_verified_games"],
         "cups_seen": coverage["cup_manifests"],
+        "leagues_seen": coverage["league_manifests"],
+        "league_synthetic_excluded": coverage["league_synthetic_excluded"],
         "cup_synthetic_excluded": coverage["cup_synthetic_excluded"],
         "rejected_games": coverage["rejected_games"],
         "rejected_records": coverage["rejected_records"],
