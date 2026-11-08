@@ -6,7 +6,7 @@
   const $ = id => document.getElementById(id);
   const state = {
     slug:null,players:[],profile:null,active:false,version:0,
-    pane:"overview",filters:{q:"",origin:"all",modality:"all",result:"all"},
+    pane:"overview",filters:{q:"",origin:"all",modality:"all",result:"all",year_from:"",year_to:""},
     page:1,perPage:20,report:null,initial:null,replay:null,ply:0,
     ratingMode:"classical",loading:false,
   };
@@ -165,27 +165,19 @@
       body.append(tr);
     }
     table.append(body);modes.append(table);
-    fillTournaments(data.games);
+    fillTournaments(data.competitions);
   }
-  function fillTournaments(games){
+  function fillTournaments(competitions){
     const box=$("archive-tournament-list");box.replaceChildren();
-    const groups=new Map();
-    for(const g of games){
-      const key=g.competition;
-      const row=groups.get(key)||{name:key,games:0,verified:0,projection:0};
-      row.games++;
-      if(g.origin==="projection")row.projection++;else row.verified++;
-      groups.set(key,row);
-    }
-    for(const g of groups.values()){
+    for(const g of competitions||[]){
       const card=el("div",null,"archive-tournament-row");
       card.append(el("strong",g.name),
         el("small",g.games+" registros · "+g.verified+
-             " UCI verificados · "+g.projection+" projeções"));
+             " UCI verificados · "+g.projections+" projeções"));
       box.append(card);
     }
     if(!box.children.length)box.append(el("p",
-      "Nenhum registro local de torneio para esta seleção."));
+      "Nenhum registro local de torneio para este enxadrista."));
   }
   function fillRows(data){
     $("archive-total-count").textContent=data.total+" registros encontrados";
@@ -244,10 +236,13 @@
     $("archive-origin").value=state.filters.origin;
     $("archive-modality").value=state.filters.modality;
     $("archive-result").value=state.filters.result;
+    $("archive-year-from").value=state.filters.year_from;
+    $("archive-year-to").value=state.filters.year_to;
     $("archive-roster-mode").value=state.filters.modality;
   }
   async function load(){
-    if(!state.active||!state.slug||state.loading)return;
+    if(!state.active||!state.slug)return;
+    // Concurrent queries are intentional; generation rejects stale replies.
     state.loading=true;
     const version=++state.version,slug=state.slug;
     const url="/api/history/players/"+slug+"/archive?"+pageQuery();
@@ -266,13 +261,15 @@
       status("");
     }catch(error){
       if(version===state.version)status(error.message,true);
-    }finally{state.loading=false;}
+    }finally{if(version===state.version)state.loading=false;}
   }
   $("archive-filters").addEventListener("submit",event=>{
     event.preventDefault();
     state.filters={
       q:$("archive-search").value.trim(),origin:$("archive-origin").value,
-      modality:$("archive-modality").value,result:$("archive-result").value
+      modality:$("archive-modality").value,result:$("archive-result").value,
+      year_from:$("archive-year-from").value,
+      year_to:$("archive-year-to").value
     };
     state.page=1;
     load();
@@ -378,7 +375,8 @@
     state.initial=null;
     state.report=null;
     state.loading=false;
-    state.filters={q:"",origin:"all",modality:"all",result:"all"};
+    state.filters={q:"",origin:"all",modality:"all",result:"all",
+                   year_from:"",year_to:""};
     $("history-modern").hidden=false;
     $("history-original").hidden=true;
     $("archive-roster-search").value="";

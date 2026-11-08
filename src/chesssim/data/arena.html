@@ -892,6 +892,14 @@
                   <option value="draw">Empates</option><option value="loss">Derrotas</option>
                   <option value="incomplete">Incompletas</option>
                 </select></label>
+                <details id="archive-advanced" class="archive-advanced">
+                  <summary>Mais filtros</summary>
+                  <div class="archive-advanced-fields">
+                    <label>Ano inicial (registro)<input id="archive-year-from" type="number" min="1800" max="2100" placeholder="Ex.: 2026"></label>
+                    <label>Ano final (registro)<input id="archive-year-to" type="number" min="1800" max="2100" placeholder="Ex.: 2027"></label>
+                    <p class="archive-muted">Filtra a data registrada pelo simulador, não o ano de uma partida histórica.</p>
+                  </div>
+                </details>
                 <button type="submit" class="archive-primary">Pesquisar</button>
               </form>
               <p id="archive-search-status" role="status" aria-live="polite"></p>

@@ -28,7 +28,8 @@ MAX_PAGE_SIZE = 50
 MAX_CUP_SCAN = 100
 MAX_SYNTHETIC_ROWS = 4096
 ID_RX = re.compile(r"(?:arena|tournament|cup):[a-z0-9_./:-]{1,450}\Z")
-FILTERS = frozenset({"q", "origin", "modality", "result", "page", "page_size"})
+FILTERS = frozenset({"q", "origin", "modality", "result",
+                     "year_from", "year_to", "page", "page_size"})
 ORIGINS = frozenset({"all", "arena", "tournament", "cup", "projection"})
 MODALITIES = frozenset({"all", "classical", "rapid", "blitz", "bullet",
                         "unclassified"})
@@ -60,7 +61,18 @@ def parameters(query: str) -> dict:
             result["modality"] not in MODALITIES or
             result["result"] not in RESULTS):
         raise ArchiveInput("Filtro inválido")
-    for key, default, upper in (("page", 1, 2000), ("page_size", 20, MAX_PAGE_SIZE)):
+    for key in ("year_from", "year_to"):
+        raw = values.get(key, "")
+        if not raw:
+            result[key] = None
+        elif not raw.isascii() or not raw.isdecimal() or not 1800 <= int(raw) <= 2100:
+            raise ArchiveInput("Ano do registro inválido")
+        else:
+            result[key] = int(raw)
+    if (result["year_from"] is not None and result["year_to"] is not None
+            and result["year_from"] > result["year_to"]):
+        raise ArchiveInput("Intervalo de registro invertido")
+    for key, default, upper in (("page", 1, 16384), ("page_size", 20, MAX_PAGE_SIZE)):
         raw = values.get(key)
         if raw is None:
             result[key] = default
@@ -180,6 +192,10 @@ def _filtered(rows: list[dict], params: dict) -> list[dict]:
         if (params["origin"] == "all" or row["origin"] == params["origin"])
         and (params["modality"] == "all" or row["modality"] == params["modality"])
         and (params["result"] == "all" or row["outcome"] == params["result"])
+        and (params["year_from"] is None or bool(row["date"]) and
+             row["date"][:4].isdigit() and int(row["date"][:4]) >= params["year_from"])
+        and (params["year_to"] is None or bool(row["date"]) and
+             row["date"][:4].isdigit() and int(row["date"][:4]) <= params["year_to"])
         and (not text or any(text in str(row[key]).casefold() for key in (
             "id", "opponent_name", "opponent", "competition")))
     ]
@@ -202,8 +218,22 @@ def archive(workspace: Path, slug: str, query: str = "") -> dict:
             "draws": sum(g["outcome"] == "draw" for g in subset),
             "losses": sum(g["outcome"] == "loss" for g in subset),
         }
+    grouped = {}
+    for game in rows:
+        key = (game["origin"], game["competition"])
+        record = grouped.setdefault(key, {
+            "origin": game["origin"], "name": game["competition"],
+            "games": 0, "verified": 0, "projections": 0,
+        })
+        record["games"] += 1
+        if game["origin"] == "projection":
+            record["projections"] += 1
+        else:
+            record["verified"] += 1
     return {
         "schema": SCHEMA, "slug": slug, "filters": params,
+        "competitions": sorted(grouped.values(),
+            key=lambda x:(-x["games"], x["name"])),
         "total": len(filtered), "all_count": len(rows),
         "page": params["page"], "page_size": params["page_size"],
         "pages": max(1, (len(filtered)+params["page_size"]-1)//params["page_size"]),
