@@ -197,3 +197,14 @@
 }
 @media(prefers-reduced-motion:reduce){.archive-hub *{scroll-behavior:auto!important;
   animation:none!important;transition:none!important}}
+
+.archive-advanced{border:1px solid #456a77;border-radius:7px;
+  background:#1a3e49;align-self:end;font-size:.73rem;min-width:120px}
+.archive-advanced summary{padding:11px;cursor:pointer;white-space:nowrap}
+.archive-advanced[open]{grid-column:1/-1;grid-row:auto}
+.archive-advanced-fields{display:grid;grid-template-columns:1fr 1fr 2fr;
+  gap:9px;padding:9px;border-top:1px solid #365e6e;align-items:end}
+.archive-advanced-fields label{font-size:.73rem}
+.archive-advanced-fields .archive-muted{margin:0}
+@media(max-width:650px){.archive-advanced-fields{grid-template-columns:1fr 1fr}
+.archive-advanced-fields .archive-muted{grid-column:1/-1}}
