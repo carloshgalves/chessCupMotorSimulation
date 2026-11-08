@@ -25,6 +25,15 @@ MAX_REPORT_BYTES = 100_000
 MAX_REPORTS_PER_PLAYER = 100
 
 
+def _report_digest(report: dict) -> str:
+    """Cover every public report field; verify it before displaying a metric."""
+    plain = {key: value for key, value in report.items()
+             if key != "report_sha256"}
+    return sha256(json.dumps(plain, sort_keys=True, ensure_ascii=False,
+                             separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+
+
+
 class RepresentationInput(ValueError):
     """Expected user input cannot be used safely."""
 
@@ -96,7 +105,10 @@ def _results(workspace: Path, slug: str) -> list[dict]:
             raise RepresentationInput("Relatório inválido") from exc
         if (not isinstance(item, dict) or item.get("schema") != SCHEMA or
                 item.get("slug") != slug or item.get("id") != path.stem or
-                not re.fullmatch(r"test-[0-9a-f]{16}", path.stem)):
+                not re.fullmatch(r"test-[0-9a-f]{16}", path.stem) or
+                not isinstance(item.get("report_sha256"), str) or
+                not re.fullmatch(r"[a-f0-9]{64}", item["report_sha256"]) or
+                item["report_sha256"] != _report_digest(item)):
             raise RepresentationInput("Identidade ou schema do relatório inválido")
         reports.append(item)
     return reports
@@ -245,6 +257,7 @@ class RepresentationLab:
                              "O conjunto de teste final permanece lacrado.",
                              "Sem avaliação cega e calibração de força independente."],
             }
+            report["report_sha256"] = _report_digest(report)
             root = self.workspace / "representation_results"
             folder = root / person.slug
             if (root.is_symlink() or folder.is_symlink()):

@@ -130,3 +130,35 @@ def test_failed_evaluation_never_creates_bogus_scores(tmp_path,monkeypatch):
     assert lab.status("fischer")["last"]["status"]=="FAILED"
     assert lab.status("fischer")["reports"]==[]
     assert not (work/"representation_results").exists()
+
+
+def test_persisted_report_checksum_is_mandatory_and_covers_metrics(tmp_path,monkeypatch):
+    import json
+    engine,work=root(tmp_path)
+    folder=work/"representation_sources"
+    folder.mkdir()
+    (folder/"fischer.pgn").write_text("[Event \"local\"]\n",encoding="utf-8")
+    monkeypatch.setattr(rep,"extract_decisions",lambda *args,**kwargs:(
+        [{"game":str(i),"fen":"start","move":"e2e4","color":"white",
+          "year":1971} for i in range(20)],
+        {"games_accepted":20}))
+    monkeypatch.setattr(rep,"split_three_ways",lambda decisions,**kwargs:(
+        decisions[:4],decisions[4:9],decisions[9:14],
+        {"validation":{"games_sampled":5},"partition_sha256":"e"*64}))
+    lab=rep.RepresentationLab(engine,work,
+        evaluator=lambda *args,**kwargs:{"decisions":5,"correct":2})
+    result=lab.start("fischer",{"match_name":"Fischer",
+        "from_year":1970,"to_year":1972,"depth":4,"positions":20,"seed":2026})
+    lab.shutdown()
+    target=work/"representation_results"/"fischer"/(result["id"]+".json")
+    original=json.loads(target.read_text())
+    assert original["report_sha256"]==rep._report_digest(original)
+    corrupted=dict(original)
+    corrupted["sample"]=dict(original["sample"],correct_top1=5)
+    target.write_text(json.dumps(corrupted),encoding="utf-8")
+    with pytest.raises(rep.RepresentationInput,match="schema"):
+        rep.RepresentationLab(engine,work).status("fischer")
+    corrupted.pop("report_sha256")
+    target.write_text(json.dumps(corrupted),encoding="utf-8")
+    with pytest.raises(rep.RepresentationInput,match="schema"):
+        rep.RepresentationLab(engine,work).status("fischer")
