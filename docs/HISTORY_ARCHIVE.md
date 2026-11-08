@@ -44,4 +44,4 @@ python -m chesssim arena --rodent "$HOME/Projetos/Engines/rodent-iv" \\
 
 Use o **mesmo --out da homologação anterior** para que partidas já executadas apareçam. Ao abrir História e selecionar um jogador com evidência local, verifique as abas **Visão geral, Partidas, Torneios, Elo experimental, Registros**. Teste os filtros, páginas, replay real, exportação da página, e mudança entre jogadores. Copas sintéticas devem ser encontráveis mas oferecer **Sem PGN**, sem aumentar vitórias UCI ou Elo. Os valores finais só podem ser determinados pelo workspace local, não pelos exemplos ilustrados nos prints.
 
-**Gate de aceite**: CI, revisão e testes automatizados, depois comparação visual em Chrome/Debian e autorização humana antes do merge. Esta PR é independente do laboratório de representação da PR #81.
+**Gate de aceite**: CI, revisão e testes automatizados, depois comparação visual em Chrome/Debian e autorização humana antes do merge. Esta PR **depende** do laboratório da PR #81. A branch da PR #82 incorpora os dois conjuntos de telas, rotas e testes; mesclar #81 primeiro, depois retarget da #82 para `main` e revalidar o diff/CI antes do merge.
