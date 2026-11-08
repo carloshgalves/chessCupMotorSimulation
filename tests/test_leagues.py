@@ -251,9 +251,25 @@ def test_engine_provenance_true_pgn_and_cannot_change_profiles(manager,monkeypat
     assert payload.count(b'[Result "0-1"]')==2
     items=manager.history(ident)["games"]
     assert all(x["pgn_sha256"] and x["engine"] for x in items)
+    # A dashboard poll reuses verified PGNs; JSON export performs a full audit.
+    original_read=chess.pgn.read_game
+    reads=[]
+    def tracked(stream):
+        reads.append(1)
+        return original_read(stream)
+    monkeypatch.setattr(chess.pgn,"read_game",tracked)
+    manager.detail(ident)
+    manager.detail(ident)
+    assert not reads, "Repeated status requests should not parse unchanged PGNs"
+    manager.export(ident,"json")
+    assert reads, "Export must revalidate PGNs from bytes"
     (root/(players[0]+".txt")).write_bytes(b"tampered")
     with pytest.raises(leagues.LeagueInput,match="mudaram"):
         manager.run(ident)
+    pgn=manager._dir(ident)/"games"/(items[0]["match_id"]+".pgn")
+    pgn.write_text(pgn.read_text(encoding="utf-8")+"\n",encoding="utf-8")
+    with pytest.raises(ValueError,match="PGN da liga ausente ou alterado"):
+        manager.detail(ident)
 
 
 def test_tampered_ledger_and_missing_receipt_fail_closed(manager):

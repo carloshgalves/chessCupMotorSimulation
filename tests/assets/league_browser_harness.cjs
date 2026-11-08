@@ -148,8 +148,9 @@ const fetch=async(path,request={})=>{
   if(path==="/api/competition/ratings?modality=rapid")return reply({
     ratings:[{slug:"player0",display_rating:"2515.0"}]
   });
-  if(path==="/api/leagues/"+id+"/round/1")return reply({
-    id,round:1,rounds_total:14,games:[{
+  if(path==="/api/leagues/"+id+"/round/1"||
+     path==="/api/leagues/"+id+"/round/2")return reply({
+    id,round:Number(path.split("/").at(-1)),rounds_total:14,games:[{
       id:"r001-g01",round:1,
       white_name:"Jogador 1",black_name:"Jogador 2",
       status:started?"COMPLETED":"PENDING",result:started?"1-0":null

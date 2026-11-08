@@ -235,6 +235,9 @@ class LeagueManager:
         self._active: str | None = None
         self._stop = Event()
         self._shutdown = Event()
+        # Repeated league polls must not reparse thousands of PGNs.
+        # Stat changes invalidate the cache; export forces full verification.
+        self._verified_pgn: dict[tuple[str, str, str], tuple[int, int, int]] = {}
         self._recover_interrupted()
 
     def _recover_interrupted(self) -> None:
@@ -381,24 +384,30 @@ class LeagueManager:
                 raise ValueError("Proveniência do motor divergente")
             if verify:
                 pgn = self._dir(state["id"]) / pgn_path
-                if pgn.is_symlink() or not pgn.is_file() or (
-                        file_hash(pgn) != entry.get("pgn_sha256")):
+                if pgn.is_symlink() or not pgn.is_file():
                     raise ValueError("PGN da liga ausente ou alterado")
-                with pgn.open(encoding="utf-8") as stream:
-                    game = chess.pgn.read_game(stream)
-                    extra = chess.pgn.read_game(stream)
-                if (game is None or game.errors or extra is not None or
-                        game.headers.get("White") != find_player(match["white"]).name or
-                        game.headers.get("Black") != find_player(match["black"]).name or
-                        game.headers.get("Result") != entry["result"] or
-                        game.headers.get("EngineSHA256") != entry["engine"]["engine_sha256"] or
-                        game.headers.get("WhiteProfileSHA256") !=
-                        entry["engine"]["profile_sha256"][match["white"]] or
-                        game.headers.get("BlackProfileSHA256") !=
-                        entry["engine"]["profile_sha256"][match["black"]] or
-                        game.headers.get("TimeControl") !=
-                        f"{state['config']['clock'][0]}+{state['config']['clock'][1]}"):
-                    raise ValueError("PGN da liga não comprova o resultado")
+                stats = pgn.stat()
+                signature = (stats.st_ino, stats.st_size, stats.st_mtime_ns)
+                key = (state["id"], match["id"], proof)
+                if self._verified_pgn.get(key) != signature:
+                    if file_hash(pgn) != entry.get("pgn_sha256"):
+                        raise ValueError("PGN da liga ausente ou alterado")
+                    with pgn.open(encoding="utf-8") as stream:
+                        game = chess.pgn.read_game(stream)
+                        extra = chess.pgn.read_game(stream)
+                    if (game is None or game.errors or extra is not None or
+                            game.headers.get("White") != find_player(match["white"]).name or
+                            game.headers.get("Black") != find_player(match["black"]).name or
+                            game.headers.get("Result") != entry["result"] or
+                            game.headers.get("EngineSHA256") != entry["engine"]["engine_sha256"] or
+                            game.headers.get("WhiteProfileSHA256") !=
+                            entry["engine"]["profile_sha256"][match["white"]] or
+                            game.headers.get("BlackProfileSHA256") !=
+                            entry["engine"]["profile_sha256"][match["black"]] or
+                            game.headers.get("TimeControl") !=
+                            f"{state['config']['clock'][0]}+{state['config']['clock'][1]}"):
+                        raise ValueError("PGN da liga não comprova o resultado")
+                    self._verified_pgn[key] = signature
         receipt = self._receipt(state["id"], match["id"])
         if not receipt.is_file() or receipt.is_symlink():
             raise ValueError("Recibo obrigatório ausente")
@@ -702,6 +711,8 @@ class LeagueManager:
 
     def export(self, ident: str, fmt: str) -> tuple[bytes, str]:
         with self._lock:
+            # Exports are audit checkpoints: verify every PGN from bytes.
+            self._verified_pgn.clear()
             data = self.detail(ident)
             state = self._load(ident)
             entries = self._ledger(state)
