@@ -681,12 +681,24 @@ def player_stats(workspace: Path, slug: str) -> dict:
     _arena_games(root, names, slug, coverage, seen, records, dates)
     _tournament_games(root, names, slug, coverage, seen, records, dates, tournaments)
     _cup_games(root, names, slug, coverage, seen, records, dates, tournaments)
+    from .leagues import verified_league_games
+    league_games, league_projections, league_rejected = verified_league_games(root)
+    coverage["league_projections"] = len(league_projections)
+    coverage["rejected_records"] += league_rejected
+    for item in league_games:
+        if slug in (item["white"], item["black"]):
+            _record(item, seen, records, coverage)
+            tournaments.add(item["event_id"])
+            if item.get("recorded_utc"):
+                dates.append(item["recorded_utc"])
+    coverage["candidate_games"] += sum(
+        slug in (r["white"], r["black"]) for r in league_games)
     totals, opponents = _tally(slug, records, tournaments)
     return {
         "schema": SCHEMA, "slug": slug,
         "scope": {
             "directory": root.name,
-            "sources": ["arena_local", "tournament_local", "cup_local"],
+            "sources": ["arena_local", "tournament_local", "cup_local", "league_local"],
             "from_utc": min(dates) if dates else None,
             "to_utc": max(dates) if dates else None,
             "date_basis": "created_utc from persisted manifest, not game duration",
@@ -702,8 +714,8 @@ def player_stats(workspace: Path, slug: str) -> dict:
             "arena_verified_games": coverage["arena_verified_games"],
             "tournament_verified_games": coverage["tournament_verified_games"],
             "cup_verified_games": coverage["cup_verified_games"],
-        "league_verified_games": coverage["league_verified_games"],
-        "league_projection_games": coverage["league_projections"],
+            "league_verified_games": coverage["league_verified_games"],
+            "league_projection_games": coverage["league_projections"],
             "rejected_games": coverage["rejected_games"],
             "rejected_records": coverage["rejected_records"],
             "excluded_attempts": coverage["excluded_attempts"],
@@ -740,6 +752,7 @@ def verified_competition_games(workspace: Path, *,
     league_games, league_projections, league_rejected = verified_league_games(root)
     for record in league_games:
         _record(record, seen, records, coverage)
+    coverage["candidate_games"] += len(league_games)
     coverage["league_projections"] = len(league_projections)
     coverage["rejected_records"] += league_rejected
     if include_projections:
@@ -750,6 +763,8 @@ def verified_competition_games(workspace: Path, *,
         "arena_verified_games": coverage["arena_verified_games"],
         "tournament_verified_games": coverage["tournament_verified_games"],
         "cup_verified_games": coverage["cup_verified_games"],
+        "league_verified_games": coverage["league_verified_games"],
+        "league_projection_games": coverage["league_projections"],
         "cups_seen": coverage["cup_manifests"],
         "cup_synthetic_excluded": coverage["cup_synthetic_excluded"],
         "rejected_games": coverage["rejected_games"],
