@@ -410,7 +410,7 @@ class LeagueManager:
                 if pgn.parent.is_symlink() or pgn.is_symlink() or not pgn.is_file():
                     raise ValueError("PGN da liga ausente ou alterado")
                 stats = pgn.stat()
-                signature = (stats.st_ino, stats.st_size, stats.st_mtime_ns)
+                signature = (stats.st_ino, stats.st_size, stats.st_mtime_ns, stats.st_ctime_ns)
                 key = (state["id"], match["id"], proof)
                 if self._verified_pgn.get(key) != signature:
                     if file_hash(pgn) != entry.get("pgn_sha256"):
@@ -477,7 +477,7 @@ class LeagueManager:
                     pgn.headers.get("Termination") != termination):
                 raise ValueError("Resultado ou jogadores divergentes do PGN")
             game_file = directory / relative
-            if game_file.is_symlink():
+            if game_file.parent.is_symlink() or game_file.is_symlink():
                 raise ValueError("Arquivo PGN redirecionado")
             game_file.parent.mkdir(exist_ok=True)
             _atomic_text(game_file, str(pgn) + "\n")
