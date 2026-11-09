@@ -6,7 +6,7 @@
   const $ = id => document.getElementById(id);
   const state = {
     slug:null,players:[],profile:null,active:false,version:0,
-    pane:"overview",filters:{q:"",origin:"all",modality:"all",result:"all",year_from:"",year_to:""},
+    pane:"overview",filters:{q:"",origin:"all",modality:"all",result:"all",color:"all",opponent:"",engine_sha256:"",date_from:"",date_to:"",year_from:"",year_to:""},
     page:1,perPage:20,report:null,initial:null,replay:null,ply:0,
     ratingMode:"classical",loading:false,
   };
@@ -21,7 +21,7 @@
     unclassified:"Sem ritmo definido"
   };
   const originLabel={
-    arena:"UCI · Arena",tournament:"UCI · Liga",
+    arena:"UCI · Arena",tournament:"UCI · Torneio",league:"UCI · Liga",
     cup:"UCI · Copa",projection:"Projeção sintética"
   };
   const resultLabel={
@@ -53,7 +53,7 @@
     if(!raw)return "Sem data";
     const date=new Date(raw);
     return Number.isFinite(date.getTime())
-      ?new Intl.DateTimeFormat("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric"})
+      ?new Intl.DateTimeFormat("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",timeZoneName:"short"})
         .format(date)
       :"Não informada";
   }
@@ -236,6 +236,11 @@
     $("archive-origin").value=state.filters.origin;
     $("archive-modality").value=state.filters.modality;
     $("archive-result").value=state.filters.result;
+    $("archive-color").value=state.filters.color;
+    $("archive-opponent").value=state.filters.opponent;
+    $("archive-engine").value=state.filters.engine_sha256;
+    $("archive-date-from").value=state.filters.date_from;
+    $("archive-date-to").value=state.filters.date_to;
     $("archive-year-from").value=state.filters.year_from;
     $("archive-year-to").value=state.filters.year_to;
     $("archive-roster-mode").value=state.filters.modality;
@@ -268,6 +273,9 @@
     state.filters={
       q:$("archive-search").value.trim(),origin:$("archive-origin").value,
       modality:$("archive-modality").value,result:$("archive-result").value,
+      color:$("archive-color").value,opponent:$("archive-opponent").value.trim().toLowerCase(),
+      engine_sha256:$("archive-engine").value.trim().toLowerCase(),
+      date_from:$("archive-date-from").value,date_to:$("archive-date-to").value,
       year_from:$("archive-year-from").value,
       year_to:$("archive-year-to").value
     };
@@ -376,6 +384,7 @@
     state.report=null;
     state.loading=false;
     state.filters={q:"",origin:"all",modality:"all",result:"all",
+                   color:"all",opponent:"",engine_sha256:"",date_from:"",date_to:"",
                    year_from:"",year_to:""};
     $("history-modern").hidden=false;
     $("history-original").hidden=true;
