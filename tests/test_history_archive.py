@@ -106,7 +106,7 @@ def test_verified_rows_and_export_are_bounded(monkeypatch,tmp_path):
     workspace=tmp_path/"workspace";workspace.mkdir()
     sample=[record(1),record(2,origin="tournament",status="INCOMPLETE",
                              result=None)]
-    monkeypatch.setattr(archive,"verified_competition_games",lambda _:
+    monkeypatch.setattr(archive,"verified_competition_games",lambda _, **kwargs:
         (sample,{"rejected_records":1,"partial":True}))
     monkeypatch.setattr(archive,"_projections",lambda *args:([],0))
     report=archive.archive(workspace,"fischer")
