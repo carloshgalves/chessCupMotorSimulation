@@ -702,6 +702,8 @@ def player_stats(workspace: Path, slug: str) -> dict:
             "arena_verified_games": coverage["arena_verified_games"],
             "tournament_verified_games": coverage["tournament_verified_games"],
             "cup_verified_games": coverage["cup_verified_games"],
+        "league_verified_games": coverage["league_verified_games"],
+        "league_projection_games": coverage["league_projections"],
             "rejected_games": coverage["rejected_games"],
             "rejected_records": coverage["rejected_records"],
             "excluded_attempts": coverage["excluded_attempts"],
@@ -712,7 +714,8 @@ def player_stats(workspace: Path, slug: str) -> dict:
     }
 
 
-def verified_competition_games(workspace: Path) -> tuple[list[dict], dict]:
+def verified_competition_games(workspace: Path, *,
+                               include_projections: bool = False) -> tuple[list[dict], dict]:
     """Validate all local simulated results once, reusing the strict #52 gate.
 
     Non-scorable attempts and historical games are never returned; all
@@ -731,6 +734,16 @@ def verified_competition_games(workspace: Path) -> tuple[list[dict], dict]:
     _arena_games(root, names, None, coverage, seen, records, dates)
     _tournament_games(root, names, None, coverage, seen, records, dates, tournaments)
     _cup_games(root, names, None, coverage, seen, records, dates, tournaments)
+    # Read existing League journals and receipts without creating a manager:
+    # GET requests must never perform startup recovery, mkdir or appends.
+    from .leagues import verified_league_games
+    league_games, league_projections, league_rejected = verified_league_games(root)
+    for record in league_games:
+        _record(record, seen, records, coverage)
+    coverage["league_projections"] = len(league_projections)
+    coverage["rejected_records"] += league_rejected
+    if include_projections:
+        records.extend(league_projections)
     return records, {
         "candidate_games": coverage["candidate_games"],
         "verified_games": coverage["verified_games"],
