@@ -34,7 +34,8 @@ MAX_CUP_SCAN = 100
 MAX_SYNTHETIC_ROWS = 4096
 MAX_INDEX_FILES = 50000
 _INDEX_LOCK = RLock()
-_INDEX: OrderedDict[tuple[str, str], tuple[str, list[dict], dict]] = OrderedDict()
+_INDEX: OrderedDict[str, tuple[str, list[dict], dict]] = OrderedDict()
+_PLAYER_INDEX: OrderedDict[tuple[str, str], tuple[str, list[dict], dict]] = OrderedDict()
 ID_RX = re.compile(r"(?:arena|tournament|cup):[a-z0-9_./:-]{1,450}\Z")
 FILTERS = frozenset({"q", "origin", "modality", "result", "color",
                      "opponent", "engine_sha256", "date_from", "date_to",
@@ -276,19 +277,37 @@ def _source_fingerprint(workspace: Path) -> str:
     return fingerprint.hexdigest()
 
 
+def _verified_source_index(workspace: Path, signature: str) -> tuple[list[dict], dict]:
+    """Share one full PGN audit across every player's paginated archive."""
+    key = str(workspace)
+    with _INDEX_LOCK:
+        cached = _INDEX.get(key)
+        if cached and cached[0] == signature:
+            _INDEX.move_to_end(key)
+            return deepcopy(cached[1]), deepcopy(cached[2])
+    records, coverage = verified_competition_games(
+        workspace, include_projections=True)
+    if _source_fingerprint(workspace) == signature:
+        with _INDEX_LOCK:
+            _INDEX[key] = (signature, deepcopy(records), deepcopy(coverage))
+            _INDEX.move_to_end(key)
+            while len(_INDEX) > 2:
+                _INDEX.popitem(last=False)
+    return records, coverage
+
+
 def _all(workspace: Path, slug: str) -> tuple[list[dict], dict]:
     _player(slug)
     workspace = workspace.expanduser().resolve(strict=True)
     signature = _source_fingerprint(workspace)
     cache_key = (str(workspace), slug)
     with _INDEX_LOCK:
-        cached = _INDEX.get(cache_key)
+        cached = _PLAYER_INDEX.get(cache_key)
         if cached and cached[0] == signature:
-            _INDEX.move_to_end(cache_key)
+            _PLAYER_INDEX.move_to_end(cache_key)
             return deepcopy(cached[1]), deepcopy(cached[2])
     names = {p.slug: p.name for p in load_roster()}
-    records, coverage = verified_competition_games(
-        workspace, include_projections=True)
+    records, coverage = _verified_source_index(workspace, signature)
     actual = [_from_player(r, slug, names) for r in records
               if r["origin"] != "projection" and
               slug in (r["white"], r["black"])]
@@ -311,10 +330,11 @@ def _all(workspace: Path, slug: str) -> tuple[list[dict], dict]:
     # Recompute if source changed while indexing; do not cache a stale result.
     if _source_fingerprint(workspace) == signature:
         with _INDEX_LOCK:
-            _INDEX[cache_key] = (signature, deepcopy(rows), deepcopy(result_coverage))
-            _INDEX.move_to_end(cache_key)
-            while len(_INDEX) > 4:
-                _INDEX.popitem(last=False)
+            _PLAYER_INDEX[cache_key] = (
+                signature, deepcopy(rows), deepcopy(result_coverage))
+            _PLAYER_INDEX.move_to_end(cache_key)
+            while len(_PLAYER_INDEX) > 64:
+                _PLAYER_INDEX.popitem(last=False)
     return rows, result_coverage
 
 
