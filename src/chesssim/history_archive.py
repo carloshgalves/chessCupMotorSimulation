@@ -229,12 +229,11 @@ def _projections(workspace: Path, slug: str, names: dict) -> tuple[list[dict], i
 
 
 def _source_fingerprint(workspace: Path) -> str:
-    """Metadata-only cache invalidation, including receipt and PGN changes.
+    """Version the local competition evidence without reading PGN bytes.
 
-    Enumerate competition roots, never scan historical corpora or arbitrary
-    user folders recursively. Invalidation also tracks ctime so rewriting a
-    PGN while restoring its mtime does not preserve a stale archive index.
-    Raw PGN hashes are still revalidated for replay/export.
+    Source discovery is bounded as it runs. In particular, never accumulate
+    every filename in the workspace before applying the capacity limit.
+    Replay and PGN export still revalidate actual bytes and SHA-256.
     """
     roots = []
     for child in workspace.iterdir():
@@ -245,27 +244,30 @@ def _source_fingerprint(workspace: Path) -> str:
             roots.append(child)
     if (workspace / "tournament.json").exists():
         roots.append(workspace / "tournament.json")
+
+    def source_paths(root: Path):
+        if root.is_file():
+            yield root
+            return
+        for directory, dirs, files in os.walk(root, followlinks=False):
+            dirs.sort()
+            files.sort()
+            base = Path(directory)
+            yield base
+            for name in dirs:
+                redirected = base / name
+                if redirected.is_symlink():
+                    yield redirected
+            for name in files:
+                if name.endswith((".json", ".jsonl", ".pgn")):
+                    yield base / name
+
     fingerprint = sha256()
     inspected = 0
     for root in sorted(roots):
         if root.is_symlink():
             raise ArchiveInput("Fonte de partidas redirecionada")
-        if root.is_file():
-            locations = [root]
-        else:
-            locations = []
-            for directory, dirs, files in os.walk(root, followlinks=False):
-                dirs.sort()
-                files.sort()
-                base = Path(directory)
-                locations.append(base)
-                for name in dirs:
-                    location = base / name
-                    if location.is_symlink():
-                        locations.append(location)
-                locations.extend(base / name for name in files
-                                 if name.endswith((".json", ".jsonl", ".pgn")))
-        for path in locations:
+        for path in source_paths(root):
             inspected += 1
             if inspected > MAX_INDEX_FILES:
                 raise ArchiveInput("Limite de arquivos no índice excedido")
@@ -273,7 +275,7 @@ def _source_fingerprint(workspace: Path) -> str:
             payload = (path.relative_to(workspace).as_posix(), stat.st_mode,
                        stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
             fingerprint.update(repr(payload).encode("utf-8"))
-            fingerprint.update(b"\\n")
+            fingerprint.update(bytes((0,)))
     return fingerprint.hexdigest()
 
 
