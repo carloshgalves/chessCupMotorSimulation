@@ -27,6 +27,8 @@ def record(n, *, origin="arena", status="COMPLETED", result="1-0",
     "result=draw&result=win","q="+"a"*81,
     "year_from=1801&year_to=1800","year_from=1",
     "year_from=202x","page=16385",
+    "date_from=2026-02-30","date_from=2026-12-01&date_to=2026-11-01",
+    "color=green","opponent=../../bad","engine_sha256=aa",
 ])
 def test_strict_query_validation(query):
     with pytest.raises(archive.ArchiveInput):
@@ -39,7 +41,7 @@ def test_filter_sort_page_and_summary_are_from_evidence(monkeypatch,tmp_path):
                  black="fischer" if n%2 else "tal",
                  result="1-0" if n%3 else "1/2-1/2",
                  modality="rapid" if n%2 else "classical") for n in range(31)]
-    monkeypatch.setattr(archive,"verified_competition_games",lambda root:(
+    monkeypatch.setattr(archive,"verified_competition_games",lambda root, **kwargs:(
         rows,{"rejected_records":0,"partial":False}))
     monkeypatch.setattr(archive,"_projections",lambda *args:([],0))
     first=archive.archive(workspace,"fischer","page=1&page_size=20")
@@ -134,3 +136,62 @@ def test_no_game_id_can_read_outside_verified_record(monkeypatch,tmp_path):
 def test_noncanonical_slug_is_rejected(tmp_path):
     with pytest.raises(ValueError):
         archive.archive(tmp_path,"../fischer")
+
+
+def test_metadata_filters_and_provenance_exports(monkeypatch, tmp_path):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    proof = {"engine_sha256": "b" * 64,
+             "white_profile_sha256": "c" * 64,
+             "black_profile_sha256": "d" * 64}
+    rows = [dict(record(1), engine_strength_config=proof,
+                 recorded_utc="2026-11-08T11:00:00+00:00",
+                 started_at_utc="2026-11-08T11:05:00+00:00",
+                 finished_at_utc="2026-11-08T11:07:00+00:00",
+                 duration_seconds=120)]
+    monkeypatch.setattr(archive, "verified_competition_games",
+                        lambda root, **kwargs: (rows, {"partial": False}))
+    monkeypatch.setattr(archive, "_projections", lambda *args: ([], 0))
+    for query in ("color=black", "opponent=kasparov",
+                  "date_from=2026-11-09", "date_to=2026-11-07",
+                  "engine_sha256=" + "a" * 64):
+        assert archive.archive(workspace, "fischer", query)["total"] == 0
+    good = ("color=white&opponent=tal&date_from=2026-11-08&"
+            "date_to=2026-11-08&engine_sha256=" + "b" * 64)
+    report = archive.archive(workspace, "fischer", good)
+    assert report["total"] == 1
+    row = report["games"][0]
+    assert row["engine_sha256"] == "b" * 64
+    assert row["evidence_pgn_sha256"] == "a" * 64
+    assert row["duration_seconds"] == 120
+    assert row["started_at_utc"].endswith("+00:00")
+    assert row["license_status"] == "not_assessed"
+    csv_data, _, _ = archive.export_page(workspace, "fischer", good, "csv")
+    assert b"engine_sha256" in csv_data and b"evidence_pgn_sha256" in csv_data
+    assert b"started_at_utc" in csv_data and b"license_status" in csv_data
+
+
+def test_4032_game_pagination_reuses_versioned_index(monkeypatch, tmp_path):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    source = workspace / "leagues" / "league-0123456789abcdef"
+    source.mkdir(parents=True)
+    (source / "league.json").write_text("v1", encoding="utf-8")
+    rows = [record(i, origin="league", modality="rapid") for i in range(4032)]
+    scanned = []
+    def read_records(root, **kwargs):
+        scanned.append(1)
+        return rows, {"partial": False, "rejected_records": 0}
+    monkeypatch.setattr(archive, "verified_competition_games", read_records)
+    monkeypatch.setattr(archive, "_projections", lambda *args: ([], 0))
+    first = archive.archive(workspace, "fischer", "page=1&page_size=50")
+    last = archive.archive(workspace, "fischer", "page=81&page_size=50")
+    assert first["total"] == last["total"] == 4032
+    assert first["pages"] == last["pages"] == 81
+    assert len(first["games"]) == 50 and len(last["games"]) == 32
+    assert len({x["id"] for x in first["games"] + last["games"]}) == 82
+    assert scanned == [1], "page changes must not reparse every PGN"
+    # A changed receipt/manifest invalidates the index and forces re-audit.
+    (source / "league.json").write_text("v2-altered", encoding="utf-8")
+    archive.archive(workspace, "fischer", "page=2")
+    assert scanned == [1, 1]
