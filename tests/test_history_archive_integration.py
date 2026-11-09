@@ -84,6 +84,11 @@ def test_real_cup_is_paginated_and_replay_has_full_legal_states(verified_cup):
     assert report["total"]==1
     row=report["games"][0]
     assert row["origin"]=="cup" and row["pgn"] is True
+    assert row["source_kind"] == "engine_full"
+    assert row["started_at_utc"] and row["finished_at_utc"]
+    assert row["duration_seconds"] >= 0
+    assert len(row["receipt_sha256"]) == 64
+    assert row["event_id"] == ident
     replay=archive.replay(workspace,"fischer",row["id"])
     assert replay["schema"]=="chesssim-archive-replay-v1"
     assert replay["game"]["result"]=="0-1"
