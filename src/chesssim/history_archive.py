@@ -217,6 +217,8 @@ def _projections(workspace: Path, slug: str, names: dict) -> tuple[list[dict], i
                     "result": entry["result"], "status": "COMPLETED",
                     "origin": "projection", "modality": mode,
                     "recorded_utc": entry.get("finished_utc"),
+                    "source_kind": "fast_statistical", "event_id": path.parent.name,
+                    "round": entry.get("round"), "receipt_sha256": entry.get("sha256"),
                     "rating_eligible": False,
                 }
                 rows.append(_from_player(record, slug, names))
