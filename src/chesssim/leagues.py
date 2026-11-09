@@ -241,7 +241,7 @@ class LeagueManager:
         self._shutdown = Event()
         # Repeated league polls must not reparse thousands of PGNs.
         # Stat changes invalidate the cache; export forces full verification.
-        self._verified_pgn: dict[tuple[str, str, str], tuple[int, int, int]] = {}
+        self._verified_pgn: dict[tuple[str, str, str], tuple[int, int, int, int]] = {}
         self._recover_interrupted()
 
     def _recover_interrupted(self) -> None:
