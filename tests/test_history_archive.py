@@ -125,7 +125,7 @@ def test_verified_rows_and_export_are_bounded(monkeypatch,tmp_path):
 
 def test_no_game_id_can_read_outside_verified_record(monkeypatch,tmp_path):
     workspace=tmp_path/"workspace";workspace.mkdir()
-    monkeypatch.setattr(archive,"verified_competition_games",lambda root:
+    monkeypatch.setattr(archive,"verified_competition_games",lambda root, **kwargs:
         ([],{"rejected_records":0,"partial":False}))
     with pytest.raises(archive.ArchiveInput):
         archive.replay(workspace,"fischer","../../etc/passwd")
