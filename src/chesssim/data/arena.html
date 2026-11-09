@@ -965,7 +965,7 @@
                 <label>Buscar partidas<input id="archive-search" name="q" type="search" placeholder="Adversário, competição ou ID"></label>
                 <label>Origem<select id="archive-origin" name="origin">
                   <option value="all">Todas</option><option value="arena">Arena</option>
-                  <option value="tournament">Liga/Torneio</option><option value="cup">Copa UCI</option>
+                  <option value="tournament">Torneio mata-mata</option><option value="league">Liga / temporada</option><option value="cup">Copa UCI</option>
                   <option value="projection">Projeção sintética</option>
                 </select></label>
                 <label>Modalidade<select id="archive-modality" name="modality">
@@ -981,9 +981,17 @@
                 <details id="archive-advanced" class="archive-advanced">
                   <summary>Mais filtros</summary>
                   <div class="archive-advanced-fields">
+                    <label>Cor<select id="archive-color" name="color">
+                      <option value="all">Todas</option><option value="white">Brancas</option>
+                      <option value="black">Pretas</option>
+                    </select></label>
+                    <label>Adversário (slug)<input id="archive-opponent" type="text" maxlength="48" placeholder="Ex.: fischer" autocomplete="off"></label>
+                    <label>Motor (SHA-256)<input id="archive-engine" type="text" maxlength="64" placeholder="Hash completo de 64 caracteres" autocomplete="off"></label>
+                    <label>Data inicial do registro (UTC)<input id="archive-date-from" type="date"></label>
+                    <label>Data final do registro (UTC)<input id="archive-date-to" type="date"></label>
                     <label>Ano inicial (registro)<input id="archive-year-from" type="number" min="1800" max="2100" placeholder="Ex.: 2026"></label>
                     <label>Ano final (registro)<input id="archive-year-to" type="number" min="1800" max="2100" placeholder="Ex.: 2027"></label>
-                    <p class="archive-muted">Filtra a data registrada pelo simulador, não o ano de uma partida histórica.</p>
+                    <p class="archive-muted">Datas dos filtros são UTC; a coluna Registro é exibida no fuso do navegador. A criação do manifesto não comprova a hora da partida.</p>
                   </div>
                 </details>
                 <button type="submit" class="archive-primary">Pesquisar</button>
