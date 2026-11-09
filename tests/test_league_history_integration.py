@@ -8,7 +8,7 @@ import chess
 import chess.pgn
 import pytest
 
-from chesssim import history_archive, leagues, competition_rating
+from chesssim import history_archive, leagues, competition_rating, history_stats
 from chesssim.catalog import find_player
 
 
@@ -98,6 +98,10 @@ def test_league_verified_pgn_is_scored_replayed_and_exported(league):
     assert b"receipt_sha256" in csv
     json_data, _, _ = history_archive.export_page(work, "fischer", "origin=league", "json")
     assert json.loads(json_data)["games"][0]["id"] == row["id"]
+    legacy = history_stats.player_stats(work, "fischer")
+    assert legacy["totals"]["completed"] == 1
+    assert legacy["coverage"]["league_verified_games"] == 1
+    assert "league_local" in legacy["scope"]["sources"]
     rated = competition_rating.rating_report(work, modality="rapid", include_ledger=True)
     assert rated["counts"]["scored_games"] == 1
     assert rated["rating_ledger"][0]["source"] == "league"
