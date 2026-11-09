@@ -190,7 +190,8 @@ def test_4032_game_pagination_reuses_versioned_index(monkeypatch, tmp_path):
     assert first["pages"] == last["pages"] == 81
     assert len(first["games"]) == 50 and len(last["games"]) == 32
     assert len({x["id"] for x in first["games"] + last["games"]}) == 82
-    assert scanned == [1], "page changes must not reparse every PGN"
+    assert archive.archive(workspace, "tal", "page=2&page_size=50")["total"] == 4032
+    assert scanned == [1], "page/player changes must reuse one PGN evidence scan"
     # A changed receipt/manifest invalidates the index and forces re-audit.
     (source / "league.json").write_text("v2-altered", encoding="utf-8")
     archive.archive(workspace, "fischer", "page=2")
