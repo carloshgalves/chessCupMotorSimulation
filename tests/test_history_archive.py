@@ -196,3 +196,16 @@ def test_4032_game_pagination_reuses_versioned_index(monkeypatch, tmp_path):
     (source / "league.json").write_text("v2-altered", encoding="utf-8")
     archive.archive(workspace, "fischer", "page=2")
     assert scanned == [1, 1]
+
+
+def test_index_rejects_excess_files_before_source_audit(monkeypatch, tmp_path):
+    workspace = tmp_path / "workspace"
+    source = workspace / "leagues" / "league-0123456789abcdef"
+    source.mkdir(parents=True)
+    (source / "league.json").write_text("local", encoding="utf-8")
+    monkeypatch.setattr(archive, "MAX_INDEX_FILES", 2)
+    monkeypatch.setattr(archive, "verified_competition_games",
+                        lambda *args, **kwargs: pytest.fail(
+                            "Evidence audit should not run above index capacity"))
+    with pytest.raises(archive.ArchiveInput, match="Limite de arquivos"):
+        archive.archive(workspace, "fischer")
