@@ -595,12 +595,25 @@ def _cup_games(root: Path, names: dict[str, str], slug: str | None,
                 duel = (game_id.split("-s", 1)[0]
                         if stage != "women_double_round_robin" else
                         "-".join(sorted((row["white"], row["black"]))))
+                began = _timestamp(row.get("started_utc"))
+                ended = _timestamp(row.get("finished_utc"))
+                if not began or not ended:
+                    raise InvalidCatalogue("Recibo de Copa sem horário confiável")
+                elapsed = (datetime.fromisoformat(ended) -
+                           datetime.fromisoformat(began)).total_seconds()
+                if elapsed < 0:
+                    raise InvalidCatalogue("Duração de Copa negativa")
                 record = {
                     "id": "cup:" + ident + ":" + game_id,
                     "duel_id": "cup:" + ident + ":" + duel,
                     "white": row["white"], "black": row["black"],
                     "status": "COMPLETED", "result": row["result"],
                     "origin": "cup", "recorded_utc": when,
+                    "started_at_utc": began, "finished_at_utc": ended,
+                    "duration_seconds": round(elapsed, 3),
+                    "event_id": ident, "round": row.get("round"),
+                    "source_kind": "engine_full",
+                    "receipt_sha256": row["sha256"],
                     "time_control": modality, "clock": clock,
                     "rating_eligible": eligible,
                     "engine_strength_config": {
