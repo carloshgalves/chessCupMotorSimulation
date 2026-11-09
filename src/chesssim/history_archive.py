@@ -477,7 +477,7 @@ def export_page(workspace: Path, slug: str, query: str,
     if kind == "csv":
         out=StringIO()
         writer=csv.writer(out)
-        keys=["id","recorded_at_utc","started_at_utc","finished_at_utc",
+        keys=["id","date","recorded_at_utc","started_at_utc","finished_at_utc",
               "duration_seconds","competition","event_id","season_id","round",
               "opponent_name","color","modality","result","outcome","origin",
               "source_kind","status","pgn","rating_eligible","virtual_week",
