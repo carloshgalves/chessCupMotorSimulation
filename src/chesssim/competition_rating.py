@@ -165,7 +165,7 @@ def build_rating_ledger(records: list[dict], *, k: object = DEFAULT_K,
             raise ValueError("Interrupção declara resultado final")
         source = record.get("origin")
         record_modality, clock = classify_competition_record(record)
-        if source not in ("arena", "tournament", "cup"):
+        if source not in ("arena", "tournament", "cup", "league"):
             raise ValueError("Origem de jogo inválida")
         rating_eligible = record.get("rating_eligible", True)
         if type(rating_eligible) is not bool:
