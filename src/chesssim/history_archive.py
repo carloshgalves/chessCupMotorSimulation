@@ -6,6 +6,11 @@ by History and experimental Elo. Cup projections remain isolated from PGNs.
 from __future__ import annotations
 
 from hashlib import sha256
+from datetime import date, datetime, timezone
+from collections import OrderedDict
+from copy import deepcopy
+from threading import RLock
+import os
 from io import StringIO
 import csv
 import json
@@ -27,13 +32,18 @@ SCHEMA = "chesssim-player-archive-v1"
 MAX_PAGE_SIZE = 50
 MAX_CUP_SCAN = 100
 MAX_SYNTHETIC_ROWS = 4096
+MAX_INDEX_FILES = 50000
+_INDEX_LOCK = RLock()
+_INDEX: OrderedDict[tuple[str, str], tuple[str, list[dict], dict]] = OrderedDict()
 ID_RX = re.compile(r"(?:arena|tournament|cup):[a-z0-9_./:-]{1,450}\Z")
-FILTERS = frozenset({"q", "origin", "modality", "result",
+FILTERS = frozenset({"q", "origin", "modality", "result", "color",
+                     "opponent", "engine_sha256", "date_from", "date_to",
                      "year_from", "year_to", "page", "page_size"})
-ORIGINS = frozenset({"all", "arena", "tournament", "cup", "projection"})
+ORIGINS = frozenset({"all", "arena", "tournament", "cup", "league", "projection"})
 MODALITIES = frozenset({"all", "classical", "rapid", "blitz", "bullet",
                         "unclassified"})
 RESULTS = frozenset({"all", "win", "draw", "loss", "incomplete"})
+COLORS = frozenset({"all", "white", "black"})
 
 
 class ArchiveInput(ValueError):
@@ -42,7 +52,7 @@ class ArchiveInput(ValueError):
 
 def parameters(query: str) -> dict:
     try:
-        pairs = parse_qsl(query, keep_blank_values=True, max_num_fields=12)
+        pairs = parse_qsl(query, keep_blank_values=True, max_num_fields=16)
     except ValueError as exc:
         raise ArchiveInput("Consulta muito longa") from exc
     if len(pairs) != len({key for key, _ in pairs}) or any(
@@ -54,13 +64,37 @@ def parameters(query: str) -> dict:
         "origin": values.get("origin", "all"),
         "modality": values.get("modality", "all"),
         "result": values.get("result", "all"),
+        "color": values.get("color", "all"),
+        "opponent": values.get("opponent", ""),
+        "engine_sha256": values.get("engine_sha256", ""),
     }
     if len(result["q"]) > 80 or any(ord(c) < 32 for c in result["q"]):
         raise ArchiveInput("Pesquisa inválida")
     if (result["origin"] not in ORIGINS or
             result["modality"] not in MODALITIES or
-            result["result"] not in RESULTS):
+            result["result"] not in RESULTS or
+            result["color"] not in COLORS):
         raise ArchiveInput("Filtro inválido")
+    if result["opponent"] and not re.fullmatch(r"[a-z0-9-]{2,48}", result["opponent"]):
+        raise ArchiveInput("Adversário inválido")
+    if result["engine_sha256"] and not re.fullmatch(
+            r"[0-9a-f]{64}", result["engine_sha256"]):
+        raise ArchiveInput("Hash de motor inválido")
+    for key in ("date_from", "date_to"):
+        raw = values.get(key, "")
+        if not raw:
+            result[key] = None
+        else:
+            if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", raw):
+                raise ArchiveInput("Data deve ser AAAA-MM-DD")
+            try:
+                date.fromisoformat(raw)
+            except ValueError as exc:
+                raise ArchiveInput("Data inválida") from exc
+            result[key] = raw
+    if (result["date_from"] and result["date_to"] and
+            result["date_from"] > result["date_to"]):
+        raise ArchiveInput("Intervalo de datas invertido")
     for key in ("year_from", "year_to"):
         raw = values.get(key, "")
         if not raw:
@@ -105,19 +139,43 @@ def _from_player(rec: dict, slug: str, names: dict) -> dict:
     origin = rec["origin"]
     if origin == "cup":
         competition = "Copa · " + rec["id"].split(":")[1]
+    elif origin == "league":
+        competition = ("Liga · " + rec.get("event_name", rec["id"].split(":")[1]) +
+                       " / " + rec.get("season_id", "Temporada"))
     elif origin == "tournament":
         competition = "Torneio local"
     elif origin == "arena":
         competition = "Arena · Duelo"
     else:
         competition = "Projeção"
+    proof = rec.get("engine_strength_config") or {}
+    timestamp = rec.get("recorded_utc")
+    # The created-manifest timestamp is not evidence of when moves were played.
     return {
         "id": rec["id"], "opponent": opponent, "opponent_name": names[opponent],
         "white": white, "black": black, "color": "white" if white == slug else "black",
         "result": result, "outcome": outcome, "status": rec["status"],
         "origin": origin, "modality": mode, "competition": competition,
-        "date": rec.get("recorded_utc"), "pgn": origin != "projection" and
-        rec["status"] == "COMPLETED",
+        "date": timestamp, "recorded_at_utc": timestamp,
+        "recorded_timezone": "UTC" if timestamp else None,
+        "started_at_utc": rec.get("started_at_utc"),
+        "finished_at_utc": rec.get("finished_at_utc"),
+        "duration_seconds": rec.get("duration_seconds"),
+        "simulated_calendar_date": rec.get("simulated_calendar_date"),
+        "virtual_week": rec.get("virtual_week"),
+        "virtual_day": rec.get("virtual_day"),
+        "event_id": rec.get("event_id"), "season_id": rec.get("season_id"),
+        "round": rec.get("round"), "source_kind": rec.get(
+            "source_kind", "fast_statistical" if origin == "projection"
+            else "engine_full"),
+        "engine_sha256": proof.get("engine_sha256"),
+        "white_profile_sha256": proof.get("white_profile_sha256"),
+        "black_profile_sha256": proof.get("black_profile_sha256"),
+        "evidence_pgn_sha256": rec.get("evidence_pgn_sha256"),
+        "receipt_sha256": rec.get("receipt_sha256"),
+        # Not an assertion of copyright ownership or redistribution rights.
+        "license_status": "not_assessed",
+        "pgn": origin != "projection" and rec["status"] == "COMPLETED",
         "rating_eligible": bool(rec.get("rating_eligible", origin != "projection")),
     }
 
@@ -167,22 +225,95 @@ def _projections(workspace: Path, slug: str, names: dict) -> tuple[list[dict], i
     return rows, rejected
 
 
+def _source_fingerprint(workspace: Path) -> str:
+    """Metadata-only cache invalidation, including receipt and PGN changes.
+
+    Enumerate competition roots, never scan historical corpora or arbitrary
+    user folders recursively. Invalidation also tracks ctime so rewriting a
+    PGN while restoring its mtime does not preserve a stale archive index.
+    Raw PGN hashes are still revalidated for replay/export.
+    """
+    roots = []
+    for child in workspace.iterdir():
+        if child.name in {"cups", "leagues", "tournaments"} or (
+                child.name.startswith("session-") or
+                child.name.startswith("tournament-") or
+                (child.is_dir() and (child / "tournament.json").exists())):
+            roots.append(child)
+    if (workspace / "tournament.json").exists():
+        roots.append(workspace / "tournament.json")
+    fingerprint = sha256()
+    inspected = 0
+    for root in sorted(roots):
+        if root.is_symlink():
+            raise ArchiveInput("Fonte de partidas redirecionada")
+        if root.is_file():
+            locations = [root]
+        else:
+            locations = []
+            for directory, dirs, files in os.walk(root, followlinks=False):
+                dirs.sort()
+                files.sort()
+                base = Path(directory)
+                locations.append(base)
+                for name in dirs:
+                    location = base / name
+                    if location.is_symlink():
+                        locations.append(location)
+                locations.extend(base / name for name in files
+                                 if name.endswith((".json", ".jsonl", ".pgn")))
+        for path in locations:
+            inspected += 1
+            if inspected > MAX_INDEX_FILES:
+                raise ArchiveInput("Limite de arquivos no índice excedido")
+            stat = path.lstat()
+            payload = (path.relative_to(workspace).as_posix(), stat.st_mode,
+                       stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
+            fingerprint.update(repr(payload).encode("utf-8"))
+            fingerprint.update(b"\\n")
+    return fingerprint.hexdigest()
+
+
 def _all(workspace: Path, slug: str) -> tuple[list[dict], dict]:
     _player(slug)
+    workspace = workspace.expanduser().resolve(strict=True)
+    signature = _source_fingerprint(workspace)
+    cache_key = (str(workspace), slug)
+    with _INDEX_LOCK:
+        cached = _INDEX.get(cache_key)
+        if cached and cached[0] == signature:
+            _INDEX.move_to_end(cache_key)
+            return deepcopy(cached[1]), deepcopy(cached[2])
     names = {p.slug: p.name for p in load_roster()}
-    records, coverage = verified_competition_games(workspace)
+    records, coverage = verified_competition_games(
+        workspace, include_projections=True)
     actual = [_from_player(r, slug, names) for r in records
-              if slug in (r["white"], r["black"])]
-    projections, invalid_projections = _projections(workspace, slug, names)
+              if r["origin"] != "projection" and
+              slug in (r["white"], r["black"])]
+    league_projections = [_from_player(r, slug, names) for r in records
+                          if r["origin"] == "projection" and
+                          slug in (r["white"], r["black"])]
+    cup_projections, invalid_projections = _projections(workspace, slug, names)
+    projections = league_projections + cup_projections
     rows = actual + projections
     rows.sort(key=lambda r: (r["date"] or "", r["id"]), reverse=True)
-    return rows, {
+    result_coverage = {
         "verified": len(actual), "projections": len(projections),
         "rejected_records": coverage.get("rejected_records", 0) +
         invalid_projections,
+        "rejected_games": coverage.get("rejected_games", 0),
         "partial": coverage.get("partial", False) or invalid_projections > 0,
         "ordering": "record_timestamp_desc_then_id",
+        "index_strategy": "in_memory_metadata_versioned",
     }
+    # Recompute if source changed while indexing; do not cache a stale result.
+    if _source_fingerprint(workspace) == signature:
+        with _INDEX_LOCK:
+            _INDEX[cache_key] = (signature, deepcopy(rows), deepcopy(result_coverage))
+            _INDEX.move_to_end(cache_key)
+            while len(_INDEX) > 4:
+                _INDEX.popitem(last=False)
+    return rows, result_coverage
 
 
 def _filtered(rows: list[dict], params: dict) -> list[dict]:
@@ -192,6 +323,14 @@ def _filtered(rows: list[dict], params: dict) -> list[dict]:
         if (params["origin"] == "all" or row["origin"] == params["origin"])
         and (params["modality"] == "all" or row["modality"] == params["modality"])
         and (params["result"] == "all" or row["outcome"] == params["result"])
+        and (params["color"] == "all" or row["color"] == params["color"])
+        and (not params["opponent"] or row["opponent"] == params["opponent"])
+        and (not params["engine_sha256"] or
+             row["engine_sha256"] == params["engine_sha256"])
+        and (params["date_from"] is None or bool(row["date"]) and
+             row["date"][:10] >= params["date_from"])
+        and (params["date_to"] is None or bool(row["date"]) and
+             row["date"][:10] <= params["date_to"])
         and (params["year_from"] is None or bool(row["date"]) and
              row["date"][:4].isdigit() and int(row["date"][:4]) >= params["year_from"])
         and (params["year_to"] is None or bool(row["date"]) and
@@ -255,7 +394,15 @@ def _raw_pgn(workspace: Path, record: dict) -> tuple[bytes, chess.pgn.Game]:
     """Resolve a verified opaque identifier to a bounded, no-follow PGN."""
     id_ = record["id"]
     origin = record["origin"]
-    if origin == "cup":
+    if origin == "league":
+        _, league_id, match_id = id_.split(":")
+        if (not re.fullmatch(r"league-[0-9a-f]{16}", league_id) or
+                not re.fullmatch(r"r[0-9]{3}-g[0-9]{2}", match_id)):
+            raise ArchiveInput("ID da Liga inválido")
+        rel = Path("leagues") / league_id / "games" / (match_id + ".pgn")
+        raw = _read(workspace, rel, MAX_PGN_BYTES)
+        game = _game(raw)
+    elif origin == "cup":
         _, cup_id, game_id = id_.split(":")
         if not re.fullmatch(r"cup-[a-f0-9]{16}", cup_id):
             raise ArchiveInput("Copa inválida")
@@ -330,8 +477,13 @@ def export_page(workspace: Path, slug: str, query: str,
     if kind == "csv":
         out=StringIO()
         writer=csv.writer(out)
-        keys=["id","date","competition","opponent_name","color",
-              "modality","result","outcome","origin","status","pgn"]
+        keys=["id","recorded_at_utc","started_at_utc","finished_at_utc",
+              "duration_seconds","competition","event_id","season_id","round",
+              "opponent_name","color","modality","result","outcome","origin",
+              "source_kind","status","pgn","rating_eligible","virtual_week",
+              "virtual_day","engine_sha256","white_profile_sha256",
+              "black_profile_sha256","evidence_pgn_sha256","receipt_sha256",
+              "license_status"]
         writer.writerow(keys)
         for row in rows:
             writer.writerow([row.get(k,"") for k in keys])
@@ -346,6 +498,12 @@ def export_page(workspace: Path, slug: str, query: str,
         if rec is None:
             raise ArchiveInput("Registro alterado durante exportação")
         _,game=_raw_pgn(workspace, rec)
+        # Add origin/hash tags to the exported copy, never mutate the PGN
+        # verified on disk. A hash refers to the original source bytes.
+        game.headers["ChessSimOrigin"] = rec["origin"]
+        game.headers["ChessSimPGNSHA256"] = rec["evidence_pgn_sha256"]
+        game.headers["ChessSimGameID"] = rec["id"]
+        game.headers["ChessSimLicenseStatus"] = "NotAssessed"
         games.append(str(game))
     if not games:
         raise ArchiveInput("Página sem PGN de partidas UCI concluídas")
