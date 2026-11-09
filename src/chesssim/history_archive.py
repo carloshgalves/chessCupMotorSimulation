@@ -6,7 +6,7 @@ by History and experimental Elo. Cup projections remain isolated from PGNs.
 from __future__ import annotations
 
 from hashlib import sha256
-from datetime import date, datetime, timezone
+from datetime import date
 from collections import OrderedDict
 from copy import deepcopy
 from threading import RLock
