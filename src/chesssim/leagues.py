@@ -14,6 +14,7 @@ from typing import Callable
 import json
 import os
 import re
+import math
 
 import chess.pgn
 
@@ -407,7 +408,7 @@ class LeagueManager:
                 raise ValueError("Proveniência do motor divergente")
             if verify:
                 pgn = self._dir(state["id"]) / pgn_path
-                if pgn.is_symlink() or not pgn.is_file():
+                if pgn.parent.is_symlink() or pgn.is_symlink() or not pgn.is_file():
                     raise ValueError("PGN da liga ausente ou alterado")
                 stats = pgn.stat()
                 signature = (stats.st_ino, stats.st_size, stats.st_mtime_ns)
@@ -806,3 +807,99 @@ class LeagueManager:
             thread = self._thread
         if thread is not None:
             thread.join()
+
+
+def verified_league_games(workspace: Path) -> tuple[list[dict], list[dict], int]:
+    """Audit local league receipts without starting a manager or modifying files.
+
+    Return independently checked UCI games, separately labelled projections,
+    and the number of rejected seasons. A damaged season contributes no games.
+    The reader reuses the same manifest, journal, receipt and PGN verification
+    as league standings; it never calls startup recovery or reconciles a ledger.
+    """
+    folder = workspace / "leagues"
+    if not folder.exists():
+        return [], [], 0
+    if folder.is_symlink() or not folder.is_dir():
+        raise LeagueInput("Diretório de ligas inseguro")
+    manifests = sorted(folder.glob("league-*/league.json"))
+    if len(manifests) > 100:
+        raise LeagueInput("Limite de temporadas para auditoria excedido")
+    auditor = object.__new__(LeagueManager)
+    auditor.folder = folder
+    auditor._verified_pgn = {}
+    games: list[dict] = []
+    projections: list[dict] = []
+    rejected = 0
+
+    def stamp(value: object) -> str | None:
+        if not isinstance(value, str) or len(value) > 48:
+            raise ValueError("Timestamp de liga inválido")
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            raise ValueError("Timestamp de liga sem fuso")
+        return parsed.astimezone(timezone.utc).isoformat()
+
+    for manifest in manifests:
+        try:
+            ident = manifest.parent.name
+            if not ID_RX.fullmatch(ident) or manifest.is_symlink():
+                raise LeagueInput("Manifesto de liga redirecionado")
+            state = auditor._load(ident)
+            recorded = stamp(state["created_utc"])
+            entries = auditor._ledger(state, verify=True, reconcile=False)
+            rounds = schedule(state["config"]["participants"], state["config"]["format"])
+            if state["status"] == "COMPLETED" and len(entries) != sum(map(len, rounds)):
+                raise LeagueInput("Temporada finalizada sem evidências completas")
+            season_games: list[dict] = []
+            season_projections: list[dict] = []
+            for match_id, entry in sorted(entries.items()):
+                start = stamp(entry["started_utc"])
+                finish = stamp(entry["finished_utc"])
+                start_dt = datetime.fromisoformat(start)
+                finish_dt = datetime.fromisoformat(finish)
+                if finish_dt < start_dt:
+                    raise LeagueInput("Relógios cronológicos incompatíveis")
+                is_projection = entry["source"] == "fast_statistical"
+                evidence = entry["engine"] if not is_projection else None
+                clock = list(state["config"]["clock"]) if not is_projection else None
+                record = {
+                    "id": ("projection:league:" if is_projection else "league:") +
+                          ident + ":" + match_id,
+                    "duel_id": "league:" + ident + ":" + match_id,
+                    "white": entry["white"], "black": entry["black"],
+                    "status": "COMPLETED", "result": entry["result"],
+                    "origin": "projection" if is_projection else "league",
+                    "source_kind": entry["source"], "recorded_utc": recorded,
+                    "started_at_utc": start if not is_projection else None,
+                    "finished_at_utc": finish if not is_projection else None,
+                    "duration_seconds": (
+                        round((finish_dt - start_dt).total_seconds(), 3)
+                        if not is_projection else None),
+                    "virtual_week": entry["virtual_week"],
+                    "virtual_day": entry["virtual_day"],
+                    "event_id": ident, "event_name": state["config"]["name"],
+                    "season_id": state["config"]["season"],
+                    "round": entry["round"], "time_control": (
+                        state["config"]["modality"] if not is_projection else
+                        "unclassified"),
+                    "modality": state["config"]["modality"],
+                    "clock": clock,
+                    "engine_strength_config": ({
+                        "engine_sha256": evidence["engine_sha256"],
+                        "white_profile_sha256":
+                            evidence["profile_sha256"][entry["white"]],
+                        "black_profile_sha256":
+                            evidence["profile_sha256"][entry["black"]],
+                    } if evidence else None),
+                    "evidence_pgn_sha256": entry["pgn_sha256"],
+                    "receipt_sha256": entry["sha256"],
+                    "rating_eligible": not is_projection,
+                }
+                (season_projections if is_projection else season_games).append(record)
+            games.extend(season_games)
+            projections.extend(season_projections)
+        except (OSError, ValueError, TypeError, KeyError, IndexError,
+                AttributeError, OverflowError):
+            rejected += 1
+    return games, projections, rejected
