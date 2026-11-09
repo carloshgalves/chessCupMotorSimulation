@@ -14,7 +14,6 @@ from typing import Callable
 import json
 import os
 import re
-import math
 
 import chess.pgn
 
