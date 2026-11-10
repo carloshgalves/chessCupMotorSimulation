@@ -306,6 +306,11 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   board.events.contextmenu({target:board.children[62],
     preventDefault(){contextPrevented=true;}});
   assert.equal(contextPrevented,true,"no browser menu inside annotated board");
+  contextPrevented=false;
+  board.events.contextmenu({target:board,
+    preventDefault(){contextPrevented=true;}});
+  assert.equal(contextPrevented,true,
+    "pointer capture can retarget contextmenu to the board itself");
   drawRightArrow(58,56,40,600,7,600,40);
   assert.equal(overlay.children.length,7,"same arrow toggles off");
   rightMark(59,62,520,600);
@@ -317,6 +322,16 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   board.events.pointermove(right(60,outsideSource,-50,-50));
   board.events.pointerup(right(60,outsideSource,-50,-50));
   assert.equal(overlay.children.length,outsideBefore);
+  // Interrupted right-click must not commit an annotation.
+  board.events.pointerdown(right(65,outsideSource,40,600));
+  board.events.pointermove(right(65,board.children[7],600,40));
+  board.events.pointercancel(right(65,board.children[7],600,40));
+  assert.equal(overlay.children.length,outsideBefore);
+  board.events.pointerdown(right(66,outsideSource,40,600));
+  board.events.pointermove(right(66,board.children[7],600,40));
+  board.events.lostpointercapture(right(66,board.children[7],600,40));
+  assert.equal(overlay.children.length,outsideBefore);
+  assert.equal(board.captured,null);
   clearMarks.events.click();
   assert.equal(overlay.children.length,0);
   assert.equal(clearMarks.disabled,true);
@@ -442,6 +457,12 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   board.events.pointerup(pointer(9,board.children[51],280,360));
   await flush();
   assert.equal(calls.length,unchanged+1,"no pre-moves in increment 1");
+  const beforeThinkingAnnotation=calls.length;
+  rightMark(67,board.children[51]===undefined?52:51,280,520);
+  assert.equal(overlay.children.length,1,
+    "right-click analysis still works while the engine thinks");
+  assert.equal(calls.length,beforeThinkingAnnotation,
+    "visual-only annotations never become a pre-move or POST");
 
   await $("human-resign").events.click();
   await flush();
@@ -466,6 +487,8 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   await flush();
   assert.equal($("human-turn-title").textContent,"Sua vez");
   assert.equal(board.children.length,64);
+  assert.equal(overlay.children.length,0,
+    "new session clears previous annotation even if no move is submitted");
   // Flipped orientation must draw visually from e7 to e5, not from
   // the canonical white-view squares. Right-button arrows need no legal move.
   drawRightArrow(64,51,280,520,35,280,360);
