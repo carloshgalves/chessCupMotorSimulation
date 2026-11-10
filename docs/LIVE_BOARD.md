@@ -126,3 +126,15 @@ A suíte de CI valida a API e os assets com um servidor HTTP local e verifica
 atualização de PGN enquanto o confronto ainda está em andamento. O teste de
 ponta a ponta visual com o Rodent IV do notebook é uma verificação operacional
 posterior ao merge; não deve ser apresentado como realizado no GitHub Actions.
+
+## Adivinhar o próximo lance — desafio do espectador (#94)
+
+No monitor `watch` e no visualizador de Duelo da Arena (iframe `/viewer`), o botão **Ativar palpites** permite escolher origem e destino ou arrastar para prever um lance da posição exibida **ao vivo**. Os destaques **azuis** identificam o palpite; uma peça semitransparente é exibida em uma camada gráfica independente sobre o destino, com a arte SVG atual, sem remover a peça real das 64 casas. A confirmação/erro só aparece quando a reprodução cadenciada alcançar o próximo lance efetivamente jogado, para não antecipar o resultado ao espectador. O azul é distinto do vermelho dos pré-moves do modo Jogar (#90) e das setas manuais (#91).
+
+**Contrato de integridade:** a resposta `/api/state` inclui `uci` real por meio-lance (derivado do PGN validado) e apenas para a última posição ainda ativa a lista `legal_moves` produzida por `python-chess`. O observador só pode palpitar quando estiver no último lance conhecido de uma partida `live`, não durante reprodução pausada/histórica. O palpite não altera FEN, PGN, UCI, relógio, classificação, Elo ou arquivos de execução; não envia POST e não consulta uma engine separada. O lance seguinte do mesmo jogo é comparado por UCI exato; snapshots repetidos não pontuam em duplicidade. Há placar local por partida (acertos/tentativas) e mensagens de acerto/erro. Troca de partida, pausa ou navegação histórica descarta intenções pendentes. Sem login, persistência ou ranking multiusuário.
+
+Uma promoção é escolhida explicitamente (D/T/B/C), sem inventar uma variante. Nenhuma previsão retroativa é pontuada. A apresentação segue como renderização local com realce de origem/destino para não falsificar a posição real antes do motor jogar.
+
+**Referências de UX (consultadas 10/11/2026):** a antiga interação `Guess the Move` do Chess.com permitia mover uma peça durante a observação e comparar com o movimento efetivo: https://www.chess.com/forum/view/help-support/guess-the-move-feature. Moderadores relataram remoção do espectador Live tradicional (2024) e disponibilidade residual em Events (2026): https://www.chess.com/forum/view/site-feedback/what-happened-to-guessing-moves-while-spectating-games. Implementação independente; não copia código/assets externos.
+
+**Gate:** homologação manual com PGN real em Chrome/Debian, zoom, toque/arraste, eventos de rede, latência e múltiplos jogos permanece `NOT_RUN` em #83; CI não substitui essa prova.
