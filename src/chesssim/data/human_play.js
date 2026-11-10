@@ -512,7 +512,11 @@
        Math.hypot(event.clientX-gesture.startX,
                   event.clientY-gesture.startY)<DRAG_THRESHOLD_PX)return;
     if(!gesture.dragged) {
-      gesture.preview=dragPreview(gesture.square,event);
+      // Capture the grab position from pointerdown, not the first move
+      // beyond the 8px threshold; otherwise the piece jumps on pickup.
+      gesture.preview=dragPreview(gesture.square,{
+        clientX:gesture.startX,clientY:gesture.startY
+      });
       if(!gesture.preview){cancelDrag();return;}
       gesture.dragged=true;
       state.selected=gesture.from;
