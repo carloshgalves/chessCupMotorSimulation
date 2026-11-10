@@ -171,6 +171,18 @@ def test_event_route_rejects_invalid_selection_cross_origin_and_post(tmp_path):
         assert denied.value.code == 405
 
 
+def test_rejected_cross_origin_never_reads_the_pgn(tmp_path, monkeypatch):
+    duel(tmp_path)
+    with monitor(tmp_path) as (_, base):
+        def forbidden_read(*args, **kwargs):
+            raise AssertionError("Untrusted origin reached expensive snapshot reader")
+        monkeypatch.setattr(live_board, "snapshot", forbidden_read)
+        with pytest.raises(HTTPError) as rejected:
+            urlopen(Request(base + "/api/events", headers={
+                "Origin": "https://untrusted.example"}), timeout=3)
+        assert rejected.value.code == 403
+
+
 def test_event_slot_quota_fails_fast_without_leaking_state(tmp_path):
     duel(tmp_path)
     with monitor(tmp_path) as (server, base):
