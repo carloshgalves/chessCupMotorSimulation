@@ -308,3 +308,26 @@ def test_my_games_rejects_false_timeout_winner_and_false_resignation(tmp_path):
     assert my_games.listing(tmp_path)["coverage"]["rejected"] == 1
     with pytest.raises(my_games.MyGamesInput, match="causa"):
         my_games.replay(tmp_path, another.name)
+
+
+def test_my_games_index_reuses_pgn_audit_and_invalidates_on_change(
+        tmp_path, monkeypatch):
+    session = make_game(tmp_path)
+    original = my_games._document
+    calls = []
+    def recorded(*args, **kwargs):
+        calls.append(1)
+        return original(*args, **kwargs)
+    monkeypatch.setattr(my_games, "_document", recorded)
+    assert my_games.listing(tmp_path, "page=1&page_size=1")["total"] == 1
+    assert len(calls) == 1
+    assert my_games.listing(tmp_path, "page=2&page_size=1")["total"] == 1
+    assert len(calls) == 1, "Page change must not re-parse PGNs"
+    state = session / "state.json"
+    state.write_text(state.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    assert my_games.listing(tmp_path)["total"] == 1
+    assert len(calls) == 2, "State changes must invalidate the index"
+    pgn = session / "game.pgn"
+    pgn.write_text(pgn.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    assert my_games.listing(tmp_path)["total"] == 1
+    assert len(calls) == 3, "PGN changes must invalidate the index"
