@@ -154,7 +154,7 @@ motor UCI.
   com `schema: chesssim-game-events-v1`, `revision`, `mode`, `selection`,
   `duel`, `games`, `tournament` e `changes`.
 - Cada jogo contém a identidade `id`, `ply`, último `uci`, lado a jogar,
-  `clocks`, estado, resultado e indicador `live`. `changes` indica
+  `clocks`, estado, resultado, motivo de encerramento e indicador `live`. `changes` indica
   `snapshot`, `session`, `move`, `clock`, `terminal` ou `state`.
   Múltiplos lances entre dois checkpoints podem ser **coalescidos**; um evento
   NÃO significa necessariamente exatamente um lance, e a UI reproduz cada
