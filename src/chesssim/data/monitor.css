@@ -89,3 +89,20 @@ button.accent{flex:1;font-size:.81rem}
 .bracket-match .match-status{font-size:.75rem;color:#aec1c6}
 #attempts:disabled,#games:disabled{opacity:.64;cursor:not-allowed}
 @media(max-width:870px){#bracket{max-height:310px}}
+
+/* Observer predictions never replace board pieces or historical last-move cues. */
+.guess-actions,.guess-promotion{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+.guess-actions button{flex:1;min-width:125px}
+.guess-actions #guess-toggle[aria-pressed="true"]{border-color:#5baee5;background:#174a66;color:#e3f6ff}
+.guess-promotion[hidden]{display:none}
+.guess-promotion button{min-height:34px;padding:5px 9px;font-size:.8rem}
+.guess-score{color:#a4dbff!important;font-variant-numeric:tabular-nums;font-weight:700}
+#guess-status{min-height:42px;color:#dcebf5}
+.board .square.guess-selected{box-shadow:inset 0 0 0 5px #69ccff;cursor:pointer}
+.board .square.guess-from,.board .square.guess-to{
+  box-shadow:inset 0 0 0 5px #367bc2;
+  background-image:linear-gradient(#3587c54a,#3587c54a)!important
+}
+.board[role="group"] .square[tabindex="0"]{cursor:pointer}
+.board[role="group"] .square:focus-visible{outline:3px solid #ffe59a;outline-offset:-4px;z-index:2}
+@media(prefers-reduced-motion:reduce){.board .square.guess-from,.board .square.guess-to{transition:none!important}}
