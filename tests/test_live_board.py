@@ -86,6 +86,10 @@ def test_partial_game_is_available_before_duel_finishes(tmp_path):
     assert game["states"][-1]["fen"].startswith("rnbqkbnr/pppp1ppp")
     assert game["states"][-1]["clocks"] == [598.0, 596.0]
     assert game["states"][-1]["turn"] == "white"
+    assert game["states"][-1]["uci"] == "e7e5"
+    assert "g1f3" in game["states"][-1]["legal_moves"]
+    assert "legal_moves" not in game["states"][0]
+    assert "legal_moves" not in game["states"][1]
 
 
 def test_http_repoll_delivers_new_moves_without_final_pgn(tmp_path):
@@ -115,6 +119,8 @@ def test_latest_finished_game_is_preferred_to_stale_partial(tmp_path):
     assert one["status"] == "COMPLETED"
     assert not one["live"]
     assert len(one["states"]) == 5
+    assert one["states"][-1]["uci"] == "b8c6"
+    assert all("legal_moves" not in state for state in one["states"])
     assert two["white"] == "Mikhail Tal"
     assert two["black"] == "Bobby Fischer"
     assert two["number"] == 2
