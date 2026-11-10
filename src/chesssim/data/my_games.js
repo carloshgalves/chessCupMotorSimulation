@@ -139,7 +139,7 @@
         index+1===state.ply?"step":"false"));
   }
   async function openReplay(id){
-    if(!state.active||!/^[a-z0-9-]{15,45}$/.test(id))return;
+    if(!state.active||!/^human-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$/.test(id))return;
     const version=state.version;
     try{
       const data=await get("/api/my-games/"+encodeURIComponent(id)+"/replay");
