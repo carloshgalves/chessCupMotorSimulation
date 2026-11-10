@@ -583,7 +583,9 @@
       const previous=arrows.get(key);
       if(previous?.color===gesture.arrowColor)arrows.delete(key);
       else {
-        // Avoid stacking one colored arrow on top of an older arrow.
+        // Prevent unbounded SVG allocation after many annotation gestures.
+        if(!arrows.has(key) && arrows.size>=64)
+          arrows.delete(arrows.keys().next().value);
         arrows.set(key,{from:gesture.from,to,color:gesture.arrowColor});
       }
     }
@@ -743,7 +745,10 @@
     if(dragGesture?.pointerId===event.pointerId)cancelDrag();
   });
   board.addEventListener("contextmenu",event=>{
-    if(state.mode==="human" && board.contains(event.target.closest?.(".square")))
+    // Pointer capture can retarget contextmenu to the board element itself.
+    // Still prevent the native menu, but only inside the human board.
+    if(state.mode==="human" && (event.target===board ||
+       board.contains(event.target?.closest?.(".square"))))
       event.preventDefault();
   });
   window.addEventListener?.("blur",()=>{
