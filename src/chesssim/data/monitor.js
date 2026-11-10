@@ -107,8 +107,11 @@ function reconcileGuess() {
 function drawGuessPreview() {
   const layer=$("guess-piece-preview");
   layer.replaceChildren();
-  const p=guess.pending,g=guessGame();
-  if(!p||!g||g.id!==p.gameId||cursor!==p.ply)return;
+  const p=guess.pending,g=currentGame();
+  // The server may already know the next move, while the viewer is still
+  // presenting the previous position. Retain the ghost until that animation.
+  if(!p||!guess.enabled||pinned||!g||
+     g.id!==p.gameId||cursor!==p.ply)return;
   const source=[...$("board").children].find(s=>guessSquare(s)===p.from);
   const artwork=[...source?.children||[]].find(
     child=>child.classList?.contains("piece-glyph"));
@@ -127,6 +130,8 @@ function drawGuessPreview() {
 function renderGuess(game=currentGame()) {
   setGuessGame(game);
   const live=guessGame();
+  const waiting=guess.enabled && !pinned && !!guess.pending &&
+    game?.id===guess.pending.gameId && cursor===guess.pending.ply;
   $("guess-toggle").textContent=guess.enabled?"Desativar palpites":"Ativar palpites";
   $("guess-toggle").setAttribute("aria-pressed",String(guess.enabled));
   $("guess-cancel").disabled=!guess.pending&&!guess.selected;
@@ -146,8 +151,8 @@ function renderGuess(game=currentGame()) {
     if(!square.className?.split(/\s+/).includes("square"))continue;
     const name=guessSquare(square);
     square.classList.toggle("guess-selected",!!live&&name===guess.selected);
-    square.classList.toggle("guess-from",!!live&&name===guess.pending?.from);
-    square.classList.toggle("guess-to",!!live&&name===guess.pending?.to);
+    square.classList.toggle("guess-from",waiting&&name===guess.pending?.from);
+    square.classList.toggle("guess-to",waiting&&name===guess.pending?.to);
     square.tabIndex=live&&playable.includes(name)?0:-1;
     square.setAttribute("role",live?"button":"presentation");
   }
