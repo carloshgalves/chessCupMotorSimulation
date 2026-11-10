@@ -12,6 +12,7 @@ const intervals = [];
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
 const E5 = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2";
+const D4 = "rnbqkbnr/pppp1ppp/8/4p3/3PP3/8/PPP2PPP/RNBQKBNR b KQkq d3 0 2";
 class ClassList {
   constructor(owner){this.owner=owner;}
   contains(name){return this.owner.className.split(/\s+/).includes(name);}
@@ -150,7 +151,10 @@ const fetch=async(path,options={})=>{
         assert.equal(request.revision,2);
         assert.equal(request.uci,"d2d4","staged premove remains a legal server-validated move");
         game.revision=3;game.human_turn=false;game.turn="black";
-        game.legal_moves=[];
+        game.fen=D4;game.last=["d2","d4"];game.legal_moves=[];
+        game.moves.push({ply:3,san:"d4",uci:"d2d4"});
+        game.states.push({fen:D4,last:["d2","d4"],
+          turn:"black",clocks:[179,179]});
         return reply({id:game.id,revision:3,status:"RUNNING"});
       }
       if(game.id==="human-promote"){
@@ -595,11 +599,21 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   assert.equal(calls.length,beforePremove,"queue is frontend-only");
   game.revision=2;game.fen=E5;game.turn="white";
   game.human_turn=true;game.legal_moves=["d2d4"];
+  game.moves.push({ply:2,san:"e5",uci:"e7e5"});
   game.states.push({fen:E5,last:["e7","e5"],turn:"white",clocks:[179,179]});
-  await intervals.find(x=>x.delay===1100).fn();await flush();
+  await intervals.find(x=>x.delay===1100).fn();
+  // The queued red intent stays visible while the POST is in flight.
+  assert.equal($("human-premove-status").textContent.includes("executando"),true);
+  assert.equal($("human-premove-cancel").disabled,true,
+    "an already-submitted move cannot be cancelled");
+  await flush();
   assert.equal(calls.length,beforePremove+1,"exactly one auto-submission");
   assert.equal(calls.at(-1).request.uci,"d2d4");
   assert.equal(calls.at(-1).request.revision,2);
+  assert.equal($("human-premove-status").textContent,"Nenhum pré-move pendente");
+  assert.equal($("human-feedback").textContent,"Pré-move executado: d2d4");
+  assert.equal(board.dataset.lastFen,D4,
+    "accepted premove paints its actual resulting position immediately, not 650ms later");
   await intervals.find(x=>x.delay===1100).fn();await flush();
   assert.equal(calls.length,beforePremove+1,"poll replay cannot duplicate premove");
 
