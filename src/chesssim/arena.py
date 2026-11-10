@@ -30,7 +30,7 @@ from .leagues import LeagueManager, LeagueInput, LeagueBusy
 from .cups import CupManager, CupBusy
 from .cup_rules import CupInput, presets as cup_presets
 from .live_board import SCHEMA, make_handler, snapshot
-from .live_events import MAX_EVENT_CLIENTS, stream_events
+from .live_events import MAX_EVENT_CLIENTS, same_origin, stream_events
 from .matches import _atomic_text, official_book_hashes, play_duel, validate
 from .peak_windows import CLOCK_PRESETS, PROVISIONAL_PEAKS
 
@@ -831,6 +831,9 @@ def make_arena_handler(manager: ArenaManager, token: str):
                         KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "Estado do duelo indisponível"})
             elif url.path == "/api/events":
+                if not same_origin(self):
+                    self._json(403, {"error": "Origem não autorizada"})
+                    return
                 if url.query:
                     self._json(400, {"error": "Consulta de eventos inválida"})
                     return
