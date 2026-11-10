@@ -1,4 +1,6 @@
-> **Estado em 09/11/2026:** os 64 retratos locais e 64 perfis da PR #55 estão **mesclados à `main`**; a CI do pacote foi aprovada. Permanecem **16 imagens marcadas PDM 1.0** sem parecer territorial conclusivo para redistribuição comercial/SaaS (gate #53). A aprovação técnica não é autorização de direitos de terceiros; a inspeção de acessibilidade/Chrome real segue `NOT_RUN`.\n\n# Retratos da Copa dos Imortais — estado consolidado (06/11/2026)
+> **Estado em 09/11/2026:** os 64 retratos locais e 64 perfis da PR #55 estão **mesclados à `main`**; a CI do pacote foi aprovada. Permanecem **16 imagens marcadas PDM 1.0** sem parecer territorial conclusivo para redistribuição comercial/SaaS (gate #53). A aprovação técnica não é autorização de direitos de terceiros; a inspeção de acessibilidade/Chrome real segue `NOT_RUN`.
+
+# Retratos da Copa dos Imortais — estado consolidado (06/11/2026)
 
 **64 perfis biográficos · 64 imagens locais · nenhum placeholder de retrato.**
 
