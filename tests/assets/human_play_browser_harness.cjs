@@ -483,10 +483,38 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   assert.equal(board.children[51].classList.contains("human-premove-from"),true);
   assert.equal(board.children[35].classList.contains("human-premove-to"),true);
   assert.equal(calls.length,unchanged+1,"premove staging must not POST");
+  // Right-drag still makes an arrow while a premove is queued; it does not
+  // accidentally cancel the queued chess intention.
+  drawRightArrow(68,56,40,600,7,600,40);
+  assert.equal(board.children[51].classList.contains("human-premove-from"),true,
+    "right drag must preserve a waiting premove");
+  assert.equal(overlay.children.length,1);
+  clearMarks.events.click();
+  assert.equal(overlay.children.length,0);
+
+  // A short right-click on ANY other square cancels the premove, with no
+  // accidental analysis mark or outgoing HTTP move.
+  rightMark(69,0,40,40); // a8, not premove source d2
+  assert.equal($("human-premove-status").textContent,"Nenhum pré-move pendente");
+  assert.equal($("human-feedback").textContent,"Pré-move cancelado.");
+  assert.equal(board.children[51].classList.contains("human-premove-from"),false);
+  assert.equal(board.children[35].classList.contains("human-premove-to"),false);
+  assert.equal(overlay.children.length,0,"cancel click must not mark square");
+  assert.equal(calls.length,unchanged+1,"right-click cancellation must not POST");
+
+  // Aborting a right gesture cannot cancel a new waiting premove.
+  board.events.pointerdown(pointer(10,pawn,280,520));
+  board.events.pointermove(pointer(10,pawn,280,360));
+  board.events.pointerup(pointer(10,pawn,280,360));
+  assert.equal($("human-premove-cancel").disabled,false);
+  board.events.pointerdown(right(70,board.children[0],40,40));
+  board.events.pointercancel(right(70,board.children[0],40,40));
+  assert.equal(board.children[51].classList.contains("human-premove-from"),true,
+    "an aborted right-click must not cancel");
   await $("human-premove-cancel").events.click();
   assert.equal($("human-premove-cancel").disabled,true);
   assert.equal(board.children[51].classList.contains("human-premove-from"),false);
-  assert.equal(calls.length,unchanged+1,"cancellation must not POST");
+  assert.equal(calls.length,unchanged+1,"button cancellation must not POST");
   const beforeThinkingAnnotation=calls.length;
   rightMark(67,board.children[51]===undefined?52:51,280,520);
   assert.equal(overlay.children.length,1,
@@ -612,6 +640,11 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   assert.equal(typeof releasePremovePost,"function");
   assert.equal(board.children[51].classList.contains("human-premove-from"),true,
     "red staging stays visible before the server replies");
+  rightMark(71,0,40,40);
+  assert.equal($("human-premove-status").textContent.includes("executando"),true,
+    "right-click cannot undo an already submitted UCI move");
+  assert.equal(overlay.children.length,0,
+    "right-click during in-flight POST must not add a stray annotation");
   releasePremovePost();
   await flush();
   assert.equal(calls.length,beforePremove+1,"exactly one auto-submission");
