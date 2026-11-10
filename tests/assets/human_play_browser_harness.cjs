@@ -136,6 +136,13 @@ const fetch=async(path,options={})=>{
     }
     if(path==="/api/arena/human/move"){
       assert.equal(request.id,game.id);
+      if(game.id==="human-promote"){
+        assert.equal(request.revision,0);
+        assert.equal(request.uci,"a7a8n","underpromotion is selected explicitly");
+        game.revision=1;game.turn="black";game.human_turn=false;
+        game.legal_moves=[];
+        return reply({id:game.id,revision:1,status:"RUNNING"});
+      }
       if(game.id==="human-black"){
         assert.equal(request.revision,1);
         assert.equal(request.uci,"e7e5");
@@ -194,7 +201,7 @@ const paint=(element,position)=>{
       const sq=new Node("div");
       sq.className="square";
       // Fake a rendered glyph on the squares used in pointer drag tests.
-      if([52,62,12].includes(i)){
+      if([8,12,52,62].includes(i)){
         const piece=new Node("span");piece.className="piece-glyph";
         sq.appendChild(piece);
       }
@@ -338,6 +345,34 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   assert.equal(calls.at(-1).request.uci,"e7e5");
   assert.equal(calls.at(-1).request.revision,1);
   assert.equal(calls.filter(x=>x.path==="/api/arena/human/move").length,3);
+
+  // A promoted pawn has four legal UCI candidates. Drag only opens the
+  // existing selector; no automatic queen or move before explicit choice.
+  const PROMO="4k3/P7/8/8/8/8/8/4K3 w - - 0 1";
+  game={
+    id:"human-promote",status:"RUNNING",revision:0,
+    config:{color:"white",opponent:"fischer",depth:2,preset:"blitz"},
+    white:"Você",black:"Bobby Fischer",fen:PROMO,turn:"white",
+    human_turn:true,legal_moves:["a7a8q","a7a8r","a7a8b","a7a8n"],
+    last:null,result:"*",termination:null,clocks:[180,180],moves:[],
+    states:[{fen:PROMO,last:null,turn:"white",clocks:[180,180]}],
+    draw_offer:null
+  };
+  await intervals.find(x=>x.delay===1100).fn();
+  await flush();
+  const promotionSource=board.children[8]; // a7
+  const beforePromotion=calls.length;
+  board.events.pointerdown(pointer(11,promotionSource,40,120));
+  board.events.pointermove(pointer(11,promotionSource,40,40));
+  board.events.pointerup(pointer(11,promotionSource,40,40));
+  await flush();
+  assert.equal($("human-promotion").hidden,false);
+  assert.equal(calls.length,beforePromotion,"must not auto-queen");
+  await $("human-promotion").children.find(x=>x.dataset.promote==="n").events.click();
+  await flush();
+  assert.equal($("human-promotion").hidden,true);
+  assert.equal(calls.at(-1).request.uci,"a7a8n");
+  assert.equal(calls.length,beforePromotion+1);
 
   $("arena-mode-duel").events.click();
   assert.equal($("duel-viewer").hidden,false);
