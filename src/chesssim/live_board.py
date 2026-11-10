@@ -9,12 +9,15 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib.resources import files
 from pathlib import Path
+from threading import BoundedSemaphore
 from urllib.parse import parse_qs, urlsplit
 import json
 import re
 
 import chess
 import chess.pgn
+
+from .live_events import MAX_EVENT_CLIENTS, stream_events
 
 MAX_PGN_BYTES = 2 * 1024 * 1024
 class InvalidSelection(ValueError):
@@ -291,11 +294,13 @@ def make_handler(directory: Path):
                 return
             url = urlsplit(self.path)
             route = url.path
-            if route == "/api/state":
+            if route in ("/api/state", "/api/events"):
                 try:
                     match_id, attempt = _parse_selection(url.query)
-                    payload = json.dumps(snapshot(root, match_id=match_id, attempt=attempt),
-                                         ensure_ascii=False, allow_nan=False).encode("utf-8")
+                    report = snapshot(root, match_id=match_id, attempt=attempt)
+                    if route == "/api/state":
+                        payload = json.dumps(report, ensure_ascii=False,
+                                             allow_nan=False).encode("utf-8")
                 except InvalidSelection:
                     self._reply(400, b'{"error":"Selecao de partida invalida"}',
                                 "application/json; charset=utf-8")
@@ -305,7 +310,11 @@ def make_handler(directory: Path):
                     payload = b'{"error":"Nao foi possivel ler o estado local da partida"}'
                     self._reply(503, payload, "application/json; charset=utf-8")
                     return
-                self._reply(200, payload, "application/json; charset=utf-8")
+                if route == "/api/events":
+                    stream_events(self, report,
+                        lambda: snapshot(root, match_id=match_id, attempt=attempt))
+                else:
+                    self._reply(200, payload, "application/json; charset=utf-8")
                 return
             if route.startswith("/piece-assets/"):
                 match = _PIECE_PATH.fullmatch(route)
@@ -346,6 +355,7 @@ def create_server(directory: Path, port: int = 8765) -> ThreadingHTTPServer:
         raise ValueError("Porta deve estar entre 0 e 65535")
     snapshot(directory)  # fail fast before binding
     server = ThreadingHTTPServer(("127.0.0.1", port), make_handler(directory))
+    server.event_stream_slots = BoundedSemaphore(MAX_EVENT_CLIENTS)
     server.daemon_threads = True
     return server
 
