@@ -357,3 +357,44 @@ def test_my_games_unhashable_metadata_is_rejected_as_input(
 def test_my_games_query_parser_rejects_malformed_separator(tmp_path):
     with pytest.raises(my_games.MyGamesInput, match="malformada"):
         my_games.listing(tmp_path, "page=1&")
+
+
+def test_my_games_rejects_alternate_initial_fen_and_stop_reason_mismatch(tmp_path):
+    directory = make_game(tmp_path, finished=False)
+    state_file = directory / "state.json"
+    pgn_file = directory / "game.pgn"
+    with pgn_file.open(encoding="utf-8") as source:
+        original = chess.pgn.read_game(source)
+
+    # A syntactically valid PGN can represent a position the HumanGame
+    # application would never create. The personal reader must reject it.
+    start = chess.Board(
+        "rnbqkbnr/pppppppp/8/8/8/4P3/PPPP1PPP/RNBQKBNR w KQkq - 0 1")
+    forged = chess.pgn.Game.from_board(start)
+    forged.headers.update(dict(original.headers))
+    forged.headers["SetUp"] = "1"
+    forged.headers["FEN"] = start.fen()
+    pgn_file.write_text(str(forged) + "\n", encoding="utf-8")
+    data = json.loads(state_file.read_text(encoding="utf-8"))
+    data["revision"] = 0
+    state_file.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(my_games.MyGamesInput, match="posição inicial"):
+        my_games.replay(tmp_path, directory.name)
+
+    # A stopped session needs the termination reason in the manifest/PGN
+    # to agree. Preserve the special read-only ServerRestart recovery case.
+    data["revision"] = 2
+    state_file.write_text(json.dumps(data), encoding="utf-8")
+    original.headers["Termination"] = "ServerShutdown"
+    pgn_file.write_text(str(original) + "\n", encoding="utf-8")
+    with pytest.raises(my_games.MyGamesInput, match="Causa"):
+        my_games.replay(tmp_path, directory.name)
+
+    data["termination"] = "ServerRestart"
+    data["finished_utc"] = None
+    state_file.write_text(json.dumps(data), encoding="utf-8")
+    original.headers.pop("Termination", None)
+    pgn_file.write_text(str(original) + "\n", encoding="utf-8")
+    replay = my_games.replay(tmp_path, directory.name)
+    assert replay["game"]["status"] == "INTERRUPTED"
+    assert replay["game"]["outcome"] == "incomplete"
