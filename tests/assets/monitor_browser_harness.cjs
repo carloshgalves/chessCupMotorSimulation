@@ -337,6 +337,11 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
     san:"e5",last:["e7","e5"],turn:"white",clocks:[598,598],
     uci:"e7e5",legal_moves:["g1f3","d2d4"]});
   await vm.runInContext("poll()",predictor.context);
+  assert.equal(predictor.elements.get("guess-score").textContent,"0 acerto(s) em 0 tentativa(s)",
+    "a backend burst cannot spoil the guess before the move is shown");
+  assert.equal(predictionLayer.children.length,1,
+    "visual prediction stays until the actual move is displayed");
+  vm.runInContext("advanceLivePlayback(lastPresentedAt+650)",predictor.context);
   assert.equal(predictor.elements.get("guess-score").textContent,"1 acerto(s) em 1 tentativa(s)");
   assert(predictor.elements.get("guess-status").textContent.includes("Acertou"));
   assert.equal(predictionLayer.children.length,0,"actual move clears the ghost");
@@ -350,6 +355,8 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
     san:"d4",last:["d2","d4"],turn:"black",clocks:[597,598],
     uci:"d2d4",legal_moves:["b8c6"]});
   await vm.runInContext("poll()",predictor.context);
+  assert.equal(predictor.elements.get("guess-score").textContent,"1 acerto(s) em 1 tentativa(s)");
+  vm.runInContext("advanceLivePlayback(lastPresentedAt+650)",predictor.context);
   assert.equal(predictor.elements.get("guess-score").textContent,"1 acerto(s) em 2 tentativa(s)");
   assert(predictor.elements.get("guess-status").textContent.includes("Não foi"));
   assert(predictor.requests.every(uri=>uri.startsWith("/api/state")));
