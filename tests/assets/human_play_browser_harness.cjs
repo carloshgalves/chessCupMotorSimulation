@@ -309,6 +309,8 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
 
   await $("human-resign").events.click();
   await flush();
+  assert.equal($("human-turn-title").textContent,"Reproduzindo os lances");
+  now+=650;intervals.find(x=>x.delay===100).fn();
   assert.equal($("human-turn-title").textContent,"Partida concluída");
 
   // Black-side orientation reverses DOM order; the coordinate mapping must
