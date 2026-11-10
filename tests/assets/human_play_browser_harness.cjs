@@ -98,6 +98,10 @@ const document={
     return nodes.get(id);
   },
   createElement(tag){return new Node(tag);},
+  createElementNS(namespace,tag){
+    assert.equal(namespace,"http://www.w3.org/2000/svg");
+    return new Node(tag);
+  },
   body:new Node("body"),
   addEventListener(){}
 };
@@ -250,12 +254,110 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   assert.equal(board.children.length,64);
   assert.equal($("human-turn-title").textContent,"Sua vez");
 
+  // #91: right-button gestures are annotations, not UCI moves.
+  const overlay=$("human-annotations");
+  const clearMarks=$("human-annotations-clear");
+  const right=(id,square,x,y,mods={})=>({
+    pointerId:id,pointerType:"mouse",button:2,buttons:2,isPrimary:true,
+    target:square,clientX:x,clientY:y,
+    ctrlKey:!!mods.ctrlKey,altKey:!!mods.altKey,shiftKey:!!mods.shiftKey,
+    preventDefault(){this.prevented=true;}
+  });
+  const drawRightArrow=(id,fromIndex,fx,fy,toIndex,tx,ty,mods={})=>{
+    const from=board.children[fromIndex],to=board.children[toIndex];
+    board.events.pointerdown(right(id,from,fx,fy,mods));
+    assert.equal(board.captured,id,"annotation captures the pointer");
+    board.events.pointermove(right(id,to,tx,ty,mods));
+    assert.equal(overlay.children.at(-1).getAttribute("fill-opacity"),".46",
+                 "annotation is previewed during drag");
+    board.events.pointerup(right(id,to,tx,ty,mods));
+    assert.equal(board.captured,null,"capture released after annotation");
+  };
+  const rightMark=(id,index,x,y,mods={})=>{
+    const cell=board.children[index],ev=right(id,cell,x,y,mods);
+    board.events.pointerdown(ev);
+    board.events.pointerup(ev);
+  };
+  const noUci=calls.length,initialRevision=game.revision;
+  drawRightArrow(50,56,40,600,7,600,40);
+  assert.equal(overlay.children.length,1);
+  assert.equal(overlay.children[0].tagName,"PATH");
+  assert.equal(overlay.children[0].getAttribute("data-arrow"),"a1-h8");
+  assert.equal(overlay.children[0].getAttribute("data-color"),"yellow");
+  assert.equal(overlay.children[0].getAttribute("fill"),"#f2c94c");
+  assert.equal(board.children.length,64,"SVG is a sibling, not a 65th square");
+  assert.equal(calls.length,noUci,"an illegal chess path is a legal visual arrow");
+  drawRightArrow(51,56,40,600,15,600,120,{ctrlKey:true});
+  drawRightArrow(52,56,40,600,23,600,200,{altKey:true});
+  drawRightArrow(53,56,40,600,31,600,280,{shiftKey:true});
+  assert.deepEqual(overlay.children.map(n=>n.getAttribute("data-color")),
+                   ["yellow","red","blue","green"]);
+  rightMark(54,62,520,600); // g1: red by default
+  rightMark(55,61,440,600,{ctrlKey:true});
+  rightMark(56,60,360,600,{altKey:true});
+  rightMark(57,59,280,600,{shiftKey:true});
+  assert.equal(overlay.children.length,8);
+  assert.deepEqual(overlay.children.slice(0,4).map(n=>n.getAttribute("data-color")),
+                   ["red","yellow","blue","green"]);
+  assert.equal($("human-annotations-status").textContent,
+               "4 seta(s) · 4 casa(s) marcada(s)");
+  assert.equal(clearMarks.disabled,false);
+  let contextPrevented=false;
+  board.events.contextmenu({target:board.children[62],
+    preventDefault(){contextPrevented=true;}});
+  assert.equal(contextPrevented,true,"no browser menu inside annotated board");
+  contextPrevented=false;
+  board.events.contextmenu({target:board,
+    preventDefault(){contextPrevented=true;}});
+  assert.equal(contextPrevented,true,
+    "pointer capture can retarget contextmenu to the board itself");
+  drawRightArrow(58,56,40,600,7,600,40);
+  assert.equal(overlay.children.length,7,"same arrow toggles off");
+  rightMark(59,62,520,600);
+  assert.equal(overlay.children.length,6,"same marked square toggles off");
+  // A right-button drag that leaves the board never creates an arrow.
+  const outsideBefore=overlay.children.length;
+  const outsideSource=board.children[56];
+  board.events.pointerdown(right(60,outsideSource,40,600));
+  board.events.pointermove(right(60,outsideSource,-50,-50));
+  board.events.pointerup(right(60,outsideSource,-50,-50));
+  assert.equal(overlay.children.length,outsideBefore);
+  // Interrupted right-click must not commit an annotation.
+  board.events.pointerdown(right(65,outsideSource,40,600));
+  board.events.pointermove(right(65,board.children[7],600,40));
+  board.events.pointercancel(right(65,board.children[7],600,40));
+  assert.equal(overlay.children.length,outsideBefore);
+  board.events.pointerdown(right(66,outsideSource,40,600));
+  board.events.pointermove(right(66,board.children[7],600,40));
+  board.events.lostpointercapture(right(66,board.children[7],600,40));
+  assert.equal(overlay.children.length,outsideBefore);
+  assert.equal(board.captured,null);
+  clearMarks.events.click();
+  assert.equal(overlay.children.length,0);
+  assert.equal(clearMarks.disabled,true);
+  assert.equal($("human-annotations-status").textContent,"Nenhuma marcação");
+  assert.equal(game.revision,initialRevision);
+  assert.equal(calls.length,noUci);
+
+  rightMark(61,62,520,600);
+  board.events.keydown({key:"Escape",target:board.children[62],
+                        preventDefault(){}});
+  assert.equal(overlay.children.length,0,"Escape clears arrows and marks");
+  rightMark(62,62,520,600);
+  board.events.pointerdown({pointerId:63,pointerType:"mouse",button:0,
+    target:board.children[56],isPrimary:true,clientX:40,clientY:600});
+  assert.equal(overlay.children.length,0,"left click clears annotations");
+  assert.equal(calls.length,noUci);
+
+  rightMark(170,52,360,520);
+  assert.equal(overlay.children.length,1);
   // e2 to e4 by clicking the source and destination: canonical A8..H1.
   board.events.click({target:board.children[52]});
   board.events.click({target:board.children[36]});
   await flush();
   assert.equal(calls.at(-1).path,"/api/arena/human/move");
   assert.equal(calls.at(-1).request.uci,"e2e4");
+  assert.equal(overlay.children.length,0,"new game revision clears annotations");
   assert.equal($("human-turn-title").textContent,"Reproduzindo os lances");
   assert.equal($("human-moves").children.length,0);
   assert.equal(board.dataset.lastFen,START,"must not skip the human move");
@@ -358,6 +460,12 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   board.events.pointerup(pointer(9,board.children[51],280,360));
   await flush();
   assert.equal(calls.length,unchanged+1,"no pre-moves in increment 1");
+  const beforeThinkingAnnotation=calls.length;
+  rightMark(67,board.children[51]===undefined?52:51,280,520);
+  assert.equal(overlay.children.length,1,
+    "right-click analysis still works while the engine thinks");
+  assert.equal(calls.length,beforeThinkingAnnotation,
+    "visual-only annotations never become a pre-move or POST");
 
   await $("human-resign").events.click();
   await flush();
@@ -381,6 +489,16 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   await intervals.find(x=>x.delay===1100).fn();
   await flush();
   assert.equal($("human-turn-title").textContent,"Sua vez");
+  assert.equal(board.children.length,64);
+  assert.equal(overlay.children.length,0,
+    "new session clears previous annotation even if no move is submitted");
+  // Flipped orientation must draw visually from e7 to e5, not from
+  // the canonical white-view squares. Right-button arrows need no legal move.
+  drawRightArrow(64,51,280,520,35,280,360);
+  assert.equal(overlay.children[0].getAttribute("data-arrow"),"e7-e5");
+  assert.match(overlay.children[0].getAttribute("d"),/^M360\.00,650\.00 /);
+  assert.equal(calls.filter(x=>x.path==="/api/arena/human/move").length,2);
+  // This overlay is local and not part of the board's 64 square children.
   assert.equal(board.children.length,64);
   const blackSource=board.children[51]; // e7 when black looks from bottom
   // Real SVGs are already loaded; moving the node must not trigger a
@@ -433,6 +551,7 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   assert.equal(calls.length,beforePromotion+1);
 
   $("arena-mode-duel").events.click();
+  assert.equal(overlay.children.length,0,"switching modes clears analysis");
   assert.equal($("duel-viewer").hidden,false);
   assert.equal($("human-viewer").hidden,true);
   assert(!nodes.has("human-clear"),"No reset button in approved design");

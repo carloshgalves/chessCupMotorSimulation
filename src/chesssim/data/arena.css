@@ -90,6 +90,28 @@ button.primary{background:#4d856f;border-color:#78b69a;color:#fff;flex:1}
    gesture starts inside the playable 8x8 board. Outside it, scroll is normal. */
 .human-board{border:1px solid #638892;border-radius:6px;max-width:700px;touch-action:none}
 .human-board .square{cursor:pointer}
+/* Annotation SVG uses the same 8x8 geometry as the board, but is its
+   sibling: board.children must remain exactly the 64 canonical squares. */
+.human-board-stage{position:relative;width:100%;max-width:700px;min-width:0}
+.human-board-stage .human-board{max-width:none;width:100%;margin:0}
+.human-annotation-layer{
+  position:absolute;inset:0;display:block;width:100%;height:100%;
+  z-index:3;pointer-events:none;touch-action:none;user-select:none;
+  overflow:hidden
+}
+.human-annotation-controls{
+  display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:8px 0 2px
+}
+.human-annotation-controls button{
+  min-height:34px;padding:6px 10px;font-size:.75rem;
+  border-color:#4d947f;background:#194738
+}
+.human-annotation-controls button:disabled{opacity:.52;cursor:default}
+.human-annotation-controls button:focus-visible{
+  outline:3px solid #edcf79;outline-offset:2px
+}
+.human-annotation-controls span{color:#bbd6d6;font-size:.74rem}
+
 .human-board .square:focus-visible{outline:3px solid #e6c47b;outline-offset:-4px;z-index:2}
 .human-board .square.human-selected{box-shadow:inset 0 0 0 5px #46cc80}
 /* The source square is truly empty while the original piece is being
@@ -147,7 +169,7 @@ button.primary{background:#4d856f;border-color:#78b69a;color:#fff;flex:1}
   border:1px solid #36535e;border-radius:8px}
 #human-info-details{grid-template-columns:auto minmax(0,1fr)}
 @media(max-width:1300px){.human-play-columns{grid-template-columns:1fr}
-  .human-board{max-width:600px;margin:auto}
+  .human-board-stage{max-width:600px;margin:auto}
   .human-sidebar{min-height:300px}
   #human-moves{height:260px}
 }
