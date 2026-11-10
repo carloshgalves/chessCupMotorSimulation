@@ -280,6 +280,10 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   assert.equal(calls.length,unchanged,"illegal drop did not POST");
   board.events.click({detail:1,target:sq,preventDefault(){}});
   assert.equal(calls.length,unchanged,"synthetic click after drag is suppressed");
+  assert.equal(sq.classList.contains("human-selected"),false);
+  board.events.click({detail:1,target:board.children[51]});
+  assert.equal(board.children[51].classList.contains("human-selected"),true,
+               "the next genuine mouse click must not remain suppressed");
 
   // Outside the 8x8 board (e.g. g9) must cancel, without staging a pre-move.
   board.events.pointerdown(pointer(6,sq,520,600,"touch"));
