@@ -5,7 +5,7 @@
   const $ = id => document.getElementById(id);
   const state = {
     active:false, version:0, page:1, perPage:20, report:null,
-    replay:null, ply:0, gameId:null, filters:{status:"all",outcome:"all",color:"all",opponent:""}
+    replay:null, ply:0, gameId:null, replayVersion:0, filters:{status:"all",outcome:"all",color:"all",opponent:""}
   };
   const node = (tag,text,cls) => {
     const value=document.createElement(tag);
@@ -140,10 +140,11 @@
   }
   async function openReplay(id){
     if(!state.active||!/^human-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$/.test(id))return;
-    const version=state.version;
+    const version=state.version, replayVersion=++state.replayVersion;
     try{
       const data=await get("/api/my-games/"+encodeURIComponent(id)+"/replay");
-      if(!state.active||version!==state.version)return;
+      if(!state.active||version!==state.version||
+         replayVersion!==state.replayVersion)return;
       if(data.schema!=="chesssim-my-replay-v1"||data.game?.id!==id||
          !Array.isArray(data.states)||!data.states.length)
         throw new Error("Replay pessoal incompatível");
@@ -167,9 +168,13 @@
       download.download=id+".pgn";
       paint(0);
       $("my-games-dialog").showModal();
-    }catch(error){inform(error.message,true);}
+    }catch(error){
+      if(state.active&&version===state.version&&
+         replayVersion===state.replayVersion)inform(error.message,true);
+    }
   }
   function closeReplay(){
+    state.replayVersion++;
     const dialog=$("my-games-dialog");
     if(dialog.open)dialog.close();
     state.replay=null;state.gameId=null;
@@ -222,6 +227,7 @@
   ])$("my-games-"+control).addEventListener("click",()=>paint(position(state.ply)));
   $("my-games-close").addEventListener("click",closeReplay);
   $("my-games-dialog").addEventListener("close",()=>{
+    state.replayVersion++;
     state.replay=null;state.gameId=null;
     $("my-games-download").removeAttribute("href");
   });
