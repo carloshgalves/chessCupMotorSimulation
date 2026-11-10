@@ -7,7 +7,7 @@ Nenhuma rota de Histórico/Elo usa os arquivos `human-games/`. Essa fronteira é
 
 ## Fonte local e limite de evidência
 - `<workspace>/human-games/human-*/state.json` e `game.pgn`, gravados por `human_game.py`; nenhum download, motor, captura de dados da Internet ou operação de recuperação acontece nas requisições GET.
-- Leitura limitada a 10.000 sessões, 32 KiB por estado e 1 MiB por PGN; arquivos e diretórios abertos via descritores com `O_NOFOLLOW`. Divergências de estado/PGN, linhas ilegais, JSON duplicado, IDs inválidos e resultados terminais não comprovados são rejeitados.
+- Leitura limitada a 10.000 sessões, 32 KiB por estado e 1 MiB por PGN; arquivos e diretórios abertos via descritores com `O_NOFOLLOW` e arquivos especiais lidos em modo não bloqueante. Um índice em memória invalidado por metadados de estado/PGN permite paginar sem reabrir todos os PGNs; replay e download sempre revalidam os bytes. Divergências de estado/PGN, linhas ilegais, JSON duplicado, IDs inválidos e resultados terminais não comprovados são rejeitados.
 - `created_at_utc`, `updated_at_utc` e `finished_at_utc` vêm do checkpoint. Não há data exata de início dos lances nem duração observada: os campos correspondentes permanecem `null`.
 - `pgn_sha256` é hash dos bytes lidos na consulta. `provenance=locally_consistent` **não** significa evidência assinada, autenticação da autoria, antiadulteração criptográfica do usuário ou licença PGN externa.
 - Registros inválidos são excluídos dos cálculos com contagem `coverage.rejected` e indicação de cobertura parcial na interface; nenhuma vitória é presumida.
