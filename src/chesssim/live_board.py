@@ -65,7 +65,7 @@ def _states(game: chess.pgn.Game) -> list[dict]:
     clock_match = re.fullmatch(r"(\d+)\+(\d+)", raw_control)
     clocks = ([float(clock_match.group(1))] * 2 if clock_match else [None, None])
     states = [{"fen": board.fen(), "san": "Início", "last": None,
-               "turn": "white", "clocks": clocks.copy()}]
+               "turn": "white", "clocks": clocks.copy(), "uci": None}]
     for node in game.mainline():
         move = node.move
         if move not in board.legal_moves:
@@ -81,7 +81,7 @@ def _states(game: chess.pgn.Game) -> list[dict]:
         states.append({"fen": board.fen(), "san": san,
                        "last": [uci[:2], uci[2:4]],
                        "turn": "white" if board.turn == chess.WHITE else "black",
-                       "clocks": clocks.copy()})
+                       "clocks": clocks.copy(), "uci": uci})
     return states
 
 
@@ -116,6 +116,12 @@ def _duel_snapshot(run: Path, folder: Path, *, match_id: str | None = None) -> d
                     all(isinstance(c, (int, float)) for c in final_clocks)):
                 # No timed-out move is added to PGN; show the final official clock.
                 states[-1]["clocks"] = [max(0.0, float(c)) for c in final_clocks]
+        is_live = (not final.exists() and summary.get("status") == "RUNNING")
+        if is_live:
+            # Legal candidates only for the current live position, not the
+            # entire PGN. This is a read-only observer contract.
+            board = chess.Board(states[-1]["fen"])
+            states[-1]["legal_moves"] = [m.uci() for m in board.legal_moves]
         games.append({
             "id": f"{folder.name}:game-{index}",
             "number": index,
@@ -125,7 +131,7 @@ def _duel_snapshot(run: Path, folder: Path, *, match_id: str | None = None) -> d
             "result": game.headers.get("Result", "*"),
             "termination": game.headers.get("Termination"),
             "status": metadata.get("status", "RUNNING" if not final.exists() else "UNKNOWN"),
-            "live": not final.exists() and summary.get("status") == "RUNNING",
+            "live": is_live,
             "updated_at": updated,
             "states": states,
         })
