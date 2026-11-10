@@ -31,7 +31,10 @@ RESULTS = {"1-0", "0-1", "1/2-1/2"}
 STATUS_FILTERS = VALID_STATES | {"all"}
 OUTCOMES = {"all", "win", "draw", "loss", "incomplete"}
 COLORS = {"all", "white", "black"}
-SAFE_FLAGS = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+# O_NONBLOCK prevents a malicious FIFO replacing a JSON/PGN from blocking GET
+# before fstat can reject the non-regular file.
+SAFE_FLAGS = (os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) |
+              getattr(os, "O_NONBLOCK", 0))
 DIR_FLAGS = SAFE_FLAGS | getattr(os, "O_DIRECTORY", 0)
 
 
@@ -152,8 +155,11 @@ def _document(workspace: Path, ident: str):
     created = _utc(state.get("created_utc"))
     updated = _utc(state.get("updated_utc"))
     finished = _utc(state.get("finished_utc"))
-    if not created or not updated or created > updated or (
-            finished and not created <= finished <= updated):
+    if not created or not updated or (
+            datetime.fromisoformat(created) > datetime.fromisoformat(updated)) or (
+            finished and not (datetime.fromisoformat(created) <=
+                              datetime.fromisoformat(finished) <=
+                              datetime.fromisoformat(updated))):
         raise MyGamesInput("Cronologia de sessão incompatível")
     if state["status"] == "RUNNING" and finished is not None:
         raise MyGamesInput("Partida em execução com término declarado")
@@ -163,6 +169,11 @@ def _document(workspace: Path, ident: str):
         game = chess.pgn.read_game(stream)
         if game is None or game.errors or chess.pgn.read_game(stream) is not None:
             raise MyGamesInput("PGN de partida pessoal inválido")
+        cursor = game
+        while cursor.variations:
+            if len(cursor.variations) != 1:
+                raise MyGamesInput("Variações estranhas ao PGN canônico")
+            cursor = cursor.variations[0]
         last = game.end()
         board = last.board()
     except (ValueError, UnicodeError, AssertionError) as exc:
@@ -191,24 +202,28 @@ def _document(workspace: Path, ident: str):
             raise MyGamesInput("Conclusão sem evidência de resultado")
         outcome = board.outcome(claim_draw=False)
         if outcome is not None:
-            if outcome.result() != result:
-                raise MyGamesInput("Resultado contradiz posição terminal")
+            if outcome.result() != result or termination != outcome.termination.name:
+                raise MyGamesInput("Resultado ou causa contradiz posição terminal")
         elif termination == "HumanResignation":
             if result != ("0-1" if human_white else "1-0"):
                 raise MyGamesInput("Desistência com vencedor inválido")
         elif termination == "TimeForfeit":
-            if clocks is None or min(clocks) != 0:
-                raise MyGamesInput("Queda de tempo sem relógio esgotado")
-            loser = 0 if result == "0-1" else 1 if result == "1-0" else None
-            if loser is not None and clocks[loser] != 0:
-                raise MyGamesInput("Queda de tempo de lado incompatível")
+            losing_index = 0 if board.turn == chess.WHITE else 1
+            if clocks is None or clocks[losing_index] != 0:
+                raise MyGamesInput("Queda de tempo do lado a jogar não comprovada")
+            winner_has_material = not board.has_insufficient_material(
+                not board.turn)
+            expected = (("0-1" if losing_index == 0 else "1-0")
+                        if winner_has_material else "1/2-1/2")
+            if result != expected:
+                raise MyGamesInput("Resultado contradiz a queda de tempo")
         elif termination == "HumanDrawClaim":
             if result != "1/2-1/2" or not board.can_claim_draw():
                 raise MyGamesInput("Empate reivindicado sem direito")
         else:
             raise MyGamesInput("Resultado final não comprovado")
-    elif result != "*":
-        raise MyGamesInput("Partida interrompida com resultado final")
+    elif result != "*" or board.is_game_over(claim_draw=False):
+        raise MyGamesInput("Partida não concluída com resultado ou posição terminal")
     if status == "RUNNING" and termination is not None:
         raise MyGamesInput("Partida ativa com término declarado")
 
