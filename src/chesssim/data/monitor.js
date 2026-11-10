@@ -21,6 +21,122 @@ const LIVE_MOVE_INTERVAL_MS = 650;
 let liveGameId = "";
 let lastPresentedAt = 0;
 
+// Optional observer-only game. The real board never submits guesses to UCI.
+const guess = {enabled:false,selected:null,pending:null,promotion:null,
+               attempts:0,correct:0,gameId:null,message:""};
+let guessDrag = null;
+let ignoreGuessClick = false;
+const SQUARE=/^[a-h][1-8]$/;
+function guessSquare(node) {
+  const index=[...$("board").children].indexOf(node);
+  if(index<0||index>=64)return null;
+  return String.fromCharCode(97+index%8)+String(8-Math.floor(index/8));
+}
+function guessGame() {
+  const g=currentGame();
+  return guess.enabled && !pinned && !!g && g.live &&
+    cursor===g.states.length-1 &&
+    Array.isArray(g.states[cursor]?.legal_moves) ? g : null;
+}
+function resetGuess(message="") {
+  guess.selected=null;guess.pending=null;guess.promotion=null;
+  guess.message=message;
+  $("guess-promotion").hidden=true;
+}
+function setGuessGame(g) {
+  if(!g||guess.gameId===g.id)return;
+  guess.gameId=g.id;guess.attempts=0;guess.correct=0;
+  resetGuess();
+}
+function stageGuess(uci) {
+  const g=guessGame(),moves=g?.states[cursor]?.legal_moves||[];
+  if(!g || !moves.includes(uci) || guess.pending)return false;
+  guess.pending={gameId:g.id,ply:cursor,uci,from:uci.slice(0,2),to:uci.slice(2,4)};
+  guess.selected=null;guess.promotion=null;
+  guess.message="Palpite registrado: "+uci+". Aguardando o lance real.";
+  $("guess-promotion").hidden=true;
+  renderGuess(g);
+  return true;
+}
+function chooseGuess(from,to) {
+  const g=guessGame(),moves=g?.states[cursor]?.legal_moves||[];
+  const candidates=moves.filter(m=>m.slice(0,4)===from+to);
+  if(candidates.length===1)return stageGuess(candidates[0]);
+  if(candidates.length>1) {
+    guess.promotion={from,to,candidates};
+    $("guess-promotion").hidden=false;
+    $("guess-promotion").querySelector?.("button")?.focus?.();
+    return true;
+  }
+  return false;
+}
+function guessSelect(square) {
+  const g=guessGame();
+  if(!g||!SQUARE.test(square)||guess.promotion)return;
+  const moves=g.states[cursor].legal_moves;
+  if(guess.selected && chooseGuess(guess.selected,square))return;
+  guess.selected=moves.some(m=>m.startsWith(square))?square:null;
+  renderGuess(g);
+}
+function reconcileGuess() {
+  const p=guess.pending;
+  if(!p)return;
+  const game=availableGames().find(g=>g.id===p.gameId);
+  if(!game) {resetGuess("Partida alterada. Palpite descartado.");return;}
+  if(game.states.length<=p.ply+1) {
+    if(!game.live)resetGuess("Partida encerrada antes do próximo lance.");
+    return;
+  }
+  const observed=game.states[p.ply+1]?.uci;
+  if(typeof observed!=="string") {
+    resetGuess("Lance real sem UCI verificável. Não foi pontuado.");
+    return;
+  }
+  guess.attempts++;
+  const correct=observed===p.uci;
+  if(correct)guess.correct++;
+  resetGuess(correct?
+    "Acertou! O jogador realizou "+observed+".":
+    "Não foi dessa vez. Palpite: "+p.uci+" · realizado: "+observed+".");
+}
+function renderGuess(game=currentGame()) {
+  setGuessGame(game);
+  const live=guessGame();
+  $("guess-toggle").textContent=guess.enabled?"Desativar palpites":"Ativar palpites";
+  $("guess-toggle").setAttribute("aria-pressed",String(guess.enabled));
+  $("guess-cancel").disabled=!guess.pending&&!guess.selected;
+  $("guess-score").textContent=guess.correct+" acerto(s) em "+
+    guess.attempts+" tentativa(s)";
+  $("guess-status").textContent=!guess.enabled?
+    "Ative para tentar prever o próximo lance ao vivo.":
+    guess.message||(!live?
+      "Volte à última posição de uma partida em andamento para palpitar.":
+      "Escolha uma peça e uma casa de destino no tabuleiro.");
+  const legal=live?.states[cursor]?.legal_moves||[];
+  const playable=guess.selected?
+    legal.filter(m=>m.startsWith(guess.selected)).map(m=>m.slice(2,4)):
+    legal.map(m=>m.slice(0,2));
+  $("board").setAttribute("role",live?"group":"img");
+  for(const square of $("board").children) {
+    if(!square.className?.split(/\s+/).includes("square"))continue;
+    const name=guessSquare(square);
+    square.classList.toggle("guess-selected",!!live&&name===guess.selected);
+    square.classList.toggle("guess-from",!!live&&name===guess.pending?.from);
+    square.classList.toggle("guess-to",!!live&&name===guess.pending?.to);
+    square.tabIndex=live&&playable.includes(name)?0:-1;
+    square.setAttribute("role",live?"button":"presentation");
+  }
+}
+function guessSquareAt(x,y) {
+  const board=$("board"),r=board.getBoundingClientRect?.();
+  if(!r?.width||!r?.height||x<r.left||x>=r.right||
+     y<r.top||y>=r.bottom)return null;
+  const col=Math.floor((x-r.left)*8/r.width);
+  const row=Math.floor((y-r.top)*8/r.height);
+  return board.children[row*8+col]||null;
+}
+
+
 function readSelection() {
   const params = new URLSearchParams(window.location.hash.slice(1));
   const match = params.get("match");
@@ -54,6 +170,8 @@ function applySelection() {
   liveGameId = "";
   lastPresentedAt = 0;
   followMoves = true;
+  resetGuess("Seleção alterada. Palpite descartado.");
+  guess.gameId=null;
   poll();
 }
 window.addEventListener("hashchange", applySelection);
@@ -108,6 +226,7 @@ function advanceLivePlayback(now = Date.now()) {
   render();
 }
 function freezeView() {
+  resetGuess("Previsão cancelada: visualização pausada.");
   if (!pinned) {
     const game = currentGame();
     if (game) {
@@ -372,6 +491,7 @@ function render() {
                 {fen:initialFEN,last:null,turn:"white",clocks:[null,null]};
   paintBoard(state);
   paintClocks();
+  renderGuess(game);
   const tournament = feed && feed.tournament;
   const duel = feed && feed.duel;
   const chosenMatch = tournament && feed.selection &&
@@ -440,6 +560,7 @@ async function poll() {
     if (revision !== requestVersion) return;
     if (next.schema !== "chesssim-live-board-v1") throw new Error("Formato inesperado");
     feed = next;
+    reconcileGuess();
     acceptLiveSnapshot();
     $("connection").textContent = "● Conectado ao simulador";
     $("connection").className = "connection live";
@@ -452,6 +573,58 @@ async function poll() {
     if (revision !== requestVersion) poll();
   }
 }
+
+$("guess-toggle").addEventListener("click",()=>{
+  guess.enabled=!guess.enabled;
+  resetGuess();
+  render();
+});
+$("guess-cancel").addEventListener("click",()=>{
+  resetGuess("Palpite cancelado.");renderGuess();
+});
+for(const button of $("guess-promotion").querySelectorAll("button")) {
+  button.addEventListener("click",()=>{
+    const p=guess.promotion;
+    if(!p)return;
+    const uci=p.from+p.to+button.dataset.promote;
+    if(p.candidates.includes(uci))stageGuess(uci);
+    else resetGuess("Promoção indisponível.");
+  });
+}
+$("board").addEventListener("click",event=>{
+  if(ignoreGuessClick){ignoreGuessClick=false;return;}
+  const square=event.target.closest?.(".square");
+  if(square)guessSelect(guessSquare(square));
+});
+$("board").addEventListener("keydown",event=>{
+  if(event.key==="Escape") {
+    if(guess.enabled){resetGuess("Palpite cancelado.");renderGuess();}
+    return;
+  }
+  if(event.key!=="Enter"&&event.key!==" ")return;
+  const square=event.target.closest?.(".square");
+  if(square&&guess.enabled){event.preventDefault();guessSelect(guessSquare(square));}
+});
+$("board").addEventListener("pointerdown",event=>{
+  if(event.button!==0||!guessGame())return;
+  const square=event.target.closest?.(".square");
+  const from=square&&guessSquare(square),g=guessGame();
+  if(!g?.states[cursor].legal_moves.some(m=>m.startsWith(from)))return;
+  guessDrag={id:event.pointerId,from,x:event.clientX,y:event.clientY};
+});
+$("board").addEventListener("pointerup",event=>{
+  const drag=guessDrag;
+  guessDrag=null;
+  if(!drag||drag.id!==event.pointerId||!guessGame())return;
+  if(Math.hypot(event.clientX-drag.x,event.clientY-drag.y)<8)return;
+  const target=guessSquareAt(event.clientX,event.clientY);
+  const to=target&&guessSquare(target);
+  ignoreGuessClick=true;
+  if(to)chooseGuess(drag.from,to);
+});
+for(const event of ["pointercancel","lostpointercapture"])
+  $("board").addEventListener(event,()=>{guessDrag=null;});
+
 $("moves").addEventListener("scroll", () => {
   if (automaticMoveScroll) return;
   const list = $("moves");
