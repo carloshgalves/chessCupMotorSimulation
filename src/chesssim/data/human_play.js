@@ -4,6 +4,14 @@
   const el = id => document.getElementById(id);
   const capability = new URLSearchParams(location.hash.slice(1)).get("token");
   const board = el("human-board");
+  const annotationLayer = el("human-annotations");
+  const annotationClear = el("human-annotations-clear");
+  const annotationStatus = el("human-annotations-status");
+  const annotationColors = Object.freeze({
+    yellow:"#f2c94c",red:"#ee5353",blue:"#579de6",green:"#56c484"
+  });
+  const arrows = new Map(), markedSquares = new Map();
+  let rightGesture = null, annotationRevision = null;
   const state = {game:null, selected:null, side:"white", pending:false,
                  ready:false, mode:"duel", snapshotAt:0, boardId:null,
                  flipped:false, movesId:null, renderedPly:0,
@@ -35,7 +43,10 @@
 
   function mode(next) {
     if (!["duel","human"].includes(next)) return;
-    if (next !== "human") cancelDrag();
+    if (next !== "human") {
+      cancelDrag();
+      clearAnnotations();
+    }
     state.mode = next;
     el("duel-form").hidden = next !== "duel";
     el("human-form").hidden = next !== "human";
@@ -245,6 +256,9 @@
     }
   }
   function displayBoard(g) {
+    // Chess.com-style analysis marks belong to the currently displayed
+    // position, not to a future move or a different human-game session.
+    syncAnnotationRevision(g);
     if(!g) {
       if(state.boardId!==null) {
         state.boardId=null;
@@ -420,6 +434,164 @@
     const row=Math.floor((y-rect.top)/rect.height*8);
     return board.children[row*8+col]||null;
   }
+  // Visual-only right-button annotations. The SVG is a *sibling* of the
+  // board, not a 65th child: squareName/orientation still see exactly 64 cells.
+  // Unlike moves, annotations may connect any two on-board squares.
+  function annotationColor(event,kind) {
+    if(event.ctrlKey)return kind==="arrow"?"red":"yellow";
+    if(event.altKey)return "blue";
+    if(event.shiftKey)return "green";
+    return kind==="arrow"?"yellow":"red";
+  }
+  function annotationPoint(square) {
+    if(!FROM.test(square))return null;
+    const file=square.charCodeAt(0)-97,rank=Number(square[1]);
+    const col=state.flipped?7-file:file;
+    const row=state.flipped?rank-1:8-rank;
+    return {x:(col+.5)*100,y:(row+.5)*100};
+  }
+  function svgElement(name,attributes) {
+    const node=document.createElementNS("http://www.w3.org/2000/svg",name);
+    for(const [key,value] of Object.entries(attributes))
+      node.setAttribute(key,String(value));
+    return node;
+  }
+  function annotationArrow(from,to,color,preview=false) {
+    const a=annotationPoint(from),b=annotationPoint(to);
+    if(!a||!b)return null;
+    const dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy);
+    if(dist<50)return null;
+    const ux=dx/dist,uy=dy/dist,px=-uy,py=ux;
+    const neckX=b.x-ux*41,neckY=b.y-uy*41;
+    const tipX=b.x-ux*10,tipY=b.y-uy*10;
+    const pair=(x,y)=>x.toFixed(2)+","+y.toFixed(2);
+    const d=[
+      "M"+pair(a.x+px*10,a.y+py*10),
+      "L"+pair(neckX+px*10,neckY+py*10),
+      "L"+pair(neckX+px*27,neckY+py*27),
+      "L"+pair(tipX,tipY),
+      "L"+pair(neckX-px*27,neckY-py*27),
+      "L"+pair(neckX-px*10,neckY-py*10),
+      "L"+pair(a.x-px*10,a.y-py*10),"Z"
+    ].join(" ");
+    return svgElement("path",{
+      d,fill:annotationColors[color], "fill-opacity":preview?".46":".78",
+      stroke:"#132129","stroke-opacity":preview?".08":".18",
+      "stroke-width":"1.5",
+      "data-arrow":from+"-"+to,"data-color":color
+    });
+  }
+  function annotationSquare(square,color) {
+    const p=annotationPoint(square);
+    if(!p)return null;
+    return svgElement("rect",{
+      x:p.x-47,y:p.y-47,width:94,height:94,rx:4,
+      fill:annotationColors[color],"fill-opacity":".40",
+      "data-mark":square,"data-color":color
+    });
+  }
+  function drawAnnotations() {
+    const nodes=[];
+    for(const [square,color] of markedSquares) {
+      const shape=annotationSquare(square,color);
+      if(shape)nodes.push(shape);
+    }
+    for(const value of arrows.values()) {
+      const shape=annotationArrow(value.from,value.to,value.color);
+      if(shape)nodes.push(shape);
+    }
+    if(rightGesture?.hover && rightGesture.hover!==rightGesture.from) {
+      const shape=annotationArrow(rightGesture.from,rightGesture.hover,
+        rightGesture.arrowColor,true);
+      if(shape)nodes.push(shape);
+    }
+    annotationLayer.replaceChildren(...nodes);
+    const total=arrows.size+markedSquares.size;
+    annotationClear.disabled=total===0;
+    annotationStatus.textContent=total===0?"Nenhuma marcação":
+      arrows.size+" seta(s) · "+markedSquares.size+" casa(s) marcada(s)";
+  }
+  function cancelRightGesture() {
+    const gesture=rightGesture;
+    if(!gesture)return;
+    rightGesture=null;
+    try {
+      if(board.hasPointerCapture?.(gesture.pointerId))
+        board.releasePointerCapture(gesture.pointerId);
+    } catch (_) { /* Browser may already have released pointer capture. */ }
+    drawAnnotations();
+  }
+  function clearAnnotations() {
+    cancelRightGesture();
+    if(!arrows.size && !markedSquares.size)return;
+    arrows.clear();markedSquares.clear();
+    drawAnnotations();
+  }
+  function syncAnnotationRevision(g) {
+    const current=g?g.id+":"+g.revision:"idle";
+    if(annotationRevision!==current) {
+      annotationRevision=current;
+      clearAnnotations();
+    }
+  }
+  function startRightGesture(event) {
+    if(state.mode!=="human" || dragGesture || rightGesture ||
+       event.button!==2 || event.isPrimary===false ||
+       event.pointerType==="touch")return false;
+    const square=event.target.closest?.(".square");
+    if(!square || !board.contains(square))return false;
+    const from=squareName(square);
+    if(!FROM.test(from))return false;
+    rightGesture={
+      pointerId:event.pointerId,from,hover:from,
+      arrowColor:annotationColor(event,"arrow"),
+      squareColor:annotationColor(event,"square")
+    };
+    try {board.setPointerCapture?.(event.pointerId);}
+    catch (_) {cancelRightGesture();return false;}
+    event.preventDefault?.();
+    return true;
+  }
+  function moveRightGesture(event) {
+    if(!rightGesture || event.pointerId!==rightGesture.pointerId)return false;
+    // Losing the right button without pointerup must not create a phantom arrow.
+    if(event.buttons!==undefined && !(event.buttons&2)) {
+      cancelRightGesture();return true;
+    }
+    const target=squareFromPoint(event.clientX,event.clientY);
+    const hover=target&&squareName(target);
+    if(hover!==rightGesture.hover) {
+      rightGesture.hover=hover;
+      drawAnnotations();
+    }
+    event.preventDefault?.();
+    return true;
+  }
+  function finishRightGesture(event) {
+    if(!rightGesture || event.pointerId!==rightGesture.pointerId)return false;
+    const gesture=rightGesture;
+    const target=squareFromPoint(event.clientX,event.clientY);
+    const to=target&&squareName(target);
+    cancelRightGesture();
+    if(!to)return true; // Drag outside board is always cancelled.
+    if(to===gesture.from) {
+      const previous=markedSquares.get(to);
+      if(previous===gesture.squareColor)markedSquares.delete(to);
+      else markedSquares.set(to,gesture.squareColor);
+    } else {
+      const key=gesture.from+":"+to;
+      const previous=arrows.get(key);
+      if(previous?.color===gesture.arrowColor)arrows.delete(key);
+      else {
+        // Avoid stacking one colored arrow on top of an older arrow.
+        arrows.set(key,{from:gesture.from,to,color:gesture.arrowColor});
+      }
+    }
+    drawAnnotations();
+    event.preventDefault?.();
+    return true;
+  }
+
   function dragPreview(source, event) {
     const piece=source.querySelector?.(".piece-glyph");
     const rect=board.getBoundingClientRect?.();
@@ -495,6 +667,12 @@
     }
   }
   board.addEventListener("pointerdown", event=>{
+    if(event.button===2) {
+      startRightGesture(event);
+      return;
+    }
+    if(rightGesture)return;
+    if(event.button===0 && state.mode==="human")clearAnnotations();
     if(dragGesture || event.isPrimary===false ||
        (event.pointerType==="mouse" && event.button!==0) ||
        (event.button!==undefined && event.button!==0))return;
@@ -510,6 +688,7 @@
     catch (_) { dragGesture=null; }
   });
   board.addEventListener("pointermove", event=>{
+    if(moveRightGesture(event))return;
     const gesture=dragGesture;
     if(!gesture || event.pointerId!==gesture.pointerId)return;
     const g=state.game;
@@ -540,6 +719,7 @@
       square.classList.toggle("human-drop-hover",square===gesture.hover);
   });
   board.addEventListener("pointerup",event=>{
+    if(finishRightGesture(event))return;
     const gesture=dragGesture;
     if(!gesture || event.pointerId!==gesture.pointerId)return;
     releaseDrag();
@@ -555,16 +735,26 @@
     if(to)void moveFromTo(gesture.from,to);
   });
   board.addEventListener("pointercancel",event=>{
+    if(rightGesture?.pointerId===event.pointerId)cancelRightGesture();
     if(dragGesture?.pointerId===event.pointerId)cancelDrag();
   });
   board.addEventListener("lostpointercapture",event=>{
+    if(rightGesture?.pointerId===event.pointerId)cancelRightGesture();
     if(dragGesture?.pointerId===event.pointerId)cancelDrag();
   });
-  window.addEventListener?.("blur",cancelDrag);
-  document.addEventListener?.("visibilitychange",()=>{
-    if(document.hidden)cancelDrag();
+  board.addEventListener("contextmenu",event=>{
+    if(state.mode==="human" && board.contains(event.target.closest?.(".square")))
+      event.preventDefault();
   });
+  window.addEventListener?.("blur",()=>{
+    cancelDrag();cancelRightGesture();
+  });
+  document.addEventListener?.("visibilitychange",()=>{
+    if(document.hidden){cancelDrag();cancelRightGesture();}
+  });
+  annotationClear.addEventListener("click",clearAnnotations);
   el("human-board").addEventListener("click",e=>{
+    if(e.detail===0)clearAnnotations(); // Keyboard-activated click.
     if(e.detail>0 && Date.now()<ignorePointerClickUntil) {
       // Consume exactly one browser compatibility click, not every genuine
       // click the user may make within the next 200 milliseconds.
@@ -575,10 +765,17 @@
     if(square&&board.contains(square))clickSquare(square);
   });
   board.addEventListener("keydown",e=>{
+    if(e.key==="Escape") {
+      clearAnnotations();
+      cancelDrag();
+      e.preventDefault();
+      return;
+    }
     if(e.key!=="Enter"&&e.key!==" ")return;
     const square=e.target.closest(".square");
     if(!square)return;
     e.preventDefault();
+    clearAnnotations();
     clickSquare(square);
   });
   for(const id of ["duel","human"]) {
