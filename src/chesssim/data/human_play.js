@@ -11,6 +11,9 @@
                  displayedAt:0,displayGameId:null,promotion:null};
   const FROM = /^[a-h][1-8]$/;
   const MOVE_DISPLAY_INTERVAL_MS = 650;
+  const DRAG_THRESHOLD_PX = 8;
+  let dragGesture = null;
+  let ignorePointerClickUntil = 0;
   const signed = {white:"Brancas",black:"Pretas"};
   const humanStatus = status => ({
     COMPLETED:"Partida concluída", INCOMPLETE:"Partida inconclusiva",
@@ -32,6 +35,7 @@
 
   function mode(next) {
     if (!["duel","human"].includes(next)) return;
+    if (next !== "human") cancelDrag();
     state.mode = next;
     el("duel-form").hidden = next !== "duel";
     el("human-form").hidden = next !== "human";
@@ -260,6 +264,10 @@
   function render() {
     if(state.mode!=="human")return;
     const g=state.game;
+    if (dragGesture && (!g || g.id !== dragGesture.gameId ||
+        g.revision !== dragGesture.revision || g.status !== "RUNNING" ||
+        !g.human_turn || state.pending || state.promotion ||
+        state.displayPly !== g.revision)) cancelDrag();
     displayBoard(g);
     const blackAtBottom=g?.config.color==="black";
     el("human-black-name").textContent=!g?"Adversário (motor UCI)":
@@ -338,13 +346,36 @@
     syncPlayback();
     render();
   }
+  function canMoveFrom(g, from) {
+    return state.mode === "human" && g?.status === "RUNNING" &&
+      g.human_turn && !state.pending && !state.promotion &&
+      state.displayPly === g.revision &&
+      g.legal_moves.some(move => move.slice(0,2) === from);
+  }
   async function applyMove(uci) {
     const g=state.game;
-    if(!g||!g.human_turn||state.displayPly!==g.revision)return;
+    if (!g || !canMoveFrom(g, uci.slice(0,2)) ||
+        !g.legal_moves.includes(uci)) return;
     state.selected=null;
     await command("/api/arena/human/move",{
       id:g.id,revision:g.revision,uci
     });
+  }
+  async function moveFromTo(from, to) {
+    const g=state.game;
+    if(!canMoveFrom(g,from) || !FROM.test(to))return false;
+    const candidates=g.legal_moves.filter(
+      m=>m.slice(0,2)===from&&m.slice(2,4)===to);
+    if(candidates.length===1) {
+      await applyMove(candidates[0]);return true;
+    }
+    if(candidates.length>1) {
+      state.promotion={from,to,candidates};
+      el("human-promotion").hidden=false;
+      el("human-promotion").querySelector("button")?.focus();
+      return true;
+    }
+    return false;
   }
   async function clickSquare(square) {
     const g=state.game;
@@ -352,18 +383,7 @@
        state.displayPly!==g.revision||state.promotion)return;
     const name=squareName(square);
     if(!name||!FROM.test(name))return;
-    if(state.selected) {
-      const candidates=g.legal_moves.filter(m=>m.startsWith(state.selected+name));
-      if(candidates.length===1) {
-        await applyMove(candidates[0]);return;
-      }
-      if(candidates.length>1) {
-        state.promotion={from:state.selected,to:name,candidates};
-        el("human-promotion").hidden=false;
-        el("human-promotion").querySelector("button")?.focus();
-        return;
-      }
-    }
+    if(state.selected && await moveFromTo(state.selected,name))return;
     state.selected=g.legal_moves.some(m=>m.startsWith(name))?name:null;
     decorate(g);
   }
@@ -383,7 +403,132 @@
       state.promotion=null;promo.hidden=true;board.focus();
     }
   });
+  // Pointer Events unify mouse, touch and pen without a second chess rule
+  // implementation. The server still validates game id, revision and UCI.
+  function squareFromPoint(x,y) {
+    const rect=board.getBoundingClientRect?.();
+    if(!rect || !rect.width || !rect.height ||
+       x<rect.left || x>=rect.right || y<rect.top || y>=rect.bottom)return null;
+    const col=Math.floor((x-rect.left)/rect.width*8);
+    const row=Math.floor((y-rect.top)/rect.height*8);
+    return board.children[row*8+col]||null;
+  }
+  function dragPreview(source, event) {
+    const piece=source.querySelector?.(".piece-glyph");
+    if(!piece || !document.body || !piece.cloneNode)return null;
+    const preview=document.createElement("div");
+    preview.className="board human-drag-preview";
+    preview.setAttribute("aria-hidden","true");
+    for(const key of ["data-board-theme","data-piece-style","data-piece-kind"]) {
+      const value=board.getAttribute(key);
+      if(value)preview.setAttribute(key,value);
+    }
+    const cell=document.createElement("div");
+    cell.className="square "+(source.classList.contains("whitepiece")?
+      "whitepiece":"blackpiece");
+    cell.appendChild(piece.cloneNode(true));
+    preview.appendChild(cell);
+    const rect=board.getBoundingClientRect();
+    preview.style.width=rect.width/8+"px";
+    preview.style.height=rect.height/8+"px";
+    document.body.appendChild(preview);
+    preview.style.left=event.clientX+"px";
+    preview.style.top=event.clientY+"px";
+    return preview;
+  }
+  function releaseDrag() {
+    const gesture=dragGesture;
+    if(!gesture)return null;
+    dragGesture=null;
+    gesture.preview?.remove();
+    gesture.square.classList.remove("human-drag-origin");
+    for(const square of board.children)
+      square.classList.remove("human-drop-hover");
+    try {
+      if(gesture.square.hasPointerCapture?.(gesture.pointerId))
+        gesture.square.releasePointerCapture(gesture.pointerId);
+    } catch (_) { /* Capture may already have been released by the browser. */ }
+    return gesture;
+  }
+  function cancelDrag() {
+    const gesture=releaseDrag();
+    if(gesture?.dragged) {
+      state.selected=null;
+      if(state.game && board.children.length===64)decorate(state.game);
+    }
+  }
+  board.addEventListener("pointerdown", event=>{
+    if(dragGesture || event.isPrimary===false ||
+       (event.pointerType==="mouse" && event.button!==0) ||
+       (event.button!==undefined && event.button!==0))return;
+    const square=event.target.closest?.(".square");
+    if(!square || !board.contains(square))return;
+    const from=squareName(square),g=state.game;
+    if(!canMoveFrom(g,from))return; // No pre-moves while the UCI engine thinks.
+    dragGesture={pointerId:event.pointerId,square,from,
+      gameId:g.id,revision:g.revision,
+      startX:event.clientX,startY:event.clientY,
+      dragged:false,preview:null};
+    try { square.setPointerCapture?.(event.pointerId); }
+    catch (_) { dragGesture=null; }
+  });
+  board.addEventListener("pointermove", event=>{
+    const gesture=dragGesture;
+    if(!gesture || event.pointerId!==gesture.pointerId)return;
+    const g=state.game;
+    if(!canMoveFrom(g,gesture.from) || g.id!==gesture.gameId ||
+       g.revision!==gesture.revision){cancelDrag();return;}
+    if(!gesture.dragged &&
+       Math.hypot(event.clientX-gesture.startX,
+                  event.clientY-gesture.startY)<DRAG_THRESHOLD_PX)return;
+    if(!gesture.dragged) {
+      gesture.dragged=true;
+      state.selected=gesture.from;
+      decorate(g);
+      gesture.square.classList.add("human-drag-origin");
+      gesture.preview=dragPreview(gesture.square,event);
+    }
+    event.preventDefault?.();
+    if(gesture.preview) {
+      gesture.preview.style.left=event.clientX+"px";
+      gesture.preview.style.top=event.clientY+"px";
+    }
+    const target=squareFromPoint(event.clientX,event.clientY);
+    const name=target&&squareName(target);
+    const legal=!!name&&g.legal_moves.some(
+      m=>m.slice(0,2)===gesture.from&&m.slice(2,4)===name);
+    for(const square of board.children)
+      square.classList.toggle("human-drop-hover",legal&&square===target);
+  });
+  board.addEventListener("pointerup",event=>{
+    const gesture=dragGesture;
+    if(!gesture || event.pointerId!==gesture.pointerId)return;
+    releaseDrag();
+    if(!gesture.dragged)return; // Short press still uses click-to-click.
+    ignorePointerClickUntil=Date.now()+200;
+    state.selected=null;
+    if(state.game&&board.children.length===64)decorate(state.game);
+    const g=state.game;
+    if(!canMoveFrom(g,gesture.from)||g.id!==gesture.gameId||
+       g.revision!==gesture.revision)return;
+    const destination=squareFromPoint(event.clientX,event.clientY);
+    const to=destination&&squareName(destination);
+    if(to)void moveFromTo(gesture.from,to);
+  });
+  board.addEventListener("pointercancel",event=>{
+    if(dragGesture?.pointerId===event.pointerId)cancelDrag();
+  });
+  board.addEventListener("lostpointercapture",event=>{
+    if(dragGesture?.pointerId===event.pointerId)cancelDrag();
+  });
+  window.addEventListener?.("blur",cancelDrag);
+  document.addEventListener?.("visibilitychange",()=>{
+    if(document.hidden)cancelDrag();
+  });
   el("human-board").addEventListener("click",e=>{
+    if(e.detail>0 && Date.now()<ignorePointerClickUntil) {
+      e.preventDefault?.();return;
+    }
     const square=e.target.closest(".square");
     if(square&&board.contains(square))clickSquare(square);
   });
