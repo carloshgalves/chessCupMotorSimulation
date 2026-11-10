@@ -42,6 +42,7 @@ const stats={
   by_opponent:[{slug:"tal",name:"Mikhail Tal",games:2,wins:0,draws:0,losses:1}]
 };
 let activeRequests=[],paints=[],navCalls=[],pending=null,blockOnce=false;
+let deferReplay=false,pendingReplay=null;
 function response(path){
   const u=new URL("http://127.0.0.1"+path);
   const page=Number(u.searchParams.get("page")||1);
@@ -57,6 +58,7 @@ const fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 async function fetch(path){
   activeRequests.push(path);
   if(path.includes("/replay")){
+    if(deferReplay){deferReplay=false;return new Promise(resolve=>{pendingReplay=resolve;});}
     return {ok:true,json:async()=>({
       schema:"chesssim-my-replay-v1",
       game:{...game(path.includes(id1)?id1:id2,"loss")},
@@ -104,6 +106,23 @@ async function flush(){for(let i=0;i<12;i++)await new Promise(resolve=>setImmedi
   get("my-games-close").events.click();
   assert.equal(get("my-games-dialog").open,false);
   assert.equal(get("my-games-download").href,"");
+  // Replay A may resolve after replay B: only the latest selection may render.
+  deferReplay=true;
+  const firstSlow=first.events.click();
+  await flush();
+  assert(pendingReplay,"First replay should be pending");
+  const secondAction=get("my-games-rows").children[1].children.at(-1).firstChild;
+  await secondAction.events.click();await flush();
+  assert.equal(get("my-games-dialog").open,true);
+  assert.equal(get("my-games-download").download,id2+".pgn");
+  pendingReplay({ok:true,json:async()=>({
+    schema:"chesssim-my-replay-v1",game:game(id1,"loss"),
+    states:[{fen,last:null,san:null},{fen,last:["e2","e4"],san:"e4"}]
+  })});
+  await firstSlow;await flush();
+  assert.equal(get("my-games-download").download,id2+".pgn",
+    "Out-of-order replay must not replace latest selection");
+  get("my-games-close").events.click();
   get("my-games-outcome").value="loss";
   get("my-games-filters").events.submit({preventDefault(){}});
   await flush();
