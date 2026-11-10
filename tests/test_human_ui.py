@@ -77,7 +77,14 @@ def test_human_board_styles_reuse_current_theme_and_fixed_move_rows():
     assert 'g.revision!==gesture.revision' in js
     assert 'moveFromTo(gesture.from,to)' in js
     assert 'state.mode === "human"' in js
-    assert "premoves" not in js.lower()
+    assert "function queuePremove(" in js
+    assert "function flushPremove(" in js
+    assert "g.legal_moves.includes(queued.uci)" in js
+    assert "human-premove-from" in css
+    assert "cancelIntent:premove" in js
+    assert 'premove.phase==="queued"' in js
+    assert "clique direito em qualquer casa" in (DATA/"arena.html").read_text(encoding="utf-8")
+    assert "human-premove-cancel" in (DATA/"arena.html").read_text(encoding="utf-8")
     assert "document.write" not in js
     assert 'touch-action:none' in css
     assert ".human-drag-preview" in css

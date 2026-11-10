@@ -8,10 +8,12 @@ const token = "correct-human-capability-token-from-loopback-arena";
 const calls = [];
 let now = 1000000;
 let game = null;
+let releasePremovePost = null;
 const intervals = [];
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
 const E5 = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2";
+const D4 = "rnbqkbnr/pppp1ppp/8/4p3/3PP3/8/PPP2PPP/RNBQKBNR b KQkq d3 0 2";
 class ClassList {
   constructor(owner){this.owner=owner;}
   contains(name){return this.owner.className.split(/\s+/).includes(name);}
@@ -146,6 +148,18 @@ const fetch=async(path,options={})=>{
     }
     if(path==="/api/arena/human/move"){
       assert.equal(request.id,game.id);
+      if(game.id==="human-premove"){
+        assert.equal(request.revision,2);
+        assert.equal(request.uci,"d2d4","staged premove remains a legal server-validated move");
+        // Hold the POST open to prove red does not disappear before HTTP ack.
+        await new Promise(resolve=>{releasePremovePost=resolve;});
+        game.revision=3;game.human_turn=false;game.turn="black";
+        game.fen=D4;game.last=["d2","d4"];game.legal_moves=[];
+        game.moves.push({ply:3,san:"d4",uci:"d2d4"});
+        game.states.push({fen:D4,last:["d2","d4"],
+          turn:"black",clocks:[179,179]});
+        return reply({id:game.id,revision:3,status:"RUNNING"});
+      }
       if(game.id==="human-promote"){
         assert.equal(request.revision,0);
         assert.equal(request.uci,"a7a8n","underpromotion is selected explicitly");
@@ -209,10 +223,10 @@ const paint=(element,position)=>{
     const squares=[];
     for(let i=0;i<64;i++){
       const sq=new Node("div");
-      sq.className="square"+([8,52,62].includes(i)?" whitepiece":
+      sq.className="square"+([8,51,52,62].includes(i)?" whitepiece":
                        i===12?" blackpiece":"");
       // Fake a rendered glyph on the squares used in pointer drag tests.
-      if([8,12,52,62].includes(i)){
+      if([8,12,51,52,62].includes(i)){
         const piece=new Node("span");piece.className="piece-glyph";
         sq.appendChild(piece);
       }
@@ -227,7 +241,11 @@ const window={
   location:{hash:"#token="+token},confirm:()=>true,
   addEventListener(){},
   getComputedStyle:()=>({fontSize:"44px"}),
-  ChessSimBoard:{paint,refreshArtwork(){}}
+  ChessSimBoard:{paint,refreshArtwork(){},parseFen(fen){
+    if(!fen)return null;
+    return fen.split(" ")[0].split("/").map(rank=>
+      [...rank].flatMap(char=>/[1-8]/.test(char)?Array(Number(char)).fill(""):[char]));
+  }}
 };
 const context=vm.createContext({
   document,window,location:window.location,Date:clock,fetch,
@@ -454,12 +472,49 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   board.events.click({detail:1,target:board.children[45],preventDefault(){}});
   assert.equal(calls.length,unchanged+1,"compatibility click cannot double-submit");
 
-  // While the engine thinks, no pointerdown can create a pre-move.
-  board.events.pointerdown(pointer(9,board.children[51],280,520));
-  board.events.pointermove(pointer(9,board.children[51],280,360));
-  board.events.pointerup(pointer(9,board.children[51],280,360));
+  // The UCI engine is thinking. Queue one move without any POST.
+  now+=650;intervals.find(x=>x.delay===100).fn();
+  const pawn=board.children[51];
+  board.events.pointerdown(pointer(9,pawn,280,520));
+  board.events.pointermove(pointer(9,pawn,280,360));
+  board.events.pointerup(pointer(9,pawn,280,360));
   await flush();
-  assert.equal(calls.length,unchanged+1,"no pre-moves in increment 1");
+  assert.equal($("human-premove-status").textContent.includes("d2d4"),true);
+  assert.equal(board.children[51].classList.contains("human-premove-from"),true);
+  assert.equal(board.children[35].classList.contains("human-premove-to"),true);
+  assert.equal(calls.length,unchanged+1,"premove staging must not POST");
+  // Right-drag still makes an arrow while a premove is queued; it does not
+  // accidentally cancel the queued chess intention.
+  drawRightArrow(68,56,40,600,7,600,40);
+  assert.equal(board.children[51].classList.contains("human-premove-from"),true,
+    "right drag must preserve a waiting premove");
+  assert.equal(overlay.children.length,1);
+  clearMarks.events.click();
+  assert.equal(overlay.children.length,0);
+
+  // A short right-click on ANY other square cancels the premove, with no
+  // accidental analysis mark or outgoing HTTP move.
+  rightMark(69,0,40,40); // a8, not premove source d2
+  assert.equal($("human-premove-status").textContent,"Nenhum pré-move pendente");
+  assert.equal($("human-feedback").textContent,"Pré-move cancelado.");
+  assert.equal(board.children[51].classList.contains("human-premove-from"),false);
+  assert.equal(board.children[35].classList.contains("human-premove-to"),false);
+  assert.equal(overlay.children.length,0,"cancel click must not mark square");
+  assert.equal(calls.length,unchanged+1,"right-click cancellation must not POST");
+
+  // Aborting a right gesture cannot cancel a new waiting premove.
+  board.events.pointerdown(pointer(10,pawn,280,520));
+  board.events.pointermove(pointer(10,pawn,280,360));
+  board.events.pointerup(pointer(10,pawn,280,360));
+  assert.equal($("human-premove-cancel").disabled,false);
+  board.events.pointerdown(right(70,board.children[0],40,40));
+  board.events.pointercancel(right(70,board.children[0],40,40));
+  assert.equal(board.children[51].classList.contains("human-premove-from"),true,
+    "an aborted right-click must not cancel");
+  await $("human-premove-cancel").events.click();
+  assert.equal($("human-premove-cancel").disabled,true);
+  assert.equal(board.children[51].classList.contains("human-premove-from"),false);
+  assert.equal(calls.length,unchanged+1,"button cancellation must not POST");
   const beforeThinkingAnnotation=calls.length;
   rightMark(67,board.children[51]===undefined?52:51,280,520);
   assert.equal(overlay.children.length,1,
@@ -469,7 +524,8 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
 
   await $("human-resign").events.click();
   await flush();
-  assert.equal($("human-turn-title").textContent,"Reproduzindo os lances");
+  // Earlier in this test we already drained the visual playback queue.
+  assert.equal($("human-turn-title").textContent,"Partida concluída");
   now+=650;intervals.find(x=>x.delay===100).fn();
   assert.equal($("human-turn-title").textContent,"Partida concluída");
 
@@ -549,6 +605,57 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   assert.equal($("human-promotion").hidden,true);
   assert.equal(calls.at(-1).request.uci,"a7a8n");
   assert.equal(calls.length,beforePromotion+1);
+
+  // Reconnect to a fresh live engine turn, then validate current revision
+  // and legal moves before executing exactly one queued move.
+  game={
+    id:"human-premove",status:"RUNNING",revision:1,
+    config:{color:"white",opponent:"fischer",depth:2,preset:"blitz"},
+    white:"Você",black:"Bobby Fischer",fen:E4,turn:"black",
+    human_turn:false,legal_moves:[],last:["e2","e4"],
+    result:"*",termination:null,clocks:[180,180],
+    moves:[{ply:1,san:"e4",uci:"e2e4"}],
+    states:[{fen:START,last:null,turn:"white",clocks:[180,180]},
+      {fen:E4,last:["e2","e4"],turn:"black",clocks:[180,180]}],
+    draw_offer:null
+  };
+  await intervals.find(x=>x.delay===1100).fn();await flush();
+  // The previous drag set a 200ms compatibility-click suppression window.
+  // A fresh human click after that window is a distinct gesture.
+  now+=300;
+  board.events.click({detail:1,target:board.children[51]});
+  board.events.click({detail:1,target:board.children[35]});
+  assert.equal($("human-premove-cancel").disabled,false);
+  const beforePremove=calls.length;
+  assert.equal(calls.length,beforePremove,"queue is frontend-only");
+  game.revision=2;game.fen=E5;game.turn="white";
+  game.human_turn=true;game.legal_moves=["d2d4"];
+  game.moves.push({ply:2,san:"e5",uci:"e7e5"});
+  game.states.push({fen:E5,last:["e7","e5"],turn:"white",clocks:[179,179]});
+  await intervals.find(x=>x.delay===1100).fn();
+  // The queued red intent stays visible while the POST is in flight.
+  assert.equal($("human-premove-status").textContent.includes("executando"),true);
+  assert.equal($("human-premove-cancel").disabled,true,
+    "an already-submitted move cannot be cancelled");
+  assert.equal(typeof releasePremovePost,"function");
+  assert.equal(board.children[51].classList.contains("human-premove-from"),true,
+    "red staging stays visible before the server replies");
+  rightMark(71,0,40,40);
+  assert.equal($("human-premove-status").textContent.includes("executando"),true,
+    "right-click cannot undo an already submitted UCI move");
+  assert.equal(overlay.children.length,0,
+    "right-click during in-flight POST must not add a stray annotation");
+  releasePremovePost();
+  await flush();
+  assert.equal(calls.length,beforePremove+1,"exactly one auto-submission");
+  assert.equal(calls.at(-1).request.uci,"d2d4");
+  assert.equal(calls.at(-1).request.revision,2);
+  assert.equal($("human-premove-status").textContent,"Nenhum pré-move pendente");
+  assert.equal($("human-feedback").textContent,"Pré-move executado: d2d4");
+  assert.equal(board.dataset.lastFen,D4,
+    "accepted premove paints its actual resulting position immediately, not 650ms later");
+  await intervals.find(x=>x.delay===1100).fn();await flush();
+  assert.equal(calls.length,beforePremove+1,"poll replay cannot duplicate premove");
 
   $("arena-mode-duel").events.click();
   assert.equal(overlay.children.length,0,"switching modes clears analysis");

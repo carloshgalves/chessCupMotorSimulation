@@ -21,6 +21,8 @@
   const MOVE_DISPLAY_INTERVAL_MS = 650;
   const DRAG_THRESHOLD_PX = 8;
   let dragGesture = null;
+  // One client-side intent; server validates moves and clocks.
+  let premove = null;
   let ignorePointerClickUntil = 0;
   const signed = {white:"Brancas",black:"Pretas"};
   const humanStatus = status => ({
@@ -46,6 +48,9 @@
     if (next !== "human") {
       cancelDrag();
       clearAnnotations();
+      clearPremove();
+      state.promotion=null;
+      el("human-promotion").hidden=true;
     }
     state.mode = next;
     el("duel-form").hidden = next !== "duel";
@@ -146,10 +151,12 @@
       state.game=human.game;
       state.snapshotAt=Date.now();
       syncPlayback();
+      settlePremove();
       const active=state.game?.status==="RUNNING";
       el("human-launch").disabled=!state.ready||!capability||
         arena.busy||active;
       render();
+      void flushPremove();
     } catch(e) {
       if(state.mode==="human")feedback("Sem atualização local: "+e.message,true);
     }
@@ -233,14 +240,18 @@
     const allowed=selectedMoves(g);
     for(const square of board.children) {
       const name=squareName(square);
-      const isActive=!!g&&g.human_turn&&!state.pending&&
+      const isActive=!!g&&g.status==="RUNNING"&&!state.pending&&
                      state.displayPly===g.revision;
       square.tabIndex=isActive?0:-1;
       square.setAttribute("role","button");
-      const selectable=isActive&&g.legal_moves.some(m=>m.startsWith(name));
+      const selectable=isActive&&(g.human_turn?
+        g.legal_moves.some(m=>m.startsWith(name)):isHumanPiece(square,g));
       square.setAttribute("aria-disabled",String(!selectable&&
         !allowed.some(m=>m.slice(2,4)===name)));
-      square.classList.toggle("human-selected",name===state.selected);
+      square.classList.toggle("human-selected",name===state.selected&&g?.human_turn);
+      square.classList.toggle("human-selected-premove",name===state.selected&&!g?.human_turn);
+      square.classList.toggle("human-premove-from",name===premove?.from);
+      square.classList.toggle("human-premove-to",name===premove?.to);
       const legal=allowed.some(m=>m.slice(2,4)===name);
       square.classList.toggle("human-legal",legal&&!square.classList.contains("whitepiece")&&
         !square.classList.contains("blackpiece"));
@@ -253,6 +264,8 @@
         dragging&&dragGesture.square===square);
       square.classList.toggle("human-drop-hover",
         dragging&&dragGesture.hover===square);
+      square.classList.toggle("human-premove-hover",
+        dragging&&dragGesture.premove&&dragGesture.hover===square);
     }
   }
   function displayBoard(g) {
@@ -285,9 +298,15 @@
   function render() {
     if(state.mode!=="human")return;
     const g=state.game;
+    // An open promotion chooser must not survive a game/turn change.
+    if(state.promotion && (!g || g.id!==state.promotion.gameId ||
+       g.revision!==state.promotion.revision || g.status!=="RUNNING")) {
+      state.promotion=null;
+      el("human-promotion").hidden=true;
+    }
     if (dragGesture && (!g || g.id !== dragGesture.gameId ||
         g.revision !== dragGesture.revision || g.status !== "RUNNING" ||
-        !g.human_turn || state.pending || state.promotion ||
+        dragGesture.premove === g.human_turn || state.pending || state.promotion ||
         state.displayPly !== g.revision)) cancelDrag();
     displayBoard(g);
     const blackAtBottom=g?.config.color==="black";
@@ -298,17 +317,21 @@
     clocks();drawMoves(g);info(g);
     const ongoing=g?.status==="RUNNING";
     const pacing=!!g&&state.displayPly<g.revision;
-    const yours=ongoing&&g.human_turn&&!pacing;
+    const executing=!!premove&&premove.phase==="sending";
+    const yours=ongoing&&g.human_turn&&!pacing&&!executing;
     el("human-turn-title").textContent=!g?"Pronto para iniciar":
+      executing?"Pré-move em execução":
       pacing?"Reproduzindo os lances":
       !ongoing?humanStatus(g.status):
-      yours?"Sua vez":"Motor pensando";
+      yours?"Sua vez":premove?"Motor pensando · pré-move pronto":"Motor pensando";
     el("human-turn-detail").textContent=!g?
       "Selecione um adversário para jogar.":
+      executing?"Aguardando confirmação do servidor; não é possível cancelar um lance já enviado.":
       pacing?"O jogo continua no tempo real; o tabuleiro apresenta cada lance em sequência.":
       !ongoing?"Resultado "+g.result+" · "+humanTermination(g.termination):
       yours?"Selecione uma peça e sua casa de destino.":
-      "O servidor está calculando o próximo lance.";
+      premove?"Pré-move "+premove.uci+" pendente: será validado após o lance do motor.":
+       "O servidor está calculando o próximo lance.";
     const selfMoved=ongoing&&!state.pending;
     el("human-draw").disabled=!selfMoved;
     el("human-claim").disabled=!yours||state.pending;
@@ -343,15 +366,25 @@
     state.displayedAt=now;
     render();
   }
-  async function command(path,data) {
+  async function command(path,data,committingPremove=null) {
     if(state.pending)return;
     state.pending=true;
     try {
       const result=await send(path,data);
+      // A successful POST does not mean that the visual playback has caught up.
+      // Retain the red intent until a GET confirms the accepted revision.
+      if(committingPremove)committingPremove.ackRevision=result.revision;
       await refreshForced();
       return result;
     } catch(e) {
-      feedback(e.message,true);
+      if(committingPremove && premove===committingPremove) {
+        if(committingPremove.ackRevision===null) {
+          clearPremove();
+          feedback("Pré-move não executado: "+e.message,true);
+        } else {
+          feedback("Pré-move aceito; aguardando sincronização: "+e.message,true);
+        }
+      } else feedback(e.message,true);
       return null;
     } finally {
       state.pending=false;
@@ -365,7 +398,108 @@
     const data=await r.json();
     state.game=data.game;state.snapshotAt=Date.now();
     syncPlayback();
+    settlePremove();
     render();
+    void flushPremove();
+  }
+  function isHumanPiece(square,g) {
+    return !!g && !!square && square.classList.contains(
+      g.config.color==="white"?"whitepiece":"blackpiece");
+  }
+  function canStagePremove(g,from) {
+    if(state.mode!=="human" || !g || g.status!=="RUNNING" ||
+       g.human_turn || state.pending || state.promotion ||
+       state.displayPly!==g.revision || !FROM.test(from))return false;
+    const square=[...board.children].find(node=>squareName(node)===from);
+    return isHumanPiece(square,g);
+  }
+  function pieceAt(g,from) {
+    const rows=window.ChessSimBoard.parseFen(g.states?.[g.revision]?.fen);
+    return rows?.[8-Number(from[1])]?.[from.charCodeAt(0)-97]||"";
+  }
+  function renderPremove() {
+    el("human-premove-cancel").disabled=!premove||premove.phase==="sending";
+    el("human-premove-status").textContent=premove?
+      "Pré-move: "+premove.uci+(premove.phase==="sending"?
+        " · executando, aguardando confirmação":
+        " · aguardando o motor"):
+      "Nenhum pré-move pendente";
+    if(state.game && board.children.length===64)decorate(state.game);
+  }
+  function clearPremove(message) {
+    if(message && premove?.phase==="sending") {
+      feedback("Pré-move já enviado; aguarde a confirmação do servidor.");
+      return;
+    }
+    premove=null;
+    state.selected=null;
+    if(message)feedback(message);
+    renderPremove();
+  }
+  function settlePremove() {
+    const queued=premove,g=state.game;
+    if(!queued || queued.phase!=="sending" ||
+       !Number.isInteger(queued.ackRevision))return;
+    if(!g || g.id!==queued.id)return;
+    if(g.revision<queued.ackRevision)return;
+    // This is an acknowledged real move, not speculative board painting.
+    // Do not show the old position for another 650ms after removing red.
+    state.displayPly=Math.min(g.revision,queued.ackRevision);
+    state.displayedAt=Date.now();
+    const uci=queued.uci;
+    clearPremove();
+    feedback("Pré-move executado: "+uci);
+  }
+  function queuePremove(from,to,suffix="") {
+    const g=state.game;
+    if(!canStagePremove(g,from)||!FROM.test(to)||from===to)return false;
+    const pawn=pieceAt(g,from);
+    const promotion=(pawn==="P"&&to[1]==="8")||
+                    (pawn==="p"&&to[1]==="1");
+    if(promotion && !suffix) {
+      state.promotion={from,to,premove:true,gameId:g.id,revision:g.revision};
+      el("human-promotion").hidden=false;
+      el("human-promotion").querySelector("button")?.focus();
+      return true;
+    }
+    if((promotion && !/^[qrbn]$/.test(suffix)) ||
+       (!promotion && suffix))return false;
+    premove={id:g.id,revision:g.revision,from,to,uci:from+to+suffix,
+      phase:"queued",ackRevision:null};
+    state.selected=null;
+    renderPremove();
+    return true;
+  }
+  function flushPremove() {
+    const queued=premove,g=state.game;
+    if(!queued || queued.phase==="sending")return;
+    if(!g || g.id!==queued.id || g.status!=="RUNNING" ||
+       state.mode!=="human" || g.revision<queued.revision) {
+      clearPremove("Pré-move cancelado: a partida mudou ou terminou.");
+      return;
+    }
+    if(g.revision===queued.revision)return;
+    // A premove applies only on the very next human turn, never a later turn.
+    if(g.revision!==queued.revision+1) {
+      clearPremove();
+      feedback("Pré-move descartado: a vez esperada já passou.",true);
+      return;
+    }
+    if(!g.human_turn)return;
+    if(!g.legal_moves.includes(queued.uci)) {
+      clearPremove();
+      feedback("Pré-move descartado: lance ilegal na nova posição.",true);
+      return;
+    }
+    if(state.pending)return;
+    // Mark sending BEFORE the async POST. Keep the visible red intention
+    // across polling until the accepted revision is actually rendered.
+    queued.phase="sending";
+    renderPremove();
+    render();
+    void command("/api/arena/human/move",{
+      id:g.id,revision:g.revision,uci:queued.uci
+    },queued);
   }
   function canMoveFrom(g, from) {
     return state.mode === "human" && g?.status === "RUNNING" &&
@@ -384,6 +518,7 @@
   }
   async function moveFromTo(from, to) {
     const g=state.game;
+    if(canStagePremove(g,from))return queuePremove(from,to);
     if(!canMoveFrom(g,from) || !FROM.test(to))return false;
     const candidates=g.legal_moves.filter(
       m=>m.slice(0,2)===from&&m.slice(2,4)===to);
@@ -391,7 +526,7 @@
       await applyMove(candidates[0]);return true;
     }
     if(candidates.length>1) {
-      state.promotion={from,to,candidates};
+      state.promotion={from,to,candidates,gameId:g.id,revision:g.revision};
       el("human-promotion").hidden=false;
       el("human-promotion").querySelector("button")?.focus();
       return true;
@@ -400,12 +535,15 @@
   }
   async function clickSquare(square) {
     const g=state.game;
-    if(!g?.human_turn||state.pending||
+    if(!g||g.status!=="RUNNING"||state.pending||
        state.displayPly!==g.revision||state.promotion)return;
     const name=squareName(square);
     if(!name||!FROM.test(name))return;
     if(state.selected && await moveFromTo(state.selected,name))return;
-    state.selected=g.legal_moves.some(m=>m.startsWith(name))?name:null;
+    const chosen=[...board.children].find(s=>squareName(s)===name);
+    state.selected=g.human_turn?
+      (g.legal_moves.some(m=>m.startsWith(name))?name:null):
+      (isHumanPiece(chosen,g)?name:null);
     decorate(g);
   }
   const promo=el("human-promotion");
@@ -415,7 +553,8 @@
       if(!choice)return;
       const uci=choice.from+choice.to+button.dataset.promote;
       state.promotion=null;promo.hidden=true;
-      if(choice.candidates.includes(uci))await applyMove(uci);
+      if(choice.premove)queuePremove(choice.from,choice.to,button.dataset.promote);
+       else if(choice.candidates.includes(uci))await applyMove(uci);
       else feedback("Promoção inválida nesta posição.",true);
     });
   }
@@ -544,6 +683,9 @@
     if(!FROM.test(from))return false;
     rightGesture={
       pointerId:event.pointerId,from,hover:from,
+      // Cancel a waiting premove with a short right-click on any square.
+      // A right-button drag still draws an annotation arrow.
+      cancelIntent:premove,
       arrowColor:annotationColor(event,"arrow"),
       squareColor:annotationColor(event,"square")
     };
@@ -574,6 +716,15 @@
     const to=target&&squareName(target);
     cancelRightGesture();
     if(!to)return true; // Drag outside board is always cancelled.
+    if(to===gesture.from && gesture.cancelIntent &&
+       premove===gesture.cancelIntent) {
+      // Never create an annotation mark when cancelling a queued premove.
+      // A move already submitted to the server cannot be undone here.
+      if(premove.phase==="queued")clearPremove("Pré-move cancelado.");
+      else feedback("Pré-move já enviado; aguarde a confirmação do servidor.");
+      event.preventDefault?.();
+      return true;
+    }
     if(to===gesture.from) {
       const previous=markedSquares.get(to);
       if(previous===gesture.squareColor)markedSquares.delete(to);
@@ -670,9 +821,11 @@
   }
   board.addEventListener("pointerdown", event=>{
     if(event.button===2) {
-      startRightGesture(event);
-      return;
-    }
+       // Cancel only after a short right-click is completed, so a right drag
+       // still works as an analysis arrow without discarding the premove.
+       startRightGesture(event);
+       return;
+     }
     if(rightGesture)return;
     if(event.button===0 && state.mode==="human")clearAnnotations();
     if(dragGesture || event.isPrimary===false ||
@@ -681,8 +834,9 @@
     const square=event.target.closest?.(".square");
     if(!square || !board.contains(square))return;
     const from=squareName(square),g=state.game;
-    if(!canMoveFrom(g,from))return; // No pre-moves while the UCI engine thinks.
-    dragGesture={pointerId:event.pointerId,square,from,
+    const staging=canStagePremove(g,from);
+    if(!staging && !canMoveFrom(g,from))return;
+    dragGesture={pointerId:event.pointerId,square,from,premove:staging,
       gameId:g.id,revision:g.revision,
       startX:event.clientX,startY:event.clientY,
       dragged:false,preview:null};
@@ -694,7 +848,8 @@
     const gesture=dragGesture;
     if(!gesture || event.pointerId!==gesture.pointerId)return;
     const g=state.game;
-    if(!canMoveFrom(g,gesture.from) || g.id!==gesture.gameId ||
+    if(!(gesture.premove?canStagePremove(g,gesture.from):
+         canMoveFrom(g,gesture.from)) || g.id!==gesture.gameId ||
        g.revision!==gesture.revision){cancelDrag();return;}
     if(!gesture.dragged &&
        Math.hypot(event.clientX-gesture.startX,
@@ -714,8 +869,8 @@
     if(gesture.preview)positionDragPreview(gesture.preview,event);
     const target=squareFromPoint(event.clientX,event.clientY);
     const name=target&&squareName(target);
-    const legal=!!name&&g.legal_moves.some(
-      m=>m.slice(0,2)===gesture.from&&m.slice(2,4)===name);
+    const legal=!!name&&(gesture.premove?name!==gesture.from:
+      g.legal_moves.some(m=>m.slice(0,2)===gesture.from&&m.slice(2,4)===name));
     gesture.hover=legal?target:null;
     for(const square of board.children)
       square.classList.toggle("human-drop-hover",square===gesture.hover);
@@ -730,11 +885,13 @@
     state.selected=null;
     if(state.game&&board.children.length===64)decorate(state.game);
     const g=state.game;
-    if(!canMoveFrom(g,gesture.from)||g.id!==gesture.gameId||
+    if(!(gesture.premove?canStagePremove(g,gesture.from):
+         canMoveFrom(g,gesture.from))||g.id!==gesture.gameId||
        g.revision!==gesture.revision)return;
     const destination=squareFromPoint(event.clientX,event.clientY);
     const to=destination&&squareName(destination);
-    if(to)void moveFromTo(gesture.from,to);
+    if(to)void (gesture.premove?queuePremove(gesture.from,to):
+      moveFromTo(gesture.from,to));
   });
   board.addEventListener("pointercancel",event=>{
     if(rightGesture?.pointerId===event.pointerId)cancelRightGesture();
@@ -773,6 +930,7 @@
     if(e.key==="Escape") {
       clearAnnotations();
       cancelDrag();
+      clearPremove("Pré-move cancelado.");
       e.preventDefault();
       return;
     }
@@ -803,6 +961,7 @@
     e.preventDefault();
     if(!el("human-form").reportValidity())return;
     feedback("Iniciando a partida no motor UCI...");
+    clearPremove();
     await command("/api/arena/human/start",currentConfig());
   });
   for(const tab of ["moves","info","result"])
@@ -816,10 +975,14 @@
     const g=state.game;
     if(!g)return;
     if(confirmText&&!window.confirm(confirmText))return;
+    if(["resign","interrupt"].includes(action))clearPremove();
     await command("/api/arena/human/action",{id:g.id,action});
   });
   el("human-resume").addEventListener("click",async()=>{
     if(state.game)await command("/api/arena/human/resume",{id:state.game.id});
+  });
+  el("human-premove-cancel").addEventListener("click",()=>{
+    clearPremove("Pré-move cancelado.");render();
   });
   setTab("moves");
   refresh();

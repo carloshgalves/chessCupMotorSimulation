@@ -114,6 +114,17 @@ button.primary{background:#4d856f;border-color:#78b69a;color:#fff;flex:1}
 
 .human-board .square:focus-visible{outline:3px solid #e6c47b;outline-offset:-4px;z-index:2}
 .human-board .square.human-selected{box-shadow:inset 0 0 0 5px #46cc80}
+/* Red staging is visually separate from live last-move and manual arrows. */
+.human-board .square.human-selected-premove{box-shadow:inset 0 0 0 5px #ee6262}
+.human-board .square.human-premove-from,
+.human-board .square.human-premove-to{box-shadow:inset 0 0 0 5px #e44646;
+  background-image:linear-gradient(#d8393940,#d8393940)!important}
+.human-board .square.human-premove-hover{box-shadow:inset 0 0 0 4px #ff8b8b!important}
+.human-premove-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+  padding:8px 0;color:#ffb3b3;font-size:.79rem}
+.human-premove-controls button{font-size:.76rem;min-height:34px;padding:5px 10px;
+  border-color:#a85858;background:#502d31;color:#ffe5e5}
+.human-premove-controls button:disabled{opacity:.5}
 /* The source square is truly empty while the original piece is being
    relocated, exactly as in a normal drag gesture: no faded duplicate. */
 .human-board .square.human-drag-origin{box-shadow:inset 0 0 0 2px #74cab1}
