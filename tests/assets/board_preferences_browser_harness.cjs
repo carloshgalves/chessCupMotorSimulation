@@ -29,7 +29,9 @@ const E4="rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
 const source=fs.readFileSync(process.argv[2],"utf8");
 const renderer=fs.readFileSync(process.argv[3],"utf8");
 const KEY="chesssim.board-presentation.v1";
-const names=["board","history-replay-board","board-prefs","board-theme-gallery",
+const ALL_BOARD_IDS=["board","human-board","cup-replay-board",
+  "history-replay-board","archive-replay-board","my-games-board"];
+const names=[...ALL_BOARD_IDS,"board-prefs","board-theme-gallery",
              "board-piece-gallery","board-prefs-summary","board-prefs-popup",
              "board-pref-toggle-theme","board-pref-toggle-pieces",
              "board-pref-toggle-motion","board-pref-panel-theme",
@@ -83,6 +85,21 @@ shared.set(KEY,JSON.stringify({theme:"wood",pieces:"outline",motion:"fast"}));
   const app=browser(),board=app.$("board"),hist=app.$("history-replay-board");
   assert.equal(board.getAttribute("data-board-theme"),"wood");
   assert.equal(hist.getAttribute("data-piece-style"),"spatial");
+  for (const id of ALL_BOARD_IDS) {
+    const element=app.$(id);
+    assert.equal(element.getAttribute("data-board-theme"),"wood",id+" initial theme");
+    assert.equal(element.getAttribute("data-piece-style"),"spatial",id+" initial SVG");
+    assert.equal(element.getAttribute("data-board-motion"),"fast",id+" initial motion");
+  }
+  // Full Arena: all six boards must render the same chosen 64-square theme,
+  // even when their game UI first paints the board after the preferences load.
+  for (const id of ALL_BOARD_IDS) {
+    assert.equal(app.board.paint(app.$(id),{fen:INITIAL,last:null},0),true);
+    assert.equal(squares(app.$(id)).length,64,id+" initial squares");
+    const rook=squares(app.$(id))[0].children[0].children[0];
+    assert.equal(rook.getAttribute("src"),"/piece-assets/spatial/bR.svg",
+                 id+" should use the chosen SVG before first replay");
+  }
   assert.equal(app.$("board-piece-gallery").children.length,7);
   assert.equal(app.$("board-theme-gallery").children.length,12);
   assert.equal(app.$("board-theme-gallery").children[1].getAttribute("aria-pressed"),"true");
@@ -125,11 +142,19 @@ shared.set(KEY,JSON.stringify({theme:"wood",pieces:"outline",motion:"fast"}));
   firstImage.events.load();
   assert.equal(firstRook.getAttribute("data-art-ready"),"1");
   const savedNodes=board.children;
+  const boardNodesBeforeTheme=new Map(ALL_BOARD_IDS.map(
+    id=>[id,app.$(id).children]));
   assert.equal(app.prefs.set("theme","contrast"),true);
   assert.equal(board.getAttribute("data-board-theme"),"contrast");
   assert.strictEqual(board.children,savedNodes,"pure style change must not repaint board");
   assert.equal(board.getAttribute("aria-label"),"Tabuleiro após 0 meios-lances");
   assert.equal(hist.getAttribute("data-board-theme"),"contrast");
+  for (const id of ALL_BOARD_IDS) {
+    const element=app.$(id);
+    assert.equal(element.getAttribute("data-board-theme"),"contrast",id);
+    assert.strictEqual(element.children,boardNodesBeforeTheme.get(id),
+      id+" must preserve its 64 squares after a palette change");
+  }
   assert.equal(app.board.paint(board,{fen:E4,last:["e2","e4"]},1),true);
   assert.equal(flashes(board).length,2,"new move gets 2 highlight squares");
   assert.strictEqual(squares(board)[0].children[0],firstRook,
@@ -143,6 +168,12 @@ shared.set(KEY,JSON.stringify({theme:"wood",pieces:"outline",motion:"fast"}));
   const currentImage=currentRook.children[0];
   assert.equal(app.prefs.set("pieces","chessnut"),true);
   assert.equal(hist.getAttribute("data-piece-style"),"chessnut");
+  for (const id of ALL_BOARD_IDS) {
+    const element=app.$(id);
+    assert.equal(element.getAttribute("data-piece-style"),"chessnut",id);
+    const img=squares(element)[0].children[0].children[0];
+    assert.equal(img.getAttribute("src"),"/piece-assets/chessnut/bR.svg",id);
+  }
   assert.equal(currentImage.getAttribute("src"),"/piece-assets/chessnut/bR.svg");
   assert.equal(currentRook.getAttribute("data-art-ready"),"0");
   currentImage.events.load();
@@ -169,6 +200,17 @@ shared.set(KEY,JSON.stringify({theme:"wood",pieces:"outline",motion:"fast"}));
   app.$("board-pref-theme").events.change();
   frame.listeners.storage({key:KEY,newValue:shared.get(KEY)});
   assert.equal(frame.$("board").getAttribute("data-board-theme"),"slate");
+  for (const id of ALL_BOARD_IDS) {
+    assert.equal(frame.$(id).getAttribute("data-board-theme"),"slate",
+                 "same-origin storage event: "+id);
+  }
+  const reload=browser();
+  for (const id of ALL_BOARD_IDS) {
+    assert.equal(reload.$(id).getAttribute("data-board-theme"),"slate",
+                 "persisted after reload: "+id);
+    assert.equal(reload.$(id).getAttribute("data-piece-style"),"chessnut",
+                 "persisted piece style: "+id);
+  }
   frame.listeners.storage({key:"unrelated-token",newValue:"evil"});
   assert.equal(frame.$("board").getAttribute("data-board-theme"),"slate");
   app.$("board-pref-reset").events.click();
@@ -176,6 +218,12 @@ shared.set(KEY,JSON.stringify({theme:"wood",pieces:"outline",motion:"fast"}));
   assert.equal(app.$("board-pref-pieces").value,"cburnett");
   frame.listeners.storage({key:KEY,newValue:shared.get(KEY)});
   assert.equal(frame.$("board").getAttribute("data-board-theme"),"classic");
+  for (const id of ALL_BOARD_IDS) {
+    assert.equal(frame.$(id).getAttribute("data-board-theme"),"classic",
+                 "reset across windows: "+id);
+    assert.equal(frame.$(id).getAttribute("data-piece-style"),"cburnett",
+                 "reset piece style: "+id);
+  }
   assert.deepEqual(JSON.parse(shared.get(KEY)),
                    {theme:"classic",pieces:"cburnett",motion:"off"});
   // Corrupt frames cannot smuggle attributes or HTML into the board.

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from html.parser import HTMLParser
 from pathlib import Path
 import re
 import shutil
@@ -39,7 +40,7 @@ def test_preferences_are_local_to_shared_8x8_board_and_reduced_motion():
     css = (DATA / "chess_board.css").read_text(encoding="utf-8")
     renderer = (DATA / "chess_board.js").read_text(encoding="utf-8")
     assert "chesssim.board-presentation.v1" in js
-    assert '["board","human-board","cup-replay-board","history-replay-board"]' in js
+    assert '"archive-replay-board","my-games-board"' in js
     assert "window.localStorage" in js and "addEventListener(\"storage\"" in js
     for word in ("innerHTML", "eval(", "fetch(", "WebSocket", "document.write"):
         assert word not in js
@@ -198,3 +199,54 @@ def test_wheel_manifest_requires_board_preferences():
     workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert '"board_preferences.js"' in project
     assert '"board_preferences.js"' in workflow
+
+
+class _BoardInventory(HTMLParser):
+    """Discover real board containers, not visual selection preview chips."""
+
+    def __init__(self):
+        super().__init__()
+        self.ids = []
+        self.missing = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag != "div":
+            return
+        data = dict(attrs)
+        if "board" not in (data.get("class") or "").split():
+            return
+        if not data.get("id"):
+            self.missing.append(data)
+        else:
+            self.ids.append(data["id"])
+
+
+def test_every_published_board_inherits_the_shared_appearance_contract():
+    script = (DATA / "board_preferences.js").read_text(encoding="utf-8")
+    match = re.search(
+        r"const BOARD_IDS\s*=\s*Object\.freeze\(\[([^]]+)\]\);",
+        script, re.S,
+    )
+    assert match, "All boards must be enumerated in the shared preference module"
+    managed = re.findall(r'"([a-z0-9-]+)"', match.group(1))
+    assert len(managed) == len(set(managed)), "Repeated board IDs create false coverage"
+    assert set(managed) == {
+        "board", "human-board", "cup-replay-board", "history-replay-board",
+        "archive-replay-board", "my-games-board",
+    }
+    inventories = {}
+    for html_file in ("arena.html", "monitor.html"):
+        inventory = _BoardInventory()
+        inventory.feed((DATA / html_file).read_text(encoding="utf-8"))
+        assert not inventory.missing, f"{html_file} has a board without an id"
+        assert len(inventory.ids) == len(set(inventory.ids)), html_file
+        assert set(inventory.ids) <= set(managed), (
+            f"{html_file} contains a board not covered by preferences"
+        )
+        inventories[html_file] = set(inventory.ids)
+    assert inventories["monitor.html"] == {"board"}
+    assert inventories["arena.html"] == set(managed) - {"board"}
+    assert all("data-board-theme" not in (DATA / name).read_text(encoding="utf-8")
+               for name in ("history_archive.js", "my_games.js")), (
+        "Do not introduce a second source of truth for replay board styling"
+    )

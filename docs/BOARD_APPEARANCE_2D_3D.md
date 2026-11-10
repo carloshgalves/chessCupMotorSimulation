@@ -70,12 +70,22 @@ acessibilidade continuam em português.
   Realce de último lance somente quando a FEN exibida muda; o polling
   da mesma posição não dispara repetidamente. CSS
   `prefers-reduced-motion:reduce` tem precedência.
-- Arena, replay do perfil e `watch` usam um renderer único. Uma
-  mudança de conjunto de peças atualiza os `img` existentes sem
+- **Todos os tabuleiros da mesma origem** compartilham as preferências
+  selecionadas em **Arena → Aparência**: Arena/visualizador `board`,
+  modo Jogar `human-board`, replay de Copas `cup-replay-board`,
+  replay histórico `history-replay-board`, arquivo e estatísticas dos
+  enxadristas `archive-replay-board` e histórico pessoal
+  `my-games-board`. O `watch` isolado reutiliza `board`.
+  O inventário de `div.board` em `arena.html` e `monitor.html`
+  é validado em teste de regressão; novos tabuleiros não podem ficar
+  fora da aplicação de tema, SVG ou destaque.
+- Uma mudança de conjunto de peças atualiza os `img` existentes sem
   reconstruir casas, perder realce, mudar posição ou tocar o motor.
   O visualizador embutido recebe sincronização por `storage` e
-  não exibe um segundo editor redundante; portas/origens diferentes
-  mantêm armazenamentos separados.
+  não exibe um segundo editor redundante. Como as preferências são
+  armazenadas em `localStorage`, **portas/origens diferentes** não
+  compartilham a chave automaticamente; a preferência não é armazenada
+  nos arquivos PGN nem na configuração dos motores.
 - Fontes completas de licenças e atribuições: `NOTICE.md`.
   A GPL do código não suprime termos específicos da arte.
 
