@@ -19,8 +19,9 @@ const tournament = {
   ]}]
 };
 const states=[
-  {fen:FEN,san:"Início",last:null,turn:"white",clocks:[600,600]},
-  {fen:E4,san:"e4",last:["e2","e4"],turn:"black",clocks:[598,600]}
+  {fen:FEN,san:"Início",last:null,turn:"white",clocks:[600,600],uci:null},
+  {fen:E4,san:"e4",last:["e2","e4"],turn:"black",clocks:[598,600],
+    uci:"e2e4",legal_moves:["e7e5","c7c5"]}
 ];
 const game=(id,white,black)=>({
   id:id+":game-1",number:1,white,black,result:"*",status:"RUNNING",
@@ -49,6 +50,7 @@ class FakeElement {
     this.dataset={};this.value="";this.textContent="";
     this.className="";this.scrollTop=0;
     this.classList={
+      contains:name=>this.className.split(/\s+/).includes(name),
       add:(...names)=>{
         const current=new Set(this.className.split(/\s+/).filter(Boolean));
         for(const name of names) current.add(name);
@@ -69,6 +71,9 @@ class FakeElement {
   replaceChildren(...items){this.children=items;}
   setAttribute(key,value){this.attributes[key]=value;}
   addEventListener(name,listener){this.events[name]=listener;}
+  querySelectorAll(selector){return selector==="button"?
+    this.children.filter(x=>x.tagName==="BUTTON"):[];}
+  querySelector(selector){return this.querySelectorAll(selector)[0]||null;}
 }
 function descendants(node) {
   return [node,...node.children.flatMap(descendants)];
@@ -297,6 +302,41 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal(ply(),frozen,"pausing review disables pacing");
   paced.elements.get("live").events.click();
   assert.equal(paced.elements.get("pause").attributes["aria-pressed"],"false");
+
+
+  // The local observer prediction never creates POST or engine commands.
+  const predictor=browser();
+  await flush();
+  const toggle=predictor.elements.get("guess-toggle");
+  toggle.events.click();
+  assert.equal(toggle.attributes["aria-pressed"],"true");
+  vm.runInContext("guessSelect('e7');guessSelect('e5')",predictor.context);
+  assert.equal(predictor.elements.get("guess-status").textContent.includes("e7e5"),true);
+  assert.equal(predictor.elements.get("guess-cancel").disabled,false);
+  assert(predictor.requests.every(uri=>uri.startsWith("/api/state")));
+  // One actual PGN half-move resolves the guess exactly once.
+  states.push({fen:"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2",
+    san:"e5",last:["e7","e5"],turn:"white",clocks:[598,598],
+    uci:"e7e5",legal_moves:["g1f3","d2d4"]});
+  await vm.runInContext("poll()",predictor.context);
+  assert.equal(predictor.elements.get("guess-score").textContent,"1 acerto(s) em 1 tentativa(s)");
+  assert(predictor.elements.get("guess-status").textContent.includes("Acertou"));
+  await vm.runInContext("poll()",predictor.context);
+  assert.equal(predictor.elements.get("guess-score").textContent,"1 acerto(s) em 1 tentativa(s)",
+    "identical polls must not score twice");
+  // An incorrect guess is scored once; pausing cancels any pending intent.
+  vm.runInContext("cursor=2;render();guessSelect('g1');guessSelect('f3')",
+    predictor.context);
+  states.push({fen:"rnbqkbnr/pppp1ppp/8/4p3/3PP3/8/PPP2PPP/RNBQKBNR b KQkq d3 0 2",
+    san:"d4",last:["d2","d4"],turn:"black",clocks:[597,598],
+    uci:"d2d4",legal_moves:["b8c6"]});
+  await vm.runInContext("poll()",predictor.context);
+  assert.equal(predictor.elements.get("guess-score").textContent,"1 acerto(s) em 2 tentativa(s)");
+  assert(predictor.elements.get("guess-status").textContent.includes("Não foi"));
+  assert(predictor.requests.every(uri=>uri.startsWith("/api/state")));
+  vm.runInContext("cursor=3;render();guessSelect('b8')",predictor.context);
+  predictor.elements.get("pause").events.click();
+  assert.equal(vm.runInContext("guess.pending",predictor.context),null);
 
   console.log("Live bracket browser smoke: PASS");
 })().catch(error=>{console.error(error);process.exitCode=1;});
