@@ -75,6 +75,16 @@ def test_human_board_styles_reuse_current_theme_and_fixed_move_rows():
     assert "document.write" not in js
     assert 'touch-action:none' in css
     assert ".human-drag-preview" in css
+    # Visual acceptance from the user's Chess.com reference: only the
+    # already-rendered piece moves; no faded duplicate or floating tile.
+    assert "cell.appendChild(piece)" in js
+    assert "source.appendChild(piece)" in js
+    assert "piece.cloneNode(" not in js
+    assert "gesture.startX,clientY:gesture.startY" in js
+    assert ".human-board .square.human-drag-origin .piece-glyph{opacity" not in css
+    assert "background:none!important" in css
+    assert "box-shadow:none!important" in css
+    assert "transform:none" in css
     assert "pointer-events:none" in css
 
 
