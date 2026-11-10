@@ -205,7 +205,8 @@ const paint=(element,position)=>{
     const squares=[];
     for(let i=0;i<64;i++){
       const sq=new Node("div");
-      sq.className="square";
+      sq.className="square"+([8,52,62].includes(i)?" whitepiece":
+                       i===12?" blackpiece":"");
       // Fake a rendered glyph on the squares used in pointer drag tests.
       if([8,12,52,62].includes(i)){
         const piece=new Node("span");piece.className="piece-glyph";
@@ -328,6 +329,17 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   assert.strictEqual(document.body.children[0].children[0].children[0],
     originalPiece,"legal drag moves actual piece, not a square");
   assert.equal(board.children[45].classList.contains("human-drop-hover"),true);
+  // The Arena polls live state every 1.1s. Polling can overwrite square
+  // classes, but it must never make the held piece reappear or lose hints.
+  sq.classList.remove("human-drag-origin");
+  board.children[45].classList.remove("human-drop-hover");
+  await intervals.find(x=>x.delay===1100).fn();
+  await flush();
+  assert.equal(sq.classList.contains("human-drag-origin"),true,
+               "live poll must restore empty-source drag highlight");
+  assert.equal(board.children[45].classList.contains("human-drop-hover"),true,
+               "live poll must restore legal destination highlight");
+  assert.equal(sq.children.length,0,"live poll must not duplicate held piece");
   board.events.pointerup(pointer(8,sq,440,440));
   assert.strictEqual(sq.children[0],originalPiece,
     "release restores the DOM before the backend validates the move");
