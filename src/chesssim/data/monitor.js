@@ -12,6 +12,9 @@ let attemptSignature = null;
 let bracketSignature = null;
 let fetching = false;
 let requestVersion = 0;
+let refreshQueued = false;
+let eventSource = null;
+let eventFeedConnected = false;
 let moveSignature = "";
 let moveCells = [];
 let followMoves = true;
@@ -204,6 +207,7 @@ function applySelection() {
   resetGuess("Seleção alterada. Palpite descartado.");
   guess.gameId=null;
   poll();
+  openEventFeed();
 }
 window.addEventListener("hashchange", applySelection);
 
@@ -601,9 +605,54 @@ async function poll() {
     $("connection").className = "connection error";
   } finally {
     fetching = false;
-    if (revision !== requestVersion) poll();
+    if (revision !== requestVersion || refreshQueued) {
+      refreshQueued = false;
+      void poll();
+    }
   }
 }
+// SSE provides early change notifications; /api/state is still authoritative
+// and periodic polling remains a fallback if the stream is missing or stalled.
+function eventQuery() {
+  return selection.match ?
+    "?match=" + encodeURIComponent(selection.match) +
+    (selection.attempt !== null ? "&attempt=" + String(selection.attempt) : "") : "";
+}
+function eventRefresh() {
+  if (fetching)refreshQueued = true;
+  else void poll();
+}
+function openEventFeed() {
+  if(eventSource)eventSource.close();
+  eventSource=null;
+  eventFeedConnected=false;
+  if(typeof EventSource !== "function")return;
+  const source = new EventSource("/api/events" + eventQuery());
+  eventSource=source;
+  source.addEventListener("open",()=>{
+    if(eventSource===source)eventFeedConnected=true;
+  });
+  source.addEventListener("state",event=>{
+    if(eventSource!==source)return; // Ignore stale session callbacks.
+    try {
+      const data=JSON.parse(event.data);
+      if(data.schema!=="chesssim-game-events-v1" ||
+         !/^[a-f0-9]{64}$/.test(data.revision))return;
+    } catch (_) {return;}
+    eventFeedConnected=true;
+    eventRefresh();
+  });
+  source.addEventListener("unavailable",()=>{
+    if(eventSource===source)eventFeedConnected=false;
+  });
+  source.addEventListener("error",()=>{
+    if(eventSource===source)eventFeedConnected=false;
+  });
+}
+window.addEventListener("pagehide",()=>{
+  if(eventSource)eventSource.close();
+  eventSource=null;eventFeedConnected=false;
+});
 
 $("guess-toggle").addEventListener("click",()=>{
   guess.enabled=!guess.enabled;
@@ -698,7 +747,10 @@ document.addEventListener("keydown", event => {
 });
 render();
 poll();
-setInterval(poll, 1200);
+openEventFeed();
+// Fast fallback on SSE failure; a slower safety reconciliation while connected.
+setInterval(()=>{if(!eventFeedConnected)poll();},1200);
+setInterval(()=>{if(eventFeedConnected)poll();},10000);
 // Independent rendering cadence: fast UCI bursts are queued for the viewer.
 setInterval(advanceLivePlayback, 100);
 setInterval(paintClocks, 250);
