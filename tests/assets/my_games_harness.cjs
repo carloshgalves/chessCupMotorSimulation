@@ -34,6 +34,7 @@ const id2="human-20261109T200000Z-000000000002";
 const game=(id,outcome,status="COMPLETED")=>({
   id,opponent:"tal",opponent_name:"Mikhail Tal",color:"white",
   result:outcome==="loss"?"0-1":"*",outcome,status,ply_count:4,
+  termination:status==="COMPLETED"?"CHECKMATE":"OperatorStop",
   created_at_utc:"2026-11-09T20:00:00+00:00",rating_eligible:false
 });
 const all=[game(id1,"loss"),game(id2,"incomplete","INTERRUPTED")];
@@ -96,6 +97,7 @@ async function flush(){for(let i=0;i<12;i++)await new Promise(resolve=>setImmedi
   const first=get("my-games-rows").children[0].children.at(-1).firstChild;
   await first.events.click();await flush();
   assert.equal(get("my-games-dialog").open,true,"Personal replay dialog must open");
+  assert.match(get("my-games-replay-meta").textContent,/Causa: Xeque-mate/);
   assert.equal(get("my-games-download").download,id1+".pgn");
   assert.equal(get("my-games-moves").children.length,1);
   assert.equal(paints.at(-1).ply,0);
