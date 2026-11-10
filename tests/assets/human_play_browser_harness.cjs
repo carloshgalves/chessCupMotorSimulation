@@ -34,7 +34,12 @@ class Node {
     this.parentNode=null;this.style={};this.captured=null;
   }
   append(...children){for(const c of children)this.appendChild(c);}
-  appendChild(child){child.parentNode=this;this.children.push(child);return child;}
+  appendChild(child){
+    // DOM appendChild *moves* a node; it never makes a duplicate piece.
+    if(child.parentNode)
+      child.parentNode.children=child.parentNode.children.filter(c=>c!==child);
+    child.parentNode=this;this.children.push(child);return child;
+  }
   replaceChildren(...children){
     this.children=[];for(const child of children)this.appendChild(child);
   }
@@ -215,6 +220,7 @@ const clock={now:()=>now};
 const window={
   location:{hash:"#token="+token},confirm:()=>true,
   addEventListener(){},
+  getComputedStyle:()=>({fontSize:"44px"}),
   ChessSimBoard:{paint,refreshArtwork(){}}
 };
 const context=vm.createContext({
@@ -267,16 +273,30 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   const unchanged=calls.length;
   // An impossible knight drop (g1 -> g8) must not hit the backend.
   let sq=board.children[62];
+  const originalPiece=sq.children[0];
   board.events.pointerdown(pointer(5,sq,520,600));
   board.events.pointermove(pointer(5,sq,520,40));
   assert.equal(document.body.children.length,1,"pointer drag has visual preview");
-  const previewGlyph=document.body.children[0].children[0].children[0];
-  assert.equal(previewGlyph.style.fontSize,"68px",
-    "fallback glyph must keep square-sized proportions while dragging");
+  const floating=document.body.children[0];
+  const previewGlyph=floating.children[0].children[0];
+  assert.strictEqual(previewGlyph,originalPiece,
+    "must relocate original loaded artwork instead of cloning a white tile");
+  assert.equal(sq.children.length,0,
+    "source square must become empty (never show faded duplicate)");
+  assert.equal(floating.style.left,"480px",
+    "drag position must preserve original 40px horizontal grab offset");
+  assert.equal(floating.style.top,"0px",
+    "drag position must preserve original 40px vertical grab offset");
+  assert.equal(previewGlyph.style.fontSize,"44px",
+    "fallback glyph preserves computed size of original piece");
   assert.equal(board.children[6].classList.contains("human-drop-hover"),false);
   board.events.pointerup(pointer(5,sq,520,40));
   await flush();
   assert.equal(document.body.children.length,0,"invalid drop removes preview");
+  assert.strictEqual(sq.children[0],originalPiece,
+    "invalid drop returns identical loaded piece to its origin");
+  assert.equal(sq.children[0].style.fontSize,"",
+    "an inline font override must not leak into the original board");
   assert.equal(calls.length,unchanged,"illegal drop did not POST");
   board.events.click({detail:1,target:sq,preventDefault(){}});
   assert.equal(calls.length,unchanged,"synthetic click after drag is suppressed");
@@ -299,12 +319,17 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   await flush();
   assert.equal(calls.length,unchanged);
   assert.equal(document.body.children.length,0);
+  assert.strictEqual(sq.children[0],originalPiece,"cancel returns original piece");
 
   // Legal drag is translated to exactly one UCI with the observed revision.
   board.events.pointerdown(pointer(8,sq,520,600));
   board.events.pointermove(pointer(8,sq,440,440));
+  assert.strictEqual(document.body.children[0].children[0].children[0],
+    originalPiece,"legal drag moves actual piece, not a square");
   assert.equal(board.children[45].classList.contains("human-drop-hover"),true);
   board.events.pointerup(pointer(8,sq,440,440));
+  assert.strictEqual(sq.children[0],originalPiece,
+    "release restores the DOM before the backend validates the move");
   await flush();
   assert.equal(calls.length,unchanged+1);
   assert.equal(calls.at(-1).path,"/api/arena/human/move");
@@ -345,9 +370,22 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   assert.equal($("human-turn-title").textContent,"Sua vez");
   assert.equal(board.children.length,64);
   const blackSource=board.children[51]; // e7 when black looks from bottom
+  // Real SVGs are already loaded; moving the node must not trigger a
+  // second image request, change it into a Unicode glyph or resize it.
+  const loaded=blackSource.children[0];
+  const svg=new Node("img");svg.className="piece-svg";
+  loaded.appendChild(svg);loaded.dataset.artReady="1";
+  board.setAttribute("data-piece-kind","svg");
+  board.setAttribute("data-piece-style","chessnut");
   board.events.pointerdown(pointer(10,blackSource,280,520,"touch"));
   board.events.pointermove(pointer(10,blackSource,280,360,"touch"));
+  assert.strictEqual(document.body.children[0].children[0].children[0],loaded);
+  assert.strictEqual(loaded.children[0],svg,"already-loaded SVG is reused");
+  assert.equal(loaded.style.fontSize,undefined,
+               "loaded SVG must keep CSS font-size:0, no glyph overlay");
   board.events.pointerup(pointer(10,blackSource,280,360,"touch"));
+  assert.strictEqual(blackSource.children[0],loaded);
+  assert.strictEqual(loaded.children[0],svg);
   await flush();
   assert.equal(calls.at(-1).request.uci,"e7e5");
   assert.equal(calls.at(-1).request.revision,1);
