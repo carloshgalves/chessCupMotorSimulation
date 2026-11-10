@@ -627,7 +627,14 @@ function openEventFeed() {
   eventSource=null;
   eventFeedConnected=false;
   if(typeof EventSource !== "function")return;
-  const source = new EventSource("/api/events" + eventQuery());
+  let source;
+  try {
+    source = new EventSource("/api/events" + eventQuery());
+  } catch (_) {
+    // CSP or browser policy may forbid constructing a stream. The polling
+    // fallback must still be installed and remain fully functional.
+    return;
+  }
   eventSource=source;
   source.addEventListener("open",()=>{
     if(eventSource===source)eventFeedConnected=true;
