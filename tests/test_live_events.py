@@ -97,6 +97,8 @@ def test_checkpoint_ignores_server_time_but_tracks_moves_clocks_and_terminal(tmp
     modified = json.loads(json.dumps(next_body))
     modified["games"][0]["clocks"] = [52.0, 48.0]
     assert "clock" in live_events._changes(next_body, modified)
+    modified["games"][0]["termination"] = "TimeForfeit"
+    assert "terminal" in live_events._changes(next_body, modified)
     modified["games"][0]["status"] = "COMPLETED"
     assert "terminal" in live_events._changes(next_body, modified)
 
