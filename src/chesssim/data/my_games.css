@@ -1,0 +1,99 @@
+/* #84: personal games. Scoped to this view; keep the approved Arena theme. */
+#my-games-view{color:#e6f2f4;background:radial-gradient(circle at 70% 0,#173b42,transparent 58%),#0c2029;
+  border:1px solid #3a6170;border-radius:13px;padding:clamp(12px,2vw,22px);
+  --my-edge:#3d6271;--my-surface:#142d38;--my-accent:#80d5b3}
+body:has(#my-games-view:not([hidden])) .top>div:first-child{display:none}
+body:has(#my-games-view:not([hidden])) .top{background:#102630;border:1px solid #366274;
+  border-radius:12px;padding:7px 11px;margin-bottom:9px;gap:9px}
+body:has(#my-games-view:not([hidden])) .league-nav-brand{display:flex}
+body:has(#my-games-view:not([hidden])) .main-nav{width:100%;gap:6px}
+body:has(#my-games-view:not([hidden])) .main-nav button{min-height:35px;border:0;
+  background:transparent;padding:7px 11px;font-size:.84rem}
+body:has(#my-games-view:not([hidden])) #tab-my-games[aria-pressed=true]{background:#145641;
+  border:1px solid #32b67b;box-shadow:inset 0 -2px #52dda0}
+.my-games-heading{display:flex;gap:14px;align-items:center;justify-content:space-between;
+  padding:4px 6px 15px;border-bottom:1px solid var(--my-edge)}
+.my-games-heading h2{font-size:clamp(1.35rem,2.4vw,2rem);margin:4px 0}
+.my-games-heading p{font-size:.85rem;max-width:810px}
+.my-games-heading button{flex-shrink:0;background:#1b4f46;border-color:#5aa98a}
+.my-games-notice{color:#cfdddd;line-height:1.5;font-size:.82rem;margin:12px 4px}
+.my-games-notice.error{color:#ffb5a9}
+.my-games-summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin:14px 0}
+.my-games-summary>div{min-width:0;border:1px solid #3a6572;background:#173743;
+  padding:14px;border-radius:10px}
+.my-games-summary small{display:block;color:#a8c6d0;font-size:.73rem;line-height:1.4}
+.my-games-summary strong{display:block;color:#9de6c6;font-size:1.65rem;margin-top:4px;
+  font-variant-numeric:tabular-nums}
+.my-games-panel{border:1px solid var(--my-edge);background:#102a35;
+  border-radius:11px;padding:15px;margin-top:13px;min-width:0}
+.my-games-panel h3{font-size:1.04rem;margin:0 0 8px}
+.my-games-panel-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.my-games-panel-title span{font-size:.75rem;color:#aacbd4}
+.my-games-filters{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr)) auto;
+  gap:8px;align-items:end;background:#153641;border:1px solid #386272;
+  padding:11px;border-radius:8px;margin-top:12px}
+.my-games-filters label{font-size:.74rem;min-width:0}
+.my-games-filters select{min-width:0;width:100%;font-size:.78rem;min-height:39px;
+  margin-top:4px;padding:7px 8px}
+.my-games-filters button{min-height:39px;font-size:.8rem;white-space:nowrap}
+.my-games-coverage{margin:9px 2px;color:#edcc83;font-size:.77rem}
+.my-games-table-wrap{overflow:auto;max-height:520px;border:1px solid #416576;border-radius:8px;
+  scrollbar-width:thin}
+.my-games-table{width:100%;min-width:730px;border-collapse:collapse;font-size:.78rem}
+.my-games-table thead{position:sticky;top:0;background:#194352}
+.my-games-table th{text-align:left;font-size:.68rem;color:#c5dce0;letter-spacing:.02em;
+  text-transform:uppercase;padding:11px 9px;white-space:nowrap}
+.my-games-table td{padding:11px 9px;border-top:1px solid #335462}
+.my-games-table tr:nth-child(odd){background:#12313f}
+.my-games-table tr:nth-child(even){background:#143642}
+.my-games-table button{padding:5px 10px;min-height:34px;font-size:.75rem;
+  background:#196a52;border:1px solid #49ae88}
+.my-games-result-win{color:#6ce2a7;font-weight:700}
+.my-games-result-loss{color:#ffae9f;font-weight:700}
+.my-games-result-draw{color:#e3ca94}
+.my-games-result-incomplete{color:#a9c4cd}
+.my-games-footer{display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding:12px 2px 2px;font-size:.79rem;color:#b9d4da}
+.my-games-pages{display:flex;align-items:center;gap:8px}
+.my-games-pages button{font-size:.75rem;padding:6px 11px}
+.my-games-opponents{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));
+  gap:9px;margin-top:12px}
+.my-games-opponent-card{border:1px solid #396474;border-radius:8px;
+  padding:12px;background:#193a46;display:grid;gap:3px}
+.my-games-opponent-card strong{font-size:.87rem}
+.my-games-opponent-card small{font-size:.76rem;color:#b5d1d8}
+.my-games-disclaimer{font-size:.76rem;color:#bacfd5;line-height:1.6;margin:14px 5px}
+.my-games-dialog{max-height:96vh;overflow:auto}
+#my-games-board{width:100%;max-width:470px;min-width:0}
+#my-games-moves{display:flex;flex-wrap:wrap;align-content:flex-start;gap:5px;
+  list-style:none;max-height:340px;overflow:auto;padding:9px;margin:0;
+  background:#173542;border:1px solid #395d6a;border-radius:8px}
+#my-games-moves button{font-size:.76rem;padding:5px 7px;min-height:29px}
+#my-games-moves button[aria-current=step]{background:#1b8459;border-color:#61d69a}
+.my-games-download{display:block;color:#b3eac9;text-align:center;margin:14px auto 4px;
+  font-size:.85rem}
+.my-games-download:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+@media(max-width:990px){
+  body:has(#my-games-view:not([hidden])) .main-nav{flex-wrap:wrap}
+  body:has(#my-games-view:not([hidden])) .league-nav-brand{width:100%}
+}
+@media(max-width:550px){
+  body:has(#my-games-view:not([hidden])) .main-nav button{
+    flex:1 1 calc(50% - 6px);min-width:0;text-align:center;font-size:.8rem}
+}
+@media(max-width:1100px){
+  .my-games-summary{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .my-games-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .my-games-filters button{grid-column:1/-1}
+}
+@media(max-width:650px){
+  .my-games-heading{align-items:flex-start;flex-direction:column}
+  .my-games-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .my-games-panel{padding:10px}
+  .my-games-footer{align-items:start;flex-direction:column}
+  .my-games-pages{width:100%;justify-content:space-between}
+  .my-games-dialog .archive-replay-layout{grid-template-columns:1fr}
+}
+@media(max-width:360px){.my-games-filters{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){#my-games-view *{scroll-behavior:auto!important;
+  animation:none!important;transition:none!important}}

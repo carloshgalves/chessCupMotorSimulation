@@ -25,6 +25,7 @@ from .history_archive import archive as player_archive, replay as archive_replay
 from .representation import RepresentationLab, RepresentationInput
 from .competition_rating import rating_report, RATING_POOLS
 from .human_game import HumanGame, HumanInput, HumanBusy
+from .my_games import listing as personal_listing, replay as personal_replay, pgn as personal_pgn, MyGamesInput
 from .leagues import LeagueManager, LeagueInput, LeagueBusy
 from .cups import CupManager, CupBusy
 from .cup_rules import CupInput, presets as cup_presets
@@ -624,6 +625,37 @@ def make_arena_handler(manager: ArenaManager, token: str):
                     self._json(404, {"error": str(exc)})
                 except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "Dados da temporada inconsistentes"})
+            elif url.path == "/api/my-games":
+                try:
+                    self._json(200, personal_listing(manager.workspace, url.query))
+                except MyGamesInput as exc:
+                    self._json(400, {"error": str(exc)})
+                except (OSError, ValueError, TypeError, KeyError,
+                        json.JSONDecodeError, UnicodeError):
+                    self._json(503, {"error": "Minhas Partidas indisponível"})
+            elif re.fullmatch(
+                    r"/api/my-games/human-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}/(replay|pgn)",
+                    url.path) and not url.query:
+                ident, kind = url.path.split("/")[3:5]
+                try:
+                    if kind == "replay":
+                        self._json(200, personal_replay(manager.workspace, ident))
+                    else:
+                        payload = personal_pgn(manager.workspace, ident)
+                        self.send_response(200)
+                        self.send_header("Content-Type", "application/x-chess-pgn")
+                        self.send_header("Content-Length", str(len(payload)))
+                        self.send_header("Content-Disposition",
+                                         'attachment; filename="' + ident + '.pgn"')
+                        self.send_header("Cache-Control", "no-store")
+                        self.send_header("X-Content-Type-Options", "nosniff")
+                        self.end_headers()
+                        self.wfile.write(payload)
+                except MyGamesInput as exc:
+                    self._json(404, {"error": str(exc)})
+                except (OSError, ValueError, TypeError, KeyError,
+                        json.JSONDecodeError, UnicodeError):
+                    self._json(503, {"error": "Partida pessoal indisponível"})
             elif url.path == "/api/competition/ratings":
                 modality = _rating_query(url.query)
                 if modality is None:
@@ -799,7 +831,7 @@ def make_arena_handler(manager: ArenaManager, token: str):
                     self._json(503, {"error": "Estado do duelo indisponível"})
             elif url.path in ("/", "/arena.js", "/arena.css", "/history.js", "/history_replay.js", "/history_stats.js", "/competition_rating.js", "/history.css", "/chess-board.js", "/chess-board.css", "/board-preferences.js", "/human-play.js", "/league.js", "/league.css",
                               "/cup.js", "/cup.css", "/representation.js", "/representation.css",
-                              "/history_archive.js", "/history_archive.css", "/viewer"):
+                              "/history_archive.js", "/history_archive.css", "/my-games.js", "/my-games.css", "/viewer"):
                 asset = {"/": "arena.html", "/arena.js": "arena.js",
                          "/arena.css": "arena.css", "/history.js": "history.js",
                          "/history_replay.js": "history_replay.js",
@@ -816,6 +848,8 @@ def make_arena_handler(manager: ArenaManager, token: str):
                          "/representation.css": "representation.css",
                          "/history_archive.js": "history_archive.js",
                          "/history_archive.css": "history_archive.css",
+                         "/my-games.js": "my_games.js",
+                         "/my-games.css": "my_games.css",
                          "/chess-board.css": "chess_board.css", "/viewer": "monitor.html"}[url.path]
                 kind = ("text/html; charset=utf-8" if asset.endswith(".html") else
                         "text/javascript; charset=utf-8" if asset.endswith(".js") else

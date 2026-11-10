@@ -214,6 +214,7 @@
     }
   }
   function toggle(toHistory) {
+    window.ChessSimMyGamesNavigation?.hide();
     window.ChessSimLeagueNavigation?.hide();
     window.ChessSimCupNavigation?.hide();
     byId("league-view").hidden = true;

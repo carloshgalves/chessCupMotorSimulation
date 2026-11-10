@@ -93,6 +93,7 @@
     }
   }
   function show(){
+    window.ChessSimMyGamesNavigation?.hide();
     window.ChessSimHistoryNavigation?.leave();
     window.ChessSimLeagueNavigation?.hide();
     nav("main");

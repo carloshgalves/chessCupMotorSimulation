@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/history.css">
   <link rel="stylesheet" href="/representation.css">
   <link rel="stylesheet" href="/history_archive.css">
+  <link rel="stylesheet" href="/my-games.css">
   <link rel="stylesheet" href="/league.css">
   <link rel="stylesheet" href="/cup.css">
   <script src="/arena.js" defer></script>
@@ -21,6 +22,7 @@
   <script src="/history.js" defer></script>
   <script src="/representation.js" defer></script>
   <script src="/history_archive.js" defer></script>
+  <script src="/my-games.js" defer></script>
   <script src="/league.js" defer></script>
   <script src="/cup.js" defer></script>
 </head>
@@ -35,6 +37,7 @@
       <nav class="main-nav" aria-label="Áreas da aplicação">
         <span class="league-nav-brand" aria-label="ChessCup Motor Simulation">♛ ChessCup Motor Simulation <small>v0.1.0</small></span>
         <button id="tab-arena" type="button" aria-pressed="true" aria-controls="arena-view">⌂ Arena</button>
+        <button id="tab-my-games" type="button" aria-pressed="false" aria-controls="my-games-view">▣ Minhas Partidas</button>
         <button id="tab-leagues" type="button" aria-pressed="false" aria-controls="league-view">♜ Ligas</button>
         <button id="tab-cups" type="button" aria-pressed="false" aria-controls="cup-view">🏆 Copas</button>
         <button id="tab-history" type="button" aria-pressed="false" aria-controls="history-view">▥ História</button>
@@ -762,6 +765,100 @@
         </form>
       </section>
       <footer class="league-disclaimer">ⓘ Resultados gerados pelo simulador. Elo competitivo experimental separado por ritmo; projeções sem motor nunca são apresentadas como PGNs reais.</footer>
+    </section>
+    <section id="my-games-view" class="my-games-view" aria-labelledby="my-games-heading" hidden>
+      <header class="my-games-heading">
+        <div>
+          <span class="overline">ÁREA PESSOAL · CHESSCUP</span>
+          <h2 id="my-games-heading" tabindex="-1">▣ Minhas Partidas</h2>
+          <p>Seu histórico de confrontos no modo Jogar. Estatísticas particulares, sem Elo e sem participação no histórico dos motores.</p>
+        </div>
+        <button id="my-games-reload" type="button">↻ Atualizar</button>
+      </header>
+      <p id="my-games-alert" class="my-games-notice" role="status" aria-live="polite">Abra Minhas Partidas para carregar suas partidas salvas.</p>
+      <p class="my-games-notice">Os indicadores mostram todas as partidas pessoais válidas; os filtros abaixo alteram somente a tabela. Resultados pendentes não entram em V/E/D.</p>
+      <section class="my-games-summary" aria-label="Seu desempenho nos confrontos pessoais">
+        <div><small>Partidas registradas</small><strong id="my-games-count">—</strong></div>
+        <div><small>Concluídas</small><strong id="my-games-completed">—</strong></div>
+        <div><small>Vitórias</small><strong id="my-games-wins">—</strong></div>
+        <div><small>Empates</small><strong id="my-games-draws">—</strong></div>
+        <div><small>Derrotas</small><strong id="my-games-losses">—</strong></div>
+        <div><small>Não concluídas</small><strong id="my-games-unfinished">—</strong></div>
+      </section>
+      <section class="my-games-panel" aria-label="Partidas pessoais e filtros">
+        <div class="my-games-panel-title">
+          <h3>Histórico pessoal</h3>
+          <span>Somente partidas Você × UCI</span>
+        </div>
+        <form id="my-games-filters" class="my-games-filters">
+          <label for="my-games-opponent">Adversário
+            <select id="my-games-opponent"><option value="">Todos os motores</option></select>
+          </label>
+          <label for="my-games-status">Situação
+            <select id="my-games-status">
+              <option value="all">Todas</option><option value="COMPLETED">Concluídas</option>
+              <option value="RUNNING">Em andamento</option><option value="INTERRUPTED">Interrompidas</option>
+              <option value="INCOMPLETE">Incompletas</option><option value="FAILED">Falhas</option>
+            </select>
+          </label>
+          <label for="my-games-outcome">Resultado pessoal
+            <select id="my-games-outcome">
+              <option value="all">Todos</option><option value="win">Vitórias</option>
+              <option value="draw">Empates</option><option value="loss">Derrotas</option>
+              <option value="incomplete">Não concluídas</option>
+            </select>
+          </label>
+          <label for="my-games-color">Minhas peças
+            <select id="my-games-color">
+              <option value="all">Ambas</option><option value="white">Brancas</option>
+              <option value="black">Pretas</option>
+            </select>
+          </label>
+          <button type="submit" class="primary">Aplicar filtros</button>
+        </form>
+        <p id="my-games-coverage" class="my-games-coverage"></p>
+        <div class="my-games-table-wrap" role="region" tabindex="0" aria-label="Tabela de partidas pessoais">
+          <table class="my-games-table">
+            <thead><tr><th>Registro</th><th>Adversário UCI</th><th>Minhas peças</th><th>Estado</th><th>Resultado</th><th>Lances</th><th>Ação</th></tr></thead>
+            <tbody id="my-games-rows"></tbody>
+          </table>
+        </div>
+        <footer class="my-games-footer">
+          <span id="my-games-range">Nenhuma partida</span>
+          <div class="my-games-pages">
+            <button id="my-games-prev" type="button">‹ Anterior</button>
+            <span id="my-games-page">Página 1 de 1</span>
+            <button id="my-games-next" type="button">Próxima ›</button>
+          </div>
+        </footer>
+      </section>
+      <section class="my-games-panel" aria-labelledby="my-games-opponent-heading">
+        <h3 id="my-games-opponent-heading">Meu desempenho por adversário</h3>
+        <p>Somente resultados concluídos são classificados como vitória, empate ou derrota. Partidas interrompidas não recebem placar.</p>
+        <div id="my-games-opponents" class="my-games-opponents"></div>
+      </section>
+      <p class="my-games-disclaimer">Estes resultados pertencem ao modo Jogar e nunca alteram o Elo, títulos, vitórias ou registros históricos dos motores. O sistema valida a consistência dos arquivos locais; ela não equivale a assinatura de autenticidade externa.</p>
+      <dialog id="my-games-dialog" class="archive-replay-dialog my-games-dialog" aria-labelledby="my-games-replay-title">
+        <header>
+          <h3 id="my-games-replay-title">Replay da minha partida</h3>
+          <button id="my-games-close" type="button" aria-label="Fechar replay">✕</button>
+        </header>
+        <p id="my-games-replay-meta" class="my-games-notice"></p>
+        <div class="archive-replay-layout">
+          <div id="my-games-board" class="board" role="img" aria-label="Posição do jogo pessoal" tabindex="0"></div>
+          <div class="archive-replay-side">
+            <ol id="my-games-moves" aria-label="Lances da minha partida"></ol>
+            <div class="archive-replay-controls" role="group" aria-label="Reprodução dos lances">
+              <button id="my-games-first" type="button" aria-label="Posição inicial">⇤</button>
+              <button id="my-games-back" type="button" aria-label="Lance anterior">‹</button>
+              <span id="my-games-ply">0/0</span>
+              <button id="my-games-forward" type="button" aria-label="Próximo lance">›</button>
+              <button id="my-games-last" type="button" aria-label="Última posição">⇥</button>
+            </div>
+            <a id="my-games-download" href="#" class="my-games-download" download>⇩ Exportar PGN pessoal</a>
+          </div>
+        </div>
+      </dialog>
     </section>
     <section id="history-view" class="history-shell" aria-labelledby="history-heading" hidden>
       <header class="history-heading">
