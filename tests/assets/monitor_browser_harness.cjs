@@ -102,6 +102,9 @@ function browser(initialHash="",{useEvents=false}={}) {
     close(){this.closed=true;}
     emit(type,payload={}){this.events[type]?.({data:JSON.stringify(payload)});}
   }
+  class BlockedEventSource {
+    constructor(){throw new Error("EventSource disallowed by policy");}
+  }
   let hash=initialHash;
   const location={
     get hash(){return hash;},
@@ -130,7 +133,7 @@ function browser(initialHash="",{useEvents=false}={}) {
   const context=vm.createContext({
     document,window:{location,addEventListener(name,listener){events[name]=listener;}},
     HTMLElement:FakeElement,URLSearchParams,fetch,Date,Math,Number,String,
-    ...(useEvents?{EventSource:FakeEventSource}:{}),
+    ...(useEvents?{EventSource:useEvents==="throws"?BlockedEventSource:FakeEventSource}:{}),
     setInterval(fn,delay){intervals.push({fn,delay});return intervals.length;},
     console
   });
@@ -426,6 +429,15 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal(observed.requests.length,selectedCount+2);
   observed.events.pagehide();
   assert.equal(latestStream.closed,true);
+  const blocked=browser("",{useEvents:"throws"});
+  await flush();
+  assert.equal(blocked.streams.length,0);
+  const rescue=blocked.intervals.find(x=>x.delay===1200);
+  assert(rescue,"poll fallback must still start if EventSource throws");
+  const previous=blocked.requests.length;
+  rescue.fn();
+  await flush();
+  assert.equal(blocked.requests.length,previous+1);
 
   console.log("Live bracket browser smoke: PASS");
 })().catch(error=>{console.error(error);process.exitCode=1;});
