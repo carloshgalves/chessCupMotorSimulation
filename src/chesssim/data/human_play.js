@@ -426,9 +426,13 @@
     const cell=document.createElement("div");
     cell.className="square "+(source.classList.contains("whitepiece")?
       "whitepiece":"blackpiece");
-    cell.appendChild(piece.cloneNode(true));
-    preview.appendChild(cell);
     const rect=board.getBoundingClientRect();
+    const artwork=piece.cloneNode(true);
+    // The floating preview has its own container. Without an explicit size,
+    // cqw would shrink fallback glyphs to 16px on an 80px square.
+    artwork.style.fontSize=Math.min(rect.width/8*.85,68)+"px";
+    cell.appendChild(artwork);
+    preview.appendChild(cell);
     preview.style.width=rect.width/8+"px";
     preview.style.height=rect.height/8+"px";
     document.body.appendChild(preview);
