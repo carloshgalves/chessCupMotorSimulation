@@ -46,7 +46,7 @@ python -m chesssim arena --rodent "$HOME/Projetos/Engines/rodent-iv" \\
 
 Use o **mesmo --out da homologação anterior** para que partidas já executadas apareçam. Ao abrir História e selecionar um jogador com evidência local, verifique as abas **Visão geral, Partidas, Torneios, Elo experimental, Registros**. Teste os filtros, páginas, replay real, exportação da página, e mudança entre jogadores. Copas sintéticas devem ser encontráveis mas oferecer **Sem PGN**, sem aumentar vitórias UCI ou Elo. Os valores finais só podem ser determinados pelo workspace local, não pelos exemplos ilustrados nos prints.
 
-**Gate de aceite**: CI, revisão e testes automatizados, depois comparação visual em Chrome/Debian e autorização humana antes do merge. **Ordem de merge já executada:** PR #81 seguida de #82, ambas integradas à `main` mediante autorização humana. A advertência antiga sobre a ordem de merge foi cumprida. O gate manual do operador e os itens de #70/#84 continuam separados.
+**Estado de integração:** a CI e a revisão automatizada foram concluídas, e as PRs #81 e #82 foram mescladas nessa ordem mediante autorização humana. **A exigência anterior de inspeção visual antes do merge não foi comprovada como executada** e não deve ser convertida retroativamente em PASS: ver homologação real Chrome/Debian em #83 e gate de História/direitos em #53. A issue #70 continua parcial até a #84 e a escala física de 4.032 PGNs segue sem benchmark.
 
 ## Filtros complementares e conciliação
 
