@@ -99,6 +99,26 @@ function reconcileGuess() {
     "Acertou! O jogador realizou "+observed+".":
     "Não foi dessa vez. Palpite: "+p.uci+" · realizado: "+observed+".");
 }
+function drawGuessPreview() {
+  const layer=$("guess-piece-preview");
+  layer.replaceChildren();
+  const p=guess.pending,g=guessGame();
+  if(!p||!g||g.id!==p.gameId||cursor!==p.ply)return;
+  const source=[...$("board").children].find(s=>guessSquare(s)===p.from);
+  const artwork=[...source?.children||[]].find(
+    child=>child.classList?.contains("piece-glyph"));
+  if(!source||!artwork)return; // Still keep a textual prediction when art is unavailable.
+  const ghost=document.createElement("div");
+  ghost.className="square "+(source.classList.contains("whitepiece")?
+    "whitepiece":"blackpiece");
+  ghost.style.gridColumnStart=String(p.to.charCodeAt(0)-96);
+  ghost.style.gridRowStart=String(9-Number(p.to[1]));
+  ghost.appendChild(artwork.cloneNode(true));
+  const kind=$("board").getAttribute?.("data-piece-kind")||
+    $("board").attributes?.["data-piece-kind"]||"glyph";
+  layer.setAttribute("data-piece-kind",kind);
+  layer.appendChild(ghost);
+}
 function renderGuess(game=currentGame()) {
   setGuessGame(game);
   const live=guessGame();
@@ -126,6 +146,7 @@ function renderGuess(game=currentGame()) {
     square.tabIndex=live&&playable.includes(name)?0:-1;
     square.setAttribute("role",live?"button":"presentation");
   }
+  drawGuessPreview();
 }
 function guessSquareAt(x,y) {
   const board=$("board"),r=board.getBoundingClientRect?.();
