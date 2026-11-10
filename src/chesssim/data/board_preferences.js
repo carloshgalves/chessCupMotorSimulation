@@ -11,7 +11,13 @@
     motion: Object.freeze(["off","fast","normal"])
   });
   const SECTIONS = Object.freeze(["theme","pieces","motion"]);
-  const BOARD_IDS = Object.freeze(["board","human-board","cup-replay-board","history-replay-board"]);
+  // Every published 8x8 board shares the Arena's single visual preference.
+  // Keep this inventory in sync with arena.html / monitor.html. A regression
+  // test checks all div.board containers against this list.
+  const BOARD_IDS = Object.freeze([
+    "board","human-board","cup-replay-board","history-replay-board",
+    "archive-replay-board","my-games-board"
+  ]);
   const CONTROLS = Object.freeze({
     theme:"board-pref-theme",
     pieces:"board-pref-pieces",
