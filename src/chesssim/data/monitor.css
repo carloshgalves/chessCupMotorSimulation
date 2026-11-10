@@ -106,3 +106,16 @@ button.accent{flex:1;font-size:.81rem}
 .board[role="group"] .square[tabindex="0"]{cursor:pointer}
 .board[role="group"] .square:focus-visible{outline:3px solid #ffe59a;outline-offset:-4px;z-index:2}
 @media(prefers-reduced-motion:reduce){.board .square.guess-from,.board .square.guess-to{transition:none!important}}
+
+/* A cloned piece shows the predicted move without ever changing the 64 real
+   board squares, FEN, or the renderer's cached loaded SVG nodes. */
+.guess-board-stage{position:relative;width:100%;min-width:0;aspect-ratio:1 / 1}
+.guess-board-stage>#board{width:100%;height:100%}
+.guess-board-stage>.guess-piece-preview{position:absolute;inset:0;width:100%;height:100%;
+  aspect-ratio:auto;z-index:3;pointer-events:none;overflow:hidden;background:none;
+  border:0;border-radius:4px;container-type:inline-size}
+.guess-piece-preview .square{background:none!important;background-image:none!important;
+  box-shadow:none!important;opacity:.83}
+.board .square.guess-from .piece-glyph,
+.board .square.guess-to .piece-glyph{opacity:.18}
+@media(prefers-reduced-motion:reduce){.guess-piece-preview .square{animation:none!important}}
