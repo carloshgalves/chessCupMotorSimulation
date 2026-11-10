@@ -357,6 +357,7 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   await flush();
   assert.equal(calls.at(-1).path,"/api/arena/human/move");
   assert.equal(calls.at(-1).request.uci,"e2e4");
+  assert.equal(overlay.children.length,0,"new game revision clears annotations");
   assert.equal($("human-turn-title").textContent,"Reproduzindo os lances");
   assert.equal($("human-moves").children.length,0);
   assert.equal(board.dataset.lastFen,START,"must not skip the human move");
