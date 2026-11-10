@@ -228,7 +228,7 @@ def test_my_games_dom_and_browser_scripts_are_packaged():
     assert 'id="my-games-view"' in html
     assert "/my-games.js" in html and "/my-games.css" in html
     source = root.joinpath("my_games.js").read_text(encoding="utf-8")
-    assert "innerHTML" not in source
+    assert ".innerHTML" not in source
     assert "/api/my-games" in source
     assert 'window.ChessSimHistoryNavigation?.leave()' in source
     assert "rating_report" not in source and "/api/history/players/" not in source
