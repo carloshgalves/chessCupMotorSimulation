@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import urlopen
 import json
+import os
 import shutil
 import subprocess
 import threading
@@ -261,3 +262,49 @@ def test_my_games_pagination_of_55_real_personal_checkpoints(tmp_path):
     assert len(first["games"]) == 50 and len(second["games"]) == 5
     assert len({g["id"] for g in first["games"] + second["games"]}) == 55
     assert first["stats"]["losses"] == 55
+
+
+@pytest.mark.skipif(os.name != "posix", reason="FIFO test needs POSIX open flags")
+def test_my_games_rejects_fifo_without_blocking_read(tmp_path):
+    directory = make_game(tmp_path)
+    (directory / "game.pgn").unlink()
+    os.mkfifo(directory / "game.pgn")
+    report = my_games.listing(tmp_path)
+    assert report["total"] == 0 and report["coverage"]["rejected"] == 1
+
+
+def test_my_games_rejects_false_timeout_winner_and_false_resignation(tmp_path):
+    directory = make_game(tmp_path, finished=False)
+    path = directory / "state.json"
+    state = json.loads(path.read_text(encoding="utf-8"))
+    state["status"] = "COMPLETED"
+    state["result"] = "0-1"
+    state["termination"] = "TimeForfeit"
+    state["config"]["clock"] = [180, 2]
+    state["clocks"] = [180.0, 0.0]
+    path.write_text(json.dumps(state), encoding="utf-8")
+    game_path = directory / "game.pgn"
+    with game_path.open(encoding="utf-8") as stream:
+        game = chess.pgn.read_game(stream)
+    game.headers.update({"TimeControl": "180+2", "Result": "0-1",
+                         "Termination": "TimeForfeit"})
+    game_path.write_text(str(game)+"\n", encoding="utf-8")
+    with pytest.raises(my_games.MyGamesInput, match="Queda de tempo"):
+        my_games.replay(tmp_path, directory.name)
+    state["clocks"] = [0.0, 180.0]
+    path.write_text(json.dumps(state), encoding="utf-8")
+    assert my_games.replay(tmp_path, directory.name)["game"]["outcome"] == "loss"
+
+    another = make_game(tmp_path, 2)
+    path = another / "state.json"
+    state = json.loads(path.read_text(encoding="utf-8"))
+    state["termination"] = "HumanResignation"
+    path.write_text(json.dumps(state), encoding="utf-8")
+    game_path = another / "game.pgn"
+    with game_path.open(encoding="utf-8") as stream:
+        game = chess.pgn.read_game(stream)
+    game.headers["Termination"] = "HumanResignation"
+    game_path.write_text(str(game)+"\n", encoding="utf-8")
+    assert my_games.listing(tmp_path)["coverage"]["rejected"] == 1
+    with pytest.raises(my_games.MyGamesInput, match="causa"):
+        my_games.replay(tmp_path, another.name)
