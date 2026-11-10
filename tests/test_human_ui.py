@@ -40,6 +40,12 @@ def test_human_duel_html_contract_and_no_clear_button():
     }
     assert required<=set(parsed.ids)
     assert "human-clear" not in parsed.ids
+    assert {"human-annotations", "human-annotations-clear",
+            "human-annotations-status"} <= set(parsed.ids)
+    assert 'class="human-board-stage"' in html
+    assert 'viewBox="0 0 800 800"' in html
+    assert 'aria-hidden="true" focusable="false"' in html
+    assert 'aria-keyshortcuts="Escape"' in html
     assert 'src="/human-play.js"' in html
     assert "/human-play.js" in parsed.scripts
     assert "relógio" in html.lower()
@@ -86,6 +92,20 @@ def test_human_board_styles_reuse_current_theme_and_fixed_move_rows():
     assert "box-shadow:none!important" in css
     assert "transform:none" in css
     assert "pointer-events:none" in css
+    assert ".human-annotation-layer" in css
+    assert ".human-board-stage{position:relative" in css
+    assert 'board.addEventListener("contextmenu"' in js
+    assert 'const annotationColors = Object.freeze({' in js
+    assert 'document.createElementNS(' in js
+    assert 'annotationLayer.replaceChildren(...nodes)' in js
+    assert 'arrows = new Map(), markedSquares = new Map()' in js
+    assert 'state.flipped?7-file:file' in js
+    assert 'state.flipped?rank-1:8-rank' in js
+    assert 'annotationClear.addEventListener("click",clearAnnotations)' in js
+    assert 'syncAnnotationRevision(g)' in js
+    assert ".human-annotation-layer" in css and "pointer-events:none" in css
+    assert "localStorage.setItem" not in js
+    assert '"/api/arena/human/move"' in js
 
 
 def test_human_browser_script_parses_in_node():
