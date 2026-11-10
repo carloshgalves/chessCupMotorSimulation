@@ -304,6 +304,9 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal(paced.elements.get("pause").attributes["aria-pressed"],"false");
 
 
+  // Earlier playback tests mutate a shared fixture. Start the observer test
+  // with an isolated two-ply feed (not the burst/replay fixture).
+  states.splice(2);
   // The local observer prediction never creates POST or engine commands.
   const predictor=browser();
   await flush();
