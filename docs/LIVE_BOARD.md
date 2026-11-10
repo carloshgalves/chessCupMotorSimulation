@@ -138,3 +138,54 @@ Uma promoção é escolhida explicitamente (D/T/B/C), sem inventar uma variante.
 **Referências de UX (consultadas 10/11/2026):** a antiga interação `Guess the Move` do Chess.com permitia mover uma peça durante a observação e comparar com o movimento efetivo: https://www.chess.com/forum/view/help-support/guess-the-move-feature. Moderadores relataram remoção do espectador Live tradicional (2024) e disponibilidade residual em Events (2026): https://www.chess.com/forum/view/site-feedback/what-happened-to-guessing-moves-while-spectating-games. Implementação independente; não copia código/assets externos.
 
 **Gate:** homologação manual com PGN real em Chrome/Debian, zoom, toque/arraste, eventos de rede, latência e múltiplos jogos permanece `NOT_RUN` em #83; CI não substitui essa prova.
+
+
+## Contrato incremental de eventos SSE (#17)
+
+O monitor `chesssim watch` e o `/viewer` da Arena utilizam **Server-Sent Events
+(SSE)**, pela rota local **GET `/api/events`**, para receber avisos de alteração
+sem precisar consultar `/api/state` a cada 1,2 segundo. A API existente
+`/api/state` continua sendo a **única fonte autoritativa** de PGN, FEN,
+lances legais, clocks e resultados; SSE **não altera** esses dados nem chama o
+motor UCI.
+
+- O stream usa `Content-Type: text/event-stream`; cada `event: state`
+  inclui `id` (SHA-256 do checkpoint estável, sem `server_time`) e `data`
+  com `schema: chesssim-game-events-v1`, `revision`, `mode`, `selection`,
+  `duel`, `games`, `tournament` e `changes`.
+- Cada jogo contém a identidade `id`, `ply`, último `uci`, lado a jogar,
+  `clocks`, estado, resultado e indicador `live`. `changes` indica
+  `snapshot`, `session`, `move`, `clock`, `terminal` ou `state`.
+  Múltiplos lances entre dois checkpoints podem ser **coalescidos**; um evento
+  NÃO significa necessariamente exatamente um lance, e a UI reproduz cada
+  meio-lance consultando o snapshot completo.
+- Reconexões EventSource utilizam `Last-Event-ID`: um checkpoint idêntico
+  não é reenviado. O cliente nunca assume continuidade sem consultar o estado
+  real. O stream fecha após aproximadamente 8 segundos e é reaberto
+  automaticamente; mantém um ping periódico. Há **máximo de quatro clientes
+  simultâneos por processo**; excedentes recebem HTTP 429.
+- No torneio, `/api/events?match=r01-m01&attempt=1` obedece à mesma validação
+  de seleção de `/api/state`. Na Arena, o stream é exclusivamente do duelo
+  atual e **não aceita parâmetros de seleção**. A entrada é apenas leitura,
+  protegida por Host e Origin locais, sem CORS remoto e sem POST.
+- O navegador subscreve o SSE, verifica o schema e usa o aviso para antecipar
+  uma leitura `GET /api/state`. Enquanto conectado, realiza reconciliação de
+  segurança a cada 10 segundos. Se o navegador não tiver EventSource, ou se
+  houver erro/conexão recusada, mantém o polling de 1,2 segundo. Troca de
+  confronto/aba encerra a conexão anterior.
+- A cadência de reprodução visual de 650 ms/lance **não é acelerada nem
+  descartada** pela chegada do evento; portanto, os palpites do espectador
+  continuam sendo revelados somente quando o lance real é exibido.
+- Não há fila durável nem garantia de entrega de cada evento individualmente.
+  Persistência, ordenação, legalidade e retomada seguem sob autoridade dos
+  artefatos de partida e da API de estado. Esta entrega é um **incremento da
+  issue #17**, não sua homologação física completa.
+
+### Verificação
+
+Abrir DevTools/Network no Chrome enquanto um duelo Rodent IV roda. A conexão
+`/api/events` deve exibir `text/event-stream`, com GETs `/api/state` após
+as notificações. Pausar a visualização não pausa o motor. Desconectar o monitor
+ou alternar confrontos não altera PGN, relógios ou sessão; sem SSE, o tabuleiro
+continua se atualizando por polling. Homologação física Debian/Chrome em #83,
+independente dos testes automatizados.
