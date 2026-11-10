@@ -46,3 +46,16 @@ O tabuleiro usa o mesmo renderer, peças e temas aprovados na PR #76; clique na 
 7. Sem motor instalado, opção fica indisponível; não apresentar partida simulada por dados artificiais.
 
 **Limitação de gate:** CI contém subprocesso UCI sintético, testes de segurança HTTP, relógios, PGN e testes estáticos/Node do frontend. A inspeção visual e partidas reais com Rodent IV em Debian ficam para homologação do mantenedor; a PR não é mesclada automaticamente.
+
+## Incremento #89 — Arrastar e soltar no modo Jogar
+
+O tabuleiro pessoal aceita **arrastar com mouse, toque ou caneta** através de Pointer Events, sem substituir os controles existentes de clique na peça seguido da casa ou Enter/Espaço. Após deslocamento de 8 px, **o próprio nó gráfico da peça já carregada** passa a acompanhar o ponteiro (sem cópia da casa, fundo colorido, moldura ou sombra do container). A casa de origem fica vazia durante o gesto e recebe apenas um contorno discreto; os destinos legais continuam destacados. O ponto onde o usuário pressionou a peça é preservado, evitando salto quando o arraste começa. Em cancelamento, drop ilegal ou fora do tabuleiro, o mesmo nó retorna à origem, sem recarregar o SVG. **Nenhum POST de lance é enviado** nessas situações. O comportamento foi ajustado após comparação visual dos vídeos de homologação do ChessCup e da referência Chess.com; não se reutilizam imagens nem outros assets proprietários.
+
+- A origem só pode ser selecionada se estiver na lista `legal_moves` do snapshot atual e o usuário estiver na vez correta, com a posição exibida sincronizada, sem comando/promoção pendente. Lances durante o turno do motor **não são armazenados**: pré-moves dependem da futura #90.
+- A lista do servidor é consultada também antes do drop, e a operação usa o mesmo `moveFromTo` de clique/clique para promoções (D/T/B/C). Só `/api/arena/human/move` pode aplicar a jogada; ID de partida, revisão e legalidade são revalidados no backend `python-chess`.
+- `pointercancel`, perda de captura, ocultação da aba, foco perdido, troca de modo, sessão, turno ou revisão cancelam o gesto sem enviar lances. A compatibilidade `click` após um arraste não provoca jogada duplicada.
+- Para humano de pretas, a área visível é invertida e o mapeamento para coordenadas UCI é feito pela posição visual e `squareName` existente. O drag não altera DOM da notação, relógio, PGN ou replay.
+- Estilos de peças/temas continuam sendo definidos em `board_preferences.js`. O arraste usa prévia local, sem dependência externa. O CSS desabilita scroll por toque **apenas dentro do tabuleiro**; fora dele, a rolagem permanece normal. `prefers-reduced-motion` continua respeitado.
+- Setas de anotação via botão direito são outro incremento (#91) e não integram esta PR.
+
+**Homologação adicional:** testar Chrome/Debian com mouse e touch (se disponível), arraste legal, fora do tabuleiro, capturas, promoções e preta invertida; verificar que relógios continuam sob controle do servidor. CI/Node não comprova ergonomia real em hardware.

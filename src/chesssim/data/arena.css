@@ -86,10 +86,37 @@ button.primary{background:#4d856f;border-color:#78b69a;color:#fff;flex:1}
 .human-player-strip strong{background:#243f4a;border:1px solid #5b7b86;border-radius:7px;
   min-width:90px;padding:5px 9px;text-align:center;font-size:1.2rem;
   font-variant-numeric:tabular-nums}
-.human-board{border:1px solid #638892;border-radius:6px;max-width:700px;touch-action:manipulation}
+/* Touch drags use Pointer Events; prevent page panning only when the
+   gesture starts inside the playable 8x8 board. Outside it, scroll is normal. */
+.human-board{border:1px solid #638892;border-radius:6px;max-width:700px;touch-action:none}
 .human-board .square{cursor:pointer}
 .human-board .square:focus-visible{outline:3px solid #e6c47b;outline-offset:-4px;z-index:2}
 .human-board .square.human-selected{box-shadow:inset 0 0 0 5px #46cc80}
+/* The source square is truly empty while the original piece is being
+   relocated, exactly as in a normal drag gesture: no faded duplicate. */
+.human-board .square.human-drag-origin{box-shadow:inset 0 0 0 2px #74cab1}
+.human-board .square.human-drop-hover{
+  box-shadow:inset 0 0 0 4px #e7ff9f;z-index:2
+}
+/* Only a piece floats under the pointer. Do not render a light/dark square,
+   preview tile, drop shadow or translucent panel around the artwork. */
+.board.human-drag-preview{
+  position:fixed;display:grid;grid-template-columns:1fr;grid-template-rows:1fr;
+  z-index:9999;pointer-events:none;touch-action:none;user-select:none;
+  margin:0;padding:0;border:0;min-width:0;min-height:0;
+  border-radius:0;opacity:1;transform:none;overflow:visible;
+  background:none!important;box-shadow:none!important
+}
+.board.human-drag-preview .square{
+  cursor:grabbing;overflow:visible;
+  background:none!important;background-image:none!important;
+  box-shadow:none!important
+}
+@media(prefers-reduced-motion:reduce){
+  .board.human-drag-preview,.human-board .square.human-drop-hover{
+    animation:none!important;transition:none!important
+  }
+}
 .human-board .square.human-legal::before{content:"";background:#2bc18088;
   width:24%;height:24%;border-radius:50%;position:absolute;z-index:1;pointer-events:none}
 .human-board .square.human-capture::before{content:"";inset:5%;border:4px solid #41c78c;
