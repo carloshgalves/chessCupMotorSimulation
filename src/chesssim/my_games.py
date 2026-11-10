@@ -6,10 +6,13 @@ Only the local Arena workspace is scanned; no engine, network or recovery.
 """
 from __future__ import annotations
 
+from collections import OrderedDict
+from copy import deepcopy
 from datetime import datetime, timezone
 from hashlib import sha256
 from io import StringIO
 from pathlib import Path
+from threading import RLock
 from stat import S_ISREG
 from urllib.parse import parse_qs
 import json
@@ -36,6 +39,8 @@ COLORS = {"all", "white", "black"}
 SAFE_FLAGS = (os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) |
               getattr(os, "O_NONBLOCK", 0))
 DIR_FLAGS = SAFE_FLAGS | getattr(os, "O_DIRECTORY", 0)
+_INDEX_LOCK = RLock()
+_INDEX: OrderedDict[str, tuple[str, list[dict], dict]] = OrderedDict()
 
 
 class MyGamesInput(ValueError):
@@ -271,6 +276,63 @@ def _scan(workspace: Path):
                   "partial": bool(rejected)}
 
 
+def _fingerprint(workspace: Path) -> str:
+    """Bounded metadata fingerprint; does not open/read PGN contents."""
+    root_fd = _source(workspace)
+    if root_fd is None:
+        return "absent"
+    signature = sha256()
+    try:
+        names = sorted(x for x in os.listdir(root_fd) if x.startswith("human-"))
+        if len(names) > MAX_SESSIONS:
+            raise MyGamesInput("Limite de partidas pessoais excedido")
+        for name in names:
+            signature.update(name.encode("utf-8", errors="surrogateescape"))
+            try:
+                folder_fd = os.open(name, DIR_FLAGS, dir_fd=root_fd)
+                try:
+                    stat_dir = os.fstat(folder_fd)
+                    signature.update(repr((stat_dir.st_ino, stat_dir.st_ctime_ns)).encode())
+                    for child in ("state.json", "game.pgn"):
+                        try:
+                            stat = os.stat(child, dir_fd=folder_fd,
+                                           follow_symlinks=False)
+                            parts = (child, stat.st_mode, stat.st_dev, stat.st_ino,
+                                     stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
+                            signature.update(repr(parts).encode())
+                        except OSError as exc:
+                            signature.update((child + ":" + type(exc).__name__).encode())
+                finally:
+                    os.close(folder_fd)
+            except OSError as exc:
+                signature.update((name + ":" + type(exc).__name__).encode(
+                    "utf-8", errors="surrogateescape"))
+        return signature.hexdigest()
+    finally:
+        os.close(root_fd)
+
+
+def _indexed(workspace: Path):
+    key = str(workspace.resolve(strict=True))
+    version = _fingerprint(workspace)
+    with _INDEX_LOCK:
+        cached = _INDEX.get(key)
+        if cached and cached[0] == version:
+            _INDEX.move_to_end(key)
+            return deepcopy(cached[1]), deepcopy(cached[2])
+    rows, coverage = _scan(workspace)
+    # Do not cache (or publish) a cross-checkpoint aggregation. A concurrent
+    # writer may have published PGN before state; reload after it stabilizes.
+    if _fingerprint(workspace) != version:
+        raise MyGamesInput("Arquivos pessoais mudaram durante a consulta; atualize")
+    with _INDEX_LOCK:
+        _INDEX[key] = (version, deepcopy(rows), deepcopy(coverage))
+        _INDEX.move_to_end(key)
+        while len(_INDEX) > 2:
+            _INDEX.popitem(last=False)
+    return rows, coverage
+
+
 def _filters(query: str):
     if type(query) is not str or len(query) > 2048:
         raise MyGamesInput("Consulta excessiva")
@@ -299,7 +361,7 @@ def _filters(query: str):
 
 def listing(workspace: Path, query: str = ""):
     filters = _filters(query)
-    rows, coverage = _scan(workspace)
+    rows, coverage = _indexed(workspace)
     completed = [r for r in rows if r["status"] == "COMPLETED"]
     grouped = {}
     for row in rows:
