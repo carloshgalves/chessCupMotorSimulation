@@ -82,11 +82,16 @@ function reconcileGuess() {
   const p=guess.pending;
   if(!p)return;
   const game=availableGames().find(g=>g.id===p.gameId);
-  if(!game) {resetGuess("Partida alterada. Palpite descartado.");return;}
+  if(!game||currentGame()?.id!==p.gameId) {
+    resetGuess("Partida alterada. Palpite descartado.");return;
+  }
   if(game.states.length<=p.ply+1) {
     if(!game.live)resetGuess("Partida encerrada antes do próximo lance.");
     return;
   }
+  // Reveal only when the paced viewer actually presents the next move.
+  // A fast backend update must not spoil the guess before its board animation.
+  if(cursor<p.ply+1)return;
   const observed=game.states[p.ply+1]?.uci;
   if(typeof observed!=="string") {
     resetGuess("Lance real sem UCI verificável. Não foi pontuado.");
@@ -508,6 +513,7 @@ function render() {
   updateAttemptSelector();
   renderBracket();
   const game = currentGame();
+  reconcileGuess();
   const state = game ? game.states[Math.min(cursor, game.states.length - 1)] :
                 {fen:initialFEN,last:null,turn:"white",clocks:[null,null]};
   paintBoard(state);
@@ -581,7 +587,6 @@ async function poll() {
     if (revision !== requestVersion) return;
     if (next.schema !== "chesssim-live-board-v1") throw new Error("Formato inesperado");
     feed = next;
-    reconcileGuess();
     acceptLiveSnapshot();
     $("connection").textContent = "● Conectado ao simulador";
     $("connection").className = "connection live";
