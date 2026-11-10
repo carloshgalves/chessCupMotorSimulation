@@ -8,6 +8,7 @@ const token = "correct-human-capability-token-from-loopback-arena";
 const calls = [];
 let now = 1000000;
 let game = null;
+let releasePremovePost = null;
 const intervals = [];
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
@@ -150,6 +151,8 @@ const fetch=async(path,options={})=>{
       if(game.id==="human-premove"){
         assert.equal(request.revision,2);
         assert.equal(request.uci,"d2d4","staged premove remains a legal server-validated move");
+        // Hold the POST open to prove red does not disappear before HTTP ack.
+        await new Promise(resolve=>{releasePremovePost=resolve;});
         game.revision=3;game.human_turn=false;game.turn="black";
         game.fen=D4;game.last=["d2","d4"];game.legal_moves=[];
         game.moves.push({ply:3,san:"d4",uci:"d2d4"});
@@ -606,6 +609,10 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   assert.equal($("human-premove-status").textContent.includes("executando"),true);
   assert.equal($("human-premove-cancel").disabled,true,
     "an already-submitted move cannot be cancelled");
+  assert.equal(typeof releasePremovePost,"function");
+  assert.equal(board.children[51].classList.contains("human-premove-from"),true,
+    "red staging stays visible before the server replies");
+  releasePremovePost();
   await flush();
   assert.equal(calls.length,beforePremove+1,"exactly one auto-submission");
   assert.equal(calls.at(-1).request.uci,"d2d4");
