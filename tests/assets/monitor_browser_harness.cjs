@@ -48,7 +48,7 @@ class FakeElement {
     this.tagName=tag.toUpperCase();
     this.children=[];this.attributes={};this.events={};
     this.dataset={};this.value="";this.textContent="";
-    this.className="";this.scrollTop=0;
+    this.className="";this.scrollTop=0;this.style={};
     this.classList={
       contains:name=>this.className.split(/\s+/).includes(name),
       add:(...names)=>{
@@ -74,6 +74,13 @@ class FakeElement {
   querySelectorAll(selector){return selector==="button"?
     this.children.filter(x=>x.tagName==="BUTTON"):[];}
   querySelector(selector){return this.querySelectorAll(selector)[0]||null;}
+  cloneNode(deep=false){
+    const node=new FakeElement(this.tagName);
+    node.className=this.className;node.textContent=this.textContent;
+    node.dataset={...this.dataset};node.attributes={...this.attributes};
+    if(deep)node.children=this.children.map(child=>child.cloneNode(true));
+    return node;
+  }
 }
 function descendants(node) {
   return [node,...node.children.flatMap(descendants)];
@@ -316,6 +323,14 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   vm.runInContext("guessSelect('e7');guessSelect('e5')",predictor.context);
   assert.equal(predictor.elements.get("guess-status").textContent.includes("e7e5"),true);
   assert.equal(predictor.elements.get("guess-cancel").disabled,false);
+  const predictionLayer=predictor.elements.get("guess-piece-preview");
+  assert.equal(predictionLayer.children.length,1,"one noninteractive visual piece preview");
+  const realBoard=predictor.elements.get("board");
+  assert.equal(realBoard.children.length,64,"preview cannot add a 65th real square");
+  assert.equal(predictionLayer.children[0].style.gridColumnStart,"5");
+  assert.equal(predictionLayer.children[0].style.gridRowStart,"4");
+  assert.equal(realBoard.children[12].children.length,1,
+    "the official board still retains the unmoved source artwork");
   assert(predictor.requests.every(uri=>uri.startsWith("/api/state")));
   // One actual PGN half-move resolves the guess exactly once.
   states.push({fen:"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2",
@@ -324,6 +339,7 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   await vm.runInContext("poll()",predictor.context);
   assert.equal(predictor.elements.get("guess-score").textContent,"1 acerto(s) em 1 tentativa(s)");
   assert(predictor.elements.get("guess-status").textContent.includes("Acertou"));
+  assert.equal(predictionLayer.children.length,0,"actual move clears the ghost");
   await vm.runInContext("poll()",predictor.context);
   assert.equal(predictor.elements.get("guess-score").textContent,"1 acerto(s) em 1 tentativa(s)",
     "identical polls must not score twice");
