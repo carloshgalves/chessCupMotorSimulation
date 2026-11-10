@@ -142,7 +142,7 @@ def test_my_games_rejects_invalid_sources_and_never_invents_wins(tmp_path):
     d = make_game(tmp_path, 4)
     # A committed result unsupported by the chessboard cannot count.
     (a / "game.pgn").write_text((a / "game.pgn").read_text().replace(
-        "d8h4", "e2e4"), encoding="utf-8")
+        "Qh4#", "Qf6"), encoding="utf-8")
     state = json.loads((b / "state.json").read_text())
     state["revision"] = 3
     (b / "state.json").write_text(json.dumps(state), encoding="utf-8")
