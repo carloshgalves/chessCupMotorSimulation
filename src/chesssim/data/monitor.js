@@ -25,7 +25,7 @@ let lastPresentedAt = 0;
 const guess = {enabled:false,selected:null,pending:null,promotion:null,
                attempts:0,correct:0,gameId:null,message:""};
 let guessDrag = null;
-let ignoreGuessClick = false;
+let ignoreGuessClickUntil = 0;
 const SQUARE=/^[a-h][1-8]$/;
 function guessSquare(node) {
   const index=[...$("board").children].indexOf(node);
@@ -50,7 +50,7 @@ function setGuessGame(g) {
 }
 function stageGuess(uci) {
   const g=guessGame(),moves=g?.states[cursor]?.legal_moves||[];
-  if(!g || !moves.includes(uci) || guess.pending)return false;
+  if(!g || !moves.includes(uci) )return false;
   guess.pending={gameId:g.id,ply:cursor,uci,from:uci.slice(0,2),to:uci.slice(2,4)};
   guess.selected=null;guess.promotion=null;
   guess.message="Palpite registrado: "+uci+". Aguardando o lance real.";
@@ -592,7 +592,9 @@ for(const button of $("guess-promotion").querySelectorAll("button")) {
   });
 }
 $("board").addEventListener("click",event=>{
-  if(ignoreGuessClick){ignoreGuessClick=false;return;}
+  if(event.detail>0 && Date.now()<ignoreGuessClickUntil){
+    ignoreGuessClickUntil=0;return;
+  }
   const square=event.target.closest?.(".square");
   if(square)guessSelect(guessSquare(square));
 });
@@ -619,7 +621,7 @@ $("board").addEventListener("pointerup",event=>{
   if(Math.hypot(event.clientX-drag.x,event.clientY-drag.y)<8)return;
   const target=guessSquareAt(event.clientX,event.clientY);
   const to=target&&guessSquare(target);
-  ignoreGuessClick=true;
+  ignoreGuessClickUntil=Date.now()+200;
   if(to)chooseGuess(drag.from,to);
 });
 for(const event of ["pointercancel","lostpointercapture"])
