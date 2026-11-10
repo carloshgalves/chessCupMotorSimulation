@@ -224,7 +224,7 @@ class _BoardInventory(HTMLParser):
 def test_every_published_board_inherits_the_shared_appearance_contract():
     script = (DATA / "board_preferences.js").read_text(encoding="utf-8")
     match = re.search(
-        r"const BOARD_IDS\\s*=\\s*Object\\.freeze\\(\\[([^]]+)\\]\\);",
+        r"const BOARD_IDS\s*=\s*Object\.freeze\(\[([^]]+)\]\);",
         script, re.S,
     )
     assert match, "All boards must be enumerated in the shared preference module"
