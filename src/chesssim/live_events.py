@@ -53,7 +53,11 @@ def checkpoint(report: dict) -> tuple[str, dict]:
         },
         "games": games,
     }
-    stable = json.dumps(body, sort_keys=True, ensure_ascii=False,
+    # Hash the entire authoritative checkpoint (except volatile wall time).
+    # A tournament bracket, terminal reason or metadata change must not be
+    # missed merely because the current game's ply did not advance.
+    stable_report = {k: v for k, v in report.items() if k != "server_time"}
+    stable = json.dumps(stable_report, sort_keys=True, ensure_ascii=False,
                         allow_nan=False, separators=(",", ":")).encode("utf-8")
     digest = sha256(stable).hexdigest()
     return digest, body
