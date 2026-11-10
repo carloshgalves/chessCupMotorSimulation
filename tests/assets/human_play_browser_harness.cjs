@@ -253,9 +253,90 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   assert.equal(board.dataset.lastFen,E5);
   assert.equal($("human-moves").children[0].children[2].textContent,"e5");
   assert.equal($("human-turn-title").textContent,"Sua vez");
+  const pointer=(id,square,x,y,kind="mouse")=>({
+    pointerId:id,pointerType:kind,button:0,isPrimary:true,target:square,
+    clientX:x,clientY:y,preventDefault(){this.prevented=true;}
+  });
+  const unchanged=calls.length;
+  // An impossible knight drop (g1 -> g8) must not hit the backend.
+  let sq=board.children[62];
+  board.events.pointerdown(pointer(5,sq,520,600));
+  board.events.pointermove(pointer(5,sq,520,40));
+  assert.equal(document.body.children.length,1,"pointer drag has visual preview");
+  assert.equal(board.children[6].classList.contains("human-drop-hover"),false);
+  board.events.pointerup(pointer(5,sq,520,40));
+  await flush();
+  assert.equal(document.body.children.length,0,"invalid drop removes preview");
+  assert.equal(calls.length,unchanged,"illegal drop did not POST");
+  board.events.click({detail:1,target:sq,preventDefault(){}});
+  assert.equal(calls.length,unchanged,"synthetic click after drag is suppressed");
+
+  // Outside the 8x8 board (e.g. g9) must cancel, without staging a pre-move.
+  board.events.pointerdown(pointer(6,sq,520,600,"touch"));
+  board.events.pointermove(pointer(6,sq,520,-40,"touch"));
+  board.events.pointerup(pointer(6,sq,520,-40,"touch"));
+  await flush();
+  assert.equal(calls.length,unchanged);
+
+  // OS/browser cancellation or loss of pointer capture also cancels.
+  board.events.pointerdown(pointer(7,sq,520,600,"pen"));
+  board.events.pointermove(pointer(7,sq,440,440,"pen"));
+  board.events.pointercancel(pointer(7,sq,440,440,"pen"));
+  await flush();
+  assert.equal(calls.length,unchanged);
+  assert.equal(document.body.children.length,0);
+
+  // Legal drag is translated to exactly one UCI with the observed revision.
+  board.events.pointerdown(pointer(8,sq,520,600));
+  board.events.pointermove(pointer(8,sq,440,440));
+  assert.equal(board.children[45].classList.contains("human-drop-hover"),true);
+  board.events.pointerup(pointer(8,sq,440,440));
+  await flush();
+  assert.equal(calls.length,unchanged+1);
+  assert.equal(calls.at(-1).path,"/api/arena/human/move");
+  assert.equal(calls.at(-1).request.uci,"g1f3");
+  assert.equal(calls.at(-1).request.revision,2);
+  assert.equal(document.body.children.length,0);
+  board.events.click({detail:1,target:board.children[45],preventDefault(){}});
+  assert.equal(calls.length,unchanged+1,"compatibility click cannot double-submit");
+
+  // While the engine thinks, no pointerdown can create a pre-move.
+  board.events.pointerdown(pointer(9,board.children[51],280,520));
+  board.events.pointermove(pointer(9,board.children[51],280,360));
+  board.events.pointerup(pointer(9,board.children[51],280,360));
+  await flush();
+  assert.equal(calls.length,unchanged+1,"no pre-moves in increment 1");
+
   await $("human-resign").events.click();
   await flush();
   assert.equal($("human-turn-title").textContent,"Partida concluída");
+
+  // Black-side orientation reverses DOM order; the coordinate mapping must
+  // still send e7e5, never d2d4 or an out-of-bounds destination.
+  game={
+    id:"human-black",status:"RUNNING",revision:1,
+    config:{color:"black",opponent:"fischer",depth:2,preset:"blitz"},
+    white:"Bobby Fischer",black:"Você",
+    fen:E4,turn:"black",human_turn:true,legal_moves:["e7e5"],last:["e2","e4"],
+    result:"*",termination:null,clocks:[180,180],
+    moves:[{ply:1,san:"e4",uci:"e2e4"}],
+    states:[{fen:START,last:null,turn:"white",clocks:[180,180]},
+            {fen:E4,last:["e2","e4"],turn:"black",clocks:[180,180]}],
+    draw_offer:null
+  };
+  await intervals.find(x=>x.delay===1100).fn();
+  await flush();
+  assert.equal($("human-turn-title").textContent,"Sua vez");
+  assert.equal(board.children.length,64);
+  const blackSource=board.children[51]; // e7 when black looks from bottom
+  board.events.pointerdown(pointer(10,blackSource,280,520,"touch"));
+  board.events.pointermove(pointer(10,blackSource,280,360,"touch"));
+  board.events.pointerup(pointer(10,blackSource,280,360,"touch"));
+  await flush();
+  assert.equal(calls.at(-1).request.uci,"e7e5");
+  assert.equal(calls.at(-1).request.revision,1);
+  assert.equal(calls.filter(x=>x.path==="/api/arena/human/move").length,3);
+
   $("arena-mode-duel").events.click();
   assert.equal($("duel-viewer").hidden,false);
   assert.equal($("human-viewer").hidden,true);
