@@ -90,10 +90,18 @@ class FakeElement {
 function descendants(node) {
   return [node,...node.children.flatMap(descendants)];
 }
-function browser(initialHash="") {
+function browser(initialHash="",{useEvents=false}={}) {
   const elements=new Map();
   const events={};
   const requests=[];
+  const streams=[];
+  const intervals=[];
+  class FakeEventSource {
+    constructor(url){this.url=url;this.events={};this.closed=false;streams.push(this);}
+    addEventListener(type,listener){this.events[type]=listener;}
+    close(){this.closed=true;}
+    emit(type,payload={}){this.events[type]?.({data:JSON.stringify(payload)});}
+  }
   let hash=initialHash;
   const location={
     get hash(){return hash;},
@@ -122,12 +130,14 @@ function browser(initialHash="") {
   const context=vm.createContext({
     document,window:{location,addEventListener(name,listener){events[name]=listener;}},
     HTMLElement:FakeElement,URLSearchParams,fetch,Date,Math,Number,String,
-    setInterval(){return 1;},console
+    ...(useEvents?{EventSource:FakeEventSource}:{}),
+    setInterval(fn,delay){intervals.push({fn,delay});return intervals.length;},
+    console
   });
   const shared=fs.readFileSync(process.argv[3],"utf8");
   vm.runInContext(shared,context,{filename:"chess_board.js",timeout:3000});
   vm.runInContext(source,context,{filename:"monitor.js",timeout:3000});
-  return {elements,requests,location,events,context};
+  return {elements,requests,location,events,context,streams,intervals};
 }
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 (async()=>{
@@ -368,6 +378,54 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   vm.runInContext("cursor=3;render();guessSelect('b8')",predictor.context);
   predictor.elements.get("pause").events.click();
   assert.equal(vm.runInContext("guess.pending",predictor.context),null);
+
+  // #17 SSE is strictly an invalidation signal; it must not bypass
+  // the normal state GET, skip display pacing or retain a stale selection.
+  const observed=browser("",{useEvents:true});
+  await flush();
+  assert.equal(observed.streams.length,1);
+  const firstStream=observed.streams[0];
+  assert.equal(firstStream.url,"/api/events");
+  const valid={schema:"chesssim-game-events-v1",revision:"a".repeat(64)};
+  firstStream.emit("open");
+  const beforeSignal=observed.requests.length;
+  firstStream.emit("state",valid);
+  await flush();
+  assert.equal(observed.requests.length,beforeSignal+1,
+    "SSE triggers a fresh authoritative GET, never a speculative board move");
+  firstStream.emit("state",{...valid,revision:"invalid"});
+  await flush();
+  assert.equal(observed.requests.length,beforeSignal+1,
+    "invalid event cursor is ignored");
+
+  observed.location.hash="#match=r01-m01";
+  await flush();
+  assert.equal(firstStream.closed,true,
+    "switching matches disposes the old event stream");
+  const latestStream=observed.streams.at(-1);
+  assert.equal(latestStream.url,"/api/events?match=r01-m01");
+  const selectedCount=observed.requests.length;
+  firstStream.emit("state",valid);
+  await flush();
+  assert.equal(observed.requests.length,selectedCount,
+    "stale source cannot refresh a different match");
+
+  const fallback=observed.intervals.find(x=>x.delay===1200);
+  latestStream.emit("open");
+  fallback.fn();
+  await flush();
+  assert.equal(observed.requests.length,selectedCount,
+    "connected SSE suspends fast fallback polling");
+  latestStream.emit("error");
+  fallback.fn();
+  await flush();
+  assert.equal(observed.requests.length,selectedCount+1,
+    "disconnected SSE restores polling automatically");
+  latestStream.emit("state",valid);
+  await flush();
+  assert.equal(observed.requests.length,selectedCount+2);
+  observed.events.pagehide();
+  assert.equal(latestStream.closed,true);
 
   console.log("Live bracket browser smoke: PASS");
 })().catch(error=>{console.error(error);process.exitCode=1;});
