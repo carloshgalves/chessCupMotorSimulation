@@ -33,6 +33,7 @@ def checkpoint(report: dict) -> tuple[str, dict]:
             "clocks": last.get("clocks"),
             "status": game.get("status"),
             "result": game.get("result"),
+            "termination": game.get("termination"),
             "live": game.get("live"),
         })
     tournament = report.get("tournament") or {}
@@ -85,6 +86,7 @@ def _changes(before: dict | None, after: dict) -> list[str]:
             result.append("clock")
         if (game["status"] != prior["status"] or
                 game["result"] != prior["result"] or
+                game["termination"] != prior["termination"] or
                 game["live"] != prior["live"]):
             if "terminal" not in result:
                 result.append("terminal")
