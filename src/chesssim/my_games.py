@@ -107,6 +107,19 @@ def _source(workspace: Path):
         os.close(base_fd)
 
 
+def _names(root_fd: int) -> list[str]:
+    """Collect only bounded personal-session entries, including invalid ones."""
+    names = []
+    with os.scandir(root_fd) as entries:
+        for entry in entries:
+            if not entry.name.startswith("human-"):
+                continue
+            if len(names) >= MAX_SESSIONS:
+                raise MyGamesInput("Limite de partidas pessoais excedido")
+            names.append(entry.name)
+    return sorted(names)
+
+
 def _document(workspace: Path, ident: str):
     if type(ident) is not str or not IDENT_RX.fullmatch(ident):
         raise MyGamesInput("Identificador pessoal inválido")
@@ -129,14 +142,18 @@ def _document(workspace: Path, ident: str):
     state = json.loads(state_raw.decode("utf-8"), object_pairs_hook=_unique_pairs,
                        parse_constant=_reject_constant)
     if (not isinstance(state, dict) or state.get("schema") != SCHEMA or
-            state.get("id") != ident or state.get("status") not in VALID_STATES):
+            state.get("id") != ident or
+            type(state.get("status")) is not str or
+            state["status"] not in VALID_STATES):
         raise MyGamesInput("Estado pessoal incompatível")
     conf = state.get("config")
     hashes = state.get("hashes")
     roster = {p.slug for p in load_roster()}
     if (not isinstance(conf, dict) or
-            conf.get("opponent") not in roster or
-            conf.get("color") not in {"white", "black"} or
+            type(conf.get("opponent")) is not str or
+            conf["opponent"] not in roster or
+            type(conf.get("color")) is not str or
+            conf["color"] not in {"white", "black"} or
             not isinstance(hashes, dict) or
             any(type(hashes.get(k)) is not str or
                 not re.fullmatch(r"[0-9a-f]{64}", hashes[k])
@@ -257,10 +274,7 @@ def _scan(workspace: Path):
     if root_fd is None:
         return [], {"scanned": 0, "rejected": 0, "partial": False}
     try:
-        entries = sorted(name for name in os.listdir(root_fd)
-                         if name.startswith("human-"))
-        if len(entries) > MAX_SESSIONS:
-            raise MyGamesInput("Limite de partidas pessoais excedido")
+        entries = _names(root_fd)
     finally:
         os.close(root_fd)
     rows, rejected = [], 0
@@ -283,11 +297,10 @@ def _fingerprint(workspace: Path) -> str:
         return "absent"
     signature = sha256()
     try:
-        names = sorted(x for x in os.listdir(root_fd) if x.startswith("human-"))
-        if len(names) > MAX_SESSIONS:
-            raise MyGamesInput("Limite de partidas pessoais excedido")
+        names = _names(root_fd)
         for name in names:
             signature.update(name.encode("utf-8", errors="surrogateescape"))
+            signature.update(bytes((0,)))
             try:
                 folder_fd = os.open(name, DIR_FLAGS, dir_fd=root_fd)
                 try:
@@ -336,7 +349,11 @@ def _indexed(workspace: Path):
 def _filters(query: str):
     if type(query) is not str or len(query) > 2048:
         raise MyGamesInput("Consulta excessiva")
-    parsed = parse_qs(query, keep_blank_values=True, strict_parsing=True) if query else {}
+    try:
+        parsed = parse_qs(query, keep_blank_values=True,
+                          strict_parsing=True) if query else {}
+    except ValueError as exc:
+        raise MyGamesInput("Consulta pessoal malformada") from exc
     if set(parsed) - {"page", "page_size", "status", "outcome", "color", "opponent"} or (
             any(len(values) != 1 for values in parsed.values())):
         raise MyGamesInput("Filtros pessoais inválidos")
