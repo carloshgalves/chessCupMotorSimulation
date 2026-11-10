@@ -349,6 +349,8 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   assert.equal(overlay.children.length,0,"left click clears annotations");
   assert.equal(calls.length,noUci);
 
+  rightMark(170,52,360,520);
+  assert.equal(overlay.children.length,1);
   // e2 to e4 by clicking the source and destination: canonical A8..H1.
   board.events.click({target:board.children[52]});
   board.events.click({target:board.children[36]});
