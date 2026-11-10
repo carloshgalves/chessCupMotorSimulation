@@ -238,3 +238,26 @@ def test_my_games_dom_and_browser_scripts_are_packaged():
                         str(Path(__file__).parents[1] /
                             "src/chesssim/data/my_games.js")],
                        check=True, capture_output=True, text=True)
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js unavailable")
+def test_my_games_browser_interactions():
+    root = Path(__file__).parents[1]
+    run = subprocess.run([
+        "node", str(root / "tests/assets/my_games_harness.cjs"),
+        str(root / "src/chesssim/data/my_games.js"),
+    ], capture_output=True, text=True, timeout=15)
+    assert run.returncode == 0, run.stdout + run.stderr
+    assert "My Games navigation, filters, replay, isolation: PASS" in run.stdout
+
+
+def test_my_games_pagination_of_55_real_personal_checkpoints(tmp_path):
+    for number in range(1, 56):
+        make_game(tmp_path, number)
+    first = my_games.listing(tmp_path, "page=1&page_size=50")
+    second = my_games.listing(tmp_path, "page=2&page_size=50")
+    assert first["total"] == second["total"] == 55
+    assert first["pages"] == second["pages"] == 2
+    assert len(first["games"]) == 50 and len(second["games"]) == 5
+    assert len({g["id"] for g in first["games"] + second["games"]}) == 55
+    assert first["stats"]["losses"] == 55
