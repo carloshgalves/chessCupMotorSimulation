@@ -49,6 +49,8 @@
       cancelDrag();
       clearAnnotations();
       clearPremove();
+      state.promotion=null;
+      el("human-promotion").hidden=true;
     }
     state.mode = next;
     el("duel-form").hidden = next !== "duel";
@@ -295,6 +297,12 @@
   function render() {
     if(state.mode!=="human")return;
     const g=state.game;
+    // An open promotion chooser must not survive a game/turn change.
+    if(state.promotion && (!g || g.id!==state.promotion.gameId ||
+       g.revision!==state.promotion.revision || g.status!=="RUNNING")) {
+      state.promotion=null;
+      el("human-promotion").hidden=true;
+    }
     if (dragGesture && (!g || g.id !== dragGesture.gameId ||
         g.revision !== dragGesture.revision || g.status !== "RUNNING" ||
         dragGesture.premove === g.human_turn || state.pending || state.promotion ||
@@ -414,7 +422,7 @@
     const promotion=(pawn==="P"&&to[1]==="8")||
                     (pawn==="p"&&to[1]==="1");
     if(promotion && !suffix) {
-      state.promotion={from,to,premove:true};
+      state.promotion={from,to,premove:true,gameId:g.id,revision:g.revision};
       el("human-promotion").hidden=false;
       el("human-promotion").querySelector("button")?.focus();
       return true;
@@ -475,7 +483,7 @@
       await applyMove(candidates[0]);return true;
     }
     if(candidates.length>1) {
-      state.promotion={from,to,candidates};
+      state.promotion={from,to,candidates,gameId:g.id,revision:g.revision};
       el("human-promotion").hidden=false;
       el("human-promotion").querySelector("button")?.focus();
       return true;
