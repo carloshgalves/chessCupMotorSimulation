@@ -98,12 +98,25 @@ def _frame(event_id: str, body: dict, changes: list[str]) -> bytes:
     return (f"id: {event_id}\nevent: state\ndata: {encoded}\n\n").encode("utf-8")
 
 
+def _same_origin(handler) -> bool:
+    # Same-origin requests from watch / Arena iframe are accepted; foreign
+    # webpages cannot hold local SSE slots via a blind cross-site EventSource.
+    origin = handler.headers.get("Origin")
+    host = handler.headers.get("Host", "")
+    site = handler.headers.get("Sec-Fetch-Site")
+    return (not origin or origin == "http://" + host) and site in (
+        None, "same-origin", "none")
+
+
 def stream_events(handler, initial: dict, read_state) -> None:
     """Stream at most eight seconds with a per-server concurrent-client quota.
 
     Browser EventSource reconnects automatically; Last-Event-ID suppresses
     repeating the unchanged checkpoint. No engine, PGN or clock writes occur.
     """
+    if not _same_origin(handler):
+        handler._reply(403, b"Forbidden", "text/plain; charset=utf-8")
+        return
     slots = handler.server.event_stream_slots
     if not slots.acquire(blocking=False):
         handler._reply(429, b"Too many event viewers", "text/plain; charset=utf-8")
