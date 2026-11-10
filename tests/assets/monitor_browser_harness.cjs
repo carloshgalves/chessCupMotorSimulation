@@ -66,9 +66,14 @@ class FakeElement {
       }
     };
   }
-  append(...items){this.children.push(...items);}
-  appendChild(item){this.children.push(item);return item;}
-  replaceChildren(...items){this.children=items;}
+  append(...items){for(const item of items)this.appendChild(item);}
+  appendChild(item){
+    // A real DOM inserts DocumentFragment's children, not the fragment node.
+    if(item.tagName==="FRAGMENT")this.children.push(...item.children);
+    else this.children.push(item);
+    return item;
+  }
+  replaceChildren(...items){this.children=[];this.append(...items);}
   setAttribute(key,value){this.attributes[key]=value;}
   addEventListener(name,listener){this.events[name]=listener;}
   querySelectorAll(selector){return selector==="button"?
