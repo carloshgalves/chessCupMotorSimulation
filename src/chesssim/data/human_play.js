@@ -683,6 +683,9 @@
     if(!FROM.test(from))return false;
     rightGesture={
       pointerId:event.pointerId,from,hover:from,
+      // Cancel a waiting premove with a short right-click on any square.
+      // A right-button drag still draws an annotation arrow.
+      cancelIntent:premove,
       arrowColor:annotationColor(event,"arrow"),
       squareColor:annotationColor(event,"square")
     };
@@ -713,6 +716,15 @@
     const to=target&&squareName(target);
     cancelRightGesture();
     if(!to)return true; // Drag outside board is always cancelled.
+    if(to===gesture.from && gesture.cancelIntent &&
+       premove===gesture.cancelIntent) {
+      // Never create an annotation mark when cancelling a queued premove.
+      // A move already submitted to the server cannot be undone here.
+      if(premove.phase==="queued")clearPremove("Pré-move cancelado.");
+      else feedback("Pré-move já enviado; aguarde a confirmação do servidor.");
+      event.preventDefault?.();
+      return true;
+    }
     if(to===gesture.from) {
       const previous=markedSquares.get(to);
       if(previous===gesture.squareColor)markedSquares.delete(to);
@@ -809,11 +821,8 @@
   }
   board.addEventListener("pointerdown", event=>{
     if(event.button===2) {
-       const square=event.target.closest?.(".square");
-       if(premove && square && squareName(square)===premove.from){
-         clearPremove("Pré-move cancelado.");
-         event.preventDefault?.();return;
-       }
+       // Cancel only after a short right-click is completed, so a right drag
+       // still works as an analysis arrow without discarding the premove.
        startRightGesture(event);
        return;
      }
