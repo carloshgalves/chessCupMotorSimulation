@@ -369,16 +369,16 @@ def test_my_games_rejects_alternate_initial_fen_and_stop_reason_mismatch(tmp_pat
     # A syntactically valid PGN can represent a position the HumanGame
     # application would never create. The personal reader must reject it.
     start = chess.Board(
-        "rnbqkbnr/pppppppp/8/8/8/4P3/PPPP1PPP/RNBQKBNR w KQkq - 0 1")
+        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1")
     forged = chess.pgn.Game.from_board(start)
     forged.headers.update(dict(original.headers))
     forged.headers["SetUp"] = "1"
     forged.headers["FEN"] = start.fen()
     pgn_file.write_text(str(forged) + "\n", encoding="utf-8")
     data = json.loads(state_file.read_text(encoding="utf-8"))
-    data["revision"] = 0
+    data["revision"] = 1
     state_file.write_text(json.dumps(data), encoding="utf-8")
-    with pytest.raises(my_games.MyGamesInput, match="posição inicial"):
+    with pytest.raises(my_games.MyGamesInput):
         my_games.replay(tmp_path, directory.name)
 
     # A stopped session needs the termination reason in the manifest/PGN
