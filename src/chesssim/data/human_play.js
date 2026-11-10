@@ -531,6 +531,9 @@
   });
   el("human-board").addEventListener("click",e=>{
     if(e.detail>0 && Date.now()<ignorePointerClickUntil) {
+      // Consume exactly one browser compatibility click, not every genuine
+      // click the user may make within the next 200 milliseconds.
+      ignorePointerClickUntil=0;
       e.preventDefault?.();return;
     }
     const square=e.target.closest(".square");
