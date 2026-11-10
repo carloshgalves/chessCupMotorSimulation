@@ -415,7 +415,15 @@
   }
   function dragPreview(source, event) {
     const piece=source.querySelector?.(".piece-glyph");
-    if(!piece || !document.body || !piece.cloneNode)return null;
+    const rect=board.getBoundingClientRect?.();
+    const index=[...board.children].indexOf(source);
+    if(!piece || !document.body || !rect?.width || !rect?.height ||
+       index<0)return null;
+    const width=rect.width/8,height=rect.height/8;
+    const offsetX=Math.max(0,Math.min(width,
+      event.clientX-(rect.left+(index%8)*width)));
+    const offsetY=Math.max(0,Math.min(height,
+      event.clientY-(rect.top+Math.floor(index/8)*height)));
     const preview=document.createElement("div");
     preview.className="board human-drag-preview";
     preview.setAttribute("aria-hidden","true");
@@ -424,27 +432,45 @@
       if(value)preview.setAttribute(key,value);
     }
     const cell=document.createElement("div");
+    // No light/dark class: the user drags the piece, never a duplicate tile.
     cell.className="square "+(source.classList.contains("whitepiece")?
       "whitepiece":"blackpiece");
-    const rect=board.getBoundingClientRect();
-    const artwork=piece.cloneNode(true);
-    // The floating preview has its own container. Without an explicit size,
-    // cqw would shrink fallback glyphs to 16px on an 80px square.
-    artwork.style.fontSize=Math.min(rect.width/8*.85,68)+"px";
-    cell.appendChild(artwork);
     preview.appendChild(cell);
-    preview.style.width=rect.width/8+"px";
-    preview.style.height=rect.height/8+"px";
+    preview.style.width=width+"px";
+    preview.style.height=height+"px";
+    // Relocate the actual loaded artwork. Cloning an <img> can flash an
+    // unloaded/blank SVG and show a second faded piece on the source square.
+    const previousFontSize=piece.style.fontSize;
+    if(piece.dataset.artReady!=="1") {
+      const originalSize=window.getComputedStyle?.(piece)?.fontSize;
+      piece.style.fontSize=originalSize&&originalSize.endsWith("px")?
+        originalSize:Math.min(width*.85,68)+"px";
+    }
     document.body.appendChild(preview);
-    preview.style.left=event.clientX+"px";
-    preview.style.top=event.clientY+"px";
-    return preview;
+    cell.appendChild(piece);
+    const floating={element:preview,piece,source,previousFontSize,
+      offsetX,offsetY};
+    positionDragPreview(floating,event);
+    return floating;
+  }
+  function positionDragPreview(floating,event) {
+    // Keep the point where the user grabbed the piece under their cursor.
+    // Centering it after the drag threshold would make the artwork jump.
+    floating.element.style.left=(event.clientX-floating.offsetX)+"px";
+    floating.element.style.top=(event.clientY-floating.offsetY)+"px";
   }
   function releaseDrag() {
     const gesture=dragGesture;
     if(!gesture)return null;
     dragGesture=null;
-    gesture.preview?.remove();
+    if(gesture.preview) {
+      // Restore the very same node, even for cancelled/illegal drops. It
+      // carries the already-loaded image and must never disappear on polling.
+      const {element,piece,source,previousFontSize}=gesture.preview;
+      piece.style.fontSize=previousFontSize;
+      if(board.contains(source))source.appendChild(piece);
+      element.remove();
+    }
     gesture.square.classList.remove("human-drag-origin");
     for(const square of board.children)
       square.classList.remove("human-drop-hover");
@@ -486,17 +512,15 @@
        Math.hypot(event.clientX-gesture.startX,
                   event.clientY-gesture.startY)<DRAG_THRESHOLD_PX)return;
     if(!gesture.dragged) {
+      gesture.preview=dragPreview(gesture.square,event);
+      if(!gesture.preview){cancelDrag();return;}
       gesture.dragged=true;
       state.selected=gesture.from;
       decorate(g);
       gesture.square.classList.add("human-drag-origin");
-      gesture.preview=dragPreview(gesture.square,event);
     }
     event.preventDefault?.();
-    if(gesture.preview) {
-      gesture.preview.style.left=event.clientX+"px";
-      gesture.preview.style.top=event.clientY+"px";
-    }
+    if(gesture.preview)positionDragPreview(gesture.preview,event);
     const target=squareFromPoint(event.clientX,event.clientY);
     const name=target&&squareName(target);
     const legal=!!name&&g.legal_moves.some(
