@@ -331,3 +331,29 @@ def test_my_games_index_reuses_pgn_audit_and_invalidates_on_change(
     pgn.write_text(pgn.read_text(encoding="utf-8") + "\n", encoding="utf-8")
     assert my_games.listing(tmp_path)["total"] == 1
     assert len(calls) == 3, "PGN changes must invalidate the index"
+
+
+@pytest.mark.parametrize(("field", "invalid"), [
+    ("status", ["COMPLETED"]),
+    ("opponent", ["tal"]),
+    ("color", {"unexpected": "white"}),
+])
+def test_my_games_unhashable_metadata_is_rejected_as_input(
+        tmp_path, field, invalid):
+    directory = make_game(tmp_path)
+    path = directory / "state.json"
+    state = json.loads(path.read_text(encoding="utf-8"))
+    if field == "status":
+        state["status"] = invalid
+    else:
+        state["config"][field] = invalid
+    path.write_text(json.dumps(state), encoding="utf-8")
+    report = my_games.listing(tmp_path)
+    assert report["coverage"]["rejected"] == 1
+    with pytest.raises(my_games.MyGamesInput):
+        my_games.replay(tmp_path, directory.name)
+
+
+def test_my_games_query_parser_rejects_malformed_separator(tmp_path):
+    with pytest.raises(my_games.MyGamesInput, match="malformada"):
+        my_games.listing(tmp_path, "page=1&")
