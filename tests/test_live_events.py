@@ -82,6 +82,10 @@ def test_checkpoint_ignores_server_time_but_tracks_moves_clocks_and_terminal(tmp
     eid, body = live_events.checkpoint(original)
     clone = {**original, "server_time": "a different wall time"}
     assert live_events.checkpoint(clone)[0] == eid
+    # Even a bracket-only update (no new UCI move) must invalidate viewers.
+    changed_bracket = {**original, "tournament": {
+        "status": "RUNNING", "bracket": [{"match": "r01-m01", "winner": "fischer"}]}}
+    assert live_events.checkpoint(changed_bracket)[0] != eid
     assert len(eid) == 64 and body["games"][0]["ply"] == 1
     assert body["games"][0]["uci"] == "e2e4"
     assert live_events._changes(None, body) == ["snapshot"]
