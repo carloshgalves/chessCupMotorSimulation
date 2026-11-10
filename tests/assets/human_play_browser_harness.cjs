@@ -31,7 +31,8 @@ class Node {
     this.className="";this.classList=new ClassList(this);
     this.textContent="";this.value="";this.hidden=false;this.disabled=false;
     this.scrollHeight=0;this.scrollTop=0;this.clientHeight=280;
-    this.parentNode=null;this.style={};this.captured=null;
+    // CSSStyleDeclaration returns "" for an unset inline property.
+    this.parentNode=null;this.style={fontSize:""};this.captured=null;
   }
   append(...children){for(const c of children)this.appendChild(c);}
   appendChild(child){
@@ -381,7 +382,7 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   board.events.pointermove(pointer(10,blackSource,280,360,"touch"));
   assert.strictEqual(document.body.children[0].children[0].children[0],loaded);
   assert.strictEqual(loaded.children[0],svg,"already-loaded SVG is reused");
-  assert.equal(loaded.style.fontSize,undefined,
+  assert.equal(loaded.style.fontSize,"",
                "loaded SVG must keep CSS font-size:0, no glyph overlay");
   board.events.pointerup(pointer(10,blackSource,280,360,"touch"));
   assert.strictEqual(blackSource.children[0],loaded);
