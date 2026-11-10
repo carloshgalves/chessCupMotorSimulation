@@ -17,7 +17,7 @@ import re
 import chess
 import chess.pgn
 
-from .live_events import MAX_EVENT_CLIENTS, stream_events
+from .live_events import MAX_EVENT_CLIENTS, same_origin, stream_events
 
 MAX_PGN_BYTES = 2 * 1024 * 1024
 class InvalidSelection(ValueError):
@@ -295,6 +295,10 @@ def make_handler(directory: Path):
             url = urlsplit(self.path)
             route = url.path
             if route in ("/api/state", "/api/events"):
+                # Reject cross-site streams BEFORE reading any PGN or bracket.
+                if route == "/api/events" and not same_origin(self):
+                    self._reply(403, b"Forbidden", "text/plain; charset=utf-8")
+                    return
                 try:
                     match_id, attempt = _parse_selection(url.query)
                     report = snapshot(root, match_id=match_id, attempt=attempt)
