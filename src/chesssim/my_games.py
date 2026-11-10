@@ -196,6 +196,11 @@ def _document(workspace: Path, ident: str):
             if len(cursor.variations) != 1:
                 raise MyGamesInput("Variações estranhas ao PGN canônico")
             cursor = cursor.variations[0]
+        # HumanGame always starts from the orthodox initial position.
+        # A valid PGN may declare an arbitrary SetUp/FEN; it is not
+        # evidence of a game played through the HumanGame application.
+        if game.board().fen() != chess.Board().fen():
+            raise MyGamesInput("PGN pessoal com posição inicial não autorizada")
         last = game.end()
         board = last.board()
     except (ValueError, UnicodeError, AssertionError) as exc:
@@ -246,8 +251,20 @@ def _document(workspace: Path, ident: str):
             raise MyGamesInput("Resultado final não comprovado")
     elif result != "*" or board.is_game_over(claim_draw=False):
         raise MyGamesInput("Partida não concluída com resultado ou posição terminal")
-    if status == "RUNNING" and termination is not None:
-        raise MyGamesInput("Partida ativa com término declarado")
+    if status == "RUNNING":
+        if termination is not None or headers.get("Termination") is not None:
+            raise MyGamesInput("Partida ativa com término declarado")
+    elif status != "COMPLETED":
+        # _load_last() changes RUNNING to INTERRUPTED / ServerRestart on
+        # recovery without adding a Termination PGN tag. All other stopped
+        # sessions publish the tag and checkpoint in the same save.
+        recovered = (status == "INTERRUPTED" and
+                     termination == "ServerRestart" and
+                     headers.get("Termination") is None)
+        if (not recovered and
+                (type(termination) is not str or not termination or
+                 headers.get("Termination") != termination)):
+            raise MyGamesInput("Causa de interrupção diverge do PGN")
 
     win = (result == "1-0" if human_white else result == "0-1")
     loss = (result == "0-1" if human_white else result == "1-0")
