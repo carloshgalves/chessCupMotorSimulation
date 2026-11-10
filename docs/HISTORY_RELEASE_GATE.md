@@ -1,3 +1,5 @@
+> **Revisão administrativa — 09/11/2026:** código e CI das PRs #75, #81 e #82 foram integrados; **não** há evidência nova para converter verificações manuais `NOT_RUN` em `PASS`. Os 64 retratos estão presentes; análise territorial das 16 marcações PDM continua `BLOCKED`. Gate #53 permanece aberto, e QA dos modos/engines fora do escopo de História fica em #83.
+
 # Gate #53 — História: acessibilidade, segurança, direitos e homologação
 
 **Escopo:** `docs/HISTORY_UX_ARCHITECTURE.md`, catálogo e retratos #47, carrossel #48, perfil #49, API de partidas #50, replay #51 e estatísticas #52.
