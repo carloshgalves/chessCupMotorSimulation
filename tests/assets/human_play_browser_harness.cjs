@@ -585,6 +585,9 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
     draw_offer:null
   };
   await intervals.find(x=>x.delay===1100).fn();await flush();
+  // The previous drag set a 200ms compatibility-click suppression window.
+  // A fresh human click after that window is a distinct gesture.
+  now+=300;
   board.events.click({detail:1,target:board.children[51]});
   board.events.click({detail:1,target:board.children[35]});
   assert.equal($("human-premove-cancel").disabled,false);
