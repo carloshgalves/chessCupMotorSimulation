@@ -4,7 +4,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from http.client import HTTPResponse
 from pathlib import Path
-from threading import Thread
+from threading import Event, Thread
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 import json
@@ -131,14 +131,19 @@ def test_last_event_id_skips_unchanged_checkpoint_on_reconnect(tmp_path, monkeyp
     with monitor(tmp_path) as (_, base):
         with urlopen(base + "/api/events", timeout=4) as first:
             ident = read_state_event(first)["revision"]
-        # Make the state change after the new connection has settled.
+        # The second HTTP stream must open and receive its unchanged first
+        # snapshot BEFORE the PGN is advanced, or this wouldn't prove that
+        # Last-Event-ID suppressed the duplicate checkpoint.
+        opened = Event()
         def later():
-            time.sleep(.25)
+            assert opened.wait(timeout=2)
+            time.sleep(.15)
             duel(tmp_path, ("e2e4", "e7e5"))
         worker = Thread(target=later)
         worker.start()
         with urlopen(Request(base + "/api/events", headers={
             "Last-Event-ID": ident}), timeout=4) as stream:
+            opened.set()
             update = read_state_event(stream)
             assert update["games"][0]["ply"] == 2
             assert update["revision"] != ident
