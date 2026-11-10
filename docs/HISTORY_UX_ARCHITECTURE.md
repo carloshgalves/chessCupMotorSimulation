@@ -1,6 +1,6 @@
 # Aba História — arquitetura UX/UI (proposta V1)
 
-**Status:** proposta documental, pendente de revisão; nenhuma implementação autorizada por este documento.  
+**Status atual (09/11/2026):** arquitetura documental da PR #46 **mesclada e implementada em partes pelas PRs #54/#55, #71–#75 e #81/#82**. O restante do documento registra os **requisitos originalmente aprovados na etapa de desenho**; passagens escritas no futuro e gates de pré-implementação são históricas, não bloqueios de código ainda não integrado. Homologação visual/acessibilidade e revisão territorial de 16 retratos PDM seguem pendentes na #53; testes reais adicionais em #83. A #70 permanece aberta para partidas humanas, especificadas na #84.  
 **Frente:** [#5](https://github.com/carloshgalves/chessCupMotorSimulation/issues/5) · **Gate:** [#45](https://github.com/carloshgalves/chessCupMotorSimulation/issues/45)  
 **Referências de produto:** esboço manuscrito da aba História e captura do Play Magnus, utilizados **somente como inspiração de organização de componentes**, não como assets reutilizáveis.
 
