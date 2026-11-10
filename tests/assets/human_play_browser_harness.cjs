@@ -21,6 +21,8 @@ class ClassList {
     else all.delete(name);
     this.owner.className=[...all].join(" ");
   }
+  add(name){this.toggle(name,true);}
+  remove(name){this.toggle(name,false);}
 }
 class Node {
   constructor(tag="div",id=""){
@@ -29,7 +31,7 @@ class Node {
     this.className="";this.classList=new ClassList(this);
     this.textContent="";this.value="";this.hidden=false;this.disabled=false;
     this.scrollHeight=0;this.scrollTop=0;this.clientHeight=280;
-    this.parentNode=null;
+    this.parentNode=null;this.style={};this.captured=null;
   }
   append(...children){for(const c of children)this.appendChild(c);}
   appendChild(child){child.parentNode=this;this.children.push(child);return child;}
@@ -44,6 +46,24 @@ class Node {
     return prior;
   }
   get lastElementChild(){return this.children.at(-1)||null;}
+  getBoundingClientRect(){
+    return {left:0,top:0,right:640,bottom:640,width:640,height:640};
+  }
+  setPointerCapture(id){this.captured=id;}
+  hasPointerCapture(id){return this.captured===id;}
+  releasePointerCapture(id){if(this.captured===id)this.captured=null;}
+  remove(){
+    if(this.parentNode)
+      this.parentNode.children=this.parentNode.children.filter(x=>x!==this);
+    this.parentNode=null;
+  }
+  cloneNode(deep=false){
+    const clone=new Node(this.tagName,this.id);
+    clone.className=this.className;clone.textContent=this.textContent;
+    clone.attributes={...this.attributes};
+    if(deep)for(const child of this.children)clone.appendChild(child.cloneNode(true));
+    return clone;
+  }
   addEventListener(type,fn){this.events[type]=fn;}
   setAttribute(name,value){this.attributes[name]=String(value);}
   getAttribute(name){return this.attributes[name]??null;}
@@ -52,7 +72,11 @@ class Node {
     if(selector==="[data-promote]")return this.children.filter(x=>x.dataset.promote);
     return [];
   }
-  querySelector(selector){return this.querySelectorAll(selector)[0]||null;}
+  querySelector(selector){
+    if(selector===".piece-glyph")
+      return this.children.find(x=>x.classList.contains("piece-glyph"))||null;
+    return this.querySelectorAll(selector)[0]||null;
+  }
   contains(other){return this===other||this.children.some(x=>x.contains(other));}
   closest(selector){
     if(selector===".square"&&this.classList.contains("square"))return this;
@@ -67,7 +91,9 @@ const document={
     if(!nodes.has(id))nodes.set(id,new Node("div",id));
     return nodes.get(id);
   },
-  createElement(tag){return new Node(tag);}
+  createElement(tag){return new Node(tag);},
+  body:new Node("body"),
+  addEventListener(){}
 };
 const $=id=>document.getElementById(id);
 for(const side of ["white","black","random"]){
@@ -110,6 +136,24 @@ const fetch=async(path,options={})=>{
     }
     if(path==="/api/arena/human/move"){
       assert.equal(request.id,game.id);
+      if(game.id==="human-black"){
+        assert.equal(request.revision,1);
+        assert.equal(request.uci,"e7e5");
+        game.revision=2;game.human_turn=false;game.turn="white";
+        game.legal_moves=[];
+        return reply({id:game.id,revision:2,status:"RUNNING"});
+      }
+      if(game.revision===2) {
+        assert.equal(request.revision,2);
+        assert.equal(request.uci,"g1f3");
+        game.revision=3;game.human_turn=false;game.turn="black";
+        game.last=["g1","f3"];game.legal_moves=[];
+        game.moves.push({ply:3,san:"Nf3",uci:"g1f3"});
+        game.states.push({fen:
+          "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+          last:["g1","f3"],turn:"black",clocks:[179,179]});
+        return reply({id:game.id,revision:3,status:"RUNNING"});
+      }
       assert.equal(request.revision,0);
       assert.equal(request.uci,"e2e4");
       // Simulate a UCI burst arriving as a single HTTP snapshot.
@@ -149,6 +193,11 @@ const paint=(element,position)=>{
     for(let i=0;i<64;i++){
       const sq=new Node("div");
       sq.className="square";
+      // Fake a rendered glyph on the squares used in pointer drag tests.
+      if([52,62,12].includes(i)){
+        const piece=new Node("span");piece.className="piece-glyph";
+        sq.appendChild(piece);
+      }
       squares.push(sq);
     }
     element.replaceChildren(...squares);
@@ -158,6 +207,7 @@ const paint=(element,position)=>{
 const clock={now:()=>now};
 const window={
   location:{hash:"#token="+token},confirm:()=>true,
+  addEventListener(){},
   ChessSimBoard:{paint,refreshArtwork(){}}
 };
 const context=vm.createContext({
