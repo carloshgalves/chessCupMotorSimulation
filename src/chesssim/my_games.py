@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from hashlib import sha256
 from io import StringIO
 from pathlib import Path
-from stat import S_ISDIR, S_ISREG
+from stat import S_ISREG
 from urllib.parse import parse_qs
 import json
 import math
