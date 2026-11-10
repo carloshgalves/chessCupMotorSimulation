@@ -514,3 +514,22 @@ def test_schedule_rejects_wrong_participant_collection_types(data):
 def test_schedule_rejects_wrong_format_type(kind):
     with pytest.raises(leagues.LeagueInput):
         leagues.schedule(["fischer", "tal"], kind)
+
+
+def test_games_directory_symlink_is_never_written(manager, tmp_path):
+    ident = manager.create(config(n=2, fmt="single",
+                                  execution="engine_full"))["id"]
+    state = manager._load(ident)
+    match = leagues.schedule(state["config"]["participants"], "single")[0][0]
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (manager._dir(ident) / "games").symlink_to(outside, target_is_directory=True)
+    game = chess.pgn.Game()
+    game.headers["White"] = find_player(match["white"]).name
+    game.headers["Black"] = find_player(match["black"]).name
+    game.headers["Result"] = "1/2-1/2"
+    game.headers["Termination"] = "TEST"
+    with pytest.raises(ValueError, match="redirecionado"):
+        manager._record(state, match, "1/2-1/2",
+                        leagues.utc(), pgn=game, termination="TEST")
+    assert not any(outside.iterdir())
