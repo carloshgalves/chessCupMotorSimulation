@@ -59,3 +59,35 @@ O tabuleiro pessoal aceita **arrastar com mouse, toque ou caneta** através de P
 - Setas de anotação via botão direito são outro incremento (#91) e não integram esta PR.
 
 **Homologação adicional:** testar Chrome/Debian com mouse e touch (se disponível), arraste legal, fora do tabuleiro, capturas, promoções e preta invertida; verificar que relógios continuam sob controle do servidor. CI/Node não comprova ergonomia real em hardware.
+
+
+## Incremento #91 — Setas de análise e casas marcadas (Chess.com como referência)
+
+As anotações são **somente visuais no modo Jogar**. Não são lances, pré-moves, análise da engine nem comandos de relógio. Não são gravadas em PGN, JSON ou `localStorage`; nenhuma requisição HTTP contém esses desenhos. A geometria é um SVG local com `viewBox="0 0 800 800"` sobre o tabuleiro, alinhado às 64 casas sem participar de `board.children`.
+
+Referência funcional oficial, consultada em 10/11/2026: https://support.chess.com/en/articles/8568781-how-can-i-draw-arrows-on-the-board-like-streamers-do
+
+| Operação no desktop | Resultado |
+| --- | --- |
+| Arrastar com botão direito | Seta amarela origem → destino |
+| Ctrl + arrastar com botão direito | Seta vermelha |
+| Alt + arrastar com botão direito | Seta azul |
+| Shift + arrastar com botão direito | Seta verde |
+| Clique direito na mesma casa | Casa vermelha |
+| Ctrl + clique direito | Casa amarela |
+| Alt + clique direito | Casa azul |
+| Shift + clique direito | Casa verde |
+| Clique esquerdo dentro do tabuleiro, Escape ou Limpar setas | Remove todas as anotações |
+
+Um segundo gesto idêntico remove a seta/marca da mesma cor; selecionar outra cor substitui a anterior para o mesmo par de casas. A seta pode ligar qualquer par de casas — **não tem relação com legalidade do xadrez**. Um arraste que termina fora do tabuleiro é cancelado; botão direito não inicia o arraste de peças. Desabilitar menu contextual se limita ao tabuleiro do modo Jogar, e o SVG está com `pointer-events:none`.
+
+### Ciclo de vida e acessibilidade
+- A UI informa a quantidade de setas e casas marcadas através de status `aria-live`.
+- O botão `Limpar setas` oferece alternativa ao mouse; Escape com foco no tabuleiro também limpa. Nenhum atalho captura o botão direito fora dele.
+- A mudança de sessão, avanço de revisão da partida ou saída do modo Jogar descarta as anotações, mas não move peças. Durante o turno do motor elas podem ser desenhadas normalmente.
+- O `viewBox` e o mapeamento de orientação em `human_play.js` mantêm posição correta de brancas/pretas e escalonam com zoom e viewport; as cores são fixas e independem de temas ou conjuntos SVG.
+- Esta implementação é desktop (mouse com botão direito, caneta com botão secundário quando mapeada pelo navegador); não oferece gesto touch específico para setas. Movimentação normal por toque segue funcionando.
+- O **pré-move #90 permanece fora do escopo**, conforme decisão atual de produto.
+
+### Homologação Chrome/Debian
+Verificar 4 cores de setas e 4 cores de casas, trajetória entre casas não legais, orientação de pretas, zoom 100–200%, tema Verde/Chessnut e outro tema, ausência de menu contextual, clique esquerdo limpando sem impedir lance, botão e Escape limpando, anotações durante turno do motor, ausência de POST e de mudanças de PGN/relógio. Testes automáticos simulam Pointer Events e geometria, mas **não substituem inspeção visual real do Chrome**.
