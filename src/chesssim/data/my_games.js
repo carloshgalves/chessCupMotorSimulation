@@ -19,6 +19,26 @@
   };
   const resultText={win:"Vitória",draw:"Empate",loss:"Derrota",incomplete:"Sem resultado"};
   const colorText={white:"Brancas",black:"Pretas"};
+  const terminationText={
+    CHECKMATE:"Xeque-mate", STALEMATE:"Afogamento",
+    INSUFFICIENT_MATERIAL:"Material insuficiente",
+    SEVENTYFIVE_MOVES:"Regra dos 75 lances",
+    FIVEFOLD_REPETITION:"Quinta repetição",
+    HumanResignation:"Desistência do usuário",
+    HumanDrawClaim:"Empate reivindicado pelo usuário",
+    TimeForfeit:"Queda de tempo",
+    OperatorStop:"Interrupção solicitada",
+    ServerShutdown:"Servidor encerrado",
+    ServerRestart:"Servidor reiniciado",
+    EngineFailure:"Falha do motor",
+    IllegalEngineMove:"Lance inválido do motor",
+    WallTimeLimit:"Limite de execução",
+    PlyLimit:"Limite de meios-lances",
+    CheckpointMismatch:"Divergência no checkpoint"
+  };
+  function termination(value){
+    return value ? (terminationText[value]||value) : "Sem causa informada";
+  }
   function inform(message,bad=false){
     const target=$("my-games-alert");
     target.textContent=message;
@@ -153,6 +173,7 @@
       $("my-games-replay-meta").textContent=
         statusText[data.game.status]+" · "+resultText[data.game.outcome]+
         " · "+colorText[data.game.color]+" · "+date(data.game.created_at_utc)+
+        " · Causa: "+termination(data.game.termination)+
         " · arquivo local consistente; não é prova de autoria externa.";
       const moves=$("my-games-moves");moves.replaceChildren();
       data.states.slice(1).forEach((step,index)=>{
