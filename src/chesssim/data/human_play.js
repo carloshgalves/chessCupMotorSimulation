@@ -235,6 +235,13 @@
         !square.classList.contains("blackpiece"));
       square.classList.toggle("human-capture",legal&&
         (square.classList.contains("whitepiece")||square.classList.contains("blackpiece")));
+      // ChessSimBoard.paint refreshes square.className on each poll. Restore
+      // drag affordances while the pointer is held, without repainting pieces.
+      const dragging=!!dragGesture?.dragged;
+      square.classList.toggle("human-drag-origin",
+        dragging&&dragGesture.square===square);
+      square.classList.toggle("human-drop-hover",
+        dragging&&dragGesture.hover===square);
     }
   }
   function displayBoard(g) {
@@ -521,7 +528,6 @@
       gesture.dragged=true;
       state.selected=gesture.from;
       decorate(g);
-      gesture.square.classList.add("human-drag-origin");
     }
     event.preventDefault?.();
     if(gesture.preview)positionDragPreview(gesture.preview,event);
@@ -529,8 +535,9 @@
     const name=target&&squareName(target);
     const legal=!!name&&g.legal_moves.some(
       m=>m.slice(0,2)===gesture.from&&m.slice(2,4)===name);
+    gesture.hover=legal?target:null;
     for(const square of board.children)
-      square.classList.toggle("human-drop-hover",legal&&square===target);
+      square.classList.toggle("human-drop-hover",square===gesture.hover);
   });
   board.addEventListener("pointerup",event=>{
     const gesture=dragGesture;
