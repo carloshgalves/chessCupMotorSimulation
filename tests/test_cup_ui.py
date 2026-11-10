@@ -52,7 +52,13 @@ def test_approved_cup_dashboard_and_creation_are_in_arena():
     assert "/cup.js" in ids.scripts
     assert "/cup.css" in ids.styles
     assert "cup-clear" not in ids.ids
-    assert "limpar" not in html.lower()
+    # The Cup design forbids a reset action *inside the Cup*. This assertion
+    # must not ban the separate "Limpar setas" tool in Human vs UCI.
+    assert '<section id="cup-view"' in html
+    assert '<section id="league-view"' in html
+    cup_html=html.split('<section id="cup-view"',1)[1].split(
+        '<section id="league-view"',1)[0]
+    assert "limpar" not in cup_html.lower()
 
 
 def test_cup_theme_matches_approved_league_and_responsive_layout():
