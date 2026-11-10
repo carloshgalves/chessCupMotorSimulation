@@ -270,6 +270,9 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   board.events.pointerdown(pointer(5,sq,520,600));
   board.events.pointermove(pointer(5,sq,520,40));
   assert.equal(document.body.children.length,1,"pointer drag has visual preview");
+  const previewGlyph=document.body.children[0].children[0].children[0];
+  assert.equal(previewGlyph.style.fontSize,"68px",
+    "fallback glyph must keep square-sized proportions while dragging");
   assert.equal(board.children[6].classList.contains("human-drop-hover"),false);
   board.events.pointerup(pointer(5,sq,520,40));
   await flush();
