@@ -142,6 +142,8 @@ shared.set(KEY,JSON.stringify({theme:"wood",pieces:"outline",motion:"fast"}));
   firstImage.events.load();
   assert.equal(firstRook.getAttribute("data-art-ready"),"1");
   const savedNodes=board.children;
+  const boardNodesBeforeTheme=new Map(ALL_BOARD_IDS.map(
+    id=>[id,app.$(id).children]));
   assert.equal(app.prefs.set("theme","contrast"),true);
   assert.equal(board.getAttribute("data-board-theme"),"contrast");
   assert.strictEqual(board.children,savedNodes,"pure style change must not repaint board");
@@ -149,9 +151,8 @@ shared.set(KEY,JSON.stringify({theme:"wood",pieces:"outline",motion:"fast"}));
   assert.equal(hist.getAttribute("data-board-theme"),"contrast");
   for (const id of ALL_BOARD_IDS) {
     const element=app.$(id);
-    const squaresBefore=element.children;
     assert.equal(element.getAttribute("data-board-theme"),"contrast",id);
-    assert.strictEqual(element.children,squaresBefore,
+    assert.strictEqual(element.children,boardNodesBeforeTheme.get(id),
       id+" must preserve its 64 squares after a palette change");
   }
   assert.equal(app.board.paint(board,{fen:E4,last:["e2","e4"]},1),true);
