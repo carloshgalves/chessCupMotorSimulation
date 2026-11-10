@@ -151,6 +151,7 @@
       state.game=human.game;
       state.snapshotAt=Date.now();
       syncPlayback();
+      settlePremove();
       const active=state.game?.status==="RUNNING";
       el("human-launch").disabled=!state.ready||!capability||
         arena.busy||active;
@@ -316,13 +317,16 @@
     clocks();drawMoves(g);info(g);
     const ongoing=g?.status==="RUNNING";
     const pacing=!!g&&state.displayPly<g.revision;
-    const yours=ongoing&&g.human_turn&&!pacing;
+    const executing=!!premove&&premove.phase==="sending";
+    const yours=ongoing&&g.human_turn&&!pacing&&!executing;
     el("human-turn-title").textContent=!g?"Pronto para iniciar":
+      executing?"Pré-move em execução":
       pacing?"Reproduzindo os lances":
       !ongoing?humanStatus(g.status):
       yours?"Sua vez":premove?"Motor pensando · pré-move pronto":"Motor pensando";
     el("human-turn-detail").textContent=!g?
       "Selecione um adversário para jogar.":
+      executing?"Aguardando confirmação do servidor; não é possível cancelar um lance já enviado.":
       pacing?"O jogo continua no tempo real; o tabuleiro apresenta cada lance em sequência.":
       !ongoing?"Resultado "+g.result+" · "+humanTermination(g.termination):
       yours?"Selecione uma peça e sua casa de destino.":
@@ -362,15 +366,25 @@
     state.displayedAt=now;
     render();
   }
-  async function command(path,data) {
+  async function command(path,data,committingPremove=null) {
     if(state.pending)return;
     state.pending=true;
     try {
       const result=await send(path,data);
+      // A successful POST does not mean that the visual playback has caught up.
+      // Retain the red intent until a GET confirms the accepted revision.
+      if(committingPremove)committingPremove.ackRevision=result.revision;
       await refreshForced();
       return result;
     } catch(e) {
-      feedback(e.message,true);
+      if(committingPremove && premove===committingPremove) {
+        if(committingPremove.ackRevision===null) {
+          clearPremove();
+          feedback("Pré-move não executado: "+e.message,true);
+        } else {
+          feedback("Pré-move aceito; aguardando sincronização: "+e.message,true);
+        }
+      } else feedback(e.message,true);
       return null;
     } finally {
       state.pending=false;
@@ -384,6 +398,7 @@
     const data=await r.json();
     state.game=data.game;state.snapshotAt=Date.now();
     syncPlayback();
+    settlePremove();
     render();
     void flushPremove();
   }
@@ -403,17 +418,37 @@
     return rows?.[8-Number(from[1])]?.[from.charCodeAt(0)-97]||"";
   }
   function renderPremove() {
-    el("human-premove-cancel").disabled=!premove;
+    el("human-premove-cancel").disabled=!premove||premove.phase==="sending";
     el("human-premove-status").textContent=premove?
-      "Pré-move: "+premove.uci+" · aguardando o motor":
+      "Pré-move: "+premove.uci+(premove.phase==="sending"?
+        " · executando, aguardando confirmação":
+        " · aguardando o motor"):
       "Nenhum pré-move pendente";
     if(state.game && board.children.length===64)decorate(state.game);
   }
   function clearPremove(message) {
+    if(message && premove?.phase==="sending") {
+      feedback("Pré-move já enviado; aguarde a confirmação do servidor.");
+      return;
+    }
     premove=null;
     state.selected=null;
     if(message)feedback(message);
     renderPremove();
+  }
+  function settlePremove() {
+    const queued=premove,g=state.game;
+    if(!queued || queued.phase!=="sending" ||
+       !Number.isInteger(queued.ackRevision))return;
+    if(!g || g.id!==queued.id)return;
+    if(g.revision<queued.ackRevision)return;
+    // This is an acknowledged real move, not speculative board painting.
+    // Do not show the old position for another 650ms after removing red.
+    state.displayPly=Math.min(g.revision,queued.ackRevision);
+    state.displayedAt=Date.now();
+    const uci=queued.uci;
+    clearPremove();
+    feedback("Pré-move executado: "+uci);
   }
   function queuePremove(from,to,suffix="") {
     const g=state.game;
@@ -429,34 +464,42 @@
     }
     if((promotion && !/^[qrbn]$/.test(suffix)) ||
        (!promotion && suffix))return false;
-    premove={id:g.id,revision:g.revision,from,to,uci:from+to+suffix};
+    premove={id:g.id,revision:g.revision,from,to,uci:from+to+suffix,
+      phase:"queued",ackRevision:null};
     state.selected=null;
     renderPremove();
     return true;
   }
   function flushPremove() {
     const queued=premove,g=state.game;
-    if(!queued)return;
+    if(!queued || queued.phase==="sending")return;
     if(!g || g.id!==queued.id || g.status!=="RUNNING" ||
        state.mode!=="human" || g.revision<queued.revision) {
       clearPremove("Pré-move cancelado: a partida mudou ou terminou.");
       return;
     }
     if(g.revision===queued.revision)return;
+    // A premove applies only on the very next human turn, never a later turn.
+    if(g.revision!==queued.revision+1) {
+      clearPremove();
+      feedback("Pré-move descartado: a vez esperada já passou.",true);
+      return;
+    }
     if(!g.human_turn)return;
-    // Consume before POST; overlapping polls cannot submit twice.
-    clearPremove();
     if(!g.legal_moves.includes(queued.uci)) {
+      clearPremove();
       feedback("Pré-move descartado: lance ilegal na nova posição.",true);
       return;
     }
-    if(state.pending) {
-      feedback("Pré-move descartado: outra ação já está em andamento.",true);
-      return;
-    }
+    if(state.pending)return;
+    // Mark sending BEFORE the async POST. Keep the visible red intention
+    // across polling until the accepted revision is actually rendered.
+    queued.phase="sending";
+    renderPremove();
+    render();
     void command("/api/arena/human/move",{
       id:g.id,revision:g.revision,uci:queued.uci
-    });
+    },queued);
   }
   function canMoveFrom(g, from) {
     return state.mode === "human" && g?.status === "RUNNING" &&
