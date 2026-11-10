@@ -1,4 +1,4 @@
-# Histórico do Enxadrista e Arquivo de Partidas — Issue #70
+> **Estado da `main` em 09/11/2026:** PR #81 (merge `8d7af85e`) e PR #82 (merge `7830ef48`) já foram integradas. HEAD da #82 teve 696 testes aprovados e 2 ignorados em cada Python 3.11/3.12/3.13 ([CI](https://github.com/carloshgalves/chessCupMotorSimulation/actions/runs/42712702292)). O arquivo indexa Arena, torneios, Copas e Ligas, mas **ainda não** indexa `human-games/`: #70 segue **PARCIAL**, com slice #84. A prova 4.032 refere-se a registros de fixture, não a 4.032 PGNs físicos. Benchmark e smoke real ficam na #83; status manual `NOT_RUN`.\n\n# Histórico do Enxadrista e Arquivo de Partidas — Issue #70
 
 ## Duas telas, dados reais e limites
 
@@ -44,7 +44,7 @@ python -m chesssim arena --rodent "$HOME/Projetos/Engines/rodent-iv" \\
 
 Use o **mesmo --out da homologação anterior** para que partidas já executadas apareçam. Ao abrir História e selecionar um jogador com evidência local, verifique as abas **Visão geral, Partidas, Torneios, Elo experimental, Registros**. Teste os filtros, páginas, replay real, exportação da página, e mudança entre jogadores. Copas sintéticas devem ser encontráveis mas oferecer **Sem PGN**, sem aumentar vitórias UCI ou Elo. Os valores finais só podem ser determinados pelo workspace local, não pelos exemplos ilustrados nos prints.
 
-**Gate de aceite**: CI, revisão e testes automatizados, depois comparação visual em Chrome/Debian e autorização humana antes do merge. Esta PR **depende** do laboratório da PR #81. A branch da PR #82 incorpora os dois conjuntos de telas, rotas e testes; mesclar #81 primeiro, depois retarget da #82 para `main` e revalidar o diff/CI antes do merge.
+**Gate de aceite**: CI, revisão e testes automatizados, depois comparação visual em Chrome/Debian e autorização humana antes do merge. **Ordem de merge já executada:** PR #81 seguida de #82, ambas integradas à `main` mediante autorização humana. A advertência antiga sobre a ordem de merge foi cumprida. O gate manual do operador e os itens de #70/#84 continuam separados.
 
 ## Filtros complementares e conciliação
 
