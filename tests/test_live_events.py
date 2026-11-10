@@ -19,8 +19,11 @@ from chesssim import live_board, live_events
 
 def duel(folder: Path, moves=("e2e4",), *, status="RUNNING") -> None:
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / "summary.json").write_text(
+    summary = folder / "summary.json"
+    staging_summary = folder / ".summary.tmp"
+    staging_summary.write_text(
         json.dumps({"status": status, "games": []}), encoding="utf-8")
+    staging_summary.replace(summary)
     game = chess.pgn.Game()
     game.headers["White"] = "Bobby Fischer"
     game.headers["Black"] = "Mikhail Tal"
@@ -32,8 +35,9 @@ def duel(folder: Path, moves=("e2e4",), *, status="RUNNING") -> None:
         assert move in board.legal_moves
         node = node.add_variation(move)
         board.push(move)
-    (folder / "jogo_1.partial.pgn").write_text(
-        str(game) + "\n", encoding="utf-8")
+    staging_pgn = folder / ".game.tmp"
+    staging_pgn.write_text(str(game) + "\n", encoding="utf-8")
+    staging_pgn.replace(folder / "jogo_1.partial.pgn")
 
 
 @contextmanager
