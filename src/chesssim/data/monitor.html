@@ -126,7 +126,26 @@
           <select id="attempts" aria-label="Selecionar tentativa anterior"></select>
           <div class="small-meta" id="tournament-meta">—</div>
         </section>
-        <section class="panel bracket-panel" id="bracket-panel" hidden>
+        <section class="panel guess-panel" id="guess-panel" aria-label="Prever o próximo lance">
+           <div class="panel-kicker">DESAFIO DO ESPECTADOR</div>
+           <h2>Adivinhe o próximo lance</h2>
+           <p>Durante uma partida ao vivo, escolha origem e destino no tabuleiro para tentar antecipar o próximo lance real do motor. O palpite não modifica a partida.</p>
+           <div class="guess-actions">
+             <button id="guess-toggle" type="button" aria-pressed="false">Ativar palpites</button>
+             <button id="guess-cancel" type="button" disabled>Cancelar palpite</button>
+           </div>
+           <div id="guess-promotion" class="guess-promotion" hidden role="group" aria-label="Promoção prevista">
+             <span>Escolha a promoção:</span>
+             <button type="button" data-promote="q">Dama</button>
+             <button type="button" data-promote="r">Torre</button>
+             <button type="button" data-promote="b">Bispo</button>
+             <button type="button" data-promote="n">Cavalo</button>
+           </div>
+           <p id="guess-status" role="status" aria-live="polite">Ative para tentar prever o próximo lance ao vivo.</p>
+           <p id="guess-score" class="guess-score">0 acertos em 0 tentativas</p>
+           <p class="hint">Palpites azuis são locais e não representam o lance da partida. Ao pausar, trocar de partida ou rever o histórico, o palpite pendente é descartado.</p>
+         </section>
+         <section class="panel bracket-panel" id="bracket-panel" hidden>
           <div class="panel-kicker">CLASSIFICAÇÃO · MATA-MATA</div>
           <h2>Chaveamento da Copa</h2>
           <p id="bracket-status">Aguardando confrontos.</p>
