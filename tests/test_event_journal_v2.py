@@ -152,7 +152,10 @@ def read_event(stream):
         if not text:
             if data.get("event") == "state":
                 item = json.loads(data["data"])
-                assert item["event_id"] == data["id"]
+                if item["schema"] == "chesssim-game-events-v2":
+                    assert item["event_id"] == data["id"]
+                else:
+                    assert item["revision"] == data["id"]
                 return item
             data = {}
             continue
@@ -219,4 +222,4 @@ def test_old_v1_feed_remains_available(tmp_path, monkeypatch):
         with urlopen(base + "/api/events", timeout=3) as stream:
             old = read_event(stream)
             assert old["schema"] == "chesssim-game-events-v1"
-            assert old["revision"] == old["event_id"] if "event_id" in old else True
+            assert len(old["revision"]) == 64
