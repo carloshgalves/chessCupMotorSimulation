@@ -198,6 +198,46 @@ def test_wall_budget_limits_single_uci_call_before_next_ply(
     assert all(e.closed for e in engines)
 
 
+def test_previous_ply_watchdog_cannot_close_next_turn_engine(
+        engine_fixture, monkeypatch):
+    root, exe, white, black, _, engines = engine_fixture
+    held_watchdogs = []
+
+    class DeferredThread:
+        def __init__(self, *, target, daemon, name):
+            assert daemon and name == "chesssim-uci-deadline"
+            self.target = target
+
+        def start(self):
+            held_watchdogs.append(self.target)
+
+    monkeypatch.setattr(matches.threading, "Thread", DeferredThread)
+
+    def open_tracking(*_args, **_kwargs):
+        current = FakeEngine()
+        original = current.play
+        if len(engines) == 1:
+            def black_play(*args, **kwargs):
+                # Force the white watchdog to START late, while the black
+                # search is active. It must observe white's cancelled event
+                # rather than the new turn's still-pending event and engine.
+                held_watchdogs[0]()
+                return original(*args, **kwargs)
+            current.play = black_play
+        engines.append(current)
+        return current
+
+    monkeypatch.setattr(matches, "_open_engine", open_tracking)
+    game, meta = matches._play_one(
+        root, exe, white, black, 2, None, 2, 1,
+        {"exe": "sha", white.slug: "white", black.slug: "black"},
+        max_wall_seconds=.35)
+    assert game.end().ply() == 2
+    assert meta["termination"] == "InterruptedAtPlyLimit"
+    assert len(held_watchdogs) == 2
+    assert all(e.closed for e in engines)
+
+
 def test_late_uci_result_cannot_be_scored_after_wall_deadline(
         engine_fixture, monkeypatch):
     import time
