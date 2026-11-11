@@ -15,7 +15,6 @@ import json
 from pathlib import Path, PurePosixPath
 import re
 import subprocess
-import sys
 from typing import Iterator
 
 
@@ -307,15 +306,18 @@ def main(argv: list[str] | None = None) -> int:
                   "status": "ERROR", "error_class": type(exc).__name__}
         result = 2
     encoded = json.dumps(report, sort_keys=True, ensure_ascii=True, indent=2) + "\n"
-    print(encoded, end="")
     if report_path:
         try:
             report_path.parent.mkdir(parents=True, exist_ok=True)
             report_path.write_text(encoded, encoding="utf-8")
         except OSError:
-            # Writing the report is part of this operation's contract.
-            print('{"status":"ERROR","error_class":"ReportWriteError"}', file=sys.stderr)
+            # A failed report write must not emit an apparent PASS.
+            print(json.dumps({
+                "schema": "chesssim-git-hygiene-v1", "scope": args.scope,
+                "status": "ERROR", "error_class": "ReportWriteError",
+            }))
             return 2
+    print(encoded, end="")
     return result
 
 
