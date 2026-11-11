@@ -123,10 +123,10 @@ def _load_records(roots: Iterable[Path], opening_plies: int) -> tuple[list[dict]
             if (meta.get("mainline_sha256") != digest or
                     type(meta.get("plies")) is not int or meta["plies"] != plies):
                 raise ValueError("PGN não corresponde ao resumo de diversidade")
-            if meta.get("white") not in players or meta.get("black") not in players:
-                raise ValueError("Jogadores incompatíveis com o manifesto")
-            if meta["white"] == meta["black"] and players[0] != players[1]:
-                raise ValueError("Cor dos jogadores incompatível")
+            expected_white, expected_black = (
+                (players[0], players[1]) if i % 2 else (players[1], players[0]))
+            if (meta.get("white"), meta.get("black")) != (expected_white, expected_black):
+                raise ValueError("Ordem das cores difere do duelo registrado")
             if (game.headers.get("Result", "*") != meta.get("result") or
                     meta.get("result") not in VALID_RESULTS | {"*"}):
                 raise ValueError("Resultado do PGN difere do resumo")
@@ -141,6 +141,11 @@ def _load_records(roots: Iterable[Path], opening_plies: int) -> tuple[list[dict]
             mode = meta.get("opening_mode", "unknown")
             if not isinstance(mode, str) or not 0 < len(mode) <= 100:
                 raise ValueError("Modo de abertura inválido")
+            if game.headers.get("BookMode") != mode:
+                raise ValueError("PGN e resumo discordam sobre BookMode")
+            header_seed = game.headers.get("OpeningSeed")
+            if (header_seed is not None or seed is not None) and header_seed != str(seed):
+                raise ValueError("PGN e resumo discordam sobre OpeningSeed")
             row = {
                 "source": _source_tag(number, root, summary, i),
                 "players": sorted(players),
@@ -167,6 +172,7 @@ def cross_duel_report(roots: Iterable[Path], *, opening_plies: int = 12) -> dict
     first: dict[str, str] = {}
     groups = defaultdict(list)
     opening_positions = defaultdict(set)
+    completed_seen: dict[str, str] = {}
     for row in rows:
         digest = row["mainline_sha256"]
         if row["plies"] > 0:
@@ -176,8 +182,13 @@ def cross_duel_report(roots: Iterable[Path], *, opening_plies: int = 12) -> dict
             row["duplicate_of"] = None
         key = (tuple(row["players"]), row["opening_mode"])
         groups[key].append(row)
+        if row["complete"] and row["plies"] > 0:
+            row["completed_duplicate_of"] = completed_seen.get(digest)
+            completed_seen.setdefault(digest, row["source"])
+        else:
+            row["completed_duplicate_of"] = None
         if row["opening_position_sha256"]:
-            opening_positions[row["opening_position_sha256"]].add(digest)
+            opening_positions[(key, row["opening_position_sha256"])].add(digest)
     comparisons = []
     for (players, mode), records in sorted(groups.items()):
         eligible = [r for r in records if r["plies"] > 0]
@@ -206,6 +217,8 @@ def cross_duel_report(roots: Iterable[Path], *, opening_plies: int = 12) -> dict
         "incomplete_or_unscored_games": sum(not r["complete"] for r in rows),
         "distinct_mainlines": len({r["mainline_sha256"] for r in nonempty}),
         "exact_duplicate_games": sum(r["duplicate_of"] is not None for r in nonempty),
+        "distinct_completed_mainlines": len(completed_seen),
+        "completed_duplicate_games": sum(r["completed_duplicate_of"] is not None for r in rows),
         "transposed_opening_position_groups": sum(
             len(trajectories) > 1 for trajectories in opening_positions.values()),
         "non_duel_manifests_ignored": ignored,
