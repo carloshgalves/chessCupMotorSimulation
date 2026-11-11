@@ -80,6 +80,32 @@ def test_gapped_cursor_wrong_selection_and_restart_fail_to_snapshot():
     assert changed_epoch[0]["epoch"] != first["epoch"]
 
 
+def test_concurrent_stale_reader_cannot_roll_back_ply_or_terminal():
+    journal = event_journal.EventJournal()
+    first = journal.observe("A", report(1))[0]
+    latest = journal.observe("A", report(3), first["event_id"])[0]
+    assert latest["games"][0]["ply"] == 3
+    # Old HTTP worker finishes after a different viewer has read ply=3.
+    assert journal.observe("A", report(2), latest["event_id"]) == []
+    current = journal.observe("A", report(2))[0]
+    assert current["event_id"] == latest["event_id"]
+    assert current["games"][0]["ply"] == 3
+
+    done = journal.observe("A", report(3, status="COMPLETED"),
+                           latest["event_id"])[0]
+    assert "terminal" in done["changes"]
+    assert journal.observe("A", report(3, status="RUNNING"),
+                           done["event_id"]) == []
+    assert journal.observe("A", report(3))[0]["duel"]["status"] == "COMPLETED"
+
+    # New selected duel must be allowed to begin from its first position.
+    new_session = journal.observe("A", report(0, selection="r01-m02"),
+                                  done["event_id"])[0]
+    assert new_session["duel"]["match_id"] == "r01-m02"
+    assert new_session["games"][0]["ply"] == 0
+    assert "session" in new_session["changes"]
+
+
 def test_expired_cursor_is_detected_without_inventing_missed_moves():
     journal = event_journal.EventJournal()
     original = journal.observe("A", report(1))[0]["event_id"]
