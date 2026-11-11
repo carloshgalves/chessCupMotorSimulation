@@ -79,6 +79,17 @@ def test_cross_duel_exact_duplicates_and_transpositions_are_distinct(tmp_path):
     ]
 
 
+def test_same_opening_prefix_with_different_suffix_is_not_transposition(tmp_path):
+    root = tmp_path / "runs"
+    write_duel(root / "first", [OPENING_A + ["f1g2", "f8g7"]])
+    write_duel(root / "second", [OPENING_A + ["d2d4", "d7d5"]])
+    report = cross_duel_report([root], opening_plies=4)
+    assert report["distinct_mainlines"] == 2
+    assert report["transposed_opening_position_groups"] == 0
+    assert report["games"][0]["opening_prefix_sha256"] == (
+        report["games"][1]["opening_prefix_sha256"])
+
+
 def test_incomplete_and_zero_ply_never_claim_finished_evidence(tmp_path):
     root = tmp_path / "runs"
     write_duel(root / "empty", [[]], status="INCOMPLETE")
