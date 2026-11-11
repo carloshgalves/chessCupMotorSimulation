@@ -115,12 +115,13 @@ faz uma pausa graciosa e não se mantém entre chamadas.
 busca em andamento. O timeout interno do `SimpleEngine` também é reduzido
 quando aplicável. Isso é necessário porque, em buscas por profundidade ou
 relógio, `python-chess` não aplica automaticamente `SimpleEngine.timeout`
-ao `play()` sem `Limit.time`. Se uma busca expirar, o resultado é
-`INCOMPLETE` com
-`Termination=WallTimeLimit`; sem orçamento explícito, uma resposta UCI que
-exceder o timeout padrão é marcada `EngineResponseTimeout`, e a queda do motor
-durante a busca é marcada `EngineTerminated`. **Nenhum desses eventos é derrota,
-vitória ou empate enxadrístico**.
+ao `play()` sem `Limit.time`. Se o orçamento da partida expirar,
+o resultado é `INCOMPLETE` com `Termination=WallTimeLimit`. Se o próprio
+transporte UCI detectar timeout por outra razão, usa
+`EngineResponseTimeout`; a queda do motor durante a busca usa
+`EngineTerminated`. **Sem um orçamento explícito, não há garantia de timeout
+por lance nas buscas de profundidade/relógio.** Nenhum desses eventos é derrota,
+vitória ou empate enxadrístico.
 
 Lances recebidos após o orçamento de parede são descartados, preservando o
 checkpoint anterior; o transporte do motor sem resposta é fechado diretamente,
