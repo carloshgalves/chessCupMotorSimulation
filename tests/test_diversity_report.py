@@ -66,6 +66,8 @@ def test_cross_duel_exact_duplicates_and_transpositions_are_distinct(tmp_path):
     assert report["completed_games"] == 3
     assert report["distinct_mainlines"] == 2
     assert report["exact_duplicate_games"] == 1
+    assert report["distinct_completed_mainlines"] == 2
+    assert report["completed_duplicate_games"] == 1
     assert report["transposed_opening_position_groups"] == 1
     assert report["games"][1]["duplicate_of"] == report["games"][0]["source"]
     assert report["games"][2]["duplicate_of"] is None
@@ -86,6 +88,8 @@ def test_incomplete_and_zero_ply_never_claim_finished_evidence(tmp_path):
     assert report["incomplete_or_unscored_games"] == 2
     assert report["games_with_moves"] == 1
     assert report["distinct_mainlines"] == 1
+    assert report["distinct_completed_mainlines"] == 0
+    assert report["completed_duplicate_games"] == 0
     assert report["games"][0]["opening_position_sha256"] is None
     assert report["games"][1]["opening_position_sha256"] is None
 
@@ -106,6 +110,42 @@ def test_only_summary_verified_against_pgn_and_never_overwrites(tmp_path):
                          encoding="utf-8")
     with pytest.raises(ValueError, match="PGN"):
         cross_duel_report([root], opening_plies=4)
+
+
+def test_provenance_rejects_mislabelled_seed_mode_and_colors(tmp_path):
+    root = tmp_path / "runs"
+    folder = write_duel(root / "pair", [E4], seed=7, mode="historical")
+    summary = folder / "summary.json"
+    original = json.loads(summary.read_text(encoding="utf-8"))
+    for field, value in (
+        ("opening_seed", 8), ("opening_mode", "disabled"), ("white", "tal")
+    ):
+        changed = json.loads(json.dumps(original))
+        changed["games"][0][field] = value
+        summary.write_text(json.dumps(changed), encoding="utf-8")
+        with pytest.raises(ValueError):
+            cross_duel_report([root], opening_plies=4)
+    summary.write_text(json.dumps(original), encoding="utf-8")
+    assert cross_duel_report([root], opening_plies=4)["games_total"] == 1
+
+
+def test_incomplete_duplicate_does_not_falsify_completed_games(tmp_path):
+    root = tmp_path / "runs"
+    write_duel(root / "partial", [E4], status="INCOMPLETE")
+    write_duel(root / "complete", [E4], status="COMPLETED")
+    report = cross_duel_report([root], opening_plies=4)
+    assert report["exact_duplicate_games"] == 1
+    assert report["completed_games"] == 1
+    assert report["distinct_completed_mainlines"] == 1
+    assert report["completed_duplicate_games"] == 0
+
+
+def test_shared_opening_position_from_unrelated_players_not_called_transposition(tmp_path):
+    root = tmp_path / "runs"
+    write_duel(root / "a", [OPENING_A], players=("fischer", "tal"))
+    write_duel(root / "b", [OPENING_B], players=("kasparov", "carlsen"))
+    report = cross_duel_report([root], opening_plies=4)
+    assert report["transposed_opening_position_groups"] == 0
 
 
 def test_history_not_accidentally_read_from_unrelated_summary(tmp_path):
