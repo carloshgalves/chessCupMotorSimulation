@@ -89,6 +89,13 @@ def main(argv: list[str] | None = None) -> int:
     diversity.add_argument("--opening-plies", type=int, default=12,
                            help="Posição de abertura comparada após N meios-lances (2..40)")
 
+    fast_audit = sub.add_parser(
+        "fast-audit", help="Avalia probabilidades fixas da temporada rápida contra partidas UCI verificadas")
+    fast_audit.add_argument("--workspace", type=Path, required=True,
+                            help="Diretório local da Arena contendo leagues/ e recibos UCI")
+    fast_audit.add_argument("--out", type=Path, required=True,
+                            help="Novo arquivo JSON; jamais sobrescreve partidas ou relatórios")
+
     rating = sub.add_parser("rating-export",
                             help="Exporta ledger Elo experimental de jogos locais verificados (não altera motores)")
     rating.add_argument("--workspace", type=Path, required=True,
@@ -568,6 +575,18 @@ def main(argv: list[str] | None = None) -> int:
                 "estimated_cache_bytes": report["estimated_cache_bytes"],
                 "max_disk_bytes": report["max_disk_bytes"],
                 "cache_pgn_sha256": report["cache_pgn_sha256"],
+            }, ensure_ascii=False, indent=2))
+            return 0
+        if args.command == "fast-audit":
+            from .fast_statistical_audit import export_audit
+            info = export_audit(args.workspace, args.out)
+            print(json.dumps({
+                "out": str(args.out), "status": info["status"],
+                "verified_uci_games": info["verified_uci_games"],
+                "verified_uci_seasons": info["verified_uci_seasons"],
+                "rejected_seasons": info["rejected_seasons"],
+                "excluded_synthetic_projections": info["excluded_synthetic_projections"],
+                "model_status": info["model_status"],
             }, ensure_ascii=False, indent=2))
             return 0
         if args.command == "rating-export":
