@@ -24,7 +24,7 @@ def test_scope_limits_include_child_python_and_stop_option_parsing():
     assert "--property=MemoryMax=768M" in cmd
     assert "--property=CPUQuota=200%" in cmd
     assert "--property=TasksMax=64" in cmd
-    assert cmd[-5:] == [sys.executable, "-m", "chesssim", "tournament-run", "--run"] + ["/some run"] if False else cmd[-6:] == [sys.executable, "-m", "chesssim", "tournament-run", "--run", "/some run"]
+    assert cmd[-6:] == [sys.executable, "-m", "chesssim", "tournament-run", "--run", "/some run"]
     assert "--" in cmd and cmd.index("--") == len(cmd) - 7
 
 
