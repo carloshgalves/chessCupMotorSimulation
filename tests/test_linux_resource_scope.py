@@ -60,3 +60,23 @@ def test_dry_run_is_explicitly_not_enforced(capsys):
     out = capsys.readouterr().out
     assert "PLAN_ONLY_NOT_ENFORCED" in out
     assert "systemd-run" in out
+
+def test_linux_invocation_propagates_scope_exit_without_fallback(monkeypatch):
+    runner = _module()
+    calls = []
+    class Completed:
+        returncode = 17
+    monkeypatch.setattr(runner.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(runner.shutil, "which", lambda cmd: "/usr/bin/systemd-run")
+    def fake_run(cmd, *, check):
+        assert check is False
+        calls.append(cmd)
+        return Completed()
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    result = runner.main(["--memory-mib", "768", "--cpu-percent", "200",
+                          "--", "tournament-run", "--run", "/tmp/isolated"])
+    assert result == 17
+    assert len(calls) == 1
+    assert calls[0][0] == "systemd-run"
+    assert calls[0][-4:] == ["chesssim", "tournament-run", "--run", "/tmp/isolated"]
+
