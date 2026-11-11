@@ -456,6 +456,25 @@ def test_recovery_preview_recognizes_sigkill_window_before_summary(harness):
     assert len(calls) == 1, "resume must not duplicate accepted games"
 
 
+def test_recovery_gate_overrides_stale_running_checkpoint_and_stop(harness):
+    begin, _, _, _, _root = harness
+    run = begin()
+    state = tournament.load_tournament(run)
+    match = state["rounds"][0]["matches"][0]
+    a, b = match["players"]
+    (tournament._duel_dir(run, match) /
+     f"{a}-vs-{b}" / "abrupt-process-death").mkdir(parents=True)
+    state["status"] = "RUNNING"  # persisted immediately before simulated death
+    tournament._save(run, state)
+    preview = tournament.tournament_recovery_preview(run)
+    assert preview["checkpoint_status"] == "RUNNING"
+    assert preview["recovery_gate"] == "EXPLICIT_RETRY_REQUIRED"
+    tournament.request_stop(run, reason="Check after forced restart")
+    stopped = tournament.tournament_recovery_preview(run)
+    assert stopped["recovery_gate"] == "STOP_REQUESTED"
+    assert stopped["stop_requested"] is True
+
+
 def test_recovery_preview_reconstructs_completed_uncheckpointed_duel(harness):
     begin, calls, _, fake, root = harness
     run = begin()
