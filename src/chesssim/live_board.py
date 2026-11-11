@@ -17,7 +17,8 @@ import re
 import chess
 import chess.pgn
 
-from .live_events import MAX_EVENT_CLIENTS, same_origin, stream_events
+from .event_journal import EventJournal
+from .live_events import MAX_EVENT_CLIENTS, same_origin, stream_events, stream_events_v2
 
 MAX_PGN_BYTES = 2 * 1024 * 1024
 class InvalidSelection(ValueError):
@@ -294,9 +295,9 @@ def make_handler(directory: Path):
                 return
             url = urlsplit(self.path)
             route = url.path
-            if route in ("/api/state", "/api/events"):
+            if route in ("/api/state", "/api/events", "/api/events/v2"):
                 # Reject cross-site streams BEFORE reading any PGN or bracket.
-                if route == "/api/events" and not same_origin(self):
+                if route in ("/api/events", "/api/events/v2") and not same_origin(self):
                     self._reply(403, b"Forbidden", "text/plain; charset=utf-8")
                     return
                 try:
@@ -317,6 +318,12 @@ def make_handler(directory: Path):
                 if route == "/api/events":
                     stream_events(self, report,
                         lambda: snapshot(root, match_id=match_id, attempt=attempt))
+                elif route == "/api/events/v2":
+                    key = f"watch:{match_id or 'live'}:{attempt or 'latest'}"
+                    stream_events_v2(
+                        self, report,
+                        lambda: snapshot(root, match_id=match_id, attempt=attempt),
+                        key)
                 else:
                     self._reply(200, payload, "application/json; charset=utf-8")
                 return
@@ -360,6 +367,7 @@ def create_server(directory: Path, port: int = 8765) -> ThreadingHTTPServer:
     snapshot(directory)  # fail fast before binding
     server = ThreadingHTTPServer(("127.0.0.1", port), make_handler(directory))
     server.event_stream_slots = BoundedSemaphore(MAX_EVENT_CLIENTS)
+    server.event_journal = EventJournal()
     server.daemon_threads = True
     return server
 

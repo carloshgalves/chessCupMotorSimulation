@@ -15,6 +15,8 @@ let requestVersion = 0;
 let refreshQueued = false;
 let eventSource = null;
 let eventFeedConnected = false;
+let lastEventEpoch = "";
+let lastEventSequence = 0;
 let moveSignature = "";
 let moveCells = [];
 let followMoves = true;
@@ -626,10 +628,12 @@ function openEventFeed() {
   if(eventSource)eventSource.close();
   eventSource=null;
   eventFeedConnected=false;
+  lastEventEpoch="";
+  lastEventSequence=0;
   if(typeof EventSource !== "function")return;
   let source;
   try {
-    source = new EventSource("/api/events" + eventQuery());
+    source = new EventSource("/api/events/v2" + eventQuery());
   } catch (_) {
     // CSP or browser policy may forbid constructing a stream. The polling
     // fallback must still be installed and remain fully functional.
@@ -643,8 +647,15 @@ function openEventFeed() {
     if(eventSource!==source)return; // Ignore stale session callbacks.
     try {
       const data=JSON.parse(event.data);
-      if(data.schema!=="chesssim-game-events-v1" ||
-         !/^[a-f0-9]{64}$/.test(data.revision))return;
+      if(data.schema!=="chesssim-game-events-v2" ||
+         !/^[a-f0-9]{64}$/.test(data.revision) ||
+         !/^[a-f0-9]{16}$/.test(data.epoch) ||
+         !Number.isSafeInteger(data.sequence) || data.sequence<1 ||
+         typeof data.resync_required!=="boolean")return;
+      if(data.epoch===lastEventEpoch && data.sequence<=lastEventSequence &&
+         !data.resync_required)return;
+      lastEventEpoch=data.epoch;
+      lastEventSequence=data.sequence;
     } catch (_) {return;}
     eventFeedConnected=true;
     eventRefresh();

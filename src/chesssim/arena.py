@@ -30,7 +30,8 @@ from .leagues import LeagueManager, LeagueInput, LeagueBusy
 from .cups import CupManager, CupBusy
 from .cup_rules import CupInput, presets as cup_presets
 from .live_board import SCHEMA, make_handler, snapshot
-from .live_events import MAX_EVENT_CLIENTS, same_origin, stream_events
+from .event_journal import EventJournal
+from .live_events import MAX_EVENT_CLIENTS, same_origin, stream_events, stream_events_v2
 from .matches import _atomic_text, official_book_hashes, play_duel, validate
 from .peak_windows import CLOCK_PRESETS, PROVISIONAL_PEAKS
 
@@ -830,7 +831,7 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 except (ValueError, OSError, FileNotFoundError,
                         KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "Estado do duelo indisponível"})
-            elif url.path == "/api/events":
+            elif url.path in ("/api/events", "/api/events/v2"):
                 if not same_origin(self):
                     self._json(403, {"error": "Origem não autorizada"})
                     return
@@ -843,7 +844,10 @@ def make_arena_handler(manager: ArenaManager, token: str):
                         KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "Estado do duelo indisponível"})
                     return
-                stream_events(self, report, manager.state)
+                if url.path == "/api/events/v2":
+                    stream_events_v2(self, report, manager.state, "arena:live")
+                else:
+                    stream_events(self, report, manager.state)
             elif url.path in ("/", "/arena.js", "/arena.css", "/history.js", "/history_replay.js", "/history_stats.js", "/competition_rating.js", "/history.css", "/chess-board.js", "/chess-board.css", "/board-preferences.js", "/human-play.js", "/league.js", "/league.css",
                               "/cup.js", "/cup.css", "/representation.js", "/representation.css",
                               "/history_archive.js", "/history_archive.css", "/my-games.js", "/my-games.css", "/viewer"):
@@ -1013,6 +1017,7 @@ def create_server(root: Path, workspace: Path, *, port: int = 8766,
         raise
     server.daemon_threads = True
     server.event_stream_slots = threading.BoundedSemaphore(MAX_EVENT_CLIENTS)
+    server.event_journal = EventJournal()
     server.arena_manager = manager
     server.arena_token = token
     return server

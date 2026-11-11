@@ -175,3 +175,68 @@ def stream_events(handler, initial: dict, read_state) -> None:
             pass
     finally:
         slots.release()
+
+
+def stream_events_v2(handler, initial: dict, read_state, stream_key: str) -> None:
+    """Bounded replay of observed checkpoints, never a complete move log.
+
+    The browser's Last-Event-ID is an untrusted cursor. Unknown/expired IDs
+    trigger a snapshot resync. The stream is read-only and uses the same
+    cross-site and concurrency limits as the v1 endpoint.
+    """
+    if not same_origin(handler):
+        handler._reply(403, b"Forbidden", "text/plain; charset=utf-8")
+        return
+    slots = handler.server.event_stream_slots
+    if not slots.acquire(blocking=False):
+        handler._reply(429, b"Too many event viewers", "text/plain; charset=utf-8")
+        return
+    try:
+        handler.send_response(200)
+        for key, value in (
+            ("Content-Type", "text/event-stream; charset=utf-8"),
+            ("Cache-Control", "no-store"),
+            ("Connection", "close"),
+            ("X-Accel-Buffering", "no"),
+            ("X-Content-Type-Options", "nosniff"),
+            ("X-Frame-Options", "DENY"),
+            ("Referrer-Policy", "no-referrer"),
+        ):
+            handler.send_header(key, value)
+        handler.end_headers()
+        handler.close_connection = True
+        handler.wfile.write(f"retry: {EVENT_RETRY_MS}\n\n".encode("ascii"))
+        cursor = handler.headers.get("Last-Event-ID", "")
+        if len(cursor) > 112:
+            cursor = ""
+        end = time.monotonic() + EVENT_STREAM_SECONDS
+        last_ping = time.monotonic()
+        state = initial
+        while time.monotonic() < end:
+            pending = handler.server.event_journal.observe(stream_key, state, cursor)
+            for item in pending:
+                encoded = json.dumps(item, ensure_ascii=False, allow_nan=False,
+                                     separators=(",", ":"))
+                frame = (f"id: {item['event_id']}\nevent: state\n"
+                         f"data: {encoded}\n\n")
+                handler.wfile.write(frame.encode("utf-8"))
+                cursor = item["event_id"]
+                last_ping = time.monotonic()
+            if not pending and time.monotonic() - last_ping >= 2:
+                handler.wfile.write(b": keepalive\n\n")
+                last_ping = time.monotonic()
+            handler.wfile.flush()
+            time.sleep(EVENT_POLL_SECONDS)
+            state = read_state()
+    except (BrokenPipeError, ConnectionResetError, TimeoutError):
+        pass
+    except (ValueError, FileNotFoundError, OSError, TypeError, KeyError,
+            json.JSONDecodeError):
+        # Never disclose local source paths or untrusted parser content.
+        try:
+            handler.wfile.write(b"event: unavailable\ndata: {}\n\n")
+            handler.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass
+    finally:
+        slots.release()
