@@ -313,6 +313,22 @@ def prepare_cache(catalog: Path, *, out: Path, apply: bool = False,
                             max_bytes=max_cache_mb * 1024 * 1024)
     out = out.expanduser()
     report["operation"] = "APPLIED" if apply else "DRY_RUN"
+    # Include the audit manifest in the real disk budget. Its own length
+    # fields are determined by a stable fixed point (usually two iterations).
+    report["estimated_manifest_bytes"] = 0
+    report["estimated_cache_bytes"] = 0
+    while True:
+        encoded = (json.dumps(report, ensure_ascii=False, sort_keys=True,
+                              indent=2) + "\n").encode("utf-8")
+        size = len(encoded)
+        total = len(content) + size
+        if (report["estimated_manifest_bytes"] == size and
+                report["estimated_cache_bytes"] == total):
+            break
+        report["estimated_manifest_bytes"] = size
+        report["estimated_cache_bytes"] = total
+    if total > max_cache_mb * 1024 * 1024:
+        raise ValueError("Cache mais manifesto excedem o orçamento de disco")
     if not apply:
         return report
     if out.exists() or out.is_symlink():
@@ -324,9 +340,7 @@ def prepare_cache(catalog: Path, *, out: Path, apply: bool = False,
     try:
         pgn = stage / "games.pgn"
         pgn.write_bytes(content)
-        (stage / "manifest.json").write_text(
-            json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
-            encoding="utf-8")
+        (stage / "manifest.json").write_bytes(encoded)
         # Exclusive mkdir is atomic and cannot replace an empty directory
         # created by another process in between validation and commit.
         out.mkdir(mode=0o700, exist_ok=False)
