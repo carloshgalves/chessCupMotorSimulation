@@ -458,6 +458,12 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
     engine:"Stockfish test",loss_cp:120,critical:"mistake"};
   const quality=browser();
   await flush();
+  // A replay may start on a different position; explicitly select the
+  // sampled half-move rather than assuming playback has reached its tail.
+  assert.equal(vm.runInContext("currentGame()?.states[1]?.evaluation?.white_cp",
+                               quality.context),92,
+               "fixture must carry the sampled quality evidence into the feed");
+  vm.runInContext("cursor=1;render()",quality.context);
   assert.equal(quality.elements.get("analysis-score").textContent,"+0.92");
   assert(quality.elements.get("analysis-status").textContent.includes("profundidade 18"));
   assert.equal(quality.elements.get("analysis-gauge-white").style.height,
