@@ -29,7 +29,7 @@ def test_declared_repertoire_is_explicitly_unverified_not_certified():
     p = design(["fischer", "tal"], seed=1, trials=2,
                declared_external_repertoire=True)
     assert "UNVERIFIED" in p["seed_effectiveness"]
-    assert "no" not in p["status"].lower()
+    assert p["status"] == "PLAN_ONLY_NOT_RUN_NOT_CALIBRATED"
     assert p["blocks"][-1]["runs"][-1]["seed"] == 4
 
 
