@@ -18,6 +18,8 @@ def test_pairing_preserves_negative_control_and_distinct_alternate_seeds():
     assert all([r["seed"] for r in b["runs"]] ==
                [2029+i, 2029+i, 2034+i] for i, b in enumerate(plan["blocks"]))
     assert all("book_hash" in b["fixed_variables"] for b in plan["blocks"])
+    assert all("game_number" in b["fixed_variables"] for b in plan["blocks"])
+    assert all("run_mode" in b["fixed_variables"] for b in plan["blocks"])
     assert plan == design(["fischer", "tal"], seed=2029, trials=5,
                           declared_external_repertoire=False)
     assert plan != design(["fischer", "tal"], seed=2030, trials=5,
