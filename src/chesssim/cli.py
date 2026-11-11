@@ -543,6 +543,8 @@ def main(argv: list[str] | None = None) -> int:
                 "complete_results": report["complete_results"],
                 "incomplete_results": report["incomplete_results"],
                 "estimated_pgn_bytes": report["estimated_pgn_bytes"],
+                "estimated_manifest_bytes": report["estimated_manifest_bytes"],
+                "estimated_cache_bytes": report["estimated_cache_bytes"],
                 "max_disk_bytes": report["max_disk_bytes"],
                 "cache_pgn_sha256": report["cache_pgn_sha256"],
             }, ensure_ascii=False, indent=2))
