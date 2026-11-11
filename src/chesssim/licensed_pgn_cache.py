@@ -137,6 +137,22 @@ _GAP = re.compile(r"(?:\s+|[0-9]+\.(?:\.\.)?|\.\.)*\Z")
 _HEADER = re.compile(r'\[[A-Za-z0-9][A-Za-z0-9_+#=:-]*\s+"[^"\r]*"\]\s*\Z')
 
 
+class _ResultConsistentGameBuilder(chess.pgn.GameBuilder):
+    """Reject conflicting PGN [Result] headers and movetext termination.
+
+    python-chess normally preserves an explicit non-'*' Result header even if
+    the final result token says something different. That is not safe for a
+    provenance-preserving cache.
+    """
+
+    def visit_result(self, result: str) -> None:
+        declared = self.game.headers.get("Result", "*")
+        if declared != "*" and declared != result:
+            self.game.errors.append(
+                ValueError("Cabeçalho Result contradiz resultado dos lances"))
+        super().visit_result(result)
+
+
 def _strict_movetext(text: str) -> None:
     """Reject ignored PGN garbage and truncated SAN, unlike a lenient parser.
 
@@ -207,7 +223,7 @@ def _scan(catalog_path: Path, *, max_games: int, max_bytes: int) -> tuple[dict, 
         source_games, source_unique, source_dupes = 0, 0, 0
         names = Counter()
         while True:
-            game = chess.pgn.read_game(stream)
+            game = chess.pgn.read_game(stream, Visitor=_ResultConsistentGameBuilder)
             if game is None:
                 break
             total += 1
