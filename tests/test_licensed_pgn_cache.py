@@ -166,6 +166,17 @@ def test_comment_and_nag_tokens_accepted_without_exporting_annotations(tmp_path)
     assert "e4" in raw and "e5" in raw
 
 
+def test_pgn_header_result_must_agree_with_movetext_result(tmp_path):
+    inconsistent = game_text(result="1-0").replace(" 1-0", " 0-1")
+    assert '[Result "1-0"]' in inconsistent
+    assert inconsistent.rstrip().endswith("0-1")
+    source = write_source(tmp_path, "conflict.pgn", inconsistent)
+    catalog_file = catalog(tmp_path, source)
+    with pytest.raises(ValueError, match="PGN"):
+        prepare_cache(catalog_file, out=tmp_path / "cache", apply=True)
+    assert not (tmp_path / "cache").exists()
+
+
 def test_conflicting_results_same_mainline_fail_closed(tmp_path):
     item = write_source(tmp_path, "a.pgn", game_text(result="1-0"))
     item2 = write_source(tmp_path, "b.pgn", game_text(result="0-1"))
