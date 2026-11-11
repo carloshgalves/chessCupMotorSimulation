@@ -192,7 +192,12 @@ python -m chesssim tournament-recovery-preview --run /caminho/torneio
 não altera PGNs, relatórios, classificação nem tournament.json. O resultado
 é um JSON com o estado checkpointado, tentativas completas encontradas no
 disco que ainda não constam do manifesto, tentativas incompletas e confrontos
-que exigem autorização explícita de nova tentativa.
+que exigem autorização explícita de nova tentativa. O campo **recovery_gate**
+prevalece sobre o status antigo do checkpoint: EXPLICIT_RETRY_REQUIRED exige
+decisão do operador, STOP_REQUESTED exige liberação prévia do pedido de parada,
+TIEBREAK_DECISION_REQUIRED exige arbitragem, COMPETITION_COMPLETE indica fim
+e NO_INCOMPLETE_ATTEMPTS_DETECTED informa apenas que não foram encontradas
+tentativas incompletas (não autoriza iniciar execução concorrente).
 
 **Janela adicional coberta:** se o processo receber SIGKILL após criar a
 pasta da tentativa, mas **antes da gravação atômica inicial de summary.json**,
