@@ -65,7 +65,7 @@ O cache contém `games.pgn`, normalizado sem comentários e variantes secundári
 - Nenhum acesso a HTTP/HTTPS é realizado: `source_url` e `license_evidence_url` são registros de proveniência, não endereços para download.
 - URLs HTTPS de origem e evidência, atestação explícita do operador, data de revisão não futura e SHA-256 exato são obrigatórios.
 - Arquivos e diretórios com symlink, travessia de pasta (`../`), extensão diferente de `.pgn`, PGN não UTF-8, formato acima do limite, tokens SAN ignorados pelo parser, variantes não padrão e lances ilegais são rejeitados.
-- Jogos de zero lance são excluídos; jogos com resultado desconhecido permanecem como incompletos. Duplicatas entre fontes preservam a lista de origens; resultados contraditórios da mesma linha são bloqueados.
+- Jogos de zero lance são excluídos; jogos sem resultado declarado são reportados separadamente. Os campos `games_with_declared_result` e `games_with_unknown_result` refletem **apenas os resultados escritos no PGN**, não uma comprovação independente de que a partida foi concluída ou corretamente adjudicada. Duplicatas entre fontes preservam a lista de origens; resultados contraditórios da mesma linha são bloqueados.
 - A normalização remove anotações, mas **não** dá autorização de redistribuição nem transforma dados particulares em domínio público.
 - Este cache não entra no arquivo de treino, não modifica a partição lacrada de Mequinho, não gera resultado de engine nem apresenta validação histórica dos perfis.
 
