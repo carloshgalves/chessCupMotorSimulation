@@ -311,12 +311,13 @@ def prepare_cache(catalog: Path, *, out: Path, apply: bool = False,
         raise ValueError("Limites de jogos/disco inválidos")
     report, content = _scan(catalog, max_games=max_games,
                             max_bytes=max_cache_mb * 1024 * 1024)
+    out = out.expanduser()
     report["operation"] = "APPLIED" if apply else "DRY_RUN"
     if not apply:
         return report
     if out.exists() or out.is_symlink():
         raise FileExistsError("Diretório de cache já existe")
-    parent = out.expanduser().parent
+    parent = out.parent
     parent.mkdir(parents=True, exist_ok=True)
     # A temporary sibling avoids exposing a half-written final cache.
     stage = Path(mkdtemp(prefix=".chesssim-cache-", dir=parent))
