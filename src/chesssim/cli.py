@@ -80,6 +80,15 @@ def main(argv: list[str] | None = None) -> int:
     tournament_resolve.add_argument("--winner", required=True)
     tournament_resolve.add_argument("--reason", required=True, help="Justificativa formal registrada no manifesto")
 
+    diversity = sub.add_parser(
+        "diversity-report", help="Compara sequências PGN reais de múltiplos duelos, sem alterar motores")
+    diversity.add_argument("--runs", type=Path, nargs="+", required=True,
+                           help="Diretórios locais contendo duelos com summary.json e jogo_N.pgn")
+    diversity.add_argument("--out", type=Path, required=True,
+                           help="Novo arquivo JSON; não sobrescreve resultados existentes")
+    diversity.add_argument("--opening-plies", type=int, default=12,
+                           help="Posição de abertura comparada após N meios-lances (2..40)")
+
     rating = sub.add_parser("rating-export",
                             help="Exporta ledger Elo experimental de jogos locais verificados (não altera motores)")
     rating.add_argument("--workspace", type=Path, required=True,
@@ -518,6 +527,18 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     try:
+        if args.command == "diversity-report":
+            from .diversity_report import export_diversity
+            result = export_diversity(args.runs, args.out, opening_plies=args.opening_plies)
+            print(json.dumps({
+                "out": str(args.out), "games": result["games_total"],
+                "distinct_mainlines": result["distinct_mainlines"],
+                "exact_duplicate_games": result["exact_duplicate_games"],
+                "transposed_opening_position_groups":
+                    result["transposed_opening_position_groups"],
+                "warning": "Diagnóstico descritivo; nenhuma jogada do motor foi alterada.",
+            }, ensure_ascii=False, indent=2))
+            return 0
         if args.command == "rating-export":
             from .competition_rating import export_rating_ledger
             info = export_rating_ledger(args.workspace, args.out, k=args.k,
