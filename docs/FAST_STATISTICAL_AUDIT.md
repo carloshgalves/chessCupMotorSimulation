@@ -12,7 +12,7 @@ python -m chesssim fast-audit \
 
 O `workspace` precisa conter a estrutura `leagues/` de temporadas produzidas pelo ChessCup. O auditor reutiliza `verified_league_games()`, que verifica manifestos, recibos e os PGNs reais dos jogos `engine_full` antes de liberar cada registro. Temporadas com prova danificada bloqueiam o relatório comparativo inteiro, impedindo a seleção oportunista apenas dos resultados válidos. Registros `fast_statistical` são contabilizados **exclusivamente como projeções excluídas**: não entram no conjunto de treino ou teste.
 
-O arquivo JSON é criado exclusivamente (`--out` não pode existir). A execução não chama UCI, não atualiza ratings, não altera partidas e não acessa a rede, o corpus de estilo histórico nem o holdout lacrado.
+O arquivo JSON é criado exclusivamente (`--out` não pode existir), **fora do workspace de partidas** e em diretório regular sem symlinks. A execução não chama UCI, não atualiza ratings, não altera partidas e não acessa a rede, o corpus de estilo histórico nem o holdout lacrado.
 
 ## Protocolo da avaliação
 
