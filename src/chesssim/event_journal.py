@@ -7,7 +7,6 @@ always results in explicit snapshot resynchronization rather than false replay.
 from __future__ import annotations
 
 from collections import OrderedDict, deque
-from hashlib import sha256
 import re
 from secrets import token_hex
 from threading import Lock
