@@ -191,6 +191,17 @@ def test_cli_never_writes_report_inside_repository(checkout, capsys):
     assert '"status": "PASS"' not in out
 
 
+def test_unwritable_report_does_not_emit_false_pass(checkout, tmp_path, capsys):
+    parent = tmp_path / "already-a-file"
+    parent.write_text("cannot mkdir here", encoding="utf-8")
+    report = parent / "audit.json"
+    assert audit.main(["--repo", str(checkout), "--output", str(report)]) == 2
+    captured = capsys.readouterr()
+    assert '"status": "ERROR"' in captured.out
+    assert '"status": "PASS"' not in captured.out
+    assert not report.exists()
+
+
 def test_bad_index_stage_is_not_read_as_clean(checkout):
     # This probes the fail-closed parsing rule without manufacturing conflicts.
     with pytest.raises(audit.AuditError):
