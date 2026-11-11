@@ -43,19 +43,25 @@ def _load_game(path: Path):
     return game
 
 
-def _opening_position(game, opening_plies: int) -> str | None:
+def _opening_signatures(game, opening_plies: int) -> tuple[str | None, str | None]:
     board = game.board()
     moves = list(game.mainline_moves())
     if len(moves) < opening_plies:
-        return None
+        return None, None
+    prefix = []
     for move in moves[:opening_plies]:
         if move not in board.legal_moves:
             raise ValueError("Linha principal ilegal")
+        prefix.append(move.uci())
         board.push(move)
     # Move counters must not manufacture distinct positions; keep side to
-    # move, castling rights and legal en-passant in the identity.
+    # move, castling rights and legal en-passant in the position identity.
     position = " ".join(board.fen(en_passant="legal").split()[:4])
-    return sha256(position.encode("ascii")).hexdigest()
+    prefix_payload = json.dumps({
+        "initial_fen": game.board().fen(), "moves": prefix,
+    }, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return (sha256(position.encode("ascii")).hexdigest(),
+            sha256(prefix_payload).hexdigest())
 
 
 def _source_tag(root_index: int, root: Path, summary: Path, game_number: int) -> str:
@@ -146,6 +152,7 @@ def _load_records(roots: Iterable[Path], opening_plies: int) -> tuple[list[dict]
             header_seed = game.headers.get("OpeningSeed")
             if (header_seed is not None or seed is not None) and header_seed != str(seed):
                 raise ValueError("PGN e resumo discordam sobre OpeningSeed")
+            position_hash, prefix_hash = _opening_signatures(game, opening_plies)
             row = {
                 "source": _source_tag(number, root, summary, i),
                 "players": sorted(players),
@@ -157,7 +164,8 @@ def _load_records(roots: Iterable[Path], opening_plies: int) -> tuple[list[dict]
                 "result": meta["result"],
                 "plies": plies,
                 "mainline_sha256": digest,
-                "opening_position_sha256": _opening_position(game, opening_plies),
+                "opening_position_sha256": position_hash,
+                "opening_prefix_sha256": prefix_hash,
             }
             rows.append(row)
     if not rows:
@@ -188,7 +196,8 @@ def cross_duel_report(roots: Iterable[Path], *, opening_plies: int = 12) -> dict
         else:
             row["completed_duplicate_of"] = None
         if row["opening_position_sha256"]:
-            opening_positions[(key, row["opening_position_sha256"])].add(digest)
+            opening_positions[(key, row["opening_position_sha256"])].add(
+                row["opening_prefix_sha256"])
     comparisons = []
     for (players, mode), records in sorted(groups.items()):
         eligible = [r for r in records if r["plies"] > 0]
