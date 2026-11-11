@@ -68,6 +68,7 @@ def test_linux_invocation_propagates_scope_exit_without_fallback(monkeypatch):
         returncode = 17
     monkeypatch.setattr(runner.platform, "system", lambda: "Linux")
     monkeypatch.setattr(runner.shutil, "which", lambda cmd: "/usr/bin/systemd-run")
+    monkeypatch.setattr(runner, "_has_unified_cgroup", lambda: True)
     def fake_run(cmd, *, check):
         assert check is False
         calls.append(cmd)
@@ -80,3 +81,15 @@ def test_linux_invocation_propagates_scope_exit_without_fallback(monkeypatch):
     assert calls[0][0] == "systemd-run"
     assert calls[0][-4:] == ["chesssim", "tournament-run", "--run", "/tmp/isolated"]
 
+
+def test_missing_cgroup_v2_never_spawns_unbounded_child(monkeypatch):
+    runner = _module()
+    calls = []
+    monkeypatch.setattr(runner.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(runner.shutil, "which", lambda cmd: "/usr/bin/systemd-run")
+    monkeypatch.setattr(runner, "_has_unified_cgroup", lambda: False)
+    monkeypatch.setattr(runner.subprocess, "run", lambda *a, **kw: calls.append(a))
+    result = runner.main(["--memory-mib", "768", "--cpu-percent", "100",
+                          "--", "arena", "--out", "/tmp/new"])
+    assert result == 3
+    assert calls == []
