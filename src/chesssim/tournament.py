@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
 import json
@@ -338,22 +339,54 @@ def _refresh_match(match: dict, max_pairs: int) -> None:
 
 
 def _reconcile(directory: Path, state: dict, match: dict) -> None:
-    """Reconstrói tentativas já salvas se a execução caiu antes do checkpoint."""
+    """Rebuild attempts after crashes, including pre-manifest SIGKILL windows.
+
+    A created attempt directory is evidence even if summary.json was never
+    written. It must not be silently ignored or promoted to a scored result.
+    """
     a, b = match["players"]
-    base = _duel_dir(directory, match) / f"{a}-vs-{b}"
+    duel_dir = _duel_dir(directory, match)
+    base = duel_dir / f"{a}-vs-{b}"
+    # A symlink in any intermediate component can redirect the scan to files
+    # outside the tournament; fail closed rather than traverse it.
+    for component in (directory / "matches",
+                      directory / "matches" / match["id"], duel_dir, base):
+        if component.is_symlink():
+            raise RuntimeError("Diretório de torneio redirecionado por symlink")
+    if base.exists() and not base.is_dir():
+        raise RuntimeError("Diretório de tentativas inválido")
+    attempt_dirs = sorted(base.iterdir()) if base.exists() else []
+    if len(attempt_dirs) > 1000:
+        raise RuntimeError("Limite de tentativas examinadas excedido")
     present = set()
-    seen_failures = set()
+    seen_failures: dict[str, str] = {}
     previous = {x["folder"]: x for x in match["attempts"]}
     previous_winner = match.get("winner")
     was_final = previous_winner is not None
-    for summary_file in sorted(base.glob("*/summary.json")):
-        folder = str(summary_file.parent.relative_to(directory))
+    for attempt_dir in attempt_dirs:
+        if attempt_dir.is_symlink() or not attempt_dir.is_dir():
+            raise RuntimeError("Tentativa de torneio redirecionada ou inválida")
+        folder = str(attempt_dir.relative_to(directory))
         present.add(folder)
+        summary_file = attempt_dir / "summary.json"
+        if summary_file.is_symlink():
+            raise RuntimeError("Resumo da tentativa redirecionado por symlink")
+        if not summary_file.exists():
+            if folder in previous:
+                raise RuntimeError("Tentativa registrada perdeu o resumo")
+            # SIGKILL/power loss may happen between mkdir and the first
+            # atomic summary write. This is NOT a game result.
+            seen_failures[folder] = "MISSING_SUMMARY"
+            continue
+        if not summary_file.is_file() or summary_file.stat().st_size > 1048576:
+            raise RuntimeError("Resumo da tentativa inválido ou excessivo")
         summary = json.loads(summary_file.read_text(encoding="utf-8"))
+        if not isinstance(summary, dict):
+            raise ValueError("Resumo da tentativa não é objeto JSON")
         if summary.get("status") != "COMPLETED":
             if folder in previous:
                 raise RuntimeError(f"Confronto contabilizado deixou de estar concluído: {folder}")
-            seen_failures.add(folder)
+            seen_failures[folder] = "NOT_COMPLETED"
             continue
         attempt = _valid_completed_attempt(directory, state, match, summary_file)
         if folder in previous:
@@ -365,9 +398,11 @@ def _reconcile(directory: Path, state: dict, match: dict) -> None:
             match["attempts"].append(attempt)
     if set(previous) - present:
         raise RuntimeError("Artefato de confronto já registrado foi apagado")
-    match["attempts"].sort(key=lambda a: a["folder"])
-    match["excluded_attempts"] = [{"folder": p, "reason": "NOT_COMPLETED"}
-                                  for p in sorted(seen_failures)]
+    match["attempts"].sort(key=lambda item: item["folder"])
+    match["excluded_attempts"] = [
+        {"folder": folder, "reason": reason}
+        for folder, reason in sorted(seen_failures.items())
+    ]
     _refresh_match(match, state["max_tiebreak_pairs"])
     if was_final and match["winner"] != previous_winner:
         raise RuntimeError(f"Vencedor previamente confirmado foi alterado: {match['id']}")
@@ -412,6 +447,52 @@ def tournament_status(directory: Path) -> dict:
     report = _summary(load_tournament(directory))
     report["stop_requested"] = _stop_file(directory).exists()
     return report
+
+
+def tournament_recovery_preview(directory: Path) -> dict:
+    """Read-only advisory: simulate reconciliation; do not persist or start UCI.
+
+    A live runner may update the files while this snapshot is read. This
+    function intentionally does not create/acquire the tournament lock.
+    """
+    directory = directory.expanduser().resolve()
+    state = load_tournament(directory)
+    candidate = deepcopy(state)
+    recovered = []
+    excluded = []
+    for rd in candidate["rounds"]:
+        for match in rd["matches"]:
+            known = {attempt["folder"] for attempt in match["attempts"]}
+            _reconcile(directory, candidate, match)
+            recovered.extend({
+                "match": match["id"], "folder": item["folder"],
+            } for item in match["attempts"] if item["folder"] not in known)
+            excluded.extend({
+                "match": match["id"], "folder": item["folder"],
+                "reason": item["reason"],
+            } for item in match["excluded_attempts"])
+    _advance(candidate)
+    preview = _summary(candidate)
+    stop = _stop_file(directory).exists()
+    return {
+        "schema": "chesssim-tournament-recovery-preview-v1",
+        "mode": "READ_ONLY_ADVISORY",
+        "checkpoint_status": state["status"],
+        "projected_status": candidate["status"],
+        "stop_requested": stop,
+        "recovered_completed_attempts": recovered,
+        "excluded_incomplete_attempts": excluded,
+        "matches_retry_required": preview["matches_retry_required"],
+        "matches_pending_tiebreak": preview["matches_pending_tiebreak"],
+        "projected_champion": preview["champion"],
+        "projected_matches_completed": preview["matches_completed"],
+        "warnings": [
+            "Snapshot may race a running tournament; inspect only while idle.",
+            "No game, process, UCI command, checkpoint or score was changed.",
+            "An incomplete attempt requires explicit --retry-incomplete.",
+            "This does not test kernel resource quotas, SIGKILL or power-loss recovery on a real engine.",
+        ],
+    }
 
 
 def run_tournament(root: Path, directory: Path, *, limit_pairs: int | None = None,
