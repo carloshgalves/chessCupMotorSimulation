@@ -10,7 +10,7 @@ python -m chesssim diversity-plan \
   --out /CAMINHO_AUTORIZADO/ensaio-pareado.json
 ```
 
-Cada bloco possui três condições: `A1_RESEARCH_CONTROL` com a semente base, `A2_EXACT_REPLICATE` com **mesma** semente (controle negativo) e `B_ALTERNATE_SEED` com semente diferente. Todos devem preservar *versões/hashes de motor, perfil, livro*, controle de tempo, profundidade, ordem de cores e política de repertório. O SHA-256 do plano é a impressão digital de seu conteúdo canônico, **não de uma partida executada**.
+Cada bloco possui três condições: `A1_RESEARCH_CONTROL` com a semente base, `A2_EXACT_REPLICATE` com **mesma** semente (controle negativo) e `B_ALTERNATE_SEED` com semente diferente. Todos devem preservar *versões/hashes de motor, perfil, livro*, controle de tempo, profundidade, ordem de cores, **número da partida/rodada** e política de repertório. A escolha de livro externo usa `seed`, número de jogo e FEN em seu hash: só a seed deve variar entre A e B. O SHA-256 do plano é a impressão digital de seu conteúdo canônico, **não de uma partida executada**.
 
 Por padrão o relatório afirma `NO_EFFECT_EXPECTED_WITHOUT_EXTERNAL_REPERTOIRE`: a semente não controla a busca interna do Rodent IV. A opção `--external-repertoire` apenas registra a **declaração não verificada do operador**; não confirma que o livro foi instalado ou que há múltiplos lances historicamente sustentados.
 
