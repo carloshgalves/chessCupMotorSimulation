@@ -123,6 +123,58 @@ def _catalog(path: Path) -> tuple[list[dict], str]:
     return sources, sha256(raw).hexdigest()
 
 
+_GAP = re.compile(r"(?:\\s+|[0-9]+\\.(?:\\.\\.)?|\\.\\.)*\\Z")
+_HEADER = re.compile(r'\\[[A-Za-z0-9][A-Za-z0-9_+#=:-]*\\s+"[^"\\r]*"\\]\\s*\\Z')
+
+
+def _strict_movetext(text: str) -> None:
+    """Reject ignored PGN garbage and truncated SAN, unlike a lenient parser.
+
+    python-chess searches for SAN-like regex substrings and ignores unknown
+    movetext, which can silently truncate a game without setting game.errors.
+    Validate complete lexical coverage, then retain python-chess legal-move
+    validation as the semantic authority.
+    """
+    lines = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("["):
+            if not _HEADER.fullmatch(stripped):
+                raise ValueError("Cabeçalho PGN inválido")
+            continue
+        lines.append(line)
+    body = "\\n".join(lines)
+    body = re.sub(r"(?m)^\\s*%[^\\n]*", " ", body)
+    body = re.sub(r";[^\\n]*", " ", body)
+    body = re.sub(r"\\{[^{}]*\\}", " ", body, flags=re.S)
+    if "{" in body or "}" in body:
+        raise ValueError("Comentário PGN inválido")
+    cursor = 0
+    variations = 0
+    for match in chess.pgn.MOVETEXT_REGEX.finditer(body):
+        if not _GAP.fullmatch(body[cursor:match.start()]):
+            raise ValueError("Token de lance PGN não reconhecido")
+        token = match.group()
+        if token in {"--", "Z0", "0000", "@@@@"}:
+            raise ValueError("Lance nulo não permitido no PGN padrão")
+        if token == "(":
+            variations += 1
+        elif token == ")":
+            variations -= 1
+            if variations < 0:
+                raise ValueError("Variação PGN sem abertura")
+        cursor = match.end()
+        # The python-chess lexer does not include check/mate suffixes in its
+        # SAN regex, so accept one immediately following + or #.
+        if token not in {"(", ")", "1-0", "0-1", "1/2-1/2", "*"} and (
+                token.startswith(("O-O", "0-0")) or
+                (token and token[0] in "abcdefghNBKRQ")):
+            if body[cursor:cursor + 1] in ("+", "#"):
+                cursor += 1
+    if variations != 0 or not _GAP.fullmatch(body[cursor:]):
+        raise ValueError("PGN incompleto ou com texto ignorado pelo parser")
+
+
 def _scan(catalog_path: Path, *, max_games: int, max_bytes: int) -> tuple[dict, bytes]:
     sources, catalog_hash = _catalog(catalog_path)
     root = catalog_path.parent.resolve()
@@ -137,9 +189,11 @@ def _scan(catalog_path: Path, *, max_games: int, max_bytes: int) -> tuple[dict, 
         if digest != src["expected_sha256"]:
             raise ValueError("Checksum PGN diverge do catálogo; revalidar direitos e arquivo")
         try:
-            stream = StringIO(raw.decode("utf-8-sig"))
+            decoded = raw.decode("utf-8-sig")
         except UnicodeError as exc:
             raise ValueError("PGN não está em UTF-8") from exc
+        _strict_movetext(decoded)
+        stream = StringIO(decoded)
         source_games, source_unique, source_dupes = 0, 0, 0
         names = Counter()
         while True:
