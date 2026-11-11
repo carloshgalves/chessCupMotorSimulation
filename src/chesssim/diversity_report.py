@@ -76,8 +76,9 @@ def _discover(roots: Iterable[Path]) -> list[tuple[int, Path, Path]]:
             # Ignore nested directory symlinks without following them.
             if summary.is_symlink() or not summary.is_file():
                 raise ValueError("Manifesto simbólico/inválido")
-            if any(part.is_symlink() for part in summary.relative_to(root).parents
-                   if part != Path(".")):
+            if any((root / parent).is_symlink()
+                   for parent in summary.relative_to(root).parents
+                   if parent != Path(".")):
                 raise ValueError("Diretório intermediário simbólico")
             real = summary.resolve()
             if real in visited:
@@ -100,9 +101,11 @@ def _load_records(roots: Iterable[Path], opening_plies: int) -> tuple[list[dict]
             raise ValueError("Manifesto JSON inválido") from exc
         if not isinstance(manifest, dict):
             raise ValueError("Manifesto JSON não é objeto")
-        if "players" not in manifest or "games" not in manifest:
+        if "players" not in manifest and "games" not in manifest:
             skipped += 1  # Other summary.json files are not duel manifests.
             continue
+        if "players" not in manifest or "games" not in manifest:
+            raise ValueError("Manifesto de duelo incompleto")
         players = manifest["players"]
         games = manifest["games"]
         if (not isinstance(players, list) or len(players) != 2 or
@@ -129,6 +132,9 @@ def _load_records(roots: Iterable[Path], opening_plies: int) -> tuple[list[dict]
                 raise ValueError("Resultado do PGN difere do resumo")
             if meta.get("status") not in ("INCOMPLETE", "COMPLETED"):
                 raise ValueError("Status de jogo inválido")
+            if (meta["status"] == "COMPLETED" and
+                    meta["result"] not in VALID_RESULTS):
+                raise ValueError("Jogo concluído sem resultado real")
             seed = meta.get("opening_seed")
             if seed is not None and type(seed) is not int:
                 raise ValueError("Semente de abertura inválida")
