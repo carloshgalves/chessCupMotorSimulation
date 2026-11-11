@@ -445,6 +445,16 @@ def main(argv: list[str] | None = None) -> int:
     replay = sub.add_parser('replay-html', help='offline interactive chessboard replay for existing PGN games')
     replay.add_argument('--pgn', type=Path, required=True)
     replay.add_argument('--out', type=Path, required=True)
+    cache = sub.add_parser("pgn-cache", help="Pré-voo de direitos e cache PGN local sem rede/engine")
+    cache.add_argument("--catalog", required=True, type=Path,
+                       help="JSON de fontes, direitos declarados e SHA-256 dos arquivos locais")
+    cache.add_argument("--out", required=True, type=Path,
+                       help="Novo diretório de cache; não sobrescreve")
+    cache.add_argument("--apply", action="store_true",
+                       help="Autoriza gravar dados após pré-voo; padrão é dry-run sem escrita")
+    cache.add_argument("--max-games", type=int, default=500)
+    cache.add_argument("--max-cache-mb", type=int, default=32)
+
     ob9 = sub.add_parser('opening-build', help='make a per-player historical opening tree, Mequinho training embargo enforced')
     ob9.add_argument('player')
     ob9.add_argument('--pgn', type=Path, required=True)
@@ -518,6 +528,25 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     try:
+        if args.command == "pgn-cache":
+            from .licensed_pgn_cache import prepare_cache
+            report = prepare_cache(args.catalog, out=args.out, apply=args.apply,
+                                   max_games=args.max_games,
+                                   max_cache_mb=args.max_cache_mb)
+            print(json.dumps({
+                "status": report["status"], "operation": report["operation"],
+                "rights_status": report["rights_status"],
+                "sources": report["sources"], "games_examined": report["games_examined"],
+                "games_distinct": report["games_distinct"],
+                "games_duplicates": report["games_duplicates"],
+                "games_excluded": report["games_excluded"],
+                "complete_results": report["complete_results"],
+                "incomplete_results": report["incomplete_results"],
+                "estimated_pgn_bytes": report["estimated_pgn_bytes"],
+                "max_disk_bytes": report["max_disk_bytes"],
+                "cache_pgn_sha256": report["cache_pgn_sha256"],
+            }, ensure_ascii=False, indent=2))
+            return 0
         if args.command == "rating-export":
             from .competition_rating import export_rating_ledger
             info = export_rating_ledger(args.workspace, args.out, k=args.k,
