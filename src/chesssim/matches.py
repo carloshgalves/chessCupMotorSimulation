@@ -6,6 +6,7 @@ from hashlib import sha256
 from pathlib import Path
 import json
 import math
+import threading
 import uuid
 import re
 import time
@@ -186,11 +187,14 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             if opening_move is not None:
                 actual_move = opening_move
             else:
-                # A whole-game wall budget must also limit an in-flight UCI
-                # search. python-chess SimpleEngine honours its per-command
-                # timeout; previous code only checked between moves.
+                # python-chess SimpleEngine._timeout_for(limit) is UNBOUNDED
+                # for depth/clock searches (Limit.time is None), even when
+                # SimpleEngine.timeout has been shortened. A separate daemon
+                # watchdog must close the transport when the game budget ends.
                 original_timeout = getattr(actor, "timeout", None)
                 deadline_limited = False
+                cancel_watchdog = threading.Event()
+                watchdog_expired = threading.Event()
                 if max_wall_seconds is not None:
                     remaining = max_wall_seconds - (time.monotonic() - started)
                     if remaining <= 0:
@@ -199,21 +203,44 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                     if isinstance(original_timeout, (int, float)) and original_timeout > 0:
                         deadline_limited = remaining < original_timeout
                         actor.timeout = min(original_timeout, max(0.001, remaining))
+
+                    def close_on_deadline():
+                        if not cancel_watchdog.wait(timeout=remaining):
+                            watchdog_expired.set()
+                            # SimpleEngine.close is thread-safe and causes the
+                            # pending play() to terminate without a UCI bestmove.
+                            try:
+                                actor.close()
+                            except BaseException:
+                                pass
+
+                    threading.Thread(
+                        target=close_on_deadline, daemon=True,
+                        name="chesssim-uci-deadline").start()
                 try:
                     result = actor.play(board, turn_limit, game=game,
                                         info=chess.engine.INFO_NONE)
                 except TimeoutError:
-                    # Timed-out UCI processes cannot be trusted to respond to
-                    # 'quit': close their transport directly in the finally.
                     failed_engine_ids.add(id(actor))
-                    interrupted = ("WallTimeLimit" if deadline_limited else
+                    interrupted = ("WallTimeLimit" if deadline_limited or
+                                   watchdog_expired.is_set() else
                                    "EngineResponseTimeout")
                     break
                 except chess.engine.EngineTerminatedError:
                     failed_engine_ids.add(id(actor))
-                    interrupted = "EngineTerminated"
+                    interrupted = ("WallTimeLimit" if watchdog_expired.is_set() else
+                                   "EngineTerminated")
+                    break
+                except Exception:
+                    if not watchdog_expired.is_set():
+                        raise
+                    failed_engine_ids.add(id(actor))
+                    interrupted = "WallTimeLimit"
                     break
                 finally:
+                    cancel_watchdog.set()
+                    if watchdog_expired.is_set():
+                        failed_engine_ids.add(id(actor))
                     if original_timeout is not None and id(actor) not in failed_engine_ids:
                         actor.timeout = original_timeout
                 actual_move = result.move
