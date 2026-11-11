@@ -40,6 +40,7 @@ def _fixture(tmp_path: Path):
     ]
     doc = {"protocol": PROTOCOL,
            "inputs": {"pgn_sha256": sha256(pgn.read_bytes()).hexdigest(),
+                      "stockfish_sha256": "a" * 64,
                       "engine_uci_id": {"name": "Stockfish test"},
                       "depth": 18}, "decisions": rows}
     report.write_text(json.dumps(doc), encoding="utf-8")
@@ -84,6 +85,9 @@ def test_overlay_rejects_foreign_fen_and_move_without_partial_evidence(tmp_path)
     lambda d: d.update(protocol="unknown"),
     lambda d: d["inputs"].update(pgn_sha256="wrong"),
     lambda d: d["inputs"].update(depth=True),
+    lambda d: d["inputs"].update(stockfish_sha256=None),
+    lambda d: d["inputs"].update(engine_uci_id={}),
+    lambda d: d["decisions"][0].update(game_index=False),
     lambda d: d["decisions"][0].update(ply=0),
     lambda d: d["decisions"][0].update(played_eval_cp=float("nan")),
     lambda d: d["decisions"][0].update(cp_loss=-1),
