@@ -165,11 +165,9 @@ def _cluster_intervals(holdout: list[dict], baseline: tuple[float, ...],
     log_diffs = []
     draws = []
     for _ in range(BOOTSTRAP_ITERATIONS):
-        sampled = [
-            game for _ in event_ids
-            for event_game in grouped[rng.choice(event_ids)]
-            for game in [event_game]
-        ]
+        sampled = []
+        for _season in event_ids:
+            sampled.extend(grouped[rng.choice(event_ids)])
         a = _metrics(sampled, NOMINAL_FAST_WDL)
         b = _metrics(sampled, baseline)
         brier_diffs.append(a["multiclass_brier"] - b["multiclass_brier"])
@@ -300,9 +298,13 @@ def export_audit(workspace: Path, out: Path) -> dict:
     report = audit_workspace(workspace)
     output = out.expanduser().absolute()
     parent = output.parent
-    if (not parent.is_dir() or parent.is_symlink() or
-            output.is_symlink() or output.exists()):
-        raise ValueError("Destino deve ser arquivo JSON novo em pasta regular existente")
+    workspace_root = workspace.expanduser().resolve()
+    if (not parent.is_dir() or
+            any(ancestor.is_symlink() for ancestor in (parent, *parent.parents)) or
+            output.is_symlink() or output.exists() or
+            output.resolve().is_relative_to(workspace_root)):
+        raise ValueError(
+            "Destino deve ser arquivo novo fora da árvore auditada e sem symlinks")
     payload = json.dumps(report, ensure_ascii=False, indent=2,
                          sort_keys=True, allow_nan=False).encode("utf-8") + b"\n"
     with tempfile.NamedTemporaryFile(
