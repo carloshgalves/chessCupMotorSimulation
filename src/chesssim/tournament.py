@@ -474,11 +474,22 @@ def tournament_recovery_preview(directory: Path) -> dict:
     _advance(candidate)
     preview = _summary(candidate)
     stop = _stop_file(directory).exists()
+    if candidate["champion"] is not None:
+        recovery_gate = "COMPETITION_COMPLETE"
+    elif stop:
+        recovery_gate = "STOP_REQUESTED"
+    elif preview["matches_retry_required"]:
+        recovery_gate = "EXPLICIT_RETRY_REQUIRED"
+    elif preview["matches_pending_tiebreak"]:
+        recovery_gate = "TIEBREAK_DECISION_REQUIRED"
+    else:
+        recovery_gate = "NO_INCOMPLETE_ATTEMPTS_DETECTED"
     return {
         "schema": "chesssim-tournament-recovery-preview-v1",
         "mode": "READ_ONLY_ADVISORY",
         "checkpoint_status": state["status"],
         "projected_status": candidate["status"],
+        "recovery_gate": recovery_gate,
         "stop_requested": stop,
         "recovered_completed_attempts": recovered,
         "excluded_incomplete_attempts": excluded,
@@ -490,6 +501,7 @@ def tournament_recovery_preview(directory: Path) -> dict:
             "Snapshot may race a running tournament; inspect only while idle.",
             "No game, process, UCI command, checkpoint or score was changed.",
             "An incomplete attempt requires explicit --retry-incomplete.",
+            "Checkpoint/projected status is not an execution authorization; inspect recovery_gate.",
             "This does not test kernel resource quotas, SIGKILL or power-loss recovery on a real engine.",
         ],
     }
