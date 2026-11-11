@@ -79,7 +79,7 @@ def test_dry_run_exact_same_plan_then_atomic_apply_and_second_apply_refused(tmp_
     assert preview["games_examined"] == 3
     assert preview["games_distinct"] == 2
     assert preview["games_duplicates"] == 1
-    assert preview["complete_results"] == 2
+    assert preview["games_with_declared_result"] == 2
     assert {s["id"] for s in preview["sources"]} == {"a", "b"}
     applied = prepare_cache(sources, out=out, apply=True)
     assert applied["operation"] == "APPLIED"
@@ -218,8 +218,8 @@ def test_zero_ply_and_unknown_date_not_presented_as_complete_game(tmp_path):
     assert report["games_examined"] == 2
     assert report["games_excluded"] == {"zero_ply": 1}
     assert report["games_distinct"] == 1
-    assert report["complete_results"] == 0
-    assert report["incomplete_results"] == 1
+    assert report["games_with_declared_result"] == 0
+    assert report["games_with_unknown_result"] == 1
 
 
 def test_budget_enforced_before_writing(tmp_path):
