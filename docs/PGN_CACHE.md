@@ -45,7 +45,7 @@ python -m chesssim pgn-cache \
   --max-games 200 --max-cache-mb 32
 ~~~
 
-O pré-voo verifica catálogo, atestação, integridade do PGN e dos movimentos, SHA-256 das fontes, duplicatas de linhas principais, variantes e resultados, número de partidas por fonte, jogadores declarados e tamanho previsto. Não inventa datas ausentes, identificação inequívoca de homônimos, licenças de terceiros ou grau de cobertura histórica.
+O pré-voo verifica catálogo, atestação, integridade do PGN e dos movimentos, SHA-256 das fontes, duplicatas de linhas principais, variantes e resultados, número de partidas por fonte, jogadores declarados e tamanho previsto. O orçamento de disco contabiliza os bytes do **PGN derivado e do manifesto JSON juntos**, expostos em `estimated_pgn_bytes`, `estimated_manifest_bytes` e `estimated_cache_bytes`. Não inventa datas ausentes, identificação inequívoca de homônimos, licenças de terceiros ou grau de cobertura histórica.
 
 ### Persistir somente mediante autorização
 
