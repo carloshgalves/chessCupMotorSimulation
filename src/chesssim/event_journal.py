@@ -19,6 +19,34 @@ MAX_EVENTS_PER_STREAM = 32
 _EVENT_ID = re.compile(r"([a-f0-9]{16})\.([1-9][0-9]{0,15})\.([a-f0-9]{64})\Z")
 
 
+def _outdated(prior: dict, incoming: dict) -> bool:
+    """Ignore an older concurrent read from the same selected duel.
+
+    This is deliberately conservative: a new folder/selection may start at
+    ply zero; only regressions inside the same identified duel are stale.
+    """
+    if (prior.get("selection") != incoming.get("selection") or
+            prior["duel"]["folder"] != incoming["duel"]["folder"]):
+        return False
+    old_games = {g["id"]: g for g in prior["games"]}
+    new_games = {g["id"]: g for g in incoming["games"]}
+    if set(old_games) - set(new_games):
+        return True
+    for ident, game in new_games.items():
+        old = old_games.get(ident)
+        if old is None:
+            continue
+        if game["ply"] < old["ply"]:
+            return True
+        terminal = {"COMPLETED", "INCOMPLETE", "FAILED", "INTERRUPTED"}
+        if old["status"] in terminal and game["status"] not in terminal:
+            return True
+    if (prior["duel"]["status"] in {"COMPLETED", "INCOMPLETE", "FAILED"} and
+            incoming["duel"]["status"] == "RUNNING"):
+        return True
+    return False
+
+
 class EventJournal:
     """Per-process, bounded, thread-safe checkpoint-notification history."""
 
@@ -48,13 +76,19 @@ class EventJournal:
                 self._streams.move_to_end(stream)
             if not events or events[-1]["revision"] != revision:
                 prior = events[-1]["body"] if events else None
-                self._next += 1
-                ident = f"{self.epoch}.{self._next}.{revision}"
-                events.append({
-                    "id": ident, "revision": revision,
-                    "sequence": self._next, "epoch": self.epoch,
-                    "body": payload, "changes": _changes(prior, payload),
-                })
+                if prior is not None and _outdated(prior, payload):
+                    # A slow reader returned a stale in-flight snapshot after
+                    # another client had already observed the newer ply.
+                    # Keep the last journal event; never emit a rollback.
+                    revision = events[-1]["revision"]
+                else:
+                    self._next += 1
+                    ident = f"{self.epoch}.{self._next}.{revision}"
+                    events.append({
+                        "id": ident, "revision": revision,
+                        "sequence": self._next, "epoch": self.epoch,
+                        "body": payload, "changes": _changes(prior, payload),
+                    })
             if not last_id:
                 return [self._presentation(events[-1], resync=True)]
             valid = _EVENT_ID.fullmatch(last_id) if len(last_id) <= 112 else None
