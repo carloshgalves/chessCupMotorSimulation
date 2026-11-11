@@ -93,3 +93,28 @@ def test_missing_cgroup_v2_never_spawns_unbounded_child(monkeypatch):
                           "--", "arena", "--out", "/tmp/new"])
     assert result == 3
     assert calls == []
+
+def test_missing_systemd_run_fails_closed_even_with_cgroup_v2(monkeypatch):
+    runner = _module()
+    calls = []
+    monkeypatch.setattr(runner.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(runner.shutil, "which", lambda cmd: None)
+    monkeypatch.setattr(runner, "_has_unified_cgroup", lambda: True)
+    monkeypatch.setattr(runner.subprocess, "run", lambda *a, **kw: calls.append(a))
+    assert runner.main(["--memory-mib", "768", "--cpu-percent", "100",
+                        "--", "tournament-run", "--run", "/tmp/isolated"]) == 3
+    assert not calls
+
+
+def test_dry_run_never_launches_scope_even_when_systemd_is_available(monkeypatch, capsys):
+    runner = _module()
+    calls = []
+    monkeypatch.setattr(runner.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(runner.shutil, "which", lambda cmd: "/usr/bin/systemd-run")
+    monkeypatch.setattr(runner, "_has_unified_cgroup", lambda: True)
+    monkeypatch.setattr(runner.subprocess, "run", lambda *a, **kw: calls.append(a))
+    assert runner.main(["--memory-mib", "768", "--cpu-percent", "100",
+                        "--dry-run", "--", "tournament-run",
+                        "--run", "/tmp/isolated"]) == 0
+    assert not calls
+    assert "PLAN_ONLY_NOT_ENFORCED" in capsys.readouterr().out
