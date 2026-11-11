@@ -13,6 +13,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  git-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Reject sensitive tracked artifacts and recognizable credentials
+        run: python3 scripts/audit_git_artifacts.py --scope tracked
+
+  history-hygiene:
+    # One-off actual retrospective evidence on this implementation PR.
+    # Future PRs run the cheap preventive gate; full history remains opt-in.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.head_ref == 'feat/git-history-safety-7')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Audit every reachable Git object and historical path (redacted)
+        # Historical findings are evidence for triage, not code regression;
+        # a manually dispatched audit still fails if findings are present.
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
+        run: python3 scripts/audit_git_artifacts.py --scope history --output "${RUNNER_TEMP}/git-history-audit.json"
+      - name: Upload redacted history audit result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: git-history-redacted-audit
+          path: ${{ runner.temp }}/git-history-audit.json
+          if-no-files-found: warn
+          retention-days: 7
+
   test:
     runs-on: ubuntu-latest
     strategy:
