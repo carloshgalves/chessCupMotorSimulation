@@ -14,6 +14,7 @@ from pathlib import Path, PurePosixPath
 import re
 import shutil
 from tempfile import mkdtemp
+from urllib.parse import urlsplit
 
 import chess.pgn
 
@@ -64,11 +65,17 @@ def _source_path(raw: str) -> Path:
 
 
 def _https(value: object) -> bool:
-    return (isinstance(value, str) and len(value) <= 2048 and
-            value.startswith("https://") and
-            not any(ch.isspace() for ch in value) and
-            "@" not in value.split("/")[2] and
-            "." in value.split("/")[2])
+    if not isinstance(value, str) or not 1 <= len(value) <= 2048:
+        return False
+    if any(ch.isspace() for ch in value):
+        return False
+    try:
+        parts = urlsplit(value)
+        return (parts.scheme == "https" and bool(parts.hostname) and
+                "." in parts.hostname and not parts.username and
+                not parts.password and not parts.query and not parts.fragment)
+    except ValueError:
+        return False
 
 
 def _catalog(path: Path) -> tuple[list[dict], str]:
@@ -99,7 +106,8 @@ def _catalog(path: Path) -> tuple[list[dict], str]:
         _source_path(item["file"])
         if not (_https(item["source_url"]) and _https(item["license_evidence_url"])):
             raise ValueError("Origem e evidência precisam de URLs HTTPS")
-        if item["license_id"] not in ALLOWED_LICENSES:
+        if (not isinstance(item["license_id"], str) or
+                item["license_id"] not in ALLOWED_LICENSES):
             raise ValueError("Licença não reconhecida: aprovação manual necessária")
         if (item["rights_attestation"] != "operator_reviewed" or
                 not isinstance(item["attribution"], str) or
@@ -113,9 +121,11 @@ def _catalog(path: Path) -> tuple[list[dict], str]:
         if day > date.today():
             raise ValueError("Revisão de direitos não pode ter data futura")
         uses = item["allowed_uses"]
-        if not isinstance(uses, list) or len(uses) != len(set(uses)) or not (
-                set(uses) <= {"local_cache", "derived_openings"} and
-                "local_cache" in uses):
+        if (not isinstance(uses, list) or
+                not all(isinstance(use, str) for use in uses) or
+                len(uses) != len(set(uses)) or
+                not (set(uses) <= {"local_cache", "derived_openings"} and
+                     "local_cache" in uses)):
             raise ValueError("Uso local não foi autorizado pelo operador")
         if not isinstance(item["expected_sha256"], str) or not HEX_SHA.fullmatch(
                 item["expected_sha256"]):
@@ -316,10 +326,17 @@ def prepare_cache(catalog: Path, *, out: Path, apply: bool = False,
         (stage / "manifest.json").write_text(
             json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
             encoding="utf-8")
-        if out.exists() or out.is_symlink():
-            raise FileExistsError("Diretório apareceu durante o preparo")
-        stage.rename(out)
-    except BaseException:
+        # Exclusive mkdir is atomic and cannot replace an empty directory
+        # created by another process in between validation and commit.
+        out.mkdir(mode=0o700, exist_ok=False)
+        try:
+            (stage / "games.pgn").replace(out / "games.pgn")
+            # The manifest is the final commit marker: consumers must only
+            # read caches that contain both files with matching hashes.
+            (stage / "manifest.json").replace(out / "manifest.json")
+        except BaseException:
+            shutil.rmtree(out)
+            raise
+    finally:
         shutil.rmtree(stage)
-        raise
     return report
