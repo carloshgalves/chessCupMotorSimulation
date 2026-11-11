@@ -95,6 +95,17 @@ def main(argv: list[str] | None = None) -> int:
     diversity.add_argument("--opening-plies", type=int, default=12,
                            help="Posição de abertura comparada após N meios-lances (2..40)")
 
+    diversity_plan = sub.add_parser(
+        "diversity-plan", help="Planeja comparação pareada de seeds, sem abrir motor nem PGN")
+    diversity_plan.add_argument("--players", nargs=2, required=True,
+                                help="Dois slugs canônicos distintos")
+    diversity_plan.add_argument("--seed", type=int, default=2029)
+    diversity_plan.add_argument("--trials", type=int, default=6)
+    diversity_plan.add_argument("--external-repertoire", action="store_true",
+                                help="Declara hipótese de repertório externo ativo; não verifica instalação")
+    diversity_plan.add_argument("--out", type=Path, required=True,
+                                help="Arquivo JSON novo, nunca sobrescrito")
+
     fast_audit = sub.add_parser(
         "fast-audit", help="Avalia probabilidades fixas da temporada rápida contra partidas UCI verificadas")
     fast_audit.add_argument("--workspace", type=Path, required=True,
@@ -552,6 +563,17 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     try:
+        if args.command == "diversity-plan":
+            from .diversity_experiment import export_plan
+            plan = export_plan(args.players, args.out, seed=args.seed,
+                               trials=args.trials,
+                               declared_external_repertoire=args.external_repertoire)
+            print(json.dumps({"out": str(args.out), "status": plan["status"],
+                              "trials": plan["trials"],
+                              "design_sha256": plan["design_sha256"],
+                              "seed_effectiveness": plan["seed_effectiveness"]},
+                             ensure_ascii=False, indent=2))
+            return 0
         if args.command == "diversity-report":
             from .diversity_report import export_diversity
             result = export_diversity(args.runs, args.out, opening_plies=args.opening_plies)
