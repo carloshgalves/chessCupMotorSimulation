@@ -65,6 +65,12 @@ def main(argv: list[str] | None = None) -> int:
     tournament_status = sub.add_parser("tournament-status", help="Mostra progresso e pendências do chaveamento")
     tournament_status.add_argument("--run", type=Path, required=True)
 
+    recovery = sub.add_parser(
+        "tournament-recovery-preview",
+        help="Pré-visualiza retomada e tentativas interrompidas sem alterar arquivos ou iniciar motores")
+    recovery.add_argument("--run", type=Path, required=True,
+                          help="Diretório de torneio persistente a ser auditado")
+
     tournament_stop = sub.add_parser("tournament-stop",
                                      help="Solicita parada graciosa sem aguardar o lock da partida")
     tournament_stop.add_argument("--run", type=Path, required=True)
@@ -1012,6 +1018,10 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "tournament-status":
             from .tournament import tournament_status
             print(json.dumps(tournament_status(args.run), indent=2, ensure_ascii=False))
+        elif args.command == "tournament-recovery-preview":
+            from .tournament import tournament_recovery_preview
+            print(json.dumps(tournament_recovery_preview(args.run),
+                             indent=2, ensure_ascii=False))
         elif args.command == "tournament-stop":
             from .tournament import request_stop
             print(json.dumps(request_stop(args.run, reason=args.reason),
