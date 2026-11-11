@@ -110,9 +110,13 @@ partida `INCOMPLETE`, sem atribuir derrota/empate. O limite por execução
 faz uma pausa graciosa e não se mantém entre chamadas.
 
 **Proteção adicional da busca UCI (#27):** a cada `go`, quando existe
-`--max-game-wall-seconds`, o `SimpleEngine` recebe um timeout de comunicação
-limitado ao **tempo restante da partida**, em vez de aguardar até 120 segundos
-por resposta. Se uma busca expirar, o resultado é `INCOMPLETE` com
+`--max-game-wall-seconds`, um watchdog independente aguarda somente o
+**tempo restante da partida** e, se vencer, encerra o transporte UCI da
+busca em andamento. O timeout interno do `SimpleEngine` também é reduzido
+quando aplicável. Isso é necessário porque, em buscas por profundidade ou
+relógio, `python-chess` não aplica automaticamente `SimpleEngine.timeout`
+ao `play()` sem `Limit.time`. Se uma busca expirar, o resultado é
+`INCOMPLETE` com
 `Termination=WallTimeLimit`; sem orçamento explícito, uma resposta UCI que
 exceder o timeout padrão é marcada `EngineResponseTimeout`, e a queda do motor
 durante a busca é marcada `EngineTerminated`. **Nenhum desses eventos é derrota,
@@ -124,8 +128,9 @@ sem aguardar `quit` UCI. Um duelo interrompido não inicia o jogo com cores
 invertidas e não é computado como confronto finalizado. Uma nova tentativa
 deve ser autorizada via `--retry-incomplete`.
 
-O timeout do `python-chess` limita **o comando UCI e o tempo de espera do
-aplicativo**, mas não equivale a um prazo incondicional do sistema operacional
+O watchdog e o timeout do `python-chess` limitam **a espera do
+aplicativo sob um orçamento explícito**, mas não equivalem a um prazo
+incondicional do sistema operacional
 (`SIGKILL`, falha elétrica, processo em espera ininterruptível, suspensão do
 host). O pedido `tournament-stop` continua cooperativo, verificado entre
 lances. A limitação de CPU permanece em uma thread por motor do protocolo
