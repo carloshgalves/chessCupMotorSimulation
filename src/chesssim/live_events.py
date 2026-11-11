@@ -205,7 +205,7 @@ def stream_events_v2(handler, initial: dict, read_state, stream_key: str) -> Non
             handler.send_header(key, value)
         handler.end_headers()
         handler.close_connection = True
-        handler.wfile.write(f"retry: {EVENT_RETRY_MS}\\n\\n".encode("ascii"))
+        handler.wfile.write(f"retry: {EVENT_RETRY_MS}\n\n".encode("ascii"))
         cursor = handler.headers.get("Last-Event-ID", "")
         if len(cursor) > 112:
             cursor = ""
@@ -217,13 +217,13 @@ def stream_events_v2(handler, initial: dict, read_state, stream_key: str) -> Non
             for item in pending:
                 encoded = json.dumps(item, ensure_ascii=False, allow_nan=False,
                                      separators=(",", ":"))
-                frame = (f"id: {item['event_id']}\\nevent: state\\n"
-                         f"data: {encoded}\\n\\n")
+                frame = (f"id: {item['event_id']}\nevent: state\n"
+                         f"data: {encoded}\n\n")
                 handler.wfile.write(frame.encode("utf-8"))
                 cursor = item["event_id"]
                 last_ping = time.monotonic()
             if not pending and time.monotonic() - last_ping >= 2:
-                handler.wfile.write(b": keepalive\\n\\n")
+                handler.wfile.write(b": keepalive\n\n")
                 last_ping = time.monotonic()
             handler.wfile.flush()
             time.sleep(EVENT_POLL_SECONDS)
@@ -234,7 +234,7 @@ def stream_events_v2(handler, initial: dict, read_state, stream_key: str) -> Non
             json.JSONDecodeError):
         # Never disclose local source paths or untrusted parser content.
         try:
-            handler.wfile.write(b"event: unavailable\\ndata: {}\\n\\n")
+            handler.wfile.write(b"event: unavailable\ndata: {}\n\n")
             handler.wfile.flush()
         except (BrokenPipeError, ConnectionResetError, OSError):
             pass
