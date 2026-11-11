@@ -88,8 +88,10 @@ def test_dry_run_exact_same_plan_then_atomic_apply_and_second_apply_refused(tmp_
     assert sha256((out / "games.pgn").read_bytes()).hexdigest() == (
         preview["cache_pgn_sha256"])
     assert json.loads((out / "manifest.json").read_text(encoding="utf-8")) == applied
-    assert (out / "games.pgn").read_bytes() == (
-        (out / "games.pgn").read_bytes())  # immutable content after first commit
+    assert applied["estimated_manifest_bytes"] == (out / "manifest.json").stat().st_size
+    assert applied["estimated_cache_bytes"] == sum(
+        p.stat().st_size for p in out.iterdir() if p.is_file())
+    assert applied["estimated_cache_bytes"] <= applied["max_disk_bytes"]
     with pytest.raises(FileExistsError):
         prepare_cache(sources, out=out, apply=True)
 
@@ -243,6 +245,8 @@ def test_160_game_sample_offline_quota_and_deterministic_cache(tmp_path):
     assert a["games_distinct"] == 160
     assert a["sources"][0]["players_seen_in_new_games"]["Research Player"] == 160
     assert a["estimated_pgn_bytes"] > 0
+    assert a["estimated_cache_bytes"] > a["estimated_pgn_bytes"]
+    assert a["estimated_cache_bytes"] <= a["max_disk_bytes"]
     with pytest.raises(ValueError, match="quota"):
         prepare_cache(path, out=tmp_path / "cache", max_games=100, apply=True)
     assert not (tmp_path / "cache").exists()
