@@ -84,10 +84,10 @@ def test_stalled_uci_go_times_out_and_both_children_are_reaped(tmp_path):
     """A stuck search must not keep tournament workers alive for 120 seconds."""
     exe = tmp_path / "rodent-iv-plain.exe"
     # UCI handshake succeeds; the engine then stalls on the first 'go' command.
-    slow_stub = UCI_STUB.replace("import sys\\n", "import sys\\nimport time\\n")
+    slow_stub = UCI_STUB.replace("import sys\n", "import sys\nimport time\n")
     slow_stub = slow_stub.replace(
         'print("bestmove " + sequence[len(moves) % len(sequence)], flush=True)',
-        'time.sleep(5)\\n        print("bestmove " + sequence[len(moves) % len(sequence)], flush=True)')
+        'time.sleep(5)\n        print("bestmove " + sequence[len(moves) % len(sequence)], flush=True)')
     exe.write_text(slow_stub, encoding="utf-8")
     exe.chmod(0o755)
     a = find_player("fischer")
