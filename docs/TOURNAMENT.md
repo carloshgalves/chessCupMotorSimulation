@@ -107,10 +107,29 @@ python -m chesssim tournament-run --run runs/copa-piloto-4 \
 Esses valores são exemplos, não configurações obrigatórias. O limite por
 partida é **congelado na criação do torneio**; atingir esse orçamento marca a
 partida `INCOMPLETE`, sem atribuir derrota/empate. O limite por execução
-faz uma pausa graciosa e não se mantém entre chamadas. Os limites são
-verificados entre lances, não são deadlines preemptivas durante uma busca
-bloqueada. A limitação de CPU permanece em uma thread por motor do protocolo
-e **não equivale a uma quota do sistema operacional**.
+faz uma pausa graciosa e não se mantém entre chamadas.
+
+**Proteção adicional da busca UCI (#27):** a cada `go`, quando existe
+`--max-game-wall-seconds`, o `SimpleEngine` recebe um timeout de comunicação
+limitado ao **tempo restante da partida**, em vez de aguardar até 120 segundos
+por resposta. Se uma busca expirar, o resultado é `INCOMPLETE` com
+`Termination=WallTimeLimit`; sem orçamento explícito, uma resposta UCI que
+exceder o timeout padrão é marcada `EngineResponseTimeout`, e a queda do motor
+durante a busca é marcada `EngineTerminated`. **Nenhum desses eventos é derrota,
+vitória ou empate enxadrístico**.
+
+Lances recebidos após o orçamento de parede são descartados, preservando o
+checkpoint anterior; o transporte do motor sem resposta é fechado diretamente,
+sem aguardar `quit` UCI. Um duelo interrompido não inicia o jogo com cores
+invertidas e não é computado como confronto finalizado. Uma nova tentativa
+deve ser autorizada via `--retry-incomplete`.
+
+O timeout do `python-chess` limita **o comando UCI e o tempo de espera do
+aplicativo**, mas não equivale a um prazo incondicional do sistema operacional
+(`SIGKILL`, falha elétrica, processo em espera ininterruptível, suspensão do
+host). O pedido `tournament-stop` continua cooperativo, verificado entre
+lances. A limitação de CPU permanece em uma thread por motor do protocolo
+e **não equivale a uma quota rígida do kernel**.
 
 ## Interrupções e empates
 
