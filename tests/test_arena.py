@@ -699,3 +699,47 @@ def test_depth_plus_bullet_is_forwarded_to_duel_without_losing_clock(rodent_stub
     assert observed[0]["depth"]==16
     assert observed[0]["clock"]==(60,0)
     assert observed[0]["movetime"] is None
+
+
+
+def test_arena_v2_event_reconnect_is_read_only_and_backward_compatible(
+        rodent_stub, monkeypatch):
+    from chesssim import live_events
+
+    monkeypatch.setattr(live_events, "EVENT_POLL_SECONDS", 0.02)
+    monkeypatch.setattr(live_events, "EVENT_STREAM_SECONDS", 0.1)
+    with arena_server(rodent_stub) as (server, base):
+        def receive_v2(headers=None):
+            with urlopen(Request(base + "/api/events/v2",
+                                 headers=headers or {}), timeout=4) as response:
+                assert response.status == 200
+                assert response.headers["Cache-Control"] == "no-store"
+                for _ in range(30):
+                    line = response.readline().decode("utf-8")
+                    if line.startswith("data: "):
+                        return json.loads(line.removeprefix("data: "))
+            raise AssertionError("SSE v2 event missing")
+
+        first = receive_v2()
+        assert first["schema"] == "chesssim-game-events-v2"
+        assert first["resync_required"] is True
+        assert first["duel"]["status"] is None
+        assert first["games"] == []
+        with pytest.raises(HTTPError) as invalid:
+            urlopen(base + "/api/events/v2?match=r01-m01", timeout=3)
+        assert invalid.value.code == 400
+        with pytest.raises(HTTPError) as invalid:
+            urlopen(Request(base + "/api/events/v2",
+                            headers={"Origin": "https://untrusted.example"}),
+                    timeout=3)
+        assert invalid.value.code == 403
+        with post(base, "/api/arena/launch", GOOD, server.arena_token) as launched:
+            assert launched.status == 202
+        wait_for(server.arena_manager, "COMPLETED")
+        second = receive_v2({"Last-Event-ID": first["event_id"]})
+        assert second["schema"] == "chesssim-game-events-v2"
+        assert second["sequence"] > first["sequence"]
+        assert second["resync_required"] is False
+        assert second["duel"]["status"] == "COMPLETED"
+        assert second["games"][0]["ply"] == len(FOOLS_MATE)
+        assert api(base, "/api/state")["duel"]["status"] == "COMPLETED"
