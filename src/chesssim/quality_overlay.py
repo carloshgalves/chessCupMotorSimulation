@@ -37,10 +37,13 @@ class QualityOverlay:
             raise ValueError("Falta hash verificável do PGN de origem")
         if not _integer(inputs.get("depth"), 1, 35):
             raise ValueError("Profundidade de análise inválida")
+        engine_sha = inputs.get("stockfish_sha256")
+        if not isinstance(engine_sha, str) or not HEX_SHA.fullmatch(engine_sha):
+            raise ValueError("Falta hash verificável do motor de análise")
         engine = inputs.get("engine_uci_id")
         if not isinstance(engine, dict):
             raise ValueError("Identidade do motor ausente")
-        name = engine.get("name", "Stockfish")
+        name = engine.get("name")
         if not isinstance(name, str) or not 1 <= len(name) <= 100:
             raise ValueError("Nome do motor inválido")
         self.pgn_sha256 = digest
@@ -48,7 +51,7 @@ class QualityOverlay:
         self.depth = inputs["depth"]
         self.positions = {}
         for row in rows:
-            if not isinstance(row, dict) or row.get("game_index") != 0:
+            if not isinstance(row, dict) or type(row.get("game_index")) is not int or row["game_index"] != 0:
                 raise ValueError("A camada visual aceita relatório de uma única partida")
             ply = row.get("ply")
             fen = row.get("fen")
