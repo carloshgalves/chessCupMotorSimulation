@@ -219,6 +219,14 @@ def test_export_is_exclusive_and_does_not_touch_source_files(monkeypatch, tmp_pa
     assert source.read_text(encoding="utf-8") == "untouched"
     with pytest.raises(ValueError):
         audit.export_audit(workspace, out)
+    internal = workspace / "report.json"
+    with pytest.raises(ValueError, match="fora"):
+        audit.export_audit(workspace, internal)
+    assert not internal.exists()
+    link = tmp_path / "alias"
+    link.symlink_to(tmp_path, target_is_directory=True)
+    with pytest.raises(ValueError):
+        audit.export_audit(workspace, link / "report.json")
     assert not list(tmp_path.glob(".fast-audit-*.tmp"))
 
 
