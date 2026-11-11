@@ -31,6 +31,11 @@ def record(season: int, game: int, *, result="1-0", modality="rapid") -> dict:
         "rating_eligible": True,
         "receipt_sha256": f"{season:032x}{game:032x}",
         "evidence_pgn_sha256": f"{game:032x}{season:032x}",
+        "engine_strength_config": {
+            "engine_sha256": "a" * 64,
+            "white_profile_sha256": "b" * 64,
+            "black_profile_sha256": "c" * 64,
+        },
         "recorded_utc": now.isoformat(),
     }
 
@@ -118,6 +123,26 @@ def test_the_multiclass_scoring_rule_has_correct_scale():
     assert m["white_minus_black_win_fraction"] == 0
 
 
+def test_unseen_engine_revision_is_reported_not_sold_as_generalization():
+    games = sample()
+    altered = []
+    for g in games:
+        if g["event_id"] == f"league-{8:016x}":
+            altered.append({
+                **g, "engine_strength_config": {
+                    **g["engine_strength_config"], "engine_sha256": "d" * 64,
+                },
+            })
+        else:
+            altered.append(g)
+    report = audit.evaluate_verified_games(altered)
+    assert report["status"] == "DISTRIBUTION_SHIFT_DESCRIPTIVE_ONLY"
+    assert report["evaluation"] is not None
+    assert report["split"]["train_engine_sha256"] == ["a" * 64]
+    assert report["split"]["holdout_engine_sha256"] == ["a" * 64, "d" * 64]
+    assert any("generalization" in warning for warning in report["warnings"])
+
+
 def test_rejected_season_prevents_selective_survivorship_analysis():
     report = audit.evaluate_verified_games(sample(), rejected_seasons=1,
                                            projections_seen=400)
@@ -143,6 +168,7 @@ def test_insufficient_games_do_not_publish_overconfident_statistics():
     ("recorded_utc", "2026-10-01"),
     ("receipt_sha256", "invalid"),
     ("evidence_pgn_sha256", None),
+    ("engine_strength_config", {"engine_sha256": "a" * 64}),
     ("white", None),
     ("modality", "fictional"),
 ])
