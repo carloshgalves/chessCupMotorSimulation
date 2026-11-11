@@ -177,3 +177,54 @@ desempate externa nem substitui um regulamento competitivo completo.
 Não realize `git switch`, `git pull` ou alterações nos arquivos do motor
 enquanto um duelo estiver ativo. Execute um novo torneio somente depois que
 a execução atual terminar e após instalar uma versão aprovada do código.
+
+
+## Diagnóstico após SIGKILL ou queda de energia (#27)
+
+Antes de retomar um torneio após encerramento não cooperativo, com a execução
+original **parada**, use:
+
+~~~bash
+python -m chesssim tournament-recovery-preview --run /caminho/torneio
+~~~
+
+É uma inspeção **somente leitura**: não chama Rodent IV, não cria lock,
+não altera PGNs, relatórios, classificação nem tournament.json. O resultado
+é um JSON com o estado checkpointado, tentativas completas encontradas no
+disco que ainda não constam do manifesto, tentativas incompletas e confrontos
+que exigem autorização explícita de nova tentativa. O campo **recovery_gate**
+prevalece sobre o status antigo do checkpoint: EXPLICIT_RETRY_REQUIRED exige
+decisão do operador, STOP_REQUESTED exige liberação prévia do pedido de parada,
+TIEBREAK_DECISION_REQUIRED exige arbitragem, COMPETITION_COMPLETE indica fim
+e NO_INCOMPLETE_ATTEMPTS_DETECTED informa apenas que não foram encontradas
+tentativas incompletas (não autoriza iniciar execução concorrente).
+
+**Janela adicional coberta:** se o processo receber SIGKILL após criar a
+pasta da tentativa, mas **antes da gravação atômica inicial de summary.json**,
+essa pasta é registrada como MISSING_SUMMARY. Ela não é interpretada como
+partida concluída, nem descartada silenciosamente. Arquivos partial.pgn,
+se existirem, permanecem preservados. A retomada sem autorização entra em
+BLOCKED e não inicia outro par automaticamente.
+
+Quando o operador verificar a situação e optar por nova tentativa:
+
+~~~bash
+python -m chesssim tournament-run \
+  --run /caminho/torneio \
+  --rodent /caminho/RodentIV \
+  --retry-incomplete
+~~~
+
+A tentativa anterior permanece indicada como excluída. Uma partida completa
+com summary.json, duelo.pgn, hashes, cores e resultados validados pode ser
+reincorporada à classificação sem ser jogada novamente. Tentativas já
+registradas que perderam o resumo, arquivos corrompidos e diretórios/arquivos
+simbólicos provocam erro explícito, em vez de recuperação insegura.
+
+**Limites:** o comando de inspeção é um *snapshot* e não segura lock; executar
+somente sem uma partida simultânea. Os testes simulam estados de crash,
+não equivalem a ensaio físico com SIGKILL, queda de energia, persistência
+garantida por fsync ou ausência de processos UCI órfãos após morte do
+aplicativo. Tampouco instituem quota rígida de CPU/RAM no kernel. Os testes
+operacionais reais e os limites de recursos continuam pendentes nas issues
+#27 e #83.
