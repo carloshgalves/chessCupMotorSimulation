@@ -265,6 +265,48 @@ def test_strict_http_security_and_local_viewer_frame(rodent_stub):
         assert api(base,"/api/state")["duel"] is None
 
 
+def test_arena_viewer_events_share_read_only_contract(rodent_stub):
+    """The same-origin iframe receives change hints without a POST capability."""
+    with arena_server(rodent_stub) as (server, base):
+        # No running duel is an explicit event checkpoint, not a missing route.
+        with urlopen(base + "/api/events", timeout=3) as response:
+            assert response.status == 200
+            assert response.headers["Content-Type"].startswith("text/event-stream")
+            collected = []
+            for _ in range(12):
+                line = response.readline().decode("utf-8")
+                collected.append(line)
+                if line == "\\n" and any(x.startswith("event: state") for x in collected):
+                    break
+            payload_line = next(x for x in collected if x.startswith("data: "))
+            data = json.loads(payload_line.removeprefix("data: "))
+            assert data["schema"] == "chesssim-game-events-v1"
+            assert data["duel"]["status"] is None
+            assert data["games"] == []
+            assert len(data["revision"]) == 64
+        with pytest.raises(HTTPError) as wrong:
+            urlopen(base + "/api/events?match=r01-m01", timeout=3)
+        assert wrong.value.code == 400
+        with pytest.raises(HTTPError) as forbidden:
+            urlopen(Request(base + "/api/events",
+                            headers={"Origin": "https://attacker.test"}), timeout=3)
+        assert forbidden.value.code == 403
+        with post(base, "/api/arena/launch", GOOD, server.arena_token) as launched:
+            assert launched.status == 202
+        wait_for(server.arena_manager, "COMPLETED")
+        with urlopen(base + "/api/events", timeout=3) as response:
+            found = None
+            for _ in range(15):
+                line = response.readline().decode("utf-8")
+                if line.startswith("data: "):
+                    found = json.loads(line.removeprefix("data: "))
+                    break
+            assert found is not None
+            assert found["duel"]["status"] == "COMPLETED"
+            assert found["games"][0]["ply"] == len(FOOLS_MATE)
+        assert api(base, "/api/state")["duel"]["status"] == "COMPLETED"
+
+
 def test_bad_request_schema_is_not_executed(rodent_stub):
     with arena_server(rodent_stub) as (server, base):
         with pytest.raises(HTTPError) as exc:
