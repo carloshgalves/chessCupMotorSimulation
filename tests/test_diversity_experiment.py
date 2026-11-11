@@ -67,3 +67,12 @@ def test_export_is_exclusive_and_does_not_touch_runs(tmp_path):
     with pytest.raises(FileExistsError):
         export_plan(["fischer", "tal"], link, seed=2029, trials=2)
     assert not list(tmp_path.rglob("*.pgn"))
+
+def test_export_refuses_symlink_ancestor(tmp_path):
+    real = tmp_path / "real"
+    real.mkdir()
+    alias = tmp_path / "alias_dir"
+    alias.symlink_to(real, target_is_directory=True)
+    with pytest.raises(ValueError):
+        export_plan(["fischer", "tal"], alias / "plan.json", seed=2029, trials=2)
+    assert not (real / "plan.json").exists()
