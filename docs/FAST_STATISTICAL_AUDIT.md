@@ -23,7 +23,7 @@ O arquivo JSON é criado exclusivamente (`--out` não pode existir). A execuçã
 5. **Métricas:** Brier multiclasses (soma dos três erros quadráticos por partida), log loss, frequência W/D/L observada, vantagem descritiva de brancas `P(1-0)-P(0-1)`, taxa de empates e diagnósticos por modalidade. A diferença `fast - baseline` positiva significa pontuação de perda pior para o modo rápido nesse conjunto.
 6. **Incerteza:** com pelo menos cinco competições no holdout, intervalos percentis de 95% por bootstrap **agrupado por competição**, 300 réplicas, seed fixa. Com menos de cinco competições, o intervalo é `null`, não um intervalo artificialmente estreito por lance ou partida.
 
-O relatório inclui SHA-256 canônico dos registros de entrada, IDs dos eventos de treino e teste, números de jogos e descrição explícita da avaliação. Entrada insuficiente resulta `INSUFFICIENT_EVIDENCE` sem métricas de comparação. Qualquer temporada danificada resulta `BLOCKED_UNVERIFIED_SEASONS`.
+O relatório inclui SHA-256 canônico dos registros de entrada, IDs dos eventos de treino e teste, números de jogos, **hashes de versões do motor e perfis usados**, e descrição explícita da avaliação. O pré-voo exige os hashes de engine/perfis autenticados pelo recibo do projeto. Se o holdout incluir modalidade ou revisão de motor não observada no treino, o relatório sinaliza `DISTRIBUTION_SHIFT_DESCRIPTIVE_ONLY` e a limitação de generalização. Entrada insuficiente resulta `INSUFFICIENT_EVIDENCE` sem métricas de comparação. Qualquer temporada danificada resulta `BLOCKED_UNVERIFIED_SEASONS`.
 
 ## Interpretação correta
 
