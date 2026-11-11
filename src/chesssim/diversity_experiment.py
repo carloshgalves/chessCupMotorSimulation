@@ -82,7 +82,7 @@ def export_plan(players: list[str], path: Path, *, seed: int, trials: int,
                  declared_external_repertoire=declared_external_repertoire)
     if path.is_symlink() or path.exists():
         raise FileExistsError("Relatório já existe; não sobrescrever")
-    if path.parent.is_symlink():
+    if any(ancestor.is_symlink() for ancestor in path.parents):
         raise ValueError("Diretório de saída simbólico não permitido")
     # No engine, PGN, dataset, network or outside paths are opened.
     path.parent.mkdir(parents=True, exist_ok=True)
