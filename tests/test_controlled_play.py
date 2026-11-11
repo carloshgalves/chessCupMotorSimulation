@@ -263,6 +263,42 @@ def test_partial_pgn_is_recoverable_and_second_game_not_started(engine_fixture, 
     assert all(e.closed for e in engines)
 
 
+def test_stalled_second_player_preserves_partial_pgn_and_blocks_reverse_game(
+        engine_fixture, tmp_path, monkeypatch):
+    root, exe, white, black, _, engines = engine_fixture
+
+    def first_move_then_timeout(*_args, **_kwargs):
+        current = FakeEngine()
+        current.timeout = 120.0
+        if len(engines) == 1:
+            def no_bestmove(*_args, **_kwargs):
+                raise TimeoutError("waiting for bestmove")
+            current.play = no_bestmove
+        engines.append(current)
+        return current
+
+    monkeypatch.setattr(matches, "_open_engine", first_move_then_timeout)
+    folder = matches.play_duel(
+        root, tmp_path / "duels", white, black, depth=2,
+        max_plies=20, reverse=True, use_books=False)
+    report = json.loads((folder / "summary.json").read_text(encoding="utf-8"))
+    assert report["status"] == "INCOMPLETE"
+    assert len(report["games"]) == 1
+    assert report["games"][0]["status"] == "INCOMPLETE"
+    assert report["games"][0]["termination"] == "EngineResponseTimeout"
+    assert report["games"][0]["result"] == "*"
+    assert report["games"][0]["plies"] == 1
+    assert not (folder / "jogo_2.pgn").exists()
+    assert (folder / "jogo_1.partial.pgn").exists()
+    with (folder / "jogo_1.partial.pgn").open(encoding="utf-8") as source:
+        partial = chess.pgn.read_game(source)
+    assert partial is not None and not partial.errors
+    assert partial.headers["Result"] == "*"
+    assert partial.end().ply() == 1
+    assert all(e.closed for e in engines)
+    assert not engines[1].quit_called, "the stalled engine must not await quit"
+
+
 def test_stop_after_first_completed_game_does_not_complete_duel(engine_fixture, tmp_path, monkeypatch):
     root, engine, white, black, _, engines = engine_fixture
     move_counter = [0]
