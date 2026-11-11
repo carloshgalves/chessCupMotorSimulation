@@ -388,8 +388,9 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   await flush();
   assert.equal(observed.streams.length,1);
   const firstStream=observed.streams[0];
-  assert.equal(firstStream.url,"/api/events");
-  const valid={schema:"chesssim-game-events-v1",revision:"a".repeat(64)};
+  assert.equal(firstStream.url,"/api/events/v2");
+  const valid={schema:"chesssim-game-events-v2",revision:"a".repeat(64),
+    epoch:"b".repeat(16),sequence:1,resync_required:true};
   firstStream.emit("open");
   const beforeSignal=observed.requests.length;
   firstStream.emit("state",valid);
@@ -406,7 +407,7 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal(firstStream.closed,true,
     "switching matches disposes the old event stream");
   const latestStream=observed.streams.at(-1);
-  assert.equal(latestStream.url,"/api/events?match=r01-m01");
+  assert.equal(latestStream.url,"/api/events/v2?match=r01-m01");
   const selectedCount=observed.requests.length;
   firstStream.emit("state",valid);
   await flush();
