@@ -155,6 +155,25 @@
           <div id="bracket" aria-label="Rodadas e confrontos do torneio"></div>
           <p class="hint">Pontuação dos pares disputados. Vitória no confronto avança à rodada seguinte.</p>
         </section>
+        <section class="panel analysis-panel" aria-label="Avaliação Stockfish da posição">
+          <div class="panel-kicker">AVALIAÇÃO · REPETIÇÃO VERIFICADA</div>
+          <h2>Avaliação Stockfish</h2>
+          <div class="analysis-summary">
+            <div class="analysis-gauge" id="analysis-gauge" role="img"
+                 aria-label="Avaliação indisponível">
+              <div class="analysis-gauge-white" id="analysis-gauge-white"></div>
+            </div>
+            <div class="analysis-text">
+              <strong id="analysis-score">Indisponível</strong>
+              <p id="analysis-status" role="status" aria-live="polite">
+                Um relatório pré-calculado deve corresponder exatamente ao PGN selecionado.
+              </p>
+            </div>
+          </div>
+          <p class="hint">Valores em centipeões ou mate na perspectiva das brancas, após
+             a escolha do lance. Apenas amostras realmente analisadas aparecem;
+             não representam probabilidade de vitória, Elo ou fidelidade histórica.</p>
+        </section>
         <section class="panel history">
           <div class="panel-kicker">LANCES</div>
           <div class="headline" id="headline" aria-live="polite">Posição inicial</div>
