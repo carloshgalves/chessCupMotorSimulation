@@ -119,6 +119,25 @@ def test_partial_pgn_is_never_labeled_as_analyzed(tmp_path):
     assert not any("evaluation" in s for s in states)
 
 
+
+def test_overlay_never_follows_replaced_pgn_symlink(tmp_path):
+    root, pgn, report, _ = _fixture(tmp_path)
+    overlay = QualityOverlay(report)
+    states = live_board.snapshot(root)["duel"]["games"][0]["states"]
+    archived = tmp_path / "archived.pgn"
+    pgn.rename(archived)
+    pgn.symlink_to(archived)
+    assert overlay.for_game(pgn, states) == {}
+
+
+def test_overlay_rejects_pgn_growing_beyond_reader_limit(tmp_path):
+    root, pgn, report, _ = _fixture(tmp_path)
+    overlay = QualityOverlay(report)
+    states = live_board.snapshot(root)["duel"]["games"][0]["states"]
+    with pgn.open("ab") as stream:
+        stream.write(b" " * (2 * 1024 * 1024 + 1))
+    assert overlay.for_game(pgn, states) == {}
+
 def test_http_surface_remains_read_only(tmp_path):
     root, _, report, _ = _fixture(tmp_path)
     server = live_board.create_server(root, port=0, quality_report=report)
