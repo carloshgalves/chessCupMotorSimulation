@@ -46,9 +46,11 @@ a v2 acrescenta um `sequence` ordenado por instância do servidor.
 O journal vive somente **na memória**, separado por seleção, com limite de
 **16 seleções e 32 observações por seleção**. A sequência é global ao servidor,
 não necessariamente contígua dentro de uma seleção. A reinicialização da
-Arena/monitor cria uma nova época. Uma transição que ocorreu inteiramente
-entre duas leituras nunca pode ser reconstruída por este journal e deve ser
-corrigida pelo GET ao estado atual.
+Arena/monitor cria uma nova época. O journal evita que uma leitura atrasada
+de outro espectador regrida o número de lances ou reverta um estado terminal
+do **mesmo duelo**; mudar de sessão permite naturalmente reiniciar do lance
+zero. Uma transição que ocorreu inteiramente entre duas leituras nunca pode
+ser reconstruída por este journal e deve ser corrigida pelo GET ao estado atual.
 
 ## Segurança e isolamento
 
