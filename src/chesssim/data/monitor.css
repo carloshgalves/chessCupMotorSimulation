@@ -127,3 +127,19 @@ button.accent{flex:1;font-size:.81rem}
   font-size:0;-webkit-text-stroke:0;text-shadow:none
 }
 .guess-piece-preview[data-piece-kind="svg"] .piece-glyph[data-art-ready="1"] .piece-svg{display:block}
+
+
+/* Optional pre-calculated quality evidence; blank/unsampled positions have no score. */
+.analysis-summary{display:flex;align-items:center;gap:17px;margin:12px 0}
+.analysis-gauge{width:27px;height:112px;flex-shrink:0;position:relative;
+  background:#111a21;border:1px solid #7d929c;border-radius:5px;overflow:hidden}
+.analysis-gauge-white{position:absolute;bottom:0;left:0;right:0;height:50%;
+  background:#f4eee0;transition:height .16s ease-out}
+.analysis-gauge.is-unknown{opacity:.4;border-style:dashed}
+.analysis-gauge.is-unknown .analysis-gauge-white{background:#88969d}
+.analysis-text{min-width:0}
+#analysis-score{font-size:clamp(1.05rem,2vw,1.5rem);font-variant-numeric:tabular-nums}
+#analysis-status{overflow-wrap:anywhere;min-height:34px}
+#moves .move-cell.critical{border-left:3px solid #efb56b}
+#moves .move-cell.critical.selected{border-color:var(--highlight);border-left-color:#efb56b}
+@media(prefers-reduced-motion:reduce){.analysis-gauge-white{transition:none}}
