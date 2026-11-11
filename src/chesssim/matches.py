@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
 import json
+import math
+import threading
 import uuid
 import re
 import time
@@ -108,6 +110,7 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
               on_progress: Callable[[chess.pgn.Game], None] | None = None,
               max_wall_seconds: float | None = None) -> tuple[chess.pgn.Game, dict]:
     engines = []
+    failed_engine_ids: set[int] = set()
     try:
         w = _open_engine(root, exe, white, book=use_books)
         engines.append(w)
@@ -184,10 +187,74 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             if opening_move is not None:
                 actual_move = opening_move
             else:
-                result = actor.play(board, turn_limit, game=game, info=chess.engine.INFO_NONE)
+                # python-chess SimpleEngine._timeout_for(limit) is UNBOUNDED
+                # for depth/clock searches (Limit.time is None), even when
+                # SimpleEngine.timeout has been shortened. A separate daemon
+                # watchdog must close the transport when the game budget ends.
+                original_timeout = getattr(actor, "timeout", None)
+                deadline_limited = False
+                cancel_watchdog = threading.Event()
+                watchdog_expired = threading.Event()
+                if max_wall_seconds is not None:
+                    remaining = max_wall_seconds - (time.monotonic() - started)
+                    if remaining <= 0:
+                        interrupted = "WallTimeLimit"
+                        break
+                    if isinstance(original_timeout, (int, float)) and original_timeout > 0:
+                        deadline_limited = remaining < original_timeout
+                        actor.timeout = min(original_timeout, max(0.001, remaining))
+
+                    def close_on_deadline(engine=actor, stop=cancel_watchdog,
+                                          expired=watchdog_expired, seconds=remaining):
+                        # Bind this ply's actor/event/deadline immediately.
+                        # Otherwise a late-starting worker could see the
+                        # NEXT ply's variables and close the wrong process.
+                        if not stop.wait(timeout=seconds):
+                            expired.set()
+                            # SimpleEngine.close is thread-safe and causes the
+                            # pending play() to terminate without a UCI bestmove.
+                            try:
+                                engine.close()
+                            except BaseException:
+                                pass
+
+                    threading.Thread(
+                        target=close_on_deadline, daemon=True,
+                        name="chesssim-uci-deadline").start()
+                try:
+                    result = actor.play(board, turn_limit, game=game,
+                                        info=chess.engine.INFO_NONE)
+                except TimeoutError:
+                    failed_engine_ids.add(id(actor))
+                    interrupted = ("WallTimeLimit" if deadline_limited or
+                                   watchdog_expired.is_set() else
+                                   "EngineResponseTimeout")
+                    break
+                except chess.engine.EngineTerminatedError:
+                    failed_engine_ids.add(id(actor))
+                    interrupted = ("WallTimeLimit" if watchdog_expired.is_set() else
+                                   "EngineTerminated")
+                    break
+                except Exception:
+                    if not watchdog_expired.is_set():
+                        raise
+                    failed_engine_ids.add(id(actor))
+                    interrupted = "WallTimeLimit"
+                    break
+                finally:
+                    cancel_watchdog.set()
+                    if watchdog_expired.is_set():
+                        failed_engine_ids.add(id(actor))
+                    if original_timeout is not None and id(actor) not in failed_engine_ids:
+                        actor.timeout = original_timeout
                 actual_move = result.move
             spent = time.monotonic() - start
             elapsed[idx] += spent
+            if max_wall_seconds is not None and time.monotonic() - started >= max_wall_seconds:
+                # A late answer never becomes a legal, scored move: preserve
+                # the last accepted checkpoint and flag the run incomplete.
+                interrupted = "WallTimeLimit"
+                break
             if clocks is not None:
                 clocks[idx] -= spent
                 if clocks[idx] <= 0:
@@ -256,6 +323,13 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
         return game, meta
     finally:
         for e in reversed(engines):
+            if id(e) in failed_engine_ids:
+                # Avoid awaiting UCI 'quit' for an already unresponsive process.
+                try:
+                    e.close()
+                except BaseException:
+                    pass
+                continue
             try:
                 e.quit()
             except BaseException:
@@ -289,8 +363,10 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
         raise ValueError("Movetime deve ser positivo")
     if max_plies < 1:
         raise ValueError("Max-plies deve ser >= 1")
-    if max_wall_seconds is not None and max_wall_seconds <= 0:
-        raise ValueError("max_wall_seconds deve ser positivo")
+    if max_wall_seconds is not None and (
+            isinstance(max_wall_seconds, bool) or
+            not math.isfinite(max_wall_seconds) or max_wall_seconds <= 0):
+        raise ValueError("max_wall_seconds deve ser finito e positivo")
     if not 1 <= opening_min_count <= 100:
         raise ValueError('Opening min_count must be 1..100')
     if historical_openings and (use_books is True or clock == (600, 2)):
@@ -353,7 +429,9 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
             print(f"Resultado: {meta['result']} ({meta['termination']})", flush=True)
             # Partidas limitadas por plies continuam úteis para auditoria de
             # diversidade; somente parada/timeout operacional cancela o par.
-            if meta["termination"] in {"OperatorStop", "WallTimeLimit"}:
+            if meta["termination"] in {
+                    "OperatorStop", "WallTimeLimit", "EngineResponseTimeout",
+                    "EngineTerminated"}:
                 break
         summary["status"] = ("COMPLETED" if len(summary["games"]) == len(lineups)
                              and all(g["status"] == "COMPLETED" for g in summary["games"])

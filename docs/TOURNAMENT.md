@@ -107,10 +107,35 @@ python -m chesssim tournament-run --run runs/copa-piloto-4 \
 Esses valores são exemplos, não configurações obrigatórias. O limite por
 partida é **congelado na criação do torneio**; atingir esse orçamento marca a
 partida `INCOMPLETE`, sem atribuir derrota/empate. O limite por execução
-faz uma pausa graciosa e não se mantém entre chamadas. Os limites são
-verificados entre lances, não são deadlines preemptivas durante uma busca
-bloqueada. A limitação de CPU permanece em uma thread por motor do protocolo
-e **não equivale a uma quota do sistema operacional**.
+faz uma pausa graciosa e não se mantém entre chamadas.
+
+**Proteção adicional da busca UCI (#27):** a cada `go`, quando existe
+`--max-game-wall-seconds`, um watchdog independente aguarda somente o
+**tempo restante da partida** e, se vencer, encerra o transporte UCI da
+busca em andamento. O timeout interno do `SimpleEngine` também é reduzido
+quando aplicável. Isso é necessário porque, em buscas por profundidade ou
+relógio, `python-chess` não aplica automaticamente `SimpleEngine.timeout`
+ao `play()` sem `Limit.time`. Se o orçamento da partida expirar,
+o resultado é `INCOMPLETE` com `Termination=WallTimeLimit`. Se o próprio
+transporte UCI detectar timeout por outra razão, usa
+`EngineResponseTimeout`; a queda do motor durante a busca usa
+`EngineTerminated`. **Sem um orçamento explícito, não há garantia de timeout
+por lance nas buscas de profundidade/relógio.** Nenhum desses eventos é derrota,
+vitória ou empate enxadrístico.
+
+Lances recebidos após o orçamento de parede são descartados, preservando o
+checkpoint anterior; o transporte do motor sem resposta é fechado diretamente,
+sem aguardar `quit` UCI. Um duelo interrompido não inicia o jogo com cores
+invertidas e não é computado como confronto finalizado. Uma nova tentativa
+deve ser autorizada via `--retry-incomplete`.
+
+O watchdog e o timeout do `python-chess` limitam **a espera do
+aplicativo sob um orçamento explícito**, mas não equivalem a um prazo
+incondicional do sistema operacional
+(`SIGKILL`, falha elétrica, processo em espera ininterruptível, suspensão do
+host). O pedido `tournament-stop` continua cooperativo, verificado entre
+lances. A limitação de CPU permanece em uma thread por motor do protocolo
+e **não equivale a uma quota rígida do kernel**.
 
 ## Interrupções e empates
 

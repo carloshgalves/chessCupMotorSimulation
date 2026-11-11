@@ -145,6 +145,127 @@ def test_wall_limit_stops_without_declaring_result(engine_fixture, monkeypatch):
     assert all(e.closed for e in engines)
 
 
+def test_uci_response_timeout_is_incomplete_not_an_invented_result(
+        engine_fixture, monkeypatch):
+    root, exe, white, black, _, engines = engine_fixture
+
+    def open_unresponsive(*args, **kwargs):
+        instance = FakeEngine()
+        instance.timeout = 120.0
+        def hang(*_args, **_kwargs):
+            raise TimeoutError("UCI bestmove not received")
+        instance.play = hang
+        engines.append(instance)
+        return instance
+
+    monkeypatch.setattr(matches, "_open_engine", open_unresponsive)
+    game, meta = matches._play_one(
+        root, exe, white, black, 2, None, 12, 1,
+        {"exe": "sha", white.slug: "white", black.slug: "black"})
+    assert meta["termination"] == "EngineResponseTimeout"
+    assert meta["status"] == "INCOMPLETE"
+    assert meta["result"] == "*"
+    assert game.end().ply() == 0
+    assert all(e.closed for e in engines)
+    assert not engines[0].quit_called, "a dead UCI child must be closed, not quit()"
+
+
+def test_wall_budget_limits_single_uci_call_before_next_ply(
+        engine_fixture, monkeypatch):
+    root, exe, white, black, _, engines = engine_fixture
+    observed = []
+
+    def open_unresponsive(*args, **kwargs):
+        instance = FakeEngine()
+        instance.timeout = 120.0
+        def hang(*_args, **_kwargs):
+            observed.append(instance.timeout)
+            raise TimeoutError("search exceeded limit")
+        instance.play = hang
+        engines.append(instance)
+        return instance
+
+    monkeypatch.setattr(matches, "_open_engine", open_unresponsive)
+    game, meta = matches._play_one(
+        root, exe, white, black, 2, None, 12, 1,
+        {"exe": "sha", white.slug: "white", black.slug: "black"},
+        max_wall_seconds=0.3)
+    assert len(observed) == 1 and 0.001 <= observed[0] <= .3
+    assert meta["termination"] == "WallTimeLimit"
+    assert meta["status"] == "INCOMPLETE" and meta["result"] == "*"
+    assert game.end().ply() == 0
+    assert not engines[0].quit_called
+    assert all(e.closed for e in engines)
+
+
+def test_previous_ply_watchdog_cannot_close_next_turn_engine(
+        engine_fixture, monkeypatch):
+    root, exe, white, black, _, engines = engine_fixture
+    held_watchdogs = []
+
+    class DeferredThread:
+        def __init__(self, *, target, daemon, name):
+            assert daemon and name == "chesssim-uci-deadline"
+            self.target = target
+
+        def start(self):
+            held_watchdogs.append(self.target)
+
+    monkeypatch.setattr(matches.threading, "Thread", DeferredThread)
+
+    def open_tracking(*_args, **_kwargs):
+        current = FakeEngine()
+        original = current.play
+        if len(engines) == 1:
+            def black_play(*args, **kwargs):
+                # Force the white watchdog to START late, while the black
+                # search is active. It must observe white's cancelled event
+                # rather than the new turn's still-pending event and engine.
+                held_watchdogs[0]()
+                return original(*args, **kwargs)
+            current.play = black_play
+        engines.append(current)
+        return current
+
+    monkeypatch.setattr(matches, "_open_engine", open_tracking)
+    game, meta = matches._play_one(
+        root, exe, white, black, 2, None, 2, 1,
+        {"exe": "sha", white.slug: "white", black.slug: "black"},
+        max_wall_seconds=.35)
+    assert game.end().ply() == 2
+    assert meta["termination"] == "InterruptedAtPlyLimit"
+    assert len(held_watchdogs) == 2
+    assert all(e.closed for e in engines)
+
+
+def test_late_uci_result_cannot_be_scored_after_wall_deadline(
+        engine_fixture, monkeypatch):
+    import time
+    root, exe, white, black, _, engines = engine_fixture
+
+    def open_delayed(*args, **kwargs):
+        instance = FakeEngine()
+        original_play = instance.play
+        def late(*args, **kwargs):
+            time.sleep(.035)
+            return original_play(*args, **kwargs)
+        instance.play = late
+        engines.append(instance)
+        return instance
+
+    monkeypatch.setattr(matches, "_open_engine", open_delayed)
+    positions = []
+    game, meta = matches._play_one(
+        root, exe, white, black, 2, None, 12, 1,
+        {"exe": "sha", white.slug: "white", black.slug: "black"},
+        max_wall_seconds=.005,
+        on_progress=lambda current: positions.append(current.end().ply()))
+    assert positions == [0], "late move must not be persisted in partial PGN"
+    assert meta["termination"] == "WallTimeLimit" and meta["result"] == "*"
+    assert game.end().ply() == 0
+    assert all(e.closed for e in engines)
+
+
 def test_partial_pgn_is_recoverable_and_second_game_not_started(engine_fixture, tmp_path):
     root, engine, white, black, profiles, engines = engine_fixture
     count = [0]
@@ -182,6 +303,42 @@ def test_partial_pgn_is_recoverable_and_second_game_not_started(engine_fixture, 
     assert all(e.closed for e in engines)
 
 
+def test_stalled_second_player_preserves_partial_pgn_and_blocks_reverse_game(
+        engine_fixture, tmp_path, monkeypatch):
+    root, exe, white, black, _, engines = engine_fixture
+
+    def first_move_then_timeout(*_args, **_kwargs):
+        current = FakeEngine()
+        current.timeout = 120.0
+        if len(engines) == 1:
+            def no_bestmove(*_args, **_kwargs):
+                raise TimeoutError("waiting for bestmove")
+            current.play = no_bestmove
+        engines.append(current)
+        return current
+
+    monkeypatch.setattr(matches, "_open_engine", first_move_then_timeout)
+    folder = matches.play_duel(
+        root, tmp_path / "duels", white, black, depth=2,
+        max_plies=20, reverse=True, use_books=False)
+    report = json.loads((folder / "summary.json").read_text(encoding="utf-8"))
+    assert report["status"] == "INCOMPLETE"
+    assert len(report["games"]) == 1
+    assert report["games"][0]["status"] == "INCOMPLETE"
+    assert report["games"][0]["termination"] == "EngineResponseTimeout"
+    assert report["games"][0]["result"] == "*"
+    assert report["games"][0]["plies"] == 1
+    assert not (folder / "jogo_2.pgn").exists()
+    assert (folder / "jogo_1.partial.pgn").exists()
+    with (folder / "jogo_1.partial.pgn").open(encoding="utf-8") as source:
+        partial = chess.pgn.read_game(source)
+    assert partial is not None and not partial.errors
+    assert partial.headers["Result"] == "*"
+    assert partial.end().ply() == 1
+    assert all(e.closed for e in engines)
+    assert not engines[1].quit_called, "the stalled engine must not await quit"
+
+
 def test_stop_after_first_completed_game_does_not_complete_duel(engine_fixture, tmp_path, monkeypatch):
     root, engine, white, black, _, engines = engine_fixture
     move_counter = [0]
@@ -215,8 +372,10 @@ def test_stop_after_first_completed_game_does_not_complete_duel(engine_fixture, 
 
 def test_invalid_wall_limit_preflight(engine_fixture, tmp_path):
     root, _, white, black, _, _ = engine_fixture
-    with pytest.raises(ValueError, match="max_wall_seconds"):
-        matches.play_duel(root, tmp_path / "duels", white, black, max_wall_seconds=0)
+    for invalid in (0, float("nan"), float("inf"), float("-inf"), True):
+        with pytest.raises(ValueError, match="max_wall_seconds"):
+            matches.play_duel(root, tmp_path / "duels", white, black,
+                              max_wall_seconds=invalid)
     assert not (tmp_path / "duels").exists()
 
 
