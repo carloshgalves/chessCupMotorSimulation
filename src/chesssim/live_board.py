@@ -331,7 +331,8 @@ def make_handler(directory: Path, quality_overlay: QualityOverlay | None = None)
                     key = f"watch:{match_id or 'live'}:{attempt or 'latest'}"
                     stream_events_v2(
                         self, report,
-                        lambda: snapshot(root, match_id=match_id, attempt=attempt),
+                        lambda: snapshot(root, match_id=match_id, attempt=attempt,
+                                         quality_overlay=quality_overlay),
                         key)
                 else:
                     self._reply(200, payload, "application/json; charset=utf-8")
