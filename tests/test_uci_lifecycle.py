@@ -77,3 +77,39 @@ def test_two_native_uci_subprocesses_exit_after_stop(tmp_path):
             break
         time.sleep(0.02)
     assert not any(alive(pid) for pid in pids), f"Orphan UCI processes: {pids}"
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux native process watchdog")
+def test_stalled_uci_go_times_out_and_both_children_are_reaped(tmp_path):
+    """A stuck search must not keep tournament workers alive for 120 seconds."""
+    exe = tmp_path / "rodent-iv-plain.exe"
+    # UCI handshake succeeds; the engine then stalls on the first 'go' command.
+    slow_stub = UCI_STUB.replace("import sys\\n", "import sys\\nimport time\\n")
+    slow_stub = slow_stub.replace(
+        'print("bestmove " + sequence[len(moves) % len(sequence)], flush=True)',
+        'time.sleep(5)\\n        print("bestmove " + sequence[len(moves) % len(sequence)], flush=True)')
+    exe.write_text(slow_stub, encoding="utf-8")
+    exe.chmod(0o755)
+    a = find_player("fischer")
+    b = find_player("tal")
+    started = time.monotonic()
+    game, meta = _play_one(
+        tmp_path, exe, a, b, 1, None, 12, 1,
+        {"exe": "fake", a.slug: "a", b.slug: "b"},
+        use_books=False, max_wall_seconds=.35)
+    elapsed = time.monotonic() - started
+    assert elapsed < 3.0, "a single stuck 'go' must respect a short UCI timeout"
+    assert meta["status"] == "INCOMPLETE"
+    assert meta["termination"] == "WallTimeLimit"
+    assert meta["result"] == "*"
+    assert game.end().ply() == 0
+
+    pids = [int(line) for line in
+            (tmp_path / "uci-child-pids.txt").read_text(encoding="ascii").splitlines()]
+    assert len(pids) == 2
+    for _ in range(100):
+        if not any(Path(f"/proc/{pid}").exists() for pid in pids):
+            break
+        time.sleep(.02)
+    assert not any(Path(f"/proc/{pid}").exists() for pid in pids), (
+        f"UCI children remained alive after deadline: {pids}")
