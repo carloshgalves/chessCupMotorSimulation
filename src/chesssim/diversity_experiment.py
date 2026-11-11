@@ -28,7 +28,7 @@ def design(players: list[str], *, seed: int, trials: int,
         raise ValueError("Seed deve ser uint32")
     if type(trials) is not int or not 2 <= trials <= 40:
         raise ValueError("Amostra deve ter 2..40 blocos")
-    if seed + 2 * trials >= 2**32:
+    if seed + 2 * trials > 2**32:
         raise ValueError("Seeds do experimento excedem uint32")
     if type(declared_external_repertoire) is not bool:
         raise ValueError("Flag de repertório inválida")
