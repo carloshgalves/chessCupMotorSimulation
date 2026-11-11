@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import platform
+from pathlib import Path
 import shutil
 import subprocess
 import sys
@@ -37,6 +38,10 @@ def build_command(memory_mib: int, cpu_percent: int, tasks_max: int,
     ]
 
 
+def _has_unified_cgroup() -> bool:
+    return Path("/sys/fs/cgroup/cgroup.controllers").is_file()
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Restrict ChessCup on Linux cgroup v2 via systemd user scope")
     p.add_argument("--memory-mib", type=int, required=True)
@@ -54,8 +59,9 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"status": "PLAN_ONLY_NOT_ENFORCED",
                           "command": cmd}, ensure_ascii=False))
         return 0
-    if platform.system() != "Linux" or shutil.which("systemd-run") is None:
-        print("No Linux systemd-run; refusing unbounded fallback", file=sys.stderr)
+    if (platform.system() != "Linux" or shutil.which("systemd-run") is None
+            or not _has_unified_cgroup()):
+        print("No Linux cgroup v2 / systemd-run; refusing unbounded fallback", file=sys.stderr)
         return 3
     # systemd user manager may be offline or delegation disabled. A failure
     # is an explicit nonzero exit; NEVER retry by running chesssim directly.
