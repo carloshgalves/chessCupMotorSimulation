@@ -112,6 +112,23 @@ def test_portraits_whitelisted_only_if_real_jpeg(checkout):
     assert "portrait_not_jpeg" in {x["code"] for x in tracked(checkout)["findings"]}
 
 
+def test_allowed_jpeg_cannot_hide_a_token_and_rogue_image_is_rejected(checkout):
+    folder = checkout / "src/chesssim/data/history/portraits"
+    folder.mkdir(parents=True)
+    image = folder / "example.jpg"
+    token = "ghp_" + "T" * 36
+    image.write_bytes(b"\xff\xd8\xff\xe0" + token.encode() + b"\x00")
+    git(checkout, "add", "src/chesssim/data/history/portraits/example.jpg")
+    result = tracked(checkout)
+    assert "github_token" in {x["code"] for x in result["findings"]}
+    assert token not in json.dumps(result)
+    rogue = checkout / "public.jpg"
+    rogue.write_bytes(b"\xff\xd8\xff\xe0" + b"fake bytes")
+    git(checkout, "add", "public.jpg")
+    assert "unexpected_binary_payload" in {
+        x["code"] for x in tracked(checkout)["findings"]}
+
+
 def test_symlink_in_index_is_rejected(checkout):
     (checkout / "outside").symlink_to("../private-file")
     git(checkout, "add", "outside")
@@ -161,7 +178,8 @@ def test_cli_never_writes_report_inside_repository(checkout, capsys):
     assert audit.main(["--repo", str(checkout), "--output", str(target)]) == 2
     assert not target.exists()
     out = capsys.readouterr().out
-    assert '"status": "PASS"' in out
+    assert '"status": "ERROR"' in out
+    assert '"status": "PASS"' not in out
 
 
 def test_bad_index_stage_is_not_read_as_clean(checkout):
