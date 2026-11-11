@@ -7,8 +7,10 @@ from __future__ import annotations
 
 from hashlib import sha256
 import json
+import os
 from pathlib import Path
 import re
+import stat
 
 MAX_REPORT_BYTES = 4 * 1024 * 1024
 HEX_SHA = re.compile(r"[0-9a-f]{64}\Z")
@@ -75,8 +77,19 @@ class QualityOverlay:
         """Fail closed on any stale report/move rather than displaying foreign scores."""
         if source.name.endswith(".partial.pgn"):
             return {}
+        if source.is_symlink():
+            return {}
         digest = sha256()
-        with source.open("rb") as stream:
+        try:
+            # Do not follow a PGN replaced by an external symlink after the
+            # monitor validated it. Use the opened fd for both stat and hash.
+            descriptor = os.open(source, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        except OSError:
+            return {}
+        with os.fdopen(descriptor, "rb") as stream:
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_size > 2 * 1024 * 1024:
+                return {}
             for chunk in iter(lambda: stream.read(1024 * 1024), b""):
                 digest.update(chunk)
         if digest.hexdigest() != self.pgn_sha256:
