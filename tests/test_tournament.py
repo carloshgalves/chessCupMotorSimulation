@@ -427,6 +427,7 @@ def test_recovery_preview_recognizes_sigkill_window_before_summary(harness):
     assert preview["schema"] == "chesssim-tournament-recovery-preview-v1"
     assert preview["mode"] == "READ_ONLY_ADVISORY"
     assert preview["checkpoint_status"] == "READY"
+    assert preview["recovery_gate"] == "EXPLICIT_RETRY_REQUIRED"
     assert preview["matches_retry_required"] == [match["id"]]
     assert preview["recovered_completed_attempts"] == []
     assert preview["excluded_incomplete_attempts"] == [{
@@ -472,6 +473,7 @@ def test_recovery_preview_reconstructs_completed_uncheckpointed_duel(harness):
     }]
     assert forecast["projected_matches_completed"] == 1
     assert forecast["projected_champion"] in (a.slug, b.slug)
+    assert forecast["recovery_gate"] == "COMPETITION_COMPLETE"
     assert (run / "tournament.json").read_bytes() == checkpoint
     assert (folder / "duelo.pgn").read_bytes() == game_bytes
     assert tournament.run_tournament(root, run)["status"] == "COMPLETED"
@@ -531,6 +533,7 @@ def test_recovery_preview_cli_without_mutating_tournament(harness):
     assert result.returncode == 0, result.stderr
     report = json.loads(result.stdout)
     assert report["mode"] == "READ_ONLY_ADVISORY"
+    assert report["recovery_gate"] == "NO_INCOMPLETE_ATTEMPTS_DETECTED"
     assert report["matches_retry_required"] == []
     assert (run / "tournament.json").read_bytes() == previous
     assert not (run / ".tournament.lock").exists()
