@@ -113,11 +113,14 @@ def test_no_download_no_engine_no_any_write_during_preview(tmp_path, monkeypatch
 
 @pytest.mark.parametrize("replacement", [
     {"license_id": "UNKNOWN"},
+    {"license_id": []},
     {"license_id": "PDM-1.0"},
     {"rights_attestation": "pending"},
     {"license_evidence_url": "http://example.org/rights"},
     {"source_url": "https://user:password@example.org/download"},
     {"allowed_uses": ["derived_openings"]},
+    {"allowed_uses": [["local_cache"]]},
+    {"source_url": "https://example.org/file.pgn?token=private"},
     {"rights_reviewed_on": "3020-01-01"},
     {"expected_sha256": "bad"},
     {"attribution": ""},
@@ -148,6 +151,17 @@ def test_missing_or_illegal_pgn_is_failed_not_silently_skipped(tmp_path):
     with pytest.raises(ValueError):
         prepare_cache(path, out=tmp_path / "cache")
     assert not (tmp_path / "cache").exists()
+
+
+def test_comment_and_nag_tokens_accepted_without_exporting_annotations(tmp_path):
+    pgn = game_text().replace("e4 e5", "e4 {annotated [%eval 0.2]} e5 $1")
+    item = write_source(tmp_path, "annotated.pgn", pgn)
+    rights = catalog(tmp_path, item)
+    report = prepare_cache(rights, out=tmp_path / "cache", apply=True)
+    assert report["games_distinct"] == 1
+    raw = (tmp_path / "cache" / "games.pgn").read_text(encoding="utf-8")
+    assert "[%eval" not in raw and "annotated" not in raw
+    assert "e4" in raw and "e5" in raw
 
 
 def test_conflicting_results_same_mainline_fail_closed(tmp_path):
