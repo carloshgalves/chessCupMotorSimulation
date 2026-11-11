@@ -106,6 +106,13 @@ def _content_rules(path: bytes, content: bytes, total_size: int) -> set[str]:
     if total_size > MAX_BLOB_BYTES:
         found.add("oversized_blob")
         return found
+    # Search credential signatures even inside allowed JPEG metadata. Early
+    # binary returns otherwise let a token embedded in EXIF bypass the gate.
+    for code, regex in SIGNATURES.items():
+        if regex.search(content):
+            found.add(code)
+    if any(regex.search(content) for regex in HOME_PATHS):
+        found.add("absolute_home_path")
     name = path.decode("utf-8", "surrogateescape").casefold()
     portrait = (name.startswith("src/chesssim/data/history/portraits/")
                 and name.endswith(".jpg") and name.count("/") == 5)
@@ -113,14 +120,10 @@ def _content_rules(path: bytes, content: bytes, total_size: int) -> set[str]:
         if not content.startswith(b"\xff\xd8\xff"):
             found.add("portrait_not_jpeg")
         return found
-    if b"\x00" in content or any(content.startswith(sig) for sig in BINARY_PREFIXES):
+    if (b"\x00" in content or content.startswith(
+            (b"\xff\xd8\xff", b"\x89PNG\r\n\x1a\n", b"GIF87a", b"GIF89a")) or
+            any(content.startswith(sig) for sig in BINARY_PREFIXES)):
         found.add("unexpected_binary_payload")
-        return found
-    for code, regex in SIGNATURES.items():
-        if regex.search(content):
-            found.add(code)
-    if any(regex.search(content) for regex in HOME_PATHS):
-        found.add("absolute_home_path")
     return found
 
 
@@ -278,6 +281,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--scope", choices=("tracked", "history"), default="tracked")
     parser.add_argument("--output", type=Path, help="Write the same redacted JSON to a local file")
     args = parser.parse_args(argv)
+    # Validate output destination before emitting PASS/FAIL: failures must not
+    # leave misleading audit evidence, and reports stay outside Git.
+    report_path = None
+    if args.output:
+        report_path = args.output.expanduser().resolve()
+        root = args.repo.expanduser().resolve()
+        if report_path == root or root in report_path.parents:
+            print(json.dumps({
+                "schema": "chesssim-git-hygiene-v1", "scope": args.scope,
+                "status": "ERROR", "error_class": "UnsafeOutputPath",
+            }))
+            return 2
     try:
         report = scan(args.repo, args.scope)
         result = 1 if report["finding_count"] else 0
@@ -288,15 +303,14 @@ def main(argv: list[str] | None = None) -> int:
         result = 2
     encoded = json.dumps(report, sort_keys=True, ensure_ascii=True, indent=2) + "\n"
     print(encoded, end="")
-    if args.output:
-        # Fail closed: a report belongs outside the Git repository.
-        output = args.output.expanduser().resolve()
-        root = args.repo.expanduser().resolve()
-        if output == root or root in output.parents:
-            print("Refusing to write report inside repository", file=sys.stderr)
+    if report_path:
+        try:
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            report_path.write_text(encoded, encoding="utf-8")
+        except OSError:
+            # Writing the report is part of this operation's contract.
+            print('{"status":"ERROR","error_class":"ReportWriteError"}', file=sys.stderr)
             return 2
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(encoded, encoding="utf-8")
     return result
 
 
