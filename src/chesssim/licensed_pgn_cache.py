@@ -298,9 +298,12 @@ def _scan(catalog_path: Path, *, max_games: int, max_bytes: int) -> tuple[dict, 
         "games_examined": total, "games_distinct": len(ordered),
         "games_duplicates": sum(x["exact_duplicates"] for x in source_report),
         "games_excluded": dict(rejected),
-        "complete_results": sum(x["result"] in {"1-0", "0-1", "1/2-1/2"}
-                                for _, x in ordered),
-        "incomplete_results": sum(x["result"] == "*" for _, x in ordered),
+        # PGN Result is a source declaration, not independent proof that a
+        # complete event was observed or correctly adjudicated.
+        "games_with_declared_result": sum(
+            x["result"] in {"1-0", "0-1", "1/2-1/2"} for _, x in ordered),
+        "games_with_unknown_result": sum(
+            x["result"] == "*" for _, x in ordered),
         "cache_pgn_sha256": sha256(pgn_output).hexdigest(),
         "estimated_pgn_bytes": len(pgn_output),
         "max_disk_bytes": max_bytes,
@@ -312,7 +315,7 @@ def _scan(catalog_path: Path, *, max_games: int, max_bytes: int) -> tuple[dict, 
         "limitations": [
             "Operator attestation is not independent legal verification.",
             "No network, engine, historical calibration, validation or sealed holdout is accessed.",
-            "PGN metadata does not prove player identity, age, completeness or event provenance.",
+            "PGN metadata and Result declarations do not prove identity, age, game completeness or event provenance.",
             "This cache is not automatically eligible for style calibration or public redistribution.",
         ],
     }
