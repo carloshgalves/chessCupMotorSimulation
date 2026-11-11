@@ -254,8 +254,13 @@ def scan(root: Path, scope: str) -> dict:
     blobs = 0
     with _blobs(root) as get_blob:
         for path, oid, mode in entries:
-            for code in sorted(_path_rules(path)):
-                record(code, path)
+            # rev-list --objects emits commits and trees without a path.
+            # They are Git metadata, not empty-named tracked files.
+            if path:
+                for code in sorted(_path_rules(path)):
+                    record(code, path)
+            elif scope == "tracked":
+                raise AuditError("tracked index entry has an empty name")
             if mode == b"120000":
                 record("tracked_symlink", path, oid)
             kind, content, size = get_blob(oid)
