@@ -49,6 +49,15 @@ def test_clean_index_and_untouched_working_tree(checkout):
     assert result["objects_examined"] == 1
 
 
+def test_clean_history_ignores_pathless_commit_and_tree_objects(checkout):
+    result = audit.scan(checkout, "history")
+    assert result["status"] == "PASS"
+    assert result["finding_count"] == 0
+    assert result["commits_seen"] == 1
+    assert result["blobs_examined"] == 1
+    assert result["objects_examined"] > result["blobs_examined"]
+
+
 def test_staged_secret_even_when_worktree_was_cleaned(checkout):
     token = "ghp_" + "B" * 37
     (checkout / "README.md").write_text(token, encoding="utf-8")
