@@ -66,6 +66,12 @@ def _validate_verified_games(games: list[dict]) -> tuple[list[dict], list[str]]:
         if (not isinstance(signature, str) or not RECEIPT.fullmatch(signature)
                 or not isinstance(pgn, str) or not RECEIPT.fullmatch(pgn)):
             raise ValueError("Recibo ou hash PGN ausente/inválido")
+        provenance = game.get("engine_strength_config")
+        keys = ("engine_sha256", "white_profile_sha256", "black_profile_sha256")
+        if (not isinstance(provenance, dict) or
+                any(not isinstance(provenance.get(key), str) or
+                    not RECEIPT.fullmatch(provenance[key]) for key in keys)):
+            raise ValueError("Versão do motor/perfis sem checksum verificável")
         modality = game.get("modality")
         if not isinstance(modality, str) or modality not in MODALITIES:
             raise ValueError("Modalidade UCI inválida")
@@ -90,6 +96,9 @@ def _validate_verified_games(games: list[dict]) -> tuple[list[dict], list[str]]:
             "id": ident, "event": event, "result": result,
             "modality": modality, "white": white, "black": black,
             "pgn_sha256": pgn, "receipt_sha256": signature,
+            "engine_sha256": provenance["engine_sha256"],
+            "white_profile_sha256": provenance["white_profile_sha256"],
+            "black_profile_sha256": provenance["black_profile_sha256"],
             "recorded_utc": normalized,
         })
     verified.sort(key=lambda g: (g["recorded_utc"], g["event"], g["id"]))
@@ -231,7 +240,20 @@ def evaluate_verified_games(games: list[dict], *,
         "train_games": len(train), "holdout_games": len(holdout),
         "minimum_games_each_split": MIN_GAMES_EACH_SPLIT,
         "no_overlap": not bool(train_set & holdout_set),
+        "train_modalities": sorted({g["modality"] for g in train}),
+        "holdout_modalities": sorted({g["modality"] for g in holdout}),
+        "train_engine_sha256": sorted({g["engine_sha256"] for g in train}),
+        "holdout_engine_sha256": sorted({g["engine_sha256"] for g in holdout}),
     }
+    unseen_modalities = sorted(
+        set(document["split"]["holdout_modalities"]) -
+        set(document["split"]["train_modalities"]))
+    unseen_engines = sorted(
+        set(document["split"]["holdout_engine_sha256"]) -
+        set(document["split"]["train_engine_sha256"]))
+    if unseen_modalities or unseen_engines:
+        document["warnings"].append(
+            "Holdout includes UCI modalities or engine revisions absent in training; comparison cannot establish generalization.")
     if len(train) < MIN_GAMES_EACH_SPLIT or len(holdout) < MIN_GAMES_EACH_SPLIT:
         return document
     baseline = _probabilities(_counts(train))
@@ -241,7 +263,10 @@ def evaluate_verified_games(games: list[dict], *,
     for modality in sorted({g["modality"] for g in holdout}):
         cohort = [r for r in holdout if r["modality"] == modality]
         by_modality[modality] = _metrics(cohort, NOMINAL_FAST_WDL)
-    document["status"] = "DESCRIPTIVE_HOLDOUT_NOT_CALIBRATED"
+    document["status"] = (
+        "DISTRIBUTION_SHIFT_DESCRIPTIVE_ONLY"
+        if unseen_modalities or unseen_engines else
+        "DESCRIPTIVE_HOLDOUT_NOT_CALIBRATED")
     document["evaluation"] = {
         "empirical_baseline": {
             "type": "training_only_laplace_multinomial",
