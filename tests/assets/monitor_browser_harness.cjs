@@ -453,5 +453,30 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   await flush();
   assert.equal(blocked.requests.length,previous+1);
 
+  // #24: Stockfish evidence is displayed only on the sampled exact ply.
+  states[1].evaluation={white_cp:92,white_mate_in:null,depth:18,
+    engine:"Stockfish test",loss_cp:120,critical:"mistake"};
+  const quality=browser();
+  await flush();
+  // A replay may start on a different position; explicitly select the
+  // sampled half-move rather than assuming playback has reached its tail.
+  assert.equal(vm.runInContext("currentGame()?.states[1]?.evaluation?.white_cp",
+                               quality.context),92,
+               "fixture must carry the sampled quality evidence into the feed");
+  vm.runInContext("cursor=1;render()",quality.context);
+  assert.equal(quality.elements.get("analysis-score").textContent,"+0.92");
+  assert(quality.elements.get("analysis-status").textContent.includes("profundidade 18"));
+  assert.equal(quality.elements.get("analysis-gauge-white").style.height,
+               (50+45*Math.tanh(92/400)).toFixed(2)+"%");
+  const cells=descendants(quality.elements.get("moves")).filter(x=>x.className.includes("move-cell"));
+  assert(cells.some(x=>x.classList.contains("critical")),
+         "real critical sample must be marked on the notation");
+  quality.elements.get("start").events.click();
+  assert.equal(quality.elements.get("analysis-score").textContent,"Indisponível",
+               "unsampled initial position must never inherit a prior score");
+  assert.equal(quality.elements.get("analysis-gauge").attributes["aria-label"],
+               "Avaliação não disponível para esta posição");
+  delete states[1].evaluation;
+
   console.log("Live bracket browser smoke: PASS");
 })().catch(error=>{console.error(error);process.exitCode=1;});

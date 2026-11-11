@@ -331,6 +331,39 @@ function paintClocks() {
                          (state.turn === "white" ? 0 : 1) === index);
   }
 }
+function renderAnalysis(game) {
+  const entry = game?.states?.[cursor]?.evaluation;
+  const gauge = $("analysis-gauge");
+  const bar = $("analysis-gauge-white");
+  const score = $("analysis-score");
+  const status = $("analysis-status");
+  if (!entry) {
+    gauge.classList.add("is-unknown");
+    gauge.setAttribute("aria-label", "Avaliação não disponível para esta posição");
+    bar.style.height = "50%";
+    score.textContent = "Indisponível";
+    status.textContent = game ?
+      "Este lance não foi amostrado ou não há análise para o PGN exato." :
+      "Nenhuma partida selecionada.";
+    return;
+  }
+  gauge.classList.toggle("is-unknown", false);
+  // A bounded drawing scale, NOT win probability or a claim of precision.
+  const cp = entry.white_cp;
+  const share = 50 + 45 * Math.tanh(cp / 400);
+  bar.style.height = share.toFixed(2) + "%";
+  const mate = entry.white_mate_in;
+  const value = mate === null || mate === undefined ?
+    (cp >= 0 ? "+" : "") + (cp / 100).toFixed(2) :
+    "M" + (mate >= 0 ? "+" : "") + String(mate);
+  score.textContent = value;
+  gauge.setAttribute("aria-label", "Avaliação pelas brancas: " + value);
+  const classification = entry.critical === "blunder" ? "Lance de grande perda" :
+    entry.critical === "mistake" ? "Lance crítico" : "Sem alerta nessa amostra";
+  status.textContent = classification + " · " + entry.engine +
+    " · profundidade " + entry.depth + " · perda " + entry.loss_cp +
+    " cp. Relatório pré-calculado; não é uma análise ao vivo.";
+}
 function displayMoves(game) {
   const list = $("moves");
   // The notation must advance with the paced board, not reveal future plies.
@@ -392,6 +425,15 @@ function displayMoves(game) {
     const selected = item.ply === cursor;
     item.cell.classList.toggle("selected", selected);
     item.cell.setAttribute("aria-current", selected ? "step" : "false");
+    const sample = game.states[item.ply].evaluation;
+    item.cell.classList.toggle("critical", !!sample?.critical);
+    item.cell.setAttribute("aria-label",
+      "Lance " + Math.ceil(item.ply / 2) +
+      (item.ply % 2 === 0 ? " das pretas: " : " das brancas: ") +
+      game.states[item.ply].san +
+      (sample?.critical ? " · " + (sample.critical === "blunder" ?
+        "grande perda de avaliação" : "lance crítico") : ""));
+
   }
   // Follow new turns only in live mode and only while the user is at the end.
   if (followMoves && !pinned && Number.isFinite(list.scrollHeight)) {
@@ -530,6 +572,7 @@ function render() {
   paintBoard(state);
   paintClocks();
   renderGuess(game);
+  renderAnalysis(game);
   const tournament = feed && feed.tournament;
   const duel = feed && feed.duel;
   const chosenMatch = tournament && feed.selection &&

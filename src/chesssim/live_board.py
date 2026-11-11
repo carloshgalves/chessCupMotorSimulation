@@ -19,6 +19,7 @@ import chess.pgn
 
 from .event_journal import EventJournal
 from .live_events import MAX_EVENT_CLIENTS, same_origin, stream_events, stream_events_v2
+from .quality_overlay import QualityOverlay
 
 MAX_PGN_BYTES = 2 * 1024 * 1024
 class InvalidSelection(ValueError):
@@ -89,7 +90,8 @@ def _states(game: chess.pgn.Game) -> list[dict]:
     return states
 
 
-def _duel_snapshot(run: Path, folder: Path, *, match_id: str | None = None) -> dict:
+def _duel_snapshot(run: Path, folder: Path, *, match_id: str | None = None,
+                   quality_overlay: QualityOverlay | None = None) -> dict:
     summary_path = _checked_file(run, folder / "summary.json")
     if summary_path.stat().st_size > 256 * 1024:
         raise ValueError("Resumo de confronto excedeu limite de visualização")
@@ -114,6 +116,9 @@ def _duel_snapshot(run: Path, folder: Path, *, match_id: str | None = None) -> d
         if not isinstance(metadata, dict):
             raise ValueError("Metadados de partida inválidos")
         states = _states(game)
+        if quality_overlay is not None and final.exists():
+            for ply, analysis in quality_overlay.for_game(source, states).items():
+                states[ply]["evaluation"] = analysis
         if metadata.get("termination") == "TimeForfeit":
             final_clocks = metadata.get("clock_left")
             if (isinstance(final_clocks, list) and len(final_clocks) == 2 and
@@ -189,7 +194,8 @@ def _match_attempts(run: Path, match: dict) -> list[dict]:
 
 
 def snapshot(directory: Path, *, match_id: str | None = None,
-             attempt: int | None = None) -> dict:
+             attempt: int | None = None,
+             quality_overlay: QualityOverlay | None = None) -> dict:
     run = directory.expanduser().resolve(strict=True)
     if not run.is_dir():
         raise ValueError("Informe uma pasta de torneio ou confronto")
@@ -235,7 +241,8 @@ def snapshot(directory: Path, *, match_id: str | None = None,
         folder = run
     else:
         raise ValueError("Pasta não contém manifesto de torneio nem resumo de duelo")
-    duel = _duel_snapshot(run, folder, match_id=selected_match) if folder else None
+    duel = (_duel_snapshot(run, folder, match_id=selected_match,
+                           quality_overlay=quality_overlay) if folder else None)
     public_attempts = [{k: a[k] for k in ("index", "status", "updated_at")}
                        for a in attempts]
     return {"schema": SCHEMA, "mode": "tournament" if tournament else "duel",
@@ -263,7 +270,7 @@ def _parse_selection(query: str) -> tuple[str | None, int | None]:
     return match_id, int(raw_attempt) if raw_attempt is not None else None
 
 
-def make_handler(directory: Path):
+def make_handler(directory: Path, quality_overlay: QualityOverlay | None = None):
     root = directory.expanduser().resolve(strict=True)
 
     class MonitorHandler(BaseHTTPRequestHandler):
@@ -302,7 +309,8 @@ def make_handler(directory: Path):
                     return
                 try:
                     match_id, attempt = _parse_selection(url.query)
-                    report = snapshot(root, match_id=match_id, attempt=attempt)
+                    report = snapshot(root, match_id=match_id, attempt=attempt,
+                                      quality_overlay=quality_overlay)
                     if route == "/api/state":
                         payload = json.dumps(report, ensure_ascii=False,
                                              allow_nan=False).encode("utf-8")
@@ -317,12 +325,14 @@ def make_handler(directory: Path):
                     return
                 if route == "/api/events":
                     stream_events(self, report,
-                        lambda: snapshot(root, match_id=match_id, attempt=attempt))
+                        lambda: snapshot(root, match_id=match_id, attempt=attempt,
+                                         quality_overlay=quality_overlay))
                 elif route == "/api/events/v2":
                     key = f"watch:{match_id or 'live'}:{attempt or 'latest'}"
                     stream_events_v2(
                         self, report,
-                        lambda: snapshot(root, match_id=match_id, attempt=attempt),
+                        lambda: snapshot(root, match_id=match_id, attempt=attempt,
+                                         quality_overlay=quality_overlay),
                         key)
                 else:
                     self._reply(200, payload, "application/json; charset=utf-8")
@@ -361,19 +371,22 @@ def make_handler(directory: Path):
     return MonitorHandler
 
 
-def create_server(directory: Path, port: int = 8765) -> ThreadingHTTPServer:
+def create_server(directory: Path, port: int = 8765, *,
+                  quality_report: Path | None = None) -> ThreadingHTTPServer:
     if not 0 <= port <= 65535:
         raise ValueError("Porta deve estar entre 0 e 65535")
-    snapshot(directory)  # fail fast before binding
-    server = ThreadingHTTPServer(("127.0.0.1", port), make_handler(directory))
+    overlay = QualityOverlay(quality_report) if quality_report is not None else None
+    snapshot(directory, quality_overlay=overlay)  # fail fast before binding
+    server = ThreadingHTTPServer(("127.0.0.1", port), make_handler(directory, overlay))
     server.event_stream_slots = BoundedSemaphore(MAX_EVENT_CLIENTS)
     server.event_journal = EventJournal()
     server.daemon_threads = True
     return server
 
 
-def serve(directory: Path, port: int = 8765) -> None:
-    server = create_server(directory, port)
+def serve(directory: Path, port: int = 8765, *,
+          quality_report: Path | None = None) -> None:
+    server = create_server(directory, port, quality_report=quality_report)
     print(f"Tabuleiro ao vivo: http://127.0.0.1:{server.server_port}/", flush=True)
     print("Somente leitura, acesso local. Ctrl+C encerra o visualizador.", flush=True)
     try:

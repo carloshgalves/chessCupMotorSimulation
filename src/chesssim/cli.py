@@ -130,6 +130,8 @@ def main(argv: list[str] | None = None) -> int:
     watch = sub.add_parser("watch", help="Tabuleiro local ao vivo para torneio ou duelo")
     watch.add_argument("--run", type=Path, required=True,
                        help="Diretório com tournament.json ou summary.json")
+    watch.add_argument("--quality-report", type=Path,
+                       help="JSON analyze-quality para um único PGN final com hash exato")
     watch.add_argument("--port", type=int, default=8765,
                        help="Porta local (padrão 8765; 0 escolhe uma livre)")
 
@@ -998,7 +1000,7 @@ def main(argv: list[str] | None = None) -> int:
                   max_game_wall_seconds=args.max_game_wall_seconds)
         elif args.command == "watch":
             from .live_board import serve
-            serve(args.run, port=args.port)
+            serve(args.run, port=args.port, quality_report=args.quality_report)
         elif args.command == "tournament-init":
             from .tournament import create_tournament, tournament_status
             create_tournament(rodent_root(args), args.out, participants=args.players,
