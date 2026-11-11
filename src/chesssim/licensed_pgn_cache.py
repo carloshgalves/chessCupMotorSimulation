@@ -123,8 +123,8 @@ def _catalog(path: Path) -> tuple[list[dict], str]:
     return sources, sha256(raw).hexdigest()
 
 
-_GAP = re.compile(r"(?:\\s+|[0-9]+\\.(?:\\.\\.)?|\\.\\.)*\\Z")
-_HEADER = re.compile(r'\\[[A-Za-z0-9][A-Za-z0-9_+#=:-]*\\s+"[^"\\r]*"\\]\\s*\\Z')
+_GAP = re.compile(r"(?:\s+|[0-9]+\.(?:\.\.)?|\.\.)*\Z")
+_HEADER = re.compile(r'\[[A-Za-z0-9][A-Za-z0-9_+#=:-]*\s+"[^"\r]*"\]\s*\Z')
 
 
 def _strict_movetext(text: str) -> None:
@@ -143,10 +143,10 @@ def _strict_movetext(text: str) -> None:
                 raise ValueError("Cabeçalho PGN inválido")
             continue
         lines.append(line)
-    body = "\\n".join(lines)
-    body = re.sub(r"(?m)^\\s*%[^\\n]*", " ", body)
-    body = re.sub(r";[^\\n]*", " ", body)
-    body = re.sub(r"\\{[^{}]*\\}", " ", body, flags=re.S)
+    body = "\n".join(lines)
+    body = re.sub(r"(?m)^\s*%[^\n]*", " ", body)
+    body = re.sub(r";[^\n]*", " ", body)
+    body = re.sub(r"\{[^{}]*\}", " ", body, flags=re.S)
     if "{" in body or "}" in body:
         raise ValueError("Comentário PGN inválido")
     cursor = 0
