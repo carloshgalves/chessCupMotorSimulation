@@ -204,13 +204,17 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                         deadline_limited = remaining < original_timeout
                         actor.timeout = min(original_timeout, max(0.001, remaining))
 
-                    def close_on_deadline():
-                        if not cancel_watchdog.wait(timeout=remaining):
-                            watchdog_expired.set()
+                    def close_on_deadline(engine=actor, stop=cancel_watchdog,
+                                          expired=watchdog_expired, seconds=remaining):
+                        # Bind this ply's actor/event/deadline immediately.
+                        # Otherwise a late-starting worker could see the
+                        # NEXT ply's variables and close the wrong process.
+                        if not stop.wait(timeout=seconds):
+                            expired.set()
                             # SimpleEngine.close is thread-safe and causes the
                             # pending play() to terminate without a UCI bestmove.
                             try:
-                                actor.close()
+                                engine.close()
                             except BaseException:
                                 pass
 
