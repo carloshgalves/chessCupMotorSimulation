@@ -25,9 +25,20 @@ class QualityOverlay:
     """Immutable validated presentation data, loaded once at server startup."""
 
     def __init__(self, path: Path):
-        if path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_REPORT_BYTES:
-            raise ValueError("Relatório de análise ausente, simbólico ou acima do limite")
-        raw = json.loads(path.read_text(encoding="utf-8"))
+        if path.is_symlink():
+            raise ValueError("Relatório simbólico não permitido")
+        try:
+            fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        except OSError as exc:
+            raise ValueError("Relatório de análise inacessível") from exc
+        with os.fdopen(fd, "rb") as stream:
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_REPORT_BYTES:
+                raise ValueError("Relatório de análise acima do limite ou inválido")
+            payload = stream.read(MAX_REPORT_BYTES + 1)
+        if len(payload) > MAX_REPORT_BYTES:
+            raise ValueError("Relatório de análise cresceu acima do limite")
+        raw = json.loads(payload)
         if not isinstance(raw, dict) or raw.get("protocol") != PROTOCOL:
             raise ValueError("Protocolo de análise de qualidade incompatível")
         inputs = raw.get("inputs")
