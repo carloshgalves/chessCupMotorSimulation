@@ -405,3 +405,132 @@ def test_cli_stop_status_clear_without_engine(harness, capsys):
     assert json.loads(capsys.readouterr().out)["stop_requested"] is True
     assert main(["tournament-clear-stop", "--run", str(run)]) == 0
     assert json.loads(capsys.readouterr().out)["stop_requested"] is False
+
+
+
+def test_recovery_preview_recognizes_sigkill_window_before_summary(harness):
+    """Crash after mkdir but before first atomic summary cannot vanish."""
+    begin, calls, _, _, root = harness
+    run = begin()
+    saved = tournament.load_tournament(run)
+    match = saved["rounds"][0]["matches"][0]
+    a, b = match["players"]
+    orphan = (tournament._duel_dir(run, match) /
+              f"{a}-vs-{b}" / "crash-before-summary")
+    orphan.mkdir(parents=True)
+    partial = orphan / "jogo_1.partial.pgn"
+    partial.write_text('[Event "Partial"]\n\n*\n', encoding="utf-8")
+    checkpoint = (run / "tournament.json").read_bytes()
+    progress = partial.read_bytes()
+
+    preview = tournament.tournament_recovery_preview(run)
+    assert preview["schema"] == "chesssim-tournament-recovery-preview-v1"
+    assert preview["mode"] == "READ_ONLY_ADVISORY"
+    assert preview["checkpoint_status"] == "READY"
+    assert preview["matches_retry_required"] == [match["id"]]
+    assert preview["recovered_completed_attempts"] == []
+    assert preview["excluded_incomplete_attempts"] == [{
+        "match": match["id"],
+        "folder": str(orphan.relative_to(run)),
+        "reason": "MISSING_SUMMARY",
+    }]
+    assert not calls
+    assert (run / "tournament.json").read_bytes() == checkpoint
+    assert partial.read_bytes() == progress
+    assert not (run / ".tournament.lock").exists(), "read-only preview must not lock/write"
+
+    blocked = tournament.run_tournament(root, run)
+    assert blocked["status"] == "BLOCKED"
+    assert not calls, "must refuse implicit retry after unclean process death"
+    result = tournament.run_tournament(root, run, retry_incomplete=True)
+    assert result["status"] == "COMPLETED"
+    assert len(calls) == 1
+    final = tournament.load_tournament(run)
+    match = final["rounds"][0]["matches"][0]
+    assert match["excluded_attempts"] == [{
+        "folder": str(orphan.relative_to(run)), "reason": "MISSING_SUMMARY"
+    }]
+    assert len(match["attempts"]) == 1
+    assert tournament.run_tournament(root, run)["status"] == "COMPLETED"
+    assert len(calls) == 1, "resume must not duplicate accepted games"
+
+
+def test_recovery_preview_reconstructs_completed_uncheckpointed_duel(harness):
+    begin, calls, _, fake, root = harness
+    run = begin()
+    state = tournament.load_tournament(run)
+    match = state["rounds"][0]["matches"][0]
+    a, b = (find_player(slug) for slug in match["players"])
+    folder = fake(root, tournament._duel_dir(run, match), a, b,
+                  depth=None, clock=(600, 2), reverse=True,
+                  max_plies=600, use_books=True)
+    checkpoint = (run / "tournament.json").read_bytes()
+    game_bytes = (folder / "duelo.pgn").read_bytes()
+    forecast = tournament.tournament_recovery_preview(run)
+    assert forecast["recovered_completed_attempts"] == [{
+        "match": match["id"], "folder": str(folder.relative_to(run)),
+    }]
+    assert forecast["projected_matches_completed"] == 1
+    assert forecast["projected_champion"] in (a.slug, b.slug)
+    assert (run / "tournament.json").read_bytes() == checkpoint
+    assert (folder / "duelo.pgn").read_bytes() == game_bytes
+    assert tournament.run_tournament(root, run)["status"] == "COMPLETED"
+    assert len(calls) == 1, "verified game must not be replayed"
+
+
+def test_untrusted_symlink_attempt_and_summary_are_rejected(harness, tmp_path):
+    begin, _, _, _, root = harness
+    run = begin()
+    match = tournament.load_tournament(run)["rounds"][0]["matches"][0]
+    a, b = match["players"]
+    base = tournament._duel_dir(run, match) / f"{a}-vs-{b}"
+    base.mkdir(parents=True)
+    outside = tmp_path / "outside-attempt"
+    outside.mkdir()
+    (base / "symlink-attempt").symlink_to(outside, target_is_directory=True)
+    with pytest.raises(RuntimeError, match="redirecionada"):
+        tournament.tournament_recovery_preview(run)
+    with pytest.raises(RuntimeError, match="redirecionada"):
+        tournament.run_tournament(root, run)
+    assert not (outside / "summary.json").exists()
+    (base / "symlink-attempt").unlink()
+    local = base / "regular-attempt"
+    local.mkdir()
+    original = tmp_path / "outsider-summary.json"
+    original.write_text('{"status":"COMPLETED"}', encoding="utf-8")
+    (local / "summary.json").symlink_to(original)
+    with pytest.raises(RuntimeError, match="redirecionado"):
+        tournament.tournament_recovery_preview(run)
+
+
+def test_registered_attempt_with_missing_summary_is_not_downgraded(harness):
+    begin, calls, _, _, root = harness
+    run = begin()
+    tournament.run_tournament(root, run)
+    assert len(calls) == 1
+    summary = calls[0] / "summary.json"
+    summary.unlink()
+    with pytest.raises(RuntimeError, match="perdeu o resumo"):
+        tournament.tournament_recovery_preview(run)
+    with pytest.raises(RuntimeError, match="perdeu o resumo"):
+        tournament.run_tournament(root, run)
+
+
+def test_recovery_preview_cli_without_mutating_tournament(harness):
+    import subprocess
+    import sys
+
+    begin, _, _, _, _root = harness
+    run = begin()
+    previous = (run / "tournament.json").read_bytes()
+    result = subprocess.run(
+        [sys.executable, "-m", "chesssim", "tournament-recovery-preview",
+         "--run", str(run)],
+        text=True, capture_output=True, timeout=15,
+    )
+    assert result.returncode == 0, result.stderr
+    report = json.loads(result.stdout)
+    assert report["mode"] == "READ_ONLY_ADVISORY"
+    assert report["matches_retry_required"] == []
+    assert (run / "tournament.json").read_bytes() == previous
+    assert not (run / ".tournament.lock").exists()
