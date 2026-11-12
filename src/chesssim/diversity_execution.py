@@ -187,6 +187,12 @@ def _audit_completed_pair(folder: Path, *, players: list[str],
         if game is None or game.errors or chess.pgn.read_game(stream) is not None:
             raise ValueError("PGN não contém exatamente uma partida legal")
         trajectory, plies = mainline_identity(game)
+        # This controlled depth-only runner has no clock forfeits or
+        # resignation protocol: COMPLETED requires a terminal chess position,
+        # not merely a PGN Result tag that a file can claim arbitrarily.
+        actual_outcome = game.end().board().outcome(claim_draw=True)
+        if actual_outcome is None or actual_outcome.result() != record["result"]:
+            raise ValueError("Recibo COMPLETED sem resultado terminal verificável")
         white_player = player_objects[record["white"]]
         black_player = player_objects[record["black"]]
         if (type(record.get("plies")) is not int or record["plies"] != plies or
