@@ -108,7 +108,7 @@ def main(argv: list[str] | None = None) -> int:
     custom_import.add_argument("--file", type=Path, required=True)
 
     custom_retire = sub.add_parser(
-        "custom-player-retire", help="Desativa cadastro mantendo identidade e trilha local")
+        "custom-player-retire", help="Desativa cadastro mantendo registro original")
     custom_retire.add_argument("--library", type=Path, required=True)
     custom_retire.add_argument("--id", required=True)
 
