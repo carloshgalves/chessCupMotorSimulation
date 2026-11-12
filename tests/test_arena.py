@@ -855,3 +855,24 @@ def test_arena_custom_catalog_markup_is_inert_and_explicitly_unplayable():
     assert 'fetch("/api/arena/custom-players"' in js
     assert "textContent" in js
     assert "innerHTML" not in js and "eval(" not in js
+
+
+def test_arena_cli_custom_library_forwarded_only_when_explicit(rodent_stub,
+                                                               tmp_path, monkeypatch):
+    from chesssim.cli import main
+    captured = []
+    def fake_serve(root, workspace, **kwargs):
+        captured.append((root, workspace, kwargs))
+    monkeypatch.setattr(arena, "serve", fake_serve)
+    root, out = rodent_stub
+    library = tmp_path / "customs"
+    library.mkdir()
+    base = ["arena", "--rodent", str(root), "--out", str(out),
+            "--port", "0"]
+    assert main(base) == 0
+    assert captured[-1][2]["custom_library"] is None
+    assert main([*base, "--custom-library", str(library)]) == 0
+    assert captured[-1][2]["custom_library"] == library
+    assert captured[-1][0] == root
+    assert captured[-1][1] == out
+    assert not list(library.iterdir()), "CLI forwarding does not mutate catalog"
