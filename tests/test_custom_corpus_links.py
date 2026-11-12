@@ -398,3 +398,24 @@ def test_duplicate_pgn_trajectory_is_counted_once_not_multiple_times(tmp_path):
     attached = _link(library, item, cache)
     assert attached["corpus"]["games"] == 1
     assert attached["corpus"]["coverage_band"] == "LOW_1_TO_19"
+
+
+def test_event_quota_32_blocks_33rd_without_overwriting_receipts(
+    tmp_path, monkeypatch
+):
+    library, item, cache = _setup(tmp_path, count=1)
+    snapshot = links._selection(cache, NAME)
+    monkeypatch.setattr(links, "_selection", lambda _path, _name: snapshot)
+    head = item["profile_sha256"]
+    for _ in range(16):
+        attached = _link(library, item, cache, head=head)
+        detached = links.corpus_detach(
+            library, item["id"], expected_head=attached["head_sha256"])
+        head = detached["head_sha256"]
+    originals = [(p.name, p.read_bytes()) for p in _events(library, item["id"])]
+    assert len(originals) == 32
+    with pytest.raises(ValueError, match="32"):
+        _link(library, item, cache, head=head)
+    assert originals == [(p.name, p.read_bytes())
+                         for p in _events(library, item["id"])]
+    assert links.corpus_status(library, item["id"])["sequence"] == 32
