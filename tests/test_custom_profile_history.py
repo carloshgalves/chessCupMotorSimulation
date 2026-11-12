@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 import json
-from pathlib import Path
 
 import pytest
 
