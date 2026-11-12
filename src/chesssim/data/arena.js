@@ -89,8 +89,15 @@ function applyCustomCatalog(data) {
 async function refreshCustomCatalog() {
   if (customLoading) return;
   customLoading = true;
+  // A hanging optional GET cannot consume the only catalog polling slot
+  // indefinitely. The live board continues refreshing independently.
+  const controller = typeof AbortController === "function" ?
+    new AbortController() : null;
+  const timeout = controller ? setTimeout(() => controller.abort(), 5000) : null;
   try {
-    const response = await fetch("/api/arena/custom-players", {cache:"no-store"});
+    const response = await fetch("/api/arena/custom-players", {
+      cache:"no-store", ...(controller ? {signal:controller.signal} : {})
+    });
     if (!response.ok) throw new Error("Biblioteca local indisponível");
     applyCustomCatalog(await response.json());
   } catch (_) {
@@ -104,6 +111,7 @@ async function refreshCustomCatalog() {
     fillPlayer($("black"), "tal");
     updateForm();
   } finally {
+    if (timeout !== null) clearTimeout(timeout);
     customLoading = false;
   }
 }
