@@ -8,6 +8,13 @@ const source = fs.readFileSync(process.argv[2], "utf8");
 const token = "arena-capability-token-that-is-secret-and-long";
 const calls = [];
 let current = null;
+let customCatalogUnavailable = false;
+const fictional = [{
+  id:"user-1234567890abcdef1234567890abcdef",
+  name:"Ava <img src=x onerror=alert(1)>",
+  kind:"fictional-player",status:"METADATA_ONLY_NOT_PLAYABLE",
+  revision:2,installed:false,uci_eligible:false,historically_validated:false
+}];
 const players = [
   {slug:"fischer",name:"Bobby Fischer",installed:true,alias:"Fischer",
    historically_validated:false,reference_period:"1970–1972",
@@ -58,6 +65,15 @@ const document={
 };
 const $=id=>document.getElementById(id);
 const fetch=async(path,request={})=>{
+  if(path==="/api/arena/custom-players"){
+    return customCatalogUnavailable ?
+      {ok:false,status:503,json:async()=>({error:"Corrupted"})} :
+      {ok:true,json:async()=>({
+        schema:"chesssim-custom-arena-catalog-v1",
+        configured:true,players:fictional,
+        warning:"Only metadata, no UCI"
+      })};
+  }
   if(path==="/api/arena"){
     return {ok:true,json:async()=>({
       busy:!!current,duel_busy:!!current,human_busy:false,session:current,players,opening_books_configured:false
@@ -91,6 +107,13 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal($("white").value,"fischer");
   assert.equal($("black").value,"tal");
   assert.equal($("launch").disabled,false);
+  assert.equal($("custom-profile-list").children.length,1);
+  assert($("custom-profile-list").children[0].textContent.includes(
+    "Ava <img src=x onerror=alert(1)>"), "untrusted name remains inert text");
+  assert.equal($("white").children.at(-1).tagName,"OPTGROUP");
+  assert.equal($("white").children.at(-1).children[0].disabled,true);
+  assert.equal($("black").children.at(-1).children[0].disabled,true);
+  assert($("custom-profile-status").textContent.includes("nenhum perfil UCI"));
   assert($("white-profile").children.some(el=>
     String(el.textContent).includes("NÃO VALIDADA")));
 
@@ -145,5 +168,21 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal(calls[1].path,"/api/arena/stop");
   assert($("launch-feedback").textContent.includes("Parada solicitada"));
   assert.equal($("board-frame").children.length,0);
+  fictional[0].installed=true; // A malicious API must not advertise playable fiction.
+  await vm.runInContext("refreshCustomCatalog()",ctx);
+  assert.equal($("custom-profile-list").children.length,0);
+  assert($("custom-profile-status").textContent.includes("Não foi possível"));
+  assert.equal($("white").value,"fischer");
+  assert.equal($("black").value,"tal");
+  assert.equal($("white").children.at(-1).tagName,"OPTION");
+  assert.equal(calls.length,2, "Custom GET must never create an engine POST");
+  fictional[0].installed=false;
+  await vm.runInContext("refreshCustomCatalog()",ctx);
+  assert.equal($("custom-profile-list").children.length,1);
+  customCatalogUnavailable=true;
+  await vm.runInContext("refreshCustomCatalog()",ctx);
+  assert.equal($("custom-profile-list").children.length,0);
+  assert.equal($("launch").disabled,true, "Busy state remains independent");
+  assert.equal(calls.length,2);
   console.log("Arena browser controls: PASS");
 })().catch(err=>{console.error(err);process.exitCode=1;});
