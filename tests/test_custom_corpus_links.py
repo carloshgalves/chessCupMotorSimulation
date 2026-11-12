@@ -325,3 +325,45 @@ def test_cli_status_link_detach_smoke(tmp_path, capsys):
     removed = json.loads(capsys.readouterr().out)
     assert removed["linked"] is False
     assert removed["sequence"] == 2
+
+
+def test_adversarial_action_type_and_unknown_name_revision_fail_closed(tmp_path):
+    library, item, cache = _setup(tmp_path)
+    _link(library, item, cache)
+    receipt = _events(library, item["id"])[0]
+    baseline = receipt.read_bytes()
+    data = json.loads(baseline)
+    data["event"]["action"] = ["LINK"]
+    data["sha256"] = core._sha(data["event"])
+    receipt.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(ValueError, match="divergente"):
+        links.corpus_status(library, item["id"])
+    receipt.write_bytes(baseline)
+    data = json.loads(baseline)
+    data["event"]["name_revision_sha256"] = "f" * 64
+    data["sha256"] = core._sha(data["event"])
+    receipt.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(ValueError, match="Revisão de nome"):
+        links.corpus_status(library, item["id"])
+    receipt.write_bytes(baseline)
+    assert links.corpus_status(library, item["id"])["linked"] is True
+
+
+@pytest.mark.parametrize("bad_name", [
+    NAME + "\u202e", NAME + "\u200d", NAME + "\nother",
+])
+def test_invisible_control_and_multiline_names_are_rejected(tmp_path, bad_name):
+    library, item, cache = _setup(tmp_path)
+    with pytest.raises(ValueError, match="NFC|controles"):
+        _link(library, item, cache, pgn_name=bad_name)
+    assert not _events(library, item["id"])
+
+
+def test_link_after_actual_rename_references_existing_name_revision(tmp_path):
+    library, item, cache = _setup(tmp_path)
+    renamed = names.rename_fictional(
+        library, item["id"], "Mira Ravenwood", item["revision_sha256"])
+    attached = _link(library, item, cache)
+    stored = json.loads(_events(library, item["id"])[0].read_text())
+    assert stored["event"]["name_revision_sha256"] == renamed["revision_sha256"]
+    assert links.corpus_status(library, item["id"])["head_sha256"] == attached["head_sha256"]
