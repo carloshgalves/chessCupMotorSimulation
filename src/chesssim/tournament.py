@@ -14,7 +14,7 @@ import time
 import chess.pgn
 
 from .catalog import find_player
-from .matches import _atomic_text, file_hash, official_book_hashes, play_duel, validate
+from .matches import _atomic_text, _fsync_directory_tree, file_hash, official_book_hashes, play_duel, validate
 from .game_diversity import mainline_identity
 from .peak_windows import CLOCK_PRESETS
 from .protocol import OFFICIAL
@@ -26,7 +26,8 @@ STOP_FILE = ".stop-requested.json"
 
 
 def _save(directory: Path, state: dict) -> None:
-    _atomic_text(directory / "tournament.json", json.dumps(state, indent=2, ensure_ascii=False) + "\n")
+    _atomic_text(directory / "tournament.json", json.dumps(state, indent=2, ensure_ascii=False) + "\n",
+                 durable=os.name == "posix")
 
 
 def load_tournament(directory: Path) -> dict:
@@ -55,8 +56,13 @@ def request_stop(directory: Path, *, reason: str = "Solicitado pelo operador") -
             json.dump({"requested_utc": datetime.now(timezone.utc).isoformat(),
                        "reason": reason}, stream, ensure_ascii=False)
             stream.write("\n")
+            if os.name == "posix":
+                stream.flush()
+                os.fsync(stream.fileno())
     except FileExistsError:
         pass
+    if os.name == "posix":
+        _fsync_directory_tree(path.parent)
     return tournament_status(directory)
 
 
@@ -65,7 +71,10 @@ def clear_stop(directory: Path) -> dict:
     directory = directory.expanduser().resolve()
     with _lock(directory):
         load_tournament(directory)
-        _stop_file(directory).unlink(missing_ok=True)
+        stop_path = _stop_file(directory)
+        stop_path.unlink(missing_ok=True)
+        if os.name == "posix":
+            _fsync_directory_tree(stop_path.parent)
         return tournament_status(directory)
 
 
