@@ -19,7 +19,7 @@ import chess.pgn
 
 from .catalog import find_player
 from .diversity_experiment import design
-from .game_diversity import mainline_identity
+from .game_diversity import audit_mainlines, mainline_identity
 from .matches import _atomic_text, file_hash, play_duel, validate
 from .opening_books import load_opening_book, select_book_move
 
@@ -332,6 +332,8 @@ def execute_plan(root: Path, plan_path: Path, out: Path, *,
     # Explicit, exclusive creation. Never overwrite or implicitly resume an
     # uncertain run after a crash (even if some arm folders look complete).
     out.mkdir(parents=True, exist_ok=False)
+    _, initial_diversity = audit_mainlines([])
+    observations = []
     manifest = {
         "schema": "chesssim-diversity-execution-v1",
         "status": STATUS_PLANNED, "created_utc": datetime.now(timezone.utc).isoformat(),
@@ -342,6 +344,7 @@ def execute_plan(root: Path, plan_path: Path, out: Path, *,
         "blocks_total_in_plan": plan["trials"],
         "arms_planned": 3 * blocks, "arms_completed": 0,
         "inputs": inputs, "arms": [],
+        "game_evidence": [], "diversity": initial_diversity,
         "warning": ("Executed UCI observations only; no claim of improved diversity, "
                     "independent observations or historical fidelity. "
                     "No sealed holdout is loaded or evaluated."),
@@ -385,6 +388,20 @@ def execute_plan(root: Path, plan_path: Path, out: Path, *,
                     "receipt": receipt,
                 })
                 manifest["arms_completed"] += 1
+                for game in receipt["games"]:
+                    observations.append({
+                        "source": (f"block_{block['block']:03d}/"
+                                   f"{expected_condition}/game_{game['game']}"),
+                        "mainline_sha256": game["mainline_sha256"],
+                        "plies": game["plies"],
+                        "opening_seed": arm["seed"] if books else None,
+                        "opening_mode": ("historical-v09-exploratory"
+                                         if books else "disabled"),
+                        "color_order": game["white"] + "|" + game["black"],
+                    })
+                annotated, diversity = audit_mainlines(observations)
+                manifest["game_evidence"] = annotated
+                manifest["diversity"] = diversity
                 checkpoint()
         manifest["status"] = (
             STATUS_COMPLETED if blocks == plan["trials"] else STATUS_SUBSET)
