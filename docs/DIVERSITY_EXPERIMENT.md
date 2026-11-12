@@ -74,14 +74,15 @@ do Rodent e nenhuma diversidade extra deve ser esperada.
   desenho pré-registrado, perfis e motores congelados, hash de cada repertório,
   parâmetros, resultado de cada braço e SHA/identidade de cada PGN e resumo.
   A confirmação de braço exige `summary.json` `COMPLETED`, **duas partidas
-  completas**, ambas com resultado, SHA da linha principal e números de
-  meios-lances reconciliados com os PGNs locais.
+  completas**, ambas com resultado, seed/política de repertório, SHA da linha principal e números de
+  meios-lances reconciliados com os PGNs locais. O PGN consolidado `duelo.pgn`
+  também precisa conter exatamente as duas trajetórias, na ordem correta.
 - Qualquer falha de motor, recusa do recibo, adulteração de hash ou timeout
   impede avançar para o próximo braço: o manifesto é marcado
   `FAILED_REQUIRES_MANUAL_INSPECTION`. Os arquivos ficam preservados para
   perícia. **Nunca** executar novamente no mesmo diretório; decidir
   manualmente como registrar uma nova tentativa e manter o histórico anterior.
-- O status de êxito é **`EXECUTED_RESULTS_NOT_CALIBRATED`**: houve execução
+- O status é **`EXECUTED_SUBSET_NOT_CALIBRATED`** quando somente os primeiros N blocos foram executados, e **`EXECUTED_RESULTS_NOT_CALIBRATED`** apenas quando todos os blocos do plano original foram executados: houve execução
   e reconciliação de recibos, **não** validação histórica, prova de diversidade
   efetiva nem independência estatística. A1/A2 são controles negativos;
   resultados divergentes nessas condições sinalizam não determinismo residual.
