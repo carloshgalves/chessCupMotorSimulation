@@ -106,6 +106,23 @@ def main(argv: list[str] | None = None) -> int:
     diversity_plan.add_argument("--out", type=Path, required=True,
                                 help="Arquivo JSON novo, nunca sobrescrito")
 
+    diversity_run = sub.add_parser(
+        "diversity-run", help="Executa blocos A1/A2/B pré-registrados em duelos UCI locais")
+    diversity_run.add_argument("--plan", type=Path, required=True,
+                               help="Plano gerado por diversity-plan, sem adulterações")
+    diversity_run.add_argument("--rodent", type=Path)
+    diversity_run.add_argument("--out", type=Path, required=True,
+                               help="Diretório novo e exclusivo; nunca retoma implicitamente")
+    diversity_run.add_argument("--white-book", type=Path,
+                               help="Livro do primeiro participante (não é cor fixa no replay)")
+    diversity_run.add_argument("--black-book", type=Path,
+                               help="Livro do segundo participante (não é cor fixa no replay)")
+    diversity_run.add_argument("--blocks", type=int, default=1,
+                               help="Executa os primeiros N blocos (três braços por bloco)")
+    diversity_run.add_argument("--depth", type=int, default=8)
+    diversity_run.add_argument("--max-plies", type=int, default=400)
+    diversity_run.add_argument("--max-game-wall-seconds", type=float, default=600.0)
+
     fast_audit = sub.add_parser(
         "fast-audit", help="Avalia probabilidades fixas da temporada rápida contra partidas UCI verificadas")
     fast_audit.add_argument("--workspace", type=Path, required=True,
@@ -573,6 +590,21 @@ def main(argv: list[str] | None = None) -> int:
                               "design_sha256": plan["design_sha256"],
                               "seed_effectiveness": plan["seed_effectiveness"]},
                              ensure_ascii=False, indent=2))
+            return 0
+        if args.command == "diversity-run":
+            from .diversity_execution import execute_plan
+            result = execute_plan(
+                rodent_root(args), args.plan, args.out,
+                white_book=args.white_book, black_book=args.black_book,
+                blocks=args.blocks, depth=args.depth, max_plies=args.max_plies,
+                max_game_wall_seconds=args.max_game_wall_seconds)
+            print(json.dumps({
+                "out": str(args.out),
+                "status": result["status"], "arms_completed": result["arms_completed"],
+                "arms_planned": result["arms_planned"],
+                "design_sha256": result["design_sha256"],
+                "warning": result["warning"],
+            }, ensure_ascii=False, indent=2))
             return 0
         if args.command == "diversity-report":
             from .diversity_report import export_diversity

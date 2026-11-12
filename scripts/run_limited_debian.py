@@ -24,7 +24,8 @@ def build_command(memory_mib: int, cpu_percent: int, tasks_max: int,
     if type(tasks_max) is not int or not 16 <= tasks_max <= 256:
         raise ValueError("TasksMax needs 16..256 tasks")
     if not chesssim_args or chesssim_args[0] not in {
-        "tournament-run", "arena", "play", "play-styles", "play-provisional"
+        "tournament-run", "arena", "play", "play-styles", "play-provisional",
+        "diversity-run"
     }:
         raise ValueError("Choose an explicitly supported UCI workload")
     if any(not isinstance(v, str) or not v or "\x00" in v for v in chesssim_args):

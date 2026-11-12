@@ -25,3 +25,107 @@ Por padrão o relatório afirma `NO_EFFECT_EXPECTED_WITHOUT_EXTERNAL_REPERTOIRE`
 ## Por que não muda a política do motor agora?
 
 A issue #69 propõe presets **fidelidade/reprodutibilidade** vs **entretenimento/diversidade**. Implementar troca arbitrária de lances agora distorceria o corpus e confundiria hipótese de estilo com entretenimento. Esta fatia entrega o desenho testável para decidir o efeito antes de permitir variação. **Presets executáveis continuam pendentes**, com gate experimental em #83. O novo comando não fecha #69.
+
+
+## Incremento 2 — executor local controlado (PR #114)
+
+O comando `diversity-run` transforma **uma parte do plano pré-registrado em execuções Rodent IV reais** quando o operador dispõe dos perfis e executável autorizados. O comando não executa ensaios nesta CI e não garante aumento de diversidade: somente registra resultados de jogos reais que forem executados no host.
+
+**Experimento sem repertório externo** (controle de ausência de efeito da seed):
+
+```bash
+python -m chesssim diversity-plan --players fischer tal \
+  --seed 2029 --trials 2 --out /dados/ensaio-plano.json
+
+python -m chesssim diversity-run \
+  --plan /dados/ensaio-plano.json \
+  --rodent /CAMINHO_AUTORIZADO/RodentIV \
+  --out /dados/ensaio-execucao-nova \
+  --blocks 1 --depth 8 --max-plies 400 \
+  --max-game-wall-seconds 600
+```
+
+**Com repertório histórico externo autorizado**, gerar previamente o plano com
+`--external-repertoire` e fornecer um ou ambos os arquivos `--white-book` /
+`--black-book` ao `diversity-run`. Esses nomes se referem **à primeira e
+segunda pessoa do plano**, não à cor que terão em cada partida. Os livros devem
+ser criados no fluxo `opening-build` com a proveniência de treino aplicável e
+restrições de embargo. A mera presença de arquivo/declaração **não é prova**
+de ausência de vazamento do holdout: o operador deve auditar o dataset e suas
+licenças antes de usar. Sem repertório, a seed não controla a pesquisa interna
+do Rodent e nenhuma diversidade extra deve ser esperada.
+
+**Execução com limites de recursos opcionais no Debian:**
+
+```bash
+python scripts/run_limited_debian.py \
+  --memory-mib 1024 --cpu-percent 100 --max-tasks 64 \
+  -- diversity-run --plan /dados/ensaio-plano.json \
+  --rodent /CAMINHO_AUTORIZADO/RodentIV \
+  --out /dados/ensaio-cgroup-novo \
+  --blocks 1 --depth 8 --max-game-wall-seconds 600
+```
+
+Esse wrapper exige cgroup v2 e systemd de usuário; **não** oferece execução
+irrestrita como fallback. As cotas efetivas e a recuperação após OOM/SIGKILL
+ainda precisam de homologação física na #83.
+
+### Contrato de execução
+
+- O executor valida o JSON contra uma reconstrução determinística de
+  `diversity-plan`. Uma alteração em seed, jogador, condição, variável fixa,
+  status ou impressão digital é rejeitada **antes de iniciar UCI**.
+- O destino precisa ser **novo**, fora da instalação Rodent, sem ancestrais
+  simbólicos. Os recibos produzidos por `play_duel` são aceitos somente se
+  permanecerem no braço isolado correspondente.
+- Cada bloco usa três braços **na ordem A1/A2/B**, com seeds A1=A2 e B distinta,
+  motor/profiles/hashes, cores, profundidade e repertórios idênticos. Cada
+  braço executa **duas partidas de cores invertidas**, numeradas 1 e 2, em
+  diretório próprio e novo. Os parâmetros UCI e as trajetórias nunca são
+  modificados para forçar variedade.
+- A execução começa em pasta que **não pode existir**; `--blocks N` executa
+  os primeiros N blocos (padrão 1), sem retomada implícita nem sobrescrita.
+  O modo `--depth` é limitado a 1–30, `--max-plies` a 2–600 e orçamento
+  por partida a 1–7200 segundos. Use o wrapper cgroup opt-in da #27 se
+  precisar de limitação adicional de recursos.
+- `execution.json` conserva hash SHA-256 do plano original, impressão do
+  desenho pré-registrado, perfis e motores congelados, hash de cada repertório,
+  parâmetros, resultado de cada braço e SHA/identidade de cada PGN e resumo.
+  O manifesto também apresenta `game_evidence` e `diversity` usando a
+  função canônica de auditoria de linhas principais: cópias idênticas são
+  preservadas nos PGNs, mas recebem `duplicate_mainline=true` e **não**
+  aumentam `effective_independent_games`. Isso não mede a independência
+  entre trajetórias apenas similares nem valida estilo histórico.
+  Antes de contar um braço, o executor **reexecuta deterministicamente** a
+  política de seleção do livro na trajetória do PGN, usando seed, partida
+  1/2 e posição; compara os lances escolhidos, o traço salvo e as contagens.
+  Hashes do executável, perfis e repertórios também são conferidos **depois**
+  de cada braço, inclusive o último.
+  A confirmação de braço exige `summary.json` `COMPLETED`, **duas partidas
+  completas**, ambas com resultado, seed/política de repertório, SHA da linha principal e números de
+  meios-lances reconciliados com os PGNs locais. O PGN consolidado `duelo.pgn`
+  também precisa conter exatamente as duas trajetórias, na ordem correta.
+  Como esta trilha usa `depth` sem relógio nem mecanismo de rendição, uma
+  partida só é confirmada `COMPLETED` se a posição final admitir um
+  `board.outcome(claim_draw=True)` compatível com o resultado do PGN.
+  Uma tag `Result` arbitrária não é suficiente.
+- Qualquer falha de motor, recusa do recibo, adulteração de hash ou timeout
+  impede avançar para o próximo braço: o manifesto é marcado
+  `FAILED_REQUIRES_MANUAL_INSPECTION`. Os arquivos ficam preservados para
+  perícia. **Nunca** executar novamente no mesmo diretório; decidir
+  manualmente como registrar uma nova tentativa e manter o histórico anterior.
+- O status é **`EXECUTED_SUBSET_NOT_CALIBRATED`** quando somente os primeiros N blocos foram executados, e **`EXECUTED_RESULTS_NOT_CALIBRATED`** apenas quando todos os blocos do plano original foram executados: houve execução
+  e reconciliação de recibos, **não** validação histórica, prova de diversidade
+  efetiva nem independência estatística. A1/A2 são controles negativos;
+  resultados divergentes nessas condições sinalizam não determinismo residual.
+- O executor não consulta corpus histórico, não abre dados de teste lacrados e
+  não altera ratings, estilos, livros ou partidas do torneio oficial. O
+  operador deverá rodar `diversity-report`, as avaliações independentes
+  #18/#19/#20 e testes de controlabilidade de seed antes de decidir se
+  presets de entretenimento podem ser habilitados com segurança.
+
+**Gate ainda pendente #83:** rodar de fato no Debian com Rodent IV e livros
+legítimos, verificar logs UCI, árvores de processos, orçamento, cores,
+hashes, repetibilidade A1=A2, diferenças A/B e qualidade Stockfish. Testes
+Python usam motor **simulado** e comprovam o contrato de orquestração,
+não substituem esses ensaios físicos. #69 continua aberta.

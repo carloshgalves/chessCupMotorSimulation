@@ -118,3 +118,18 @@ def test_dry_run_never_launches_scope_even_when_systemd_is_available(monkeypatch
                         "--run", "/tmp/isolated"]) == 0
     assert not calls
     assert "PLAN_ONLY_NOT_ENFORCED" in capsys.readouterr().out
+
+
+def test_diversity_execution_uses_the_same_optional_cgroup_limits():
+    runner = _module()
+    cmd = runner.build_command(
+        1024, 100, 48,
+        ["diversity-run", "--plan", "/tmp/registered-plan.json",
+         "--out", "/tmp/new-trial", "--blocks", "1"])
+    assert cmd[:3] == ["systemd-run", "--user", "--scope"]
+    assert "--property=MemoryMax=1024M" in cmd
+    assert "--property=CPUQuota=100%" in cmd
+    assert "--property=TasksMax=48" in cmd
+    assert cmd[-7:] == [
+        "diversity-run", "--plan", "/tmp/registered-plan.json",
+        "--out", "/tmp/new-trial", "--blocks", "1"]
