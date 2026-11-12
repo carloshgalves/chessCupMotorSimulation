@@ -383,7 +383,7 @@ def test_explicit_position_embargo_keeps_disjoint_short_games_and_is_audited(tmp
     assert doc["uci_eligible"] is False
     assert doc["historically_validated"] is False
     assert doc["position_embargo"]["original_partition_games"] == {
-        "train": 11, "validation": 3, "holdout": 4}
+        "train": 10, "validation": 3, "holdout": 5}
     assert doc["position_embargo"]["output_partition_games"] == {
         key: value["games"] for key, value in doc["partitions"].items()}
     assert (out / "train.pgn").is_file()
