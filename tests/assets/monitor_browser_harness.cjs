@@ -537,6 +537,26 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   qualityFilter.value="all";qualityFilter.events.change();
   assert.equal(phaseBars.children.length,3);
 
+  // Invalid or stale aggregates must fail closed rather than omit one group
+  // and display misleading totals from the others.
+  vm.runInContext("feed.duel.games[0].quality_stats.by_phase.opening.sampled=99;render()",
+                   quality.context);
+  assert.equal(phaseBars.children.length,0);
+  assert(quality.elements.get("quality-stats-status").textContent.includes("Indisponível"));
+  vm.runInContext("feed.duel.games[0].quality_stats.by_phase.opening.sampled=2;render()",
+                   quality.context);
+  assert.equal(phaseBars.children.length,3);
+
+  // A stale pinned replay cannot retain statistics after a fresh backend PGN
+  // changes even if its public game id remains the same.
+  vm.runInContext(
+    "feed.duel.games[0]={...feed.duel.games[0],states:" +
+    "feed.duel.games[0].states.map(s=>({...s}))};" +
+    "feed.duel.games[0].states[1].uci='e2e3';render()",quality.context);
+  assert.equal(phaseBars.children.length,0);
+  assert.equal(qualityFilter.disabled,true,
+               "a changed UCI sequence invalidates a pinned chart");
+  
   // A new selected game must never inherit cached statistics of the old PGN.
   quality.location.hash="#match=r01-m01";
   await flush();
