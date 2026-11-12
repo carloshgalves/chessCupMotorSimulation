@@ -63,6 +63,11 @@ def _environment(tmp_path, monkeypatch):
             game.headers["White"] = white_player.name
             game.headers["Black"] = black_player.name
             game.headers["Result"] = "1-0"
+            game.headers["BookMode"] = (
+                "historical-v09-exploratory" if options["historical_openings"] else "disabled")
+            if options["historical_openings"]:
+                game.headers["OpeningSeed"] = str(options["opening_seed"])
+                game.headers["OpeningMinCount"] = "1"
             node = game
             for move in ("e2e4", "e7e5", "d1h5", "b8c6", "f1c4", "g8f6", "h5f7"):
                 node = node.add_variation(chess.Move.from_uci(move))
@@ -87,7 +92,13 @@ def _environment(tmp_path, monkeypatch):
         hashes.update({slug: execution.file_hash(path) for slug, path in paths.items()})
         summary = {
             "status": "COMPLETED", "players": [white.slug, black.slug],
-            "file_hashes": hashes,
+            "file_hashes": hashes, "book_hashes": {},
+            "historical_opening_policy": (
+                "EXPLORATORY_POSITION_CONDITIONED" if options["historical_openings"] else "DISABLED"),
+            "variation_control": {
+                "historical_opening_seed_effective": bool(options["historical_openings"]),
+                "internal_uci_book": False, "colors_reversed": True,
+            },
             "opening_seed": options["opening_seed"] if options["historical_openings"] else None,
             "games": receipts,
         }
@@ -188,7 +199,7 @@ def test_mutating_engine_between_arms_stops_before_next_uci(
     with pytest.raises(RuntimeError, match="Hash do motor"):
         _run(root, _plan(tmp_path), out)
     saved = json.loads((out / "execution.json").read_text())
-    assert saved["arms_completed"] == 1
+    assert saved["arms_completed"] == 0
     assert saved["status"] == execution.STATUS_FAILED
     assert len(calls) == 1
 
@@ -357,3 +368,63 @@ def test_registered_plan_does_not_treat_partial_execution_as_all_trials(
     assert report["blocks_requested"] == 1
     assert report["blocks_total_in_plan"] == 2
     assert report["arms_planned"] == 3
+
+
+def test_forged_pgn_opening_header_is_rejected_without_counting(
+    tmp_path, monkeypatch
+):
+    root, calls, _ = _environment(tmp_path, monkeypatch)
+    original = execution.play_duel
+    def forged(*args, **kwargs):
+        folder = original(*args, **kwargs)
+        pgn_path = folder / "jogo_1.pgn"
+        text = pgn_path.read_text(encoding="utf-8")
+        pgn_path.write_text(text.replace('[BookMode "disabled"]',
+                                         '[BookMode "historical-v09-exploratory"]'))
+        return folder
+    monkeypatch.setattr(execution, "play_duel", forged)
+    out = tmp_path / "trial"
+    with pytest.raises(ValueError, match="cabeçalho"):
+        _run(root, _plan(tmp_path), out)
+    assert len(calls) == 1
+    assert json.loads((out / "execution.json").read_text())["arms_completed"] == 0
+
+
+def test_bogus_variation_control_receipt_rejected_before_scoring(
+    tmp_path, monkeypatch
+):
+    root, calls, _ = _environment(tmp_path, monkeypatch)
+    original = execution.play_duel
+    def forged(*args, **kwargs):
+        folder = original(*args, **kwargs)
+        summary = folder / "summary.json"
+        doc = json.loads(summary.read_text())
+        doc["variation_control"]["internal_uci_book"] = True
+        summary.write_text(json.dumps(doc))
+        return folder
+    monkeypatch.setattr(execution, "play_duel", forged)
+    out = tmp_path / "trial"
+    with pytest.raises(ValueError, match="Resumo UCI"):
+        _run(root, _plan(tmp_path), out)
+    assert len(calls) == 1
+    assert json.loads((out / "execution.json").read_text())["status"] == execution.STATUS_FAILED
+
+
+def test_engine_drift_after_last_arm_is_also_detected(
+    tmp_path, monkeypatch
+):
+    root, calls, _ = _environment(tmp_path, monkeypatch)
+    original = execution.play_duel
+    exe = root / "rodent-iv-plain.exe"
+    def mutate_at_last(*args, **kwargs):
+        folder = original(*args, **kwargs)
+        if len(calls) == 3:
+            exe.write_bytes(b"last arm mutated resource")
+        return folder
+    monkeypatch.setattr(execution, "play_duel", mutate_at_last)
+    out = tmp_path / "trial"
+    with pytest.raises(RuntimeError, match="Hash/caminho"):
+        _run(root, _plan(tmp_path), out)
+    summary = json.loads((out / "execution.json").read_text())
+    assert summary["arms_completed"] == 2
+    assert summary["status"] == execution.STATUS_FAILED
