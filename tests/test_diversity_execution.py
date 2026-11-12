@@ -12,6 +12,7 @@ import pytest
 from chesssim import diversity_execution as execution
 from chesssim.diversity_experiment import export_plan
 from chesssim.game_diversity import mainline_identity
+from chesssim.opening_books import position_token, select_book_move
 
 
 def _plan(tmp_path: Path, *, external: bool = False) -> Path:
@@ -79,13 +80,32 @@ def _environment(tmp_path, monkeypatch):
             digest, plies = mainline_identity(game)
             if state["corrupt"] and index == 2:
                 digest = "a" * 64
+            trace = []
+            opening_counts = {"white": 0, "black": 0}
+            board = game.board()
+            for ply, move in enumerate(game.mainline_moves(), 1):
+                owner = white_player if board.turn else black_player
+                external = (options["historical_openings"] or {}).get(owner.slug)
+                chosen = (select_book_move(external, board, seed=options["opening_seed"],
+                                           game_number=index, min_count=1)
+                          if external is not None else None)
+                if chosen is not None:
+                    assert chosen == move
+                    side = "white" if board.turn else "black"
+                    opening_counts[side] += 1
+                    trace.append({
+                        "ply": ply, "player": owner.slug, "move": move.uci(),
+                        "seed": options["opening_seed"], "round": index,
+                        "book_source_sha256": external["source"]["pgn_sha256"],
+                    })
+                board.push(move)
             receipts.append({
                 "round": index, "white": white_player.slug,
                 "black": black_player.slug, "result": "1-0",
                 "status": "COMPLETED", "mainline_sha256": digest,
-                "plies": plies, "opening_moves": {"white": 0, "black": 0},
+                "plies": plies, "opening_moves": opening_counts,
                 "opening_seed": options["opening_seed"] if options["historical_openings"] else None,
-                "opening_trace": [],
+                "opening_trace": trace,
                 "opening_mode": ("historical-v09-exploratory"
                                  if options["historical_openings"] else "disabled"),
             })
@@ -269,7 +289,9 @@ def test_realistic_external_book_is_loaded_only_when_declared(
     bookfile.write_text('{"test":"book"}', encoding="utf-8")
     expected_book = {
         "schema": "chesssim-opening-v9", "player": "fischer",
-        "policy": {"max_plies": 16}, "positions": {"white": {}, "black": {}},
+        "policy": {"max_plies": 16},
+        "positions": {"white": {position_token(chess.Board()): {"e2e4": 2}},
+                      "black": {}},
         "source": {
             "pgn_sha256": "a" * 64,
             "provenance": {"status": "PUBLIC_PGN_UNPARTITIONED_EXPLORATORY"},
@@ -282,6 +304,10 @@ def test_realistic_external_book_is_loaded_only_when_declared(
     report = _run(root, path, tmp_path / "trial", white_book=bookfile)
     assert len(calls) == 3
     assert all("fischer" in x["books"] for x in calls)
+    assert all(a["receipt"]["games"][0]["opening_trace"][0]["move"] == "e2e4"
+               for a in report["arms"])
+    assert all(a["receipt"]["games"][1]["opening_trace"] == []
+               for a in report["arms"])
     assert report["seed_effectiveness"] == (
         "OPERATOR_DECLARED_EXTERNAL_REPERTOIRE_UNVERIFIED")
     assert report["inputs"]["external_books"]["fischer"]["file_sha256"] == (
@@ -451,3 +477,39 @@ def test_pgn_profile_header_cannot_forge_a_completed_arm(tmp_path, monkeypatch):
         _run(root, _plan(tmp_path), out)
     assert json.loads((out / "execution.json").read_text())["arms_completed"] == 0
     assert len(calls) == 1
+
+
+def test_forged_opening_trace_cannot_claim_repertoire_evidence(
+    tmp_path, monkeypatch
+):
+    root, calls, _ = _environment(tmp_path, monkeypatch)
+    plan = _plan(tmp_path, external=True)
+    file = tmp_path / "book.json"
+    file.write_text("book", encoding="utf-8")
+    book = {
+        "schema": "chesssim-opening-v9", "player": "fischer",
+        "policy": {"max_plies": 16},
+        "positions": {"white": {position_token(chess.Board()): {"e2e4": 1}},
+                      "black": {}},
+        "source": {
+            "pgn_sha256": "a" * 64,
+            "provenance": {"status": "PUBLIC_PGN_UNPARTITIONED_EXPLORATORY"},
+        },
+    }
+    monkeypatch.setattr(execution, "load_opening_book", lambda path, slug: book)
+    original = execution.play_duel
+
+    def forged(*args, **kwargs):
+        folder = original(*args, **kwargs)
+        path = folder / "summary.json"
+        receipt = json.loads(path.read_text(encoding="utf-8"))
+        receipt["games"][0]["opening_trace"][0]["move"] = "d2d4"
+        path.write_text(json.dumps(receipt), encoding="utf-8")
+        return folder
+
+    monkeypatch.setattr(execution, "play_duel", forged)
+    out = tmp_path / "trial"
+    with pytest.raises(ValueError, match="não reproduz o livro congelado"):
+        _run(root, plan, out, white_book=file)
+    assert len(calls) == 1
+    assert json.loads((out / "execution.json").read_text())["arms_completed"] == 0
