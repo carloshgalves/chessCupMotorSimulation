@@ -336,3 +336,38 @@ def test_bundle_rejects_regressive_time_with_valid_rehashed_lineage(tmp_path):
     with pytest.raises(ValueError, match="Cronologia"):
         core.import_fictional(target, forged)
     assert not target.exists()
+
+
+def test_legacy_size_limit_is_not_relaxed_by_larger_v2_bundle_quota(tmp_path):
+    library, original = _created(tmp_path)
+    source = library / f"{original['id']}.json"
+    v1 = json.loads(source.read_text(encoding="utf-8"))
+    # Re-encoding the identity with huge JSON whitespace keeps it semantically
+    # valid, but the old 4 KiB envelope must still be rejected on import.
+    inflated = tmp_path / "inflated.json"
+    inflated.write_bytes(json.dumps(v1).encode("utf-8") +
+                         b" " * core.MAX_RECORD_BYTES)
+    with pytest.raises(ValueError, match="excessivo"):
+        core.import_fictional(tmp_path / "target", inflated)
+    assert not (tmp_path / "target").exists()
+
+
+def test_corrupt_portable_revision_does_not_mutate_existing_prefix(tmp_path):
+    library, original = _created(tmp_path)
+    _rename(library, original, "Mira Ravenwood")
+    portable = tmp_path / "portable.json"
+    core.export_fictional(library, original["id"], portable)
+    dest = tmp_path / "imported"
+    core.import_fictional(dest, portable)
+    state_before = [(p.name, p.read_bytes()) for p in sorted(dest.iterdir())
+                    if p.suffix == ".json"]
+    doc = json.loads(portable.read_text())
+    doc["revisions"][0]["event"]["recorded_utc"] = "2999-01-01T00:00:00Z"
+    doc["revisions"][0]["sha256"] = core._sha(doc["revisions"][0]["event"])
+    doc["sha256"] = core._sha({k: v for k, v in doc.items() if k != "sha256"})
+    changed = tmp_path / "changed.json"
+    changed.write_text(json.dumps(doc), encoding="utf-8")
+    with pytest.raises(ValueError, match="futura"):
+        core.import_fictional(dest, changed)
+    assert state_before == [(p.name, p.read_bytes())
+                            for p in sorted(dest.iterdir()) if p.suffix == ".json"]
