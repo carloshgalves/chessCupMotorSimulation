@@ -192,7 +192,17 @@ def export_bytes(root: Path, doc: dict, raw_base: bytes) -> bytes:
 
 
 def _parse_portable(raw: bytes) -> tuple[dict, list[dict]]:
-    document = core._json(raw)
+    # v1's historical 4 KiB contract must survive the introduction of
+    # larger v2 bundles. Invalid oversized JSON does not acquire a v2 quota.
+    try:
+        document = core._json(raw)
+    except ValueError as exc:
+        if len(raw) > core.MAX_RECORD_BYTES:
+            raise ValueError("Registro excessivo ou JSON inválido") from exc
+        raise
+    if (len(raw) > core.MAX_RECORD_BYTES
+            and document.get("schema") != BUNDLE_SCHEMA):
+        raise ValueError("Registro v1 excessivo")
     if document.get("schema") == core.SCHEMA:
         identity = core._validate_record(raw)
         return identity, []
