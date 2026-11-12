@@ -51,6 +51,14 @@ def request_stop(directory: Path, *, reason: str = "Solicitado pelo operador") -
     if not reason or len(reason) > 256:
         raise ValueError("Motivo deve conter de 1 a 256 caracteres")
     path = _stop_file(directory)
+    # A repeated stop must succeed even if the disk is now full: do not
+    # create a second temporary file for an already published regular flag.
+    if path.is_symlink():
+        raise ValueError("Existing stop flag is not a regular file")
+    if path.is_file():
+        if os.name == "posix":
+            _fsync_directory_tree(path.parent)
+        return tournament_status(directory)
     payload = json.dumps({"requested_utc": datetime.now(timezone.utc).isoformat(),
                           "reason": reason}, ensure_ascii=False) + "\n"
     try:
