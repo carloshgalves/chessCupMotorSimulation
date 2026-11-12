@@ -31,7 +31,8 @@ status ativo/desativado, revisão e flags explícitas
 `historically_validated=false`.
 
 A interface mostra um painel de consulta e as identidades como
-**opções desabilitadas** nos seletores de Duelo. A fonte de dados da
+**opções desabilitadas** nos seletores de Duelo. O UUID completo aparece
+junto ao nome: dois homônimos continuam distinguíveis visualmente. A fonte de dados da
 seleção jogável continua sendo exclusivamente `/api/arena.players`,
 que lista os 64 históricos; personagens customizados **não entram**
 nesse array. O modo Jogar, Copas e Ligas continua usando apenas as
