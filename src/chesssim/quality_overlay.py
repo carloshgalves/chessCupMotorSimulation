@@ -6,6 +6,8 @@ The replay cannot infer playing strength, win probability, or historical style.
 from __future__ import annotations
 
 from hashlib import sha256
+
+from .quality_stats import summarize_quality
 import json
 import os
 from pathlib import Path
@@ -60,9 +62,11 @@ class QualityOverlay:
         if not isinstance(name, str) or not 1 <= len(name) <= 100:
             raise ValueError("Nome do motor inválido")
         self.pgn_sha256 = digest
+        self.stockfish_sha256 = engine_sha
         self.engine_name = name
         self.depth = inputs["depth"]
         self.positions = {}
+        self.quantitatively_usable = {}
         for row in rows:
             if not isinstance(row, dict) or type(row.get("game_index")) is not int or row["game_index"] != 0:
                 raise ValueError("A camada visual aceita relatório de uma única partida")
@@ -79,10 +83,14 @@ class QualityOverlay:
                     and _integer(cp, -100000, 100000)
                     and (mate is None or _integer(mate, -10000, 10000))
                     and _integer(loss, 0, 100000)
-                    and _integer(depth, 1, 35)):
+                    and _integer(depth, 1, 35) and depth == self.depth):
                 raise ValueError("Posição analisada inválida, duplicada ou não finita")
             critical = "blunder" if loss >= 250 else "mistake" if loss >= 100 else None
             self.positions[ply] = (fen, played, cp, mate, depth, loss, critical)
+            # Search instability and mate-score mapping cannot be averaged
+            # as plain CP losses. Missing/unknown flags also fail closed.
+            self.quantitatively_usable[ply] = (row.get("mate_affected") is False and
+                                                row.get("search_disagreement") is False)
 
     def for_game(self, source: Path, states: list[dict]) -> dict[int, dict]:
         """Fail closed on any stale report/move rather than displaying foreign scores."""
@@ -119,3 +127,17 @@ class QualityOverlay:
                 "source": "stockfish-sampled-forced-move",
             }
         return mapped
+
+    def stats_for_game(self, mapping: dict[int, dict], *, headers: dict,
+                       metadata: dict, total_plies: int) -> dict | None:
+        """Descriptive statistics only for a completed, matching game receipt."""
+        result = headers.get("Result")
+        if not (metadata.get("status") == "COMPLETED" and
+                metadata.get("result") == result):
+            return None
+        return summarize_quality(
+            mapping=mapping, usable=self.quantitatively_usable,
+            headers=headers, status=metadata["status"], result=result,
+            total_plies=total_plies, report_pgn_sha256=self.pgn_sha256,
+            stockfish_sha256=self.stockfish_sha256,
+            engine=self.engine_name, depth=self.depth)
