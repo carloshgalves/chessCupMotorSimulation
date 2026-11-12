@@ -227,6 +227,14 @@ class ArenaManager:
                  max_game_wall_seconds: float = 3600,
                  runner=None):
         self.root = root.expanduser().resolve(strict=True)
+        # Validate optional metadata location before creating or locking the
+        # Arena workspace, so invalid opt-in config has zero session effects.
+        self.custom_library = None
+        if custom_library is not None:
+            directory = custom_library_path(custom_library)
+            if not directory.is_dir():
+                raise ValueError("Biblioteca de personagens personalizada inexistente")
+            self.custom_library = directory
         self.workspace = workspace.expanduser().absolute()
         if self.workspace.is_symlink():
             raise ValueError("A pasta da arena não pode ser um link simbólico")
@@ -241,12 +249,6 @@ class ArenaManager:
         self.opening_books = opening_books
         # Opt-in metadata source; no creation or inspection of identities at
         # server startup. A broken catalog must not block the core Arena.
-        self.custom_library = None
-        if custom_library is not None:
-            directory = custom_library_path(custom_library)
-            if not directory.is_dir():
-                raise ValueError("Biblioteca de personagens personalizada inexistente")
-            self.custom_library = directory
         if not isinstance(max_game_wall_seconds, (float, int)) or (
                 not math.isfinite(max_game_wall_seconds) or
                 not 30 <= max_game_wall_seconds <= 86400):
