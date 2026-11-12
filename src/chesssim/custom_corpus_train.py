@@ -125,7 +125,10 @@ def prepare_custom_train(library: Path, identifier: str, cache: Path, out: Path,
             })
         # We do not rewrite the link: its audit count includes games with
         # incomplete dates; those are quarantined from train/validation/holdout.
-        if len(selected) + sum(excluded.values()) != linked["games"]:
+        if (len(selected) + excluded["unknown_or_invalid_date"] +
+                excluded["future_date"] != linked["games"]):
+            # Games where both headers equal the same ambiguous name were
+            # already excluded by the link itself; they are diagnostic only.
             raise ValueError("Partidas elegíveis não reconciliadas com vínculo")
         pieces = _partition(selected)  # chronological whole-date grouping
         train_text = "".join(
