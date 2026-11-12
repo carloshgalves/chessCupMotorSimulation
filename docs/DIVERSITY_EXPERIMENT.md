@@ -105,6 +105,10 @@ ainda precisam de homologação física na #83.
   completas**, ambas com resultado, seed/política de repertório, SHA da linha principal e números de
   meios-lances reconciliados com os PGNs locais. O PGN consolidado `duelo.pgn`
   também precisa conter exatamente as duas trajetórias, na ordem correta.
+  Como esta trilha usa `depth` sem relógio nem mecanismo de rendição, uma
+  partida só é confirmada `COMPLETED` se a posição final admitir um
+  `board.outcome(claim_draw=True)` compatível com o resultado do PGN.
+  Uma tag `Result` arbitrária não é suficiente.
 - Qualquer falha de motor, recusa do recibo, adulteração de hash ou timeout
   impede avançar para o próximo braço: o manifesto é marcado
   `FAILED_REQUIRES_MANUAL_INSPECTION`. Os arquivos ficam preservados para
