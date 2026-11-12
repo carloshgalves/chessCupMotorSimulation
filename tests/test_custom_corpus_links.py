@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from hashlib import sha256
 import json
+import shutil
 import socket
 import subprocess
 
@@ -367,3 +368,20 @@ def test_link_after_actual_rename_references_existing_name_revision(tmp_path):
     stored = json.loads(_events(library, item["id"])[0].read_text())
     assert stored["event"]["name_revision_sha256"] == renamed["revision_sha256"]
     assert links.corpus_status(library, item["id"])["head_sha256"] == attached["head_sha256"]
+
+
+def test_source_deleted_after_link_does_not_claim_liveness(tmp_path):
+    library, item, cache = _setup(tmp_path)
+    attached = _link(library, item, cache)
+    assert attached["linked"] is True
+    assert attached["source_availability"] == "NOT_RECHECKED_AFTER_LINK"
+    shutil.rmtree(cache)
+    status = links.corpus_status(library, item["id"])
+    assert status["linked"] is True
+    assert status["source_availability"] == "NOT_RECHECKED_AFTER_LINK"
+    assert status["head_sha256"] == attached["head_sha256"]
+    assert status["uci_eligible"] is False
+    detached = links.corpus_detach(
+        library, item["id"], expected_head=attached["head_sha256"])
+    assert detached["linked"] is False
+    assert detached["source_availability"] == "NOT_APPLICABLE"
