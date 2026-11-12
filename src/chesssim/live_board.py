@@ -17,6 +17,7 @@ import re
 import chess
 import chess.pgn
 
+from .fictional_commentary import editorial_for_game
 from .event_journal import EventJournal
 from .live_events import MAX_EVENT_CLIENTS, same_origin, stream_events, stream_events_v2
 from .quality_overlay import QualityOverlay
@@ -161,6 +162,10 @@ def _duel_snapshot(run: Path, folder: Path, *, match_id: str | None = None,
         })
         if quality_stats is not None:
             games[-1]["quality_stats"] = quality_stats
+        # Editorial data is read-only and derived exclusively from legal PGN
+        # moves. Postgame text is gated independently by completed receipt.
+        games[-1]["fictional_editorial"] = editorial_for_game(
+            game, metadata=metadata, final_file=final.exists())
     return {"folder": folder.name, "match_id": match_id,
             "status": summary.get("status", "UNKNOWN"), "games": games}
 
