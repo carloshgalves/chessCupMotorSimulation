@@ -308,3 +308,47 @@ def test_same_name_in_both_pgn_headers_never_reaches_training(tmp_path):
     assert doc["linked_unique_games"] == 12
     assert sum(part["games"] for part in doc["partitions"].values()) == 12
     assert (tmp_path / "ambiguous" / "train.pgn").is_file()
+
+
+def test_different_but_self_consistent_cache_cannot_replace_linked_source(tmp_path):
+    library, profile, cache, link = _setup(tmp_path)
+    other_root = tmp_path / "other-source"
+    other_root.mkdir()
+    _, _, replacement_cache, _ = _setup(
+        other_root, games=[_game(n + 1) for n in range(18)])
+    destination = tmp_path / "foreign-cache"
+    with pytest.raises(ValueError, match="diverge do vínculo"):
+        _prepare(library, profile, replacement_cache, link, destination,
+                 min_train=5)
+    assert not destination.exists()
+    assert (cache / "games.pgn").is_file()
+    assert links.corpus_status(library, profile["id"])["linked"] is True
+
+
+def test_old_head_cannot_export_after_detach_and_relink_same_source(tmp_path):
+    library, profile, cache, first = _setup(tmp_path)
+    removed = links.corpus_detach(
+        library, profile["id"], expected_head=first["head_sha256"])
+    newer = links.corpus_link(
+        library, profile["id"], cache, pgn_name=NAME,
+        expected_head=removed["head_sha256"])
+    assert newer["head_sha256"] != first["head_sha256"]
+    destination = tmp_path / "stale-head"
+    with pytest.raises(ValueError, match="obsoleto"):
+        _prepare(library, profile, cache, first, destination, min_train=5)
+    assert not destination.exists()
+    accepted = _prepare(
+        library, profile, cache, newer, tmp_path / "fresh-head", min_train=5)
+    assert accepted["corpus_head_sha256"] == newer["head_sha256"]
+
+
+def test_default_minimum_does_not_promote_small_training_partition(tmp_path):
+    library, profile, cache, link = _setup(tmp_path)
+    report = _prepare(library, profile, cache, link, tmp_path / "default")
+    assert report["minimum_train_games"] == 20
+    assert report["partitions"]["train"]["games"] < 20
+    assert report["partitions"]["validation"]["games"] > 0
+    assert report["partitions"]["holdout"]["games"] > 0
+    assert report["status"] == "INSUFFICIENT_PARTITION_EVIDENCE"
+    assert report["uci_eligible"] is False
+    assert report["historically_validated"] is False
