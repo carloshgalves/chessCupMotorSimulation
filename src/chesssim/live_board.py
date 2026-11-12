@@ -116,9 +116,17 @@ def _duel_snapshot(run: Path, folder: Path, *, match_id: str | None = None,
         if not isinstance(metadata, dict):
             raise ValueError("Metadados de partida inválidos")
         states = _states(game)
+        quality_stats = None
         if quality_overlay is not None and final.exists():
-            for ply, analysis in quality_overlay.for_game(source, states).items():
+            mapped = quality_overlay.for_game(source, states)
+            for ply, analysis in mapped.items():
                 states[ply]["evaluation"] = analysis
+            # The provenance has already been matched to the final PGN.
+            # Summaries require a matching COMPLETED receipt and PGN result.
+            if mapped:
+                quality_stats = quality_overlay.stats_for_game(
+                    mapped, headers=dict(game.headers), metadata=metadata,
+                    total_plies=len(states) - 1)
         if metadata.get("termination") == "TimeForfeit":
             final_clocks = metadata.get("clock_left")
             if (isinstance(final_clocks, list) and len(final_clocks) == 2 and
@@ -144,6 +152,8 @@ def _duel_snapshot(run: Path, folder: Path, *, match_id: str | None = None,
             "updated_at": updated,
             "states": states,
         })
+        if quality_stats is not None:
+            games[-1]["quality_stats"] = quality_stats
     return {"folder": folder.name, "match_id": match_id,
             "status": summary.get("status", "UNKNOWN"), "games": games}
 
