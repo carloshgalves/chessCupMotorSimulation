@@ -224,7 +224,8 @@ def test_failed_hardlink_publication_leaves_no_partial_final_path(
     with pytest.raises(OSError, match="hard links"):
         profiles.create_fictional(root, "Ava Ravenwood")
     assert profiles.list_fictional(root) == []
-    assert not list(root.iterdir()), "temporary file must be cleaned"
+    assert [item.name for item in root.iterdir()] == [".custom-player.lock"], (
+        "failed publication may leave only the persistent advisory lock, not a temp or profile")
     monkeypatch.setattr(profiles.os, "link", original)
 
 
@@ -302,3 +303,55 @@ def test_restore_rejects_forged_retirement_marker(tmp_path):
     with pytest.raises(ValueError, match="inconsistente"):
         profiles.restore_fictional(root, created["id"])
     assert marker.exists(), "corrupt retirement marker not silently deleted"
+
+
+def test_concurrent_creation_respects_capacity_under_library_lock(
+    tmp_path, monkeypatch
+):
+    root = tmp_path / "same"
+    monkeypatch.setattr(profiles, "MAX_LIBRARY_PROFILES", 1)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(profiles.create_fictional, root, name)
+                   for name in ("Ava Ravenwood", "Robin Ravenwood")]
+    successes = []
+    failures = []
+    for future in futures:
+        try:
+            successes.append(future.result())
+        except ValueError as exc:
+            failures.append(str(exc))
+    assert len(successes) == 1
+    assert len(failures) == 1
+    assert "cheia" in failures[0]
+    assert len(profiles.list_fictional(root)) == 1
+
+
+def test_lock_symlink_cannot_redirect_writes_to_external_file(tmp_path):
+    root = tmp_path / "custom"
+    root.mkdir()
+    outside = tmp_path / "external"
+    outside.write_bytes(b"safe sentinel")
+    (root / ".custom-player.lock").symlink_to(outside)
+    with pytest.raises(OSError):
+        profiles.create_fictional(root, "Ava Ravenwood")
+    assert not list(root.glob("user-*.json"))
+    assert outside.read_bytes() == b"safe sentinel"
+
+
+def test_concurrent_retire_and_restore_serialize_without_corrupt_marker(
+    tmp_path
+):
+    root, created = _new(tmp_path)
+    # Concurrent retirement requests are serialized and idempotent;
+    # the second observes retired, never a partial marker.
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(profiles.retire_fictional, root, created["id"])
+                   for _ in range(2)]
+    statuses = [f.result()["operation"] for f in futures]
+    assert sorted(statuses) == ["ALREADY_RETIRED", "RETIRED_METADATA_ONLY"]
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(profiles.restore_fictional, root, created["id"])
+                   for _ in range(2)]
+    statuses = [f.result()["operation"] for f in futures]
+    assert sorted(statuses) == ["ALREADY_ACTIVE", "RESTORED_METADATA_ONLY"]
+    assert profiles.list_fictional(root)[0]["status"] == profiles.STATUS
