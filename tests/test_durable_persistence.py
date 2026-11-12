@@ -148,6 +148,7 @@ def test_stop_marker_is_synced_and_clear_commits_directory(tmp_path, monkeypatch
 
     monkeypatch.setattr(tournament.os, "fsync", observed_fsync)
     monkeypatch.setattr(tournament, "_fsync_directory_tree", observed_tree)
+    monkeypatch.setattr(matches, "_fsync_directory_tree", observed_tree)
     assert tournament.request_stop(tmp_path, reason="controlled shutdown")["stop_requested"]
     assert events[:2] == ["marker-data", "directory-chain"]
     first_bytes = (tmp_path / tournament.STOP_FILE).read_bytes()
