@@ -26,6 +26,7 @@ from .opening_books import load_opening_book
 MAX_PLAN_BYTES = 256 * 1024
 MAX_SUMMARY_BYTES = 256 * 1024
 MAX_PGN_BYTES = 2 * 1024 * 1024
+MAX_BOOK_BYTES = 64 * 1024 * 1024
 SHA64 = re.compile(r"[0-9a-f]{64}\Z")
 STATUS_PLANNED = "REGISTERED_NOT_RUN"
 STATUS_RUNNING = "RUNNING_UNVERIFIED"
@@ -115,7 +116,12 @@ def _load_books(plan: dict, white, black, white_book: Path | None,
             continue
         if source.is_symlink():
             raise ValueError("Livro simbólico não autorizado")
+        # The current book loader accepts paths; bracket its read with
+        # bounded no-follow byte hashes to detect mid-preflight mutation.
+        book_sha = sha256(_read_regular(source, MAX_BOOK_BYTES)).hexdigest()
         book = load_opening_book(source, player.slug)
+        if sha256(_read_regular(source, MAX_BOOK_BYTES)).hexdigest() != book_sha:
+            raise ValueError("Repertório foi alterado durante o pré-voo")
         info = book.get("source")
         if not isinstance(info, dict):
             raise ValueError("Livro sem fonte auditável")
@@ -128,7 +134,7 @@ def _load_books(plan: dict, white, black, white_book: Path | None,
             raise ValueError("Proveniência do repertório ausente ou não reconhecida")
         books[player.slug] = book
         provenance[player.slug] = {
-            "file_sha256": file_hash(source),
+            "file_sha256": book_sha,
             "source_pgn_sha256": recorded_sha,
             "source_policy": provenance_info["status"],
             "path": str(source),
@@ -137,13 +143,22 @@ def _load_books(plan: dict, white, black, white_book: Path | None,
 
 
 def _audit_completed_pair(folder: Path, *, players: list[str], seed: int,
-                          expected_hashes: dict, has_books: bool) -> dict:
+                          expected_hashes: dict, book_sources: dict) -> dict:
     """Reconcile disk receipts and both UCI PGNs before recording completion."""
+    has_books = bool(book_sources)
+    expected_mode = "historical-v09-exploratory" if has_books else "disabled"
     raw = _read_regular(folder / "summary.json", MAX_SUMMARY_BYTES)
     report = json.loads(raw)
     if (not isinstance(report, dict) or report.get("status") != "COMPLETED" or
             report.get("players") != players or
             report.get("file_hashes") != expected_hashes or
+            report.get("book_hashes") != {} or
+            report.get("historical_opening_policy") != (
+                "EXPLORATORY_POSITION_CONDITIONED" if has_books else "DISABLED") or
+            not isinstance(report.get("variation_control"), dict) or
+            report["variation_control"].get("historical_opening_seed_effective") is not has_books or
+            report["variation_control"].get("internal_uci_book") is not False or
+            report["variation_control"].get("colors_reversed") is not True or
             type(report.get("opening_seed")) is not (int if has_books else type(None)) or
             (has_books and report["opening_seed"] != seed)):
         raise ValueError("Resumo UCI incompleto ou com recursos diferentes")
@@ -158,8 +173,7 @@ def _audit_completed_pair(folder: Path, *, players: list[str], seed: int,
                 record.get("black") != expected_colors[index - 1][1] or
                 type(record.get("round")) is not int or record["round"] != index or
                 record.get("result") not in {"1-0", "0-1", "1/2-1/2"} or
-                record.get("opening_mode") != (
-                    "historical-v09-exploratory" if has_books else "disabled") or
+                record.get("opening_mode") != expected_mode or
                 type(record.get("opening_seed")) is not (
                     int if has_books else type(None)) or
                 (has_books and record["opening_seed"] != seed)):
@@ -174,8 +188,11 @@ def _audit_completed_pair(folder: Path, *, players: list[str], seed: int,
         trajectory, plies = mainline_identity(game)
         if (type(record.get("plies")) is not int or record["plies"] != plies or
                 record.get("mainline_sha256") != trajectory or
-                game.headers.get("Result") != record["result"]):
-            raise ValueError("Recibo diverge da trajetória ou resultado do PGN")
+                game.headers.get("Result") != record["result"] or
+                game.headers.get("BookMode") != expected_mode or
+                (has_books and (game.headers.get("OpeningSeed") != str(seed) or
+                                game.headers.get("OpeningMinCount") != "1"))):
+            raise ValueError("Recibo diverge da trajetória, seed ou cabeçalho do PGN")
         # A receipt claiming a different opening seed/round must not be
         # counted as a controlled observation even when its PGN is legal.
         trace = record.get("opening_trace")
@@ -189,6 +206,20 @@ def _audit_completed_pair(folder: Path, *, players: list[str], seed: int,
             raise ValueError("Traço de abertura sem seed/rodada verificável")
         if not has_books and trace:
             raise ValueError("Traço de abertura presente sem repertório declarado")
+        played_uci = [move.uci() for move in game.mainline_moves()]
+        counts = {"white": 0, "black": 0}
+        for entry in trace:
+            ply = entry["ply"]
+            side = "white" if ply % 2 else "black"
+            owner = record["white"] if ply % 2 else record["black"]
+            source = book_sources.get(owner)
+            if (entry.get("player") != owner or source is None or
+                    entry.get("book_source_sha256") != source["source_pgn_sha256"] or
+                    entry.get("move") != played_uci[ply - 1]):
+                raise ValueError("Traço de abertura não pertence ao PGN/repertório")
+            counts[side] += 1
+        if record.get("opening_moves") != counts:
+            raise ValueError("Contagens do repertório divergem do traço")
         receipts.append({
             "game": index, "pgn_sha256": sha256(payload).hexdigest(),
             "mainline_sha256": trajectory, "plies": plies,
@@ -251,6 +282,19 @@ def execute_plan(root: Path, plan_path: Path, out: Path, *,
     books, book_sources = _load_books(plan, white, black, white_book, black_book)
     frozen = {"exe": file_hash(executable)}
     frozen.update({slug: file_hash(path) for slug, path in paths.items()})
+    def assert_frozen_inputs() -> None:
+        current_exe, current_paths = validate(root, white, black)
+        current = {"exe": file_hash(current_exe)}
+        current.update({slug: file_hash(path) for slug, path in current_paths.items()})
+        if current != frozen or current_exe != executable or current_paths != paths:
+            raise RuntimeError("Hash/caminho do motor/perfis mudou entre braços")
+        for slug, provenance in book_sources.items():
+            source = white_book if slug == white.slug else black_book
+            if (source is None or
+                    sha256(_read_regular(source, MAX_BOOK_BYTES)).hexdigest()
+                    != provenance["file_sha256"]):
+                raise RuntimeError("Hash do repertório mudou entre braços")
+
     inputs = {"engine_sha256": frozen["exe"],
               "profiles": {slug: frozen[slug] for slug in plan["players"]},
               "external_books": book_sources,
@@ -290,24 +334,19 @@ def execute_plan(root: Path, plan_path: Path, out: Path, *,
                     raise RuntimeError("Condição divergente do plano auditado")
                 # Refuse mutation of engine, profile or book files between
                 # arms: otherwise a seed experiment has changed covariates.
-                exe_now, paths_now = validate(root, white, black)
-                current = {"exe": file_hash(exe_now)}
-                current.update({slug: file_hash(path) for slug, path in paths_now.items()})
-                if current != frozen or exe_now != executable:
-                    raise RuntimeError("Hash do motor/perfis mudou entre braços")
-                for slug, ref in book_sources.items():
-                    source = white_book if slug == white.slug else black_book
-                    if source is None or file_hash(source) != ref["file_sha256"]:
-                        raise RuntimeError("Hash do repertório mudou entre braços")
+                assert_frozen_inputs()
                 block_dir = out / "arms" / f"block-{block['block']:03d}" / expected_condition.lower()
                 folder = play_duel(
                     root, block_dir, white, black, depth=depth, movetime=None,
                     reverse=True, max_plies=max_plies, use_books=False,
                     historical_openings=books or None, opening_seed=arm["seed"],
                     opening_min_count=1, max_wall_seconds=max_game_wall_seconds)
+                # Do not count a finished arm if covariates changed while
+                # the UCI processes were running, including the very last arm.
+                assert_frozen_inputs()
                 receipt = _audit_completed_pair(
                     folder, players=plan["players"], seed=arm["seed"],
-                    expected_hashes=frozen, has_books=bool(books))
+                    expected_hashes=frozen, book_sources=book_sources)
                 manifest["arms"].append({
                     "block": block["block"], "condition": expected_condition,
                     "seed": arm["seed"], "game_number_policy": "1,2 per arm",
