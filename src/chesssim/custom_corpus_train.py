@@ -22,6 +22,7 @@ from .age_cohort import _cache_snapshot, _full_date, _header_name, _partition
 from .matches import _atomic_text
 
 SCHEMA = "chesssim-custom-train-only-split-v1"
+SCHEMA_POSITION_AUDITED = "chesssim-custom-train-only-split-v2"
 MAX_OUTPUT_MB = 32
 MAX_GAMES = 1000
 
@@ -158,7 +159,8 @@ def prepare_custom_train(library: Path, identifier: str, cache: Path, out: Path,
         embargo_incomplete = (embargo_min_ply is not None
                               and embargo["status"] != "AUDITED_DISJOINT")
         report = {
-            "schema": SCHEMA,
+            "schema": (SCHEMA_POSITION_AUDITED if embargo_min_ply is not None
+                       else SCHEMA),
             "status": (
                 "INSUFFICIENT_POSITION_EVIDENCE" if embargo_incomplete else
                 "TRAIN_ONLY_PREPARED_NOT_VALIDATED" if sufficient else
