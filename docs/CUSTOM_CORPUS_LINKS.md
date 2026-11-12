@@ -88,7 +88,9 @@ mesmo 200, recebe `SNAPSHOT_NOT_VALIDATED`.
 O recibo **não inclui PGNs ou lances**. Portanto não cria um
 dataset treinável, não fecha um holdout, não verifica a fonte em tempo
 real após o vínculo e não prova que o caminho original continuará
-existindo. O cache externo permanece no lugar; mover, alterar ou
+existindo. A resposta explícita `source_availability=NOT_RECHECKED_AFTER_LINK`
+quando há vínculo distingue o recibo histórico de uma comprovação de
+disponibilidade corrente; sem vínculo o valor é `NOT_APPLICABLE`. O cache externo permanece no lugar; mover, alterar ou
 revogar direitos requer nova auditoria e um novo vínculo.
 
 ## Restrições e limites
