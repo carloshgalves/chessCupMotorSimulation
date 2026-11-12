@@ -35,12 +35,12 @@ Abra o URL loopback informado pelo comando. Somente a partida exata cujo arquivo
 
 ## Gate
 
-Testes Python de formato/versão/PGN/hash, `ply` e UCI/FEN, números finitos, symlinks e HTTP somente leitura; harness Node para renderização de score e estado desconhecido. A homologação real de Chrome, zoom, Stockfish e Rodent IV pertence à #83 e permanece `NOT_RUN` até ocorrer. Estatísticas agregadas/fases por perfil ficam para a segunda fatia da #24.
+Testes Python de formato/versão/PGN/hash, `ply` e UCI/FEN, números finitos, symlinks e HTTP somente leitura; harness Node para renderização de score e estado desconhecido. A homologação real de Chrome, zoom, Stockfish e Rodent IV pertence à #83 e permanece `NOT_RUN` até ocorrer. As estatísticas descritivas de **uma partida por faixa e lado** foram adicionadas no incremento 2 abaixo; comparações multicompetição/por perfil histórico independente e a homologação física permanecem pendentes.
 
 
 ## Incremento 2 — gráficos descritivos por faixa/participante (#24)
 
-No mesmo comando `watch --quality-report` do incremento 1, o painel **Perdas de avaliação por faixa e participante** aparece **somente** quando todas estas condições são verdadeiras: arquivo final `jogo_N.pgn` com SHA-256 idêntico ao relatório; relatório de `analyze-quality` v9.1 válido; recibo `summary.json` com `status=COMPLETED` e resultado compatível com o PGN (`1-0`, `0-1` ou `1/2-1/2`). Um PGN incompleto ou recibo divergente não gera gráfico nem é contado como observação verificada.
+No mesmo comando `watch --quality-report` do incremento 1, o painel **Perdas de avaliação por faixa e participante** aparece **somente** quando todas estas condições são verdadeiras: arquivo final `jogo_N.pgn` com SHA-256 idêntico ao relatório; relatório de `analyze-quality` v9.1 válido; recibo `summary.json` com `status=COMPLETED`, resultado, **número de meios-lances e SHA-256 da trajetória** compatíveis com o PGN (`1-0`, `0-1` ou `1/2-1/2`). Um PGN incompleto ou recibo divergente não gera gráfico nem é contado como observação verificada.
 
 - **Faixas cronológicas heurísticas:** meios-lances 1–16, 17–60, 61+. Não são fases calculadas por material ou estratégia. O filtro mostra todas ou uma faixa, mas **não altera** o arquivo, a partida ou a análise Stockfish.
 - **Por participante/lado:** cada lance pertence às brancas se o ply é ímpar, às pretas se é par. Nome e eventual `WhiteModel`/`BlackModel` são **declarações do PGN**, não comprovação da identidade do jogador histórico nem de um perfil calibrado.
