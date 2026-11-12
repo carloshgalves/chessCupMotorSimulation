@@ -1,7 +1,6 @@
 """#66 editorial text never impersonates historical players or invents game facts."""
 from __future__ import annotations
 
-from copy import deepcopy
 import json
 
 import chess
