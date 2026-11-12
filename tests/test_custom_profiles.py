@@ -332,7 +332,7 @@ def test_lock_symlink_cannot_redirect_writes_to_external_file(tmp_path):
     outside = tmp_path / "external"
     outside.write_bytes(b"safe sentinel")
     (root / ".custom-player.lock").symlink_to(outside)
-    with pytest.raises(OSError):
+    with pytest.raises(ValueError, match="Lock simbólico"):
         profiles.create_fictional(root, "Ava Ravenwood")
     assert not list(root.glob("user-*.json"))
     assert outside.read_bytes() == b"safe sentinel"
