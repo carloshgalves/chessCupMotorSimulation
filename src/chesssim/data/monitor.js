@@ -428,11 +428,21 @@ function renderQualityStats(game) {
   const fresh = game && availableGames().find(g => g.id === game.id);
   const samePosition = !!fresh && (!pinned || (
     fresh.states.length === pinned.states.length &&
-    fresh.states[cursor]?.fen === pinned.states[cursor]?.fen));
+    fresh.states.every((s,i) => s.uci === pinned.states[i].uci &&
+      s.fen === pinned.states[i].fen)));
   const stats = samePosition ? fresh.quality_stats : null;
+  const groups = stats ? [
+    ...["opening","middle","late"].map(k => stats.by_phase?.[k]),
+    ...["white","black"].map(k => stats.by_side?.[k]),
+    ...["opening","middle","late"].flatMap(phase =>
+      ["white","black"].map(side => stats.by_phase_side?.[phase]?.[side]))
+  ] : [];
   const valid = stats?.schema === "chesssim-verified-quality-stats-v1" &&
     stats.status === "DESCRIPTIVE_SINGLE_COMPLETED_GAME_NOT_RATING" &&
     qualityMetricValid(stats.coverage) &&
+    groups.length === 11 && groups.every(qualityMetricValid) &&
+    Number.isInteger(stats.total_plies) && stats.total_plies >= 1 &&
+    stats.coverage.sampled <= stats.total_plies &&
     stats.players && stats.by_phase && stats.by_side && stats.by_phase_side &&
     stats.provenance && fresh.status === "COMPLETED" &&
     ["1-0", "0-1", "1/2-1/2"].includes(fresh.result);
