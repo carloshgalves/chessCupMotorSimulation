@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 import re
+import unicodedata
 
 from . import custom_profiles as core
 from .age_cohort import _cache_snapshot, _full_date, _header_name, _normalize_name
@@ -38,8 +39,9 @@ def _clean_name(value: str) -> str:
     normalized = _normalize_name(value)
     if not isinstance(value, str) or len(value) > 150 or not value.strip():
         raise ValueError("Nome completo PGN obrigatório (até 150 caracteres)")
-    if any(ord(ch) < 32 or ord(ch) == 127 for ch in value):
-        raise ValueError("Nome PGN não pode conter caracteres de controle")
+    if (value != unicodedata.normalize("NFC", value)
+            or any(unicodedata.category(ch).startswith("C") for ch in value)):
+        raise ValueError("Nome PGN deve ser NFC e não conter controles invisíveis")
     return normalized
 
 
@@ -172,6 +174,12 @@ def _events(root: Path, doc: dict) -> list[dict]:
     found.sort()
     if [n for n, _ in found] != list(range(1, len(found) + 1)):
         raise ValueError("Cadeia de eventos de corpus interrompida")
+    # The stored name revision must exist in this library and must predate
+    # the link event. A syntactically valid, arbitrary hash is insufficient.
+    from .custom_profile_history import _revisions
+    revision_times = {doc["sha256"]: doc["profile"]["created_utc"]}
+    for revision in _revisions(root, doc):
+        revision_times[revision["sha256"]] = revision["event"]["recorded_utc"]
     head = doc["sha256"]
     last_time = doc["profile"]["created_utc"]
     active = False
@@ -189,11 +197,15 @@ def _events(root: Path, doc: dict) -> list[dict]:
                 or event["previous_sha256"] != head
                 or not isinstance(event["name_revision_sha256"], str)
                 or not core.DIGEST.fullmatch(event["name_revision_sha256"])
+                or not isinstance(event["action"], str)
                 or event["action"] not in ACTIONS):
             raise ValueError("Cadeia ou identidade do corpus divergente")
         stamp = _utc(event["created_utc"])
         if stamp < last_time:
             raise ValueError("Cronologia de corpus regressiva")
+        known_time = revision_times.get(event["name_revision_sha256"])
+        if known_time is None or known_time > stamp:
+            raise ValueError("Revisão de nome do vínculo desconhecida ou futura")
         last_time = stamp
         if event["action"] == "LINK":
             if active:
