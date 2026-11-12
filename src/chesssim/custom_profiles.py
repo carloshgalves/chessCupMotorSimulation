@@ -6,6 +6,7 @@ checksummed for accidental corruption, NOT signed or identity-verified.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
@@ -224,21 +225,57 @@ def _summary(root: Path, doc: dict) -> dict:
     }
 
 
+
+@contextmanager
+def _exclusive_library(root: Path):
+    """Serialize cooperative writers, including capacity and lifecycle state.
+
+    The lock is per local library. It is advisory on POSIX; an operator with
+    direct write access can bypass it, so it is not an authentication boundary.
+    A crash releases the OS file lock automatically.
+    """
+    lock = root / ".custom-player.lock"
+    flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(lock, flags, 0o600)
+    with os.fdopen(fd, "r+b") as handle:
+        if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+            raise ValueError("Arquivo de lock da biblioteca inválido")
+        if os.name == "posix":
+            import fcntl
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        elif os.name == "nt":
+            import msvcrt
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+            try:
+                yield
+            finally:
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            raise OSError("Plataforma sem mecanismo de lock suportado")
+
+
 def create_fictional(library: Path, name: str) -> dict:
     name = _clean_name(name)
     root = _library(library, create=True)
-    if len(_inventory(root)) >= MAX_LIBRARY_PROFILES:
-        raise ValueError("Biblioteca cheia (256 perfis)")
-    identifier = "user-" + uuid4().hex
-    payload = {
-        "id": identifier, "display_name": name, "kind": KIND,
-        "created_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "status": STATUS, "identity_basis": "OPERATOR_DECLARED_FICTION",
-        "uci_eligible": False, "historical_fidelity_validated": False,
-    }
-    doc = {"schema": SCHEMA, "profile": payload, "sha256": _sha(payload)}
-    _publish_exclusive(_record_path(root, identifier), _encode(doc))
-    return _summary(root, doc)
+    with _exclusive_library(root):
+        if len(_inventory(root)) >= MAX_LIBRARY_PROFILES:
+            raise ValueError("Biblioteca cheia (256 perfis)")
+        identifier = "user-" + uuid4().hex
+        payload = {
+            "id": identifier, "display_name": name, "kind": KIND,
+            "created_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "status": STATUS, "identity_basis": "OPERATOR_DECLARED_FICTION",
+            "uci_eligible": False, "historical_fidelity_validated": False,
+        }
+        doc = {"schema": SCHEMA, "profile": payload, "sha256": _sha(payload)}
+        _publish_exclusive(_record_path(root, identifier), _encode(doc))
+        return _summary(root, doc)
 
 
 def list_fictional(library: Path) -> list[dict]:
@@ -263,42 +300,44 @@ def import_fictional(library: Path, source: Path) -> dict:
     # Import validation happens BEFORE creating the destination library.
     raw = _read_regular(source)
     doc = _validate_record(raw)
-    root = _library(library, create=False)
-    identity = doc["profile"]["id"]
-    target = _record_path(root, identity)
-    if target.exists() or target.is_symlink():
-        stored, _ = _read_id(root, identity)
-        if stored != doc:
-            raise FileExistsError("Mesmo ID com conteúdo divergente; importação recusada")
-        return {**_summary(root, stored), "operation": "ALREADY_PRESENT"}
-    if len(_inventory(root)) >= MAX_LIBRARY_PROFILES:
-        raise ValueError("Biblioteca cheia (256 perfis)")
-    root = _library(root, create=True)
-    try:
-        _publish_exclusive(target, _encode(doc))
-    except FileExistsError:
-        stored, _ = _read_id(root, identity)
-        if stored != doc:
-            raise FileExistsError("ID em conflito após corrida de importação")
-        return {**_summary(root, stored), "operation": "ALREADY_PRESENT"}
-    return {**_summary(root, doc), "operation": "IMPORTED_METADATA_ONLY"}
+    root = _library(library, create=True)
+    with _exclusive_library(root):
+        identity = doc["profile"]["id"]
+        target = _record_path(root, identity)
+        if target.exists() or target.is_symlink():
+            stored, _ = _read_id(root, identity)
+            if stored != doc:
+                raise FileExistsError("Mesmo ID com conteúdo divergente; importação recusada")
+            return {**_summary(root, stored), "operation": "ALREADY_PRESENT"}
+        if len(_inventory(root)) >= MAX_LIBRARY_PROFILES:
+            raise ValueError("Biblioteca cheia (256 perfis)")
+        root = _library(root, create=True)
+        try:
+            _publish_exclusive(target, _encode(doc))
+        except FileExistsError:
+            stored, _ = _read_id(root, identity)
+            if stored != doc:
+                raise FileExistsError("ID em conflito após corrida de importação")
+            return {**_summary(root, stored), "operation": "ALREADY_PRESENT"}
+        return {**_summary(root, doc), "operation": "IMPORTED_METADATA_ONLY"}
 
 
 def retire_fictional(library: Path, identifier: str) -> dict:
     root = _library(library)
-    doc, _ = _read_id(root, identifier)
-    if _read_retirement(root, doc):
-        return {**_summary(root, doc), "operation": "ALREADY_RETIRED"}
-    mark = {
-        "schema": RETIRED_SCHEMA, "id": identifier,
-        "profile_sha256": doc["sha256"],
-    }
-    try:
-        _publish_exclusive(_retirement_path(root, identifier), _encode(mark))
-    except FileExistsError:
-        if not _read_retirement(root, doc):
-            raise
-    return {**_summary(root, doc), "operation": "RETIRED_METADATA_ONLY"}
+    with _exclusive_library(root):
+        doc, _ = _read_id(root, identifier)
+        if _read_retirement(root, doc):
+            return {**_summary(root, doc), "operation": "ALREADY_RETIRED"}
+        mark = {
+            "schema": RETIRED_SCHEMA, "id": identifier,
+            "profile_sha256": doc["sha256"],
+        }
+        try:
+            _publish_exclusive(_retirement_path(root, identifier), _encode(mark))
+        except FileExistsError:
+            if not _read_retirement(root, doc):
+                raise
+        return {**_summary(root, doc), "operation": "RETIRED_METADATA_ONLY"}
 
 
 def restore_fictional(library: Path, identifier: str) -> dict:
@@ -309,11 +348,12 @@ def restore_fictional(library: Path, identifier: str) -> dict:
     not a change to historical roster membership or engine eligibility.
     """
     root = _library(library)
-    doc, _ = _read_id(root, identifier)
-    if not _read_retirement(root, doc):
-        return {**_summary(root, doc), "operation": "ALREADY_ACTIVE"}
-    marker = _retirement_path(root, identifier)
-    marker.unlink()
-    if os.name == "posix":
-        _fsync_directory_tree(root)
-    return {**_summary(root, doc), "operation": "RESTORED_METADATA_ONLY"}
+    with _exclusive_library(root):
+        doc, _ = _read_id(root, identifier)
+        if not _read_retirement(root, doc):
+            return {**_summary(root, doc), "operation": "ALREADY_ACTIVE"}
+        marker = _retirement_path(root, identifier)
+        marker.unlink()
+        if os.name == "posix":
+            _fsync_directory_tree(root)
+        return {**_summary(root, doc), "operation": "RESTORED_METADATA_ONLY"}
