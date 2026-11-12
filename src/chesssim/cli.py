@@ -112,6 +112,11 @@ def main(argv: list[str] | None = None) -> int:
     custom_retire.add_argument("--library", type=Path, required=True)
     custom_retire.add_argument("--id", required=True)
 
+    custom_restore = sub.add_parser(
+        "custom-player-restore", help="Reativa cadastro local desativado sem trocar identidade")
+    custom_restore.add_argument("--library", type=Path, required=True)
+    custom_restore.add_argument("--id", required=True)
+
     diversity = sub.add_parser(
         "diversity-report", help="Compara sequências PGN reais de múltiplos duelos, sem alterar motores")
     diversity.add_argument("--runs", type=Path, nargs="+", required=True,
@@ -624,10 +629,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.command in {
             "custom-player-create", "custom-player-list",
             "custom-player-export", "custom-player-import", "custom-player-retire",
+            "custom-player-restore",
         }:
             from .custom_profiles import (
                 create_fictional, list_fictional, export_fictional,
-                import_fictional, retire_fictional,
+                import_fictional, retire_fictional, restore_fictional,
             )
             if args.command == "custom-player-create":
                 result = create_fictional(args.library, args.name)
@@ -640,8 +646,10 @@ def main(argv: list[str] | None = None) -> int:
                 result = export_fictional(args.library, args.id, args.out)
             elif args.command == "custom-player-import":
                 result = import_fictional(args.library, args.file)
-            else:
+            elif args.command == "custom-player-retire":
                 result = retire_fictional(args.library, args.id)
+            else:
+                result = restore_fictional(args.library, args.id)
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return 0
         if args.command == "diversity-plan":
