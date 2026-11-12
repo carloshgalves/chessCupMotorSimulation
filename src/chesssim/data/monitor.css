@@ -143,3 +143,21 @@ button.accent{flex:1;font-size:.81rem}
 #moves .move-cell.critical{border-left:3px solid #efb56b}
 #moves .move-cell.critical.selected{border-color:var(--highlight);border-left-color:#efb56b}
 @media(prefers-reduced-motion:reduce){.analysis-gauge-white{transition:none}}
+
+
+/* #24 slice 2: relative-width evidence charts, numbers remain authoritative. */
+.quality-stats-panel h3{font-size:1rem;margin:15px 0 8px;color:#e1e9ea}
+.quality-stats-panel select:disabled{opacity:.6;cursor:not-allowed}
+.quality-bars{display:grid;gap:9px;min-width:0}
+.quality-bar-row{display:grid;gap:3px;min-width:0;padding:10px;
+  background:#10232b;border:1px solid #34515c;border-radius:8px}
+.quality-bar-heading{font-size:.86rem;overflow-wrap:anywhere}
+.quality-bar-value{font-size:.82rem;color:#f0e0ac;font-variant-numeric:tabular-nums;
+  overflow-wrap:anywhere}
+.quality-bar-track{height:13px;border:1px solid #456371;border-radius:6px;
+  background:#263941;overflow:hidden}
+.quality-bar-fill{height:100%;background:#d9b66d;border-radius:5px}
+.quality-bar-accounting{font-size:.74rem;color:#acbec3;font-variant-numeric:tabular-nums}
+.quality-stats-panel p{overflow-wrap:anywhere}
+@media(max-width:470px){.quality-bar-row{padding:8px}}
+@media(prefers-reduced-motion:reduce){.quality-bar-fill{transition:none}}
