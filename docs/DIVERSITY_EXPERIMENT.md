@@ -55,11 +55,29 @@ de ausência de vazamento do holdout: o operador deve auditar o dataset e suas
 licenças antes de usar. Sem repertório, a seed não controla a pesquisa interna
 do Rodent e nenhuma diversidade extra deve ser esperada.
 
+**Execução com limites de recursos opcionais no Debian:**
+
+```bash
+python scripts/run_limited_debian.py \
+  --memory-mib 1024 --cpu-percent 100 --max-tasks 64 \
+  -- diversity-run --plan /dados/ensaio-plano.json \
+  --rodent /CAMINHO_AUTORIZADO/RodentIV \
+  --out /dados/ensaio-cgroup-novo \
+  --blocks 1 --depth 8 --max-game-wall-seconds 600
+```
+
+Esse wrapper exige cgroup v2 e systemd de usuário; **não** oferece execução
+irrestrita como fallback. As cotas efetivas e a recuperação após OOM/SIGKILL
+ainda precisam de homologação física na #83.
+
 ### Contrato de execução
 
 - O executor valida o JSON contra uma reconstrução determinística de
   `diversity-plan`. Uma alteração em seed, jogador, condição, variável fixa,
   status ou impressão digital é rejeitada **antes de iniciar UCI**.
+- O destino precisa ser **novo**, fora da instalação Rodent, sem ancestrais
+  simbólicos. Os recibos produzidos por `play_duel` são aceitos somente se
+  permanecerem no braço isolado correspondente.
 - Cada bloco usa três braços **na ordem A1/A2/B**, com seeds A1=A2 e B distinta,
   motor/profiles/hashes, cores, profundidade e repertórios idênticos. Cada
   braço executa **duas partidas de cores invertidas**, numeradas 1 e 2, em
@@ -73,6 +91,11 @@ do Rodent e nenhuma diversidade extra deve ser esperada.
 - `execution.json` conserva hash SHA-256 do plano original, impressão do
   desenho pré-registrado, perfis e motores congelados, hash de cada repertório,
   parâmetros, resultado de cada braço e SHA/identidade de cada PGN e resumo.
+  Antes de contar um braço, o executor **reexecuta deterministicamente** a
+  política de seleção do livro na trajetória do PGN, usando seed, partida
+  1/2 e posição; compara os lances escolhidos, o traço salvo e as contagens.
+  Hashes do executável, perfis e repertórios também são conferidos **depois**
+  de cada braço, inclusive o último.
   A confirmação de braço exige `summary.json` `COMPLETED`, **duas partidas
   completas**, ambas com resultado, seed/política de repertório, SHA da linha principal e números de
   meios-lances reconciliados com os PGNs locais. O PGN consolidado `duelo.pgn`
