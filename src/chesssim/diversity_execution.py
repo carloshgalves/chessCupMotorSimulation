@@ -304,6 +304,8 @@ def execute_plan(root: Path, plan_path: Path, out: Path, *,
     root = root.expanduser().resolve()
     if not root.is_dir():
         raise ValueError("Diretório de motor inexistente")
+    if out.resolve().is_relative_to(root):
+        raise ValueError("Destino experimental deve ficar fora da instalação Rodent")
     executable, paths = validate(root, white, black)
     books, book_sources = _load_books(plan, white, black, white_book, black_book)
     frozen = {"exe": file_hash(executable)}
@@ -367,6 +369,9 @@ def execute_plan(root: Path, plan_path: Path, out: Path, *,
                     reverse=True, max_plies=max_plies, use_books=False,
                     historical_openings=books or None, opening_seed=arm["seed"],
                     opening_min_count=1, max_wall_seconds=max_game_wall_seconds)
+                if (folder.is_symlink() or
+                        not folder.resolve().is_relative_to(block_dir.resolve())):
+                    raise ValueError("Artefatos UCI fora do braço isolado")
                 # Do not count a finished arm if covariates changed while
                 # the UCI processes were running, including the very last arm.
                 assert_frozen_inputs()
