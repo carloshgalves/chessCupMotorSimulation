@@ -238,9 +238,15 @@ sincronização explícita** em sistemas POSIX (incluindo Debian):
    novo pode estar visível mas não foi confirmado como durável: o operador
    precisa executar a inspeção de recuperação, **não presumir commit**.
 
-Em POSIX, o marcador `.stop-requested.json` também faz `flush/fsync`
-antes do retorno de solicitação de parada, com diretórios sincronizados;
-a remoção pelo comando `tournament-clear-stop` sincroniza a pasta.
+Em POSIX, o marcador `.stop-requested.json` é preparado em um
+temporário no mesmo diretório, faz `flush/fsync` **antes de ser
+publicado por hardlink exclusivo** (`link(2)`): nunca sobrescreve outro
+pedido de parada e não se torna visível parcialmente escrito. Depois,
+o temporário é removido e os diretórios são sincronizados. Se
+`fsync(directory)` falhar após a publicação, o erro é propagado e o
+operador pode repetir a solicitação idempotente. Marcadores preexistentes
+que sejam symlink ou não sejam arquivos regulares são recusados.
+A remoção pelo comando `tournament-clear-stop` sincroniza a pasta.
 Em ambientes não POSIX, permanece a semântica preexistente de substituição
 atômica, **sem alegação de durabilidade por `fsync`**.
 
