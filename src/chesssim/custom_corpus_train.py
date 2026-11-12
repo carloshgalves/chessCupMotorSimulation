@@ -22,6 +22,7 @@ from .age_cohort import _cache_snapshot, _full_date, _header_name, _partition
 from .matches import _atomic_text
 
 SCHEMA = "chesssim-custom-train-only-split-v1"
+SCHEMA_POSITION_AUDITED = "chesssim-custom-train-only-split-v2"
 MAX_OUTPUT_MB = 32
 MAX_GAMES = 1000
 
@@ -58,7 +59,8 @@ def _partition_record(entries: list[dict], *, expose_train: bool) -> dict:
 
 def prepare_custom_train(library: Path, identifier: str, cache: Path, out: Path,
                          *, expected_head: str, min_train: int = 20,
-                         max_output_mb: int = 32) -> dict:
+                         max_output_mb: int = 32,
+                         embargo_min_ply: int | None = None) -> dict:
     """Only training PGN is materialized after a link + source revalidation.
 
     The shared library lock is held across source verification and publication.
@@ -69,6 +71,10 @@ def prepare_custom_train(library: Path, identifier: str, cache: Path, out: Path,
         raise ValueError("min-train deve estar entre 1 e 1000")
     if type(max_output_mb) is not int or not 1 <= max_output_mb <= MAX_OUTPUT_MB:
         raise ValueError("max-output-mb deve estar entre 1 e 32")
+    if embargo_min_ply is not None and (
+            type(embargo_min_ply) is not int
+            or not 1 <= embargo_min_ply <= 80):
+        raise ValueError("embargo-min-ply deve ser inteiro de 1 a 80")
     if not isinstance(expected_head, str) or not core.DIGEST.fullmatch(expected_head):
         raise ValueError("Informe head_sha256 válido do vínculo")
     root = core._library(library)
@@ -131,6 +137,17 @@ def prepare_custom_train(library: Path, identifier: str, cache: Path, out: Path,
             # already excluded by the link itself; they are diagnostic only.
             raise ValueError("Partidas elegíveis não reconciliadas com vínculo")
         pieces = _partition(selected)  # chronological whole-date grouping
+        embargo = {
+            "schema": "chesssim-custom-position-embargo-v1",
+            "status": "NOT_RUN",
+            "reason": (
+                "The historical v1 train-only export is not position embargoed; "
+                "pass --embargo-min-ply explicitly to audit and quarantine."
+            ),
+        }
+        if embargo_min_ply is not None:
+            from .custom_position_embargo import apply_embargo
+            pieces, embargo = apply_embargo(pieces, min_ply=embargo_min_ply)
         train_text = "".join(
             row["_game"].accept(chess.pgn.StringExporter(
                 headers=True, variations=False, comments=False)).rstrip() + "\n\n"
@@ -139,10 +156,15 @@ def prepare_custom_train(library: Path, identifier: str, cache: Path, out: Path,
         train_bytes = train_text.encode("utf-8")
         sufficient = (len(pieces["train"]) >= min_train
                       and bool(pieces["validation"]) and bool(pieces["holdout"]))
+        embargo_incomplete = (embargo_min_ply is not None
+                              and embargo["status"] != "AUDITED_DISJOINT")
         report = {
-            "schema": SCHEMA,
-            "status": ("TRAIN_ONLY_PREPARED_NOT_VALIDATED" if sufficient else
-                       "INSUFFICIENT_PARTITION_EVIDENCE"),
+            "schema": (SCHEMA_POSITION_AUDITED if embargo_min_ply is not None
+                       else SCHEMA),
+            "status": (
+                "INSUFFICIENT_POSITION_EVIDENCE" if embargo_incomplete else
+                "TRAIN_ONLY_PREPARED_NOT_VALIDATED" if sufficient else
+                "INSUFFICIENT_PARTITION_EVIDENCE"),
             "training_only": True,
             "uci_eligible": False,
             "historically_validated": False,
@@ -166,6 +188,9 @@ def prepare_custom_train(library: Path, identifier: str, cache: Path, out: Path,
             "excluded": dict(sorted(excluded.items())),
             "minimum_train_games": min_train,
             "partition_policy": "chronological 60/20/20 targets; civil dates not split",
+            # Preserve v1 manifest field names exactly. Only v2 carries
+            # new audit fields and the opt-in FEN quarantine contract.
+            **({"position_embargo": embargo} if embargo_min_ply is not None else {}),
             "partitions": {
                 part: _partition_record(rows, expose_train=part == "train")
                 for part, rows in pieces.items()
@@ -176,7 +201,7 @@ def prepare_custom_train(library: Path, identifier: str, cache: Path, out: Path,
                 "Not a calibrated, installed or playable UCI profile.",
                 "Rights and exact player identity remain operator-attested.",
                 "No validation or holdout PGN is emitted; original cache still holds all games.",
-                "The same chess position may occur in distinct split games; position-level embargo is not provided.",
+                "Without --embargo-min-ply position cross-split overlap is not checked; in opt-in mode only post-move positions from the specified ply are checked.",
                 "Unknown or future-dated games do not enter any partition.",
                 "Not an independently sealed holdout, licensed redistribution, or source of engine strength.",
             ],

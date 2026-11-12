@@ -165,6 +165,8 @@ def main(argv: list[str] | None = None) -> int:
                               help="Mínimo de partidas de treino para status preparado (1..1000)")
     custom_train.add_argument("--max-output-mb", type=int, default=32,
                               help="Orçamento treino + manifesto em MiB (1..32)")
+    custom_train.add_argument("--embargo-min-ply", type=int,
+                              help="Opt-in: audita/quarentena FEN pós-lance desde este ply (1..80)")
 
     diversity = sub.add_parser(
         "diversity-report", help="Compara sequências PGN reais de múltiplos duelos, sem alterar motores")
@@ -682,7 +684,8 @@ def main(argv: list[str] | None = None) -> int:
             report = prepare_custom_train(
                 args.library, args.id, args.cache, args.out,
                 expected_head=args.expected_head, min_train=args.min_train,
-                max_output_mb=args.max_output_mb)
+                max_output_mb=args.max_output_mb,
+                embargo_min_ply=args.embargo_min_ply)
             print(json.dumps(report, ensure_ascii=False, indent=2))
             return 0
         if args.command in {
