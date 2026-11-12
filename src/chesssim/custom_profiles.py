@@ -235,6 +235,8 @@ def _exclusive_library(root: Path):
     A crash releases the OS file lock automatically.
     """
     lock = root / ".custom-player.lock"
+    if lock.is_symlink():
+        raise ValueError("Lock simbólico da biblioteca não permitido")
     flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
     fd = os.open(lock, flags, 0o600)
     with os.fdopen(fd, "r+b") as handle:
