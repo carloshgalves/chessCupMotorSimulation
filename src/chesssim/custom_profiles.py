@@ -280,20 +280,26 @@ def create_fictional(library: Path, name: str) -> dict:
 
 def list_fictional(library: Path) -> list[dict]:
     root = _library(library)
-    return [_summary(root, _read_id(root, path.stem)[0])
-            for path in _inventory(root)]
+    if not root.exists():
+        return []
+    with _exclusive_library(root):
+        return [_summary(root, _read_id(root, path.stem)[0])
+                for path in _inventory(root)]
 
 
 def export_fictional(library: Path, identifier: str, output: Path) -> dict:
     root = _library(library)
-    doc, raw = _read_id(root, identifier)
-    destination = _safe_path(output)
-    if destination.resolve().is_relative_to(root.resolve()):
-        raise ValueError("Exportação deve ficar fora da biblioteca")
-    if not destination.parent.is_dir():
-        raise ValueError("Diretório de exportação inexistente")
-    _publish_exclusive(destination, raw)
-    return {**_summary(root, doc), "exported_to": str(destination)}
+    if not root.exists():
+        raise ValueError("Biblioteca local não encontrada")
+    with _exclusive_library(root):
+        doc, raw = _read_id(root, identifier)
+        destination = _safe_path(output)
+        if destination.resolve().is_relative_to(root.resolve()):
+            raise ValueError("Exportação deve ficar fora da biblioteca")
+        if not destination.parent.is_dir():
+            raise ValueError("Diretório de exportação inexistente")
+        _publish_exclusive(destination, raw)
+        return {**_summary(root, doc), "exported_to": str(destination)}
 
 
 def import_fictional(library: Path, source: Path) -> dict:
