@@ -376,6 +376,7 @@ def test_explicit_position_embargo_keeps_disjoint_short_games_and_is_audited(tmp
     doc = _prepare(
         library, profile, cache, link, out,
         min_train=5, embargo_min_ply=2)
+    assert doc["schema"] == train.SCHEMA_POSITION_AUDITED
     assert doc["position_embargo"]["status"] == "AUDITED_DISJOINT"
     assert doc["position_embargo"]["min_ply"] == 2
     assert doc["position_embargo"]["post_quarantine_cross_partition_overlap_unique_positions"] == 0
@@ -393,6 +394,7 @@ def test_legacy_train_only_export_explicitly_marks_position_embargo_not_run(tmp_
     library, profile, cache, link = _setup(tmp_path)
     result = _prepare(
         library, profile, cache, link, tmp_path / "unembargoed", min_train=5)
+    assert result["schema"] == train.SCHEMA
     assert result["position_embargo"]["status"] == "NOT_RUN"
     assert result["status"] == "TRAIN_ONLY_PREPARED_NOT_VALIDATED"
     assert result["position_embargo"]["reason"].startswith("The historical")
@@ -474,6 +476,7 @@ def test_embargo_cli_opt_in_publishes_manifest_and_no_reserved_pgn(
     ]
     assert main(args) == 0
     response = json.loads(capsys.readouterr().out)
+    assert response["schema"] == train.SCHEMA_POSITION_AUDITED
     assert response["position_embargo"]["status"] == "AUDITED_DISJOINT"
     assert sorted(p.name for p in out.iterdir()) == ["split.json", "train.pgn"]
     assert json.loads((out / "split.json").read_text()) == response
