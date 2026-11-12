@@ -488,7 +488,7 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
     status:"DESCRIPTIVE_SINGLE_COMPLETED_GAME_NOT_RATING",
     total_plies:2,coverage:active,
     players:{
-      white:{name:"<img onerror=alert(1)>",model_declared:"RodentIV:Fischer"},
+      white:{name:"<img onerror=alert(1)>",model_declared:"RodentIV:Fischer",profile_sha256_prefix:"f".repeat(12)},
       black:{name:"Tal",model_declared:"RodentIV:Tal"}
     },
     by_phase:{opening:active,middle:missing,late:missing},
@@ -517,6 +517,9 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal(phaseBars.children[0].children[2].children[0].style.width,"100.00%");
   assert(playerBars.children[0].children[0].textContent.includes("<img onerror"),
          "untrusted PGN player headers must remain inert text");
+  assert(playerBars.children[0].children[0].textContent.includes("modelo PGN RodentIV:Fischer"));
+  assert(playerBars.children[0].children[0].textContent.includes("perfil SHA-256 ffffffffffff"));
+  assert(playerBars.children[1].children[0].textContent.includes("modelo PGN RodentIV:Tal"));
   assert(playerBars.children[1].children[1].textContent.includes("Indisponível"),
          "no eligible black scores must not be represented as zero");
   assert(quality.elements.get("quality-stats-status").textContent.includes(
