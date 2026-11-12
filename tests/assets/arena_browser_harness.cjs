@@ -8,6 +8,16 @@ const source = fs.readFileSync(process.argv[2], "utf8");
 const token = "arena-capability-token-that-is-secret-and-long";
 const calls = [];
 let current = null;
+let customCatalogUnavailable = false;
+let customCatalogHang = false;
+let timeoutNextId = 0;
+const pendingTimeouts = new Map();
+const fictional = [{
+  id:"user-1234567890abcdef1234567890abcdef",
+  name:"Ava <img src=x onerror=alert(1)>",
+  kind:"fictional-player",status:"METADATA_ONLY_NOT_PLAYABLE",
+  revision:2,installed:false,uci_eligible:false,historically_validated:false
+}];
 const players = [
   {slug:"fischer",name:"Bobby Fischer",installed:true,alias:"Fischer",
    historically_validated:false,reference_period:"1970–1972",
@@ -58,6 +68,23 @@ const document={
 };
 const $=id=>document.getElementById(id);
 const fetch=async(path,request={})=>{
+  if(path==="/api/arena/custom-players"){
+    if(customCatalogHang){
+      return new Promise((resolve,reject)=>{
+        assert(request.signal, "Hanging catalog request must have abort signal");
+        request.signal.addEventListener("abort",()=>{
+          reject(new Error("catalog fetch aborted"));
+        },{once:true});
+      });
+    }
+    return customCatalogUnavailable ?
+      {ok:false,status:503,json:async()=>({error:"Corrupted"})} :
+      {ok:true,json:async()=>({
+        schema:"chesssim-custom-arena-catalog-v1",
+        configured:true,players:fictional,
+        warning:"Only metadata, no UCI"
+      })};
+  }
   if(path==="/api/arena"){
     return {ok:true,json:async()=>({
       busy:!!current,duel_busy:!!current,human_busy:false,session:current,players,opening_books_configured:false
@@ -82,6 +109,14 @@ const window={
 };
 const ctx=vm.createContext({
   document,window,URLSearchParams,fetch,Number,String,Date,Math,
+  AbortController,
+  setTimeout(callback,ms){
+    assert.equal(ms,5000);
+    const id=++timeoutNextId;
+    pendingTimeouts.set(id,callback);
+    return id;
+  },
+  clearTimeout(id){pendingTimeouts.delete(id);},
   setInterval(){return 1;},console
 });
 vm.runInContext(source,ctx,{filename:"arena.js",timeout:3000});
@@ -91,6 +126,26 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal($("white").value,"fischer");
   assert.equal($("black").value,"tal");
   assert.equal($("launch").disabled,false);
+  assert.equal($("custom-profile-list").children.length,1);
+  assert($("custom-profile-list").children[0].textContent.includes(
+    "Ava <img src=x onerror=alert(1)>"), "untrusted name remains inert text");
+  assert.equal($("white").children.at(-1).tagName,"OPTGROUP");
+  assert.equal($("white").children.at(-1).children[0].disabled,true);
+  assert.equal($("black").children.at(-1).children[0].disabled,true);
+  assert($("custom-profile-status").textContent.includes("nenhum perfil UCI"));
+  assert($("custom-profile-list").children[0].textContent.includes(fictional[0].id));
+  const sameName = {...fictional[0],id:"user-fedcba0987654321fedcba0987654321"};
+  fictional.push(sameName);
+  await vm.runInContext("refreshCustomCatalog()",ctx);
+  assert.equal($("custom-profile-list").children.length,2);
+  assert($("custom-profile-list").children[0].textContent.includes(fictional[0].id));
+  assert($("custom-profile-list").children[1].textContent.includes(sameName.id));
+  assert($("white").children.at(-1).children[0].textContent.includes(fictional[0].id));
+  assert($("white").children.at(-1).children[1].textContent.includes(sameName.id));
+  assert($("white").children.at(-1).children.every(item=>item.disabled));
+  fictional.pop();
+  await vm.runInContext("refreshCustomCatalog()",ctx);
+  assert.equal($("custom-profile-list").children.length,1);
   assert($("white-profile").children.some(el=>
     String(el.textContent).includes("NÃO VALIDADA")));
 
@@ -145,5 +200,34 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal(calls[1].path,"/api/arena/stop");
   assert($("launch-feedback").textContent.includes("Parada solicitada"));
   assert.equal($("board-frame").children.length,0);
+  fictional[0].installed=true; // A malicious API must not advertise playable fiction.
+  await vm.runInContext("refreshCustomCatalog()",ctx);
+  assert.equal($("custom-profile-list").children.length,0);
+  assert($("custom-profile-status").textContent.includes("Não foi possível"));
+  assert.equal($("white").value,"fischer");
+  assert.equal($("black").value,"tal");
+  assert.equal($("white").children.at(-1).tagName,"OPTION");
+  assert.equal(calls.length,2, "Custom GET must never create an engine POST");
+  fictional[0].installed=false;
+  await vm.runInContext("refreshCustomCatalog()",ctx);
+  assert.equal($("custom-profile-list").children.length,1);
+  customCatalogUnavailable=true;
+  await vm.runInContext("refreshCustomCatalog()",ctx);
+  assert.equal($("custom-profile-list").children.length,0);
+  assert.equal($("launch").disabled,true, "Busy state remains independent");
+  assert.equal(calls.length,2);
+  assert.equal(pendingTimeouts.size,0);
+  customCatalogUnavailable=false;
+  customCatalogHang=true;
+  const hanging=vm.runInContext("refreshCustomCatalog()",ctx);
+  await flush();
+  assert.equal(pendingTimeouts.size,1);
+  const abort=[...pendingTimeouts.values()][0];
+  abort();
+  await hanging;
+  assert.equal(pendingTimeouts.size,0);
+  assert($("custom-profile-status").textContent.includes("Não foi possível"));
+  assert.equal($("custom-profile-list").children.length,0);
+  assert.equal(calls.length,2, "Timeout must not touch engine controls");
   console.log("Arena browser controls: PASS");
 })().catch(err=>{console.error(err);process.exitCode=1;});

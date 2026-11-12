@@ -18,6 +18,7 @@ import uuid
 from urllib.parse import urlsplit, parse_qs
 
 from .catalog import load_roster, find_player
+from .custom_profiles import _library as custom_library_path, list_fictional
 from .history_profiles import list_history_players, load_history_profile
 from .history_games import InvalidCatalogue, UnknownGame, list_games, replay
 from .history_stats import player_stats
@@ -222,9 +223,18 @@ def _load_json_file(path: Path) -> dict:
 class ArenaManager:
     def __init__(self, root: Path, workspace: Path, *,
                  opening_books: Path | None = None,
+                 custom_library: Path | None = None,
                  max_game_wall_seconds: float = 3600,
                  runner=None):
         self.root = root.expanduser().resolve(strict=True)
+        # Validate optional metadata location before creating or locking the
+        # Arena workspace, so invalid opt-in config has zero session effects.
+        self.custom_library = None
+        if custom_library is not None:
+            directory = custom_library_path(custom_library)
+            if not directory.is_dir():
+                raise ValueError("Biblioteca de personagens personalizada inexistente")
+            self.custom_library = directory
         self.workspace = workspace.expanduser().absolute()
         if self.workspace.is_symlink():
             raise ValueError("A pasta da arena não pode ser um link simbólico")
@@ -237,6 +247,8 @@ class ArenaManager:
                 raise ValueError("Diretório de livros históricos inválido")
             opening_books = opening_books.resolve(strict=True)
         self.opening_books = opening_books
+        # Opt-in metadata source; no creation or inspection of identities at
+        # server startup. A broken catalog must not block the core Arena.
         if not isinstance(max_game_wall_seconds, (float, int)) or (
                 not math.isfinite(max_game_wall_seconds) or
                 not 30 <= max_game_wall_seconds <= 86400):
@@ -335,6 +347,37 @@ class ArenaManager:
                     "presets": {name: {"initial_seconds": v[0], "increment_seconds": v[1]}
                                 for name, v in PRESETS.items()},
                     "opening_books_configured": self.opening_books is not None}
+
+    def custom_players(self) -> dict:
+        """Read-only experimental identities, strictly separate from UCI roster.
+
+        Errors are isolated to the dedicated GET endpoint, not /api/arena.
+        """
+        if self.custom_library is None:
+            return {
+                "schema": "chesssim-custom-arena-catalog-v1",
+                "configured": False, "players": [],
+                "warning": "Biblioteca local não configurada; sem perfis UCI personalizados",
+            }
+        rows = list_fictional(self.custom_library)
+        return {
+            "schema": "chesssim-custom-arena-catalog-v1",
+            "configured": True,
+            "players": [
+                {
+                    "id": item["id"], "name": item["display_name"],
+                    "kind": "fictional-player", "status": item["status"],
+                    "revision": item["revision"],
+                    "installed": False, "uci_eligible": False,
+                    "historically_validated": False,
+                    "reason": "Cadastro fictício, sem motor UCI instalado ou validado",
+                } for item in rows
+            ],
+            "warning": (
+                "Catálogo somente leitura. Personagens fictícios não podem iniciar "
+                "Duelo, Jogar, Copa ou Liga até aprovação de integração UCI."
+            ),
+        }
 
     def _duel_folder(self) -> Path | None:
         if self._selected is None:
@@ -819,6 +862,12 @@ def make_arena_handler(manager: ArenaManager, token: str):
                     self._json(200, manager.human.state())
                 except (ValueError, OSError, KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "Estado do modo Jogar indisponível"})
+            elif url.path == "/api/arena/custom-players" and not url.query:
+                try:
+                    self._json(200, manager.custom_players())
+                except (ValueError, OSError, KeyError, TypeError, UnicodeError,
+                        json.JSONDecodeError):
+                    self._json(503, {"error": "Catálogo personalizado indisponível"})
             elif url.path == "/api/arena":
                 try:
                     self._json(200, manager.status())
@@ -1001,11 +1050,13 @@ def make_arena_handler(manager: ArenaManager, token: str):
 
 def create_server(root: Path, workspace: Path, *, port: int = 8766,
                   opening_books: Path | None = None,
+                  custom_library: Path | None = None,
                   max_game_wall_seconds: float = 3600,
                   runner=None):
     if not isinstance(port, int) or not 0 <= port <= 65535:
         raise ValueError("Porta inválida")
     manager = ArenaManager(root, workspace, opening_books=opening_books,
+                           custom_library=custom_library,
                            max_game_wall_seconds=max_game_wall_seconds,
                            runner=runner)
     token = secrets.token_urlsafe(32)
@@ -1025,9 +1076,11 @@ def create_server(root: Path, workspace: Path, *, port: int = 8766,
 
 def serve(root: Path, workspace: Path, *, port: int = 8766,
           opening_books: Path | None = None,
+          custom_library: Path | None = None,
           max_game_wall_seconds: float = 3600) -> None:
     server = create_server(root, workspace, port=port,
                            opening_books=opening_books,
+                           custom_library=custom_library,
                            max_game_wall_seconds=max_game_wall_seconds)
     print(f"Arena local: http://127.0.0.1:{server.server_port}/#token={server.arena_token}",
           flush=True)

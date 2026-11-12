@@ -3,6 +3,9 @@
 const $ = id => document.getElementById(id);
 const token = new URLSearchParams(window.location.hash.slice(1)).get("token");
 let roster = [];
+let customPlayers = [];
+let customRefreshCounter = 0;
+let customLoading = false;
 let busy = false;
 let duelBusy = false;
 let currentSession = null;
@@ -26,8 +29,92 @@ function fillPlayer(select, preferred) {
     option.textContent = p.name + (p.installed ? "" : " · perfil indisponível");
     select.appendChild(option);
   }
+  if (customPlayers.length) {
+    const group = document.createElement("optgroup");
+    group.label = "Personagens locais · somente cadastro, não jogáveis";
+    for (const p of customPlayers) {
+      const option = document.createElement("option");
+      option.value = p.id;
+      option.disabled = true;
+      option.textContent = p.name + " · " + p.id +
+        (p.status === "RETIRED_METADATA_ONLY" ?
+          " · desativado · não jogável" : " · não jogável");
+      group.appendChild(option);
+    }
+    select.appendChild(group);
+  }
   select.value = player(prior) && player(prior).installed ? prior :
     (roster.find(p => p.installed)?.slug || "");
+}
+function applyCustomCatalog(data) {
+  if (!data || data.schema !== "chesssim-custom-arena-catalog-v1" ||
+      typeof data.configured !== "boolean" || !Array.isArray(data.players) ||
+      data.players.length > 256) {
+    throw new Error("Formato da biblioteca local inválido");
+  }
+  const entries = [];
+  const seen = new Set();
+  for (const p of data.players) {
+    if (!p || typeof p.id !== "string" || !/^user-[0-9a-f]{32}$/.test(p.id) ||
+        seen.has(p.id) || typeof p.name !== "string" || p.name.length > 80 ||
+        !["METADATA_ONLY_NOT_PLAYABLE", "RETIRED_METADATA_ONLY"].includes(p.status) ||
+        p.kind !== "fictional-player" || p.installed !== false ||
+        p.uci_eligible !== false || p.historically_validated !== false ||
+        !Number.isInteger(p.revision) || p.revision < 0 || p.revision > 64) {
+      throw new Error("Registro de personagem local inválido");
+    }
+    seen.add(p.id);
+    entries.push(p);
+  }
+  if (!data.configured && entries.length) {
+    throw new Error("Biblioteca não configurada retornou perfis");
+  }
+  customPlayers = entries;
+  const list = $("custom-profile-list");
+  list.replaceChildren();
+  for (const p of entries) {
+    const row = document.createElement("li");
+    row.textContent = p.name + " · ID " + p.id + " · " +
+      (p.status === "RETIRED_METADATA_ONLY" ? "desativado" : "cadastrado") +
+      " · revisão " + p.revision + " · NÃO JOGÁVEL";
+    list.appendChild(row);
+  }
+  $("custom-profile-status").textContent = !data.configured ?
+    "Biblioteca não configurada. Para visualizar, inicie a Arena com --custom-library." :
+    entries.length ? entries.length + " personagens locais · nenhum perfil UCI habilitado." :
+    "Biblioteca configurada, sem personagens cadastrados.";
+  fillPlayer($("white"), "fischer");
+  fillPlayer($("black"), "tal");
+  updateForm();
+}
+async function refreshCustomCatalog() {
+  if (customLoading) return;
+  customLoading = true;
+  // A hanging optional GET cannot consume the only catalog polling slot
+  // indefinitely. The live board continues refreshing independently.
+  const controller = typeof AbortController === "function" ?
+    new AbortController() : null;
+  const timeout = controller ? setTimeout(() => controller.abort(), 5000) : null;
+  try {
+    const response = await fetch("/api/arena/custom-players", {
+      cache:"no-store", ...(controller ? {signal:controller.signal} : {})
+    });
+    if (!response.ok) throw new Error("Biblioteca local indisponível");
+    applyCustomCatalog(await response.json());
+  } catch (_) {
+    // The historical UCI arena remains usable, but stale custom identities
+    // are removed and the problem is explicit, never a silent empty list.
+    customPlayers = [];
+    $("custom-profile-list").replaceChildren();
+    $("custom-profile-status").textContent =
+      "Não foi possível verificar a biblioteca local. Confira os arquivos e o terminal.";
+    fillPlayer($("white"), "fischer");
+    fillPlayer($("black"), "tal");
+    updateForm();
+  } finally {
+    if (timeout !== null) clearTimeout(timeout);
+    customLoading = false;
+  }
 }
 function displayProfile(slot, slug) {
   const el = $(slot + "-profile");
@@ -183,6 +270,9 @@ async function refresh() {
     $("connection").className = "online";
     updateForm();
     renderSession();
+    // The optional catalog is independent of /api/arena and never blocks
+    // historical launches. Poll it less often than the live game state.
+    if (++customRefreshCounter % 10 === 1) void refreshCustomCatalog();
   } catch (err) {
     $("connection").textContent = "● Sem conexão com a arena";
     $("connection").className = "offline";

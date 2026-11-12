@@ -211,6 +211,8 @@ def main(argv: list[str] | None = None) -> int:
                        help="Porta local (padrão 8766)")
     arena.add_argument("--opening-books", type=Path,
                        help="Pasta de repertórios JSON pré-aprovados por slug")
+    arena.add_argument("--custom-library", type=Path,
+                       help="Biblioteca local de personagens fictícios da #63 (consulta, não jogável)")
     arena.add_argument("--max-game-wall-seconds", type=float, default=3600,
                        help="Limite de duração operacional por partida")
 
@@ -1164,6 +1166,7 @@ def main(argv: list[str] | None = None) -> int:
             from .arena import serve
             serve(rodent_root(args), args.out, port=args.port,
                   opening_books=args.opening_books,
+                  custom_library=args.custom_library,
                   max_game_wall_seconds=args.max_game_wall_seconds)
         elif args.command == "watch":
             from .live_board import serve

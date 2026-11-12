@@ -743,3 +743,136 @@ def test_arena_v2_event_reconnect_is_read_only_and_backward_compatible(
         assert second["duel"]["status"] == "COMPLETED"
         assert second["games"][0]["ply"] == len(FOOLS_MATE)
         assert api(base, "/api/state")["duel"]["status"] == "COMPLETED"
+
+
+def test_custom_arena_catalog_is_opt_in_and_does_not_change_roster(rodent_stub):
+    with arena_server(rodent_stub) as (server, base):
+        response = api(base, "/api/arena/custom-players")
+        assert response == {
+            "schema": "chesssim-custom-arena-catalog-v1",
+            "configured": False, "players": [],
+            "warning": "Biblioteca local não configurada; sem perfis UCI personalizados",
+        }
+        assert len(api(base)["players"]) == 64
+        assert "custom_players" not in api(base)
+        assert not (rodent_stub[1] / "custom").exists()
+        with pytest.raises(HTTPError) as wrong:
+            urlopen(base + "/api/arena/custom-players?force=1")
+        assert wrong.value.code == 404
+        with pytest.raises(HTTPError) as wrong_post:
+            post(base, "/api/arena/custom-players", {}, server.arena_token)
+        assert wrong_post.value.code == 404
+
+
+def test_custom_arena_catalog_shows_renamed_and_retired_but_never_playable(
+        rodent_stub, tmp_path):
+    from chesssim.custom_profiles import create_fictional, retire_fictional
+    from chesssim.custom_profile_history import rename_fictional
+    library = tmp_path / "fictitious"
+    first = create_fictional(library, "Ava Ravenwood")
+    homonym = create_fictional(library, "Ava Ravenwood")
+    with arena_server(rodent_stub, custom_library=library) as (server, base):
+        catalog = api(base, "/api/arena/custom-players")
+        assert catalog["configured"] is True
+        assert len(catalog["players"]) == 2
+        assert {p["id"] for p in catalog["players"]} == {first["id"], homonym["id"]}
+        assert all(p["kind"] == "fictional-player" and p["uci_eligible"] is False
+                   and p["installed"] is False and
+                   p["historically_validated"] is False
+                   for p in catalog["players"])
+        assert len(api(base)["players"]) == 64
+        for item in (first, homonym):
+            config = {**GOOD, "white": item["id"]}
+            with pytest.raises(HTTPError) as wrong:
+                post(base, "/api/arena/launch", config, server.arena_token)
+            assert wrong.value.code == 400
+        assert not list(rodent_stub[1].glob("session-*"))
+        renamed = rename_fictional(
+            library, first["id"], "Élise Ravenwood", first["revision_sha256"])
+        retire_fictional(library, homonym["id"])
+        after = api(base, "/api/arena/custom-players")
+        by_id = {item["id"]: item for item in after["players"]}
+        assert by_id[first["id"]]["name"] == "Élise Ravenwood"
+        assert by_id[first["id"]]["revision"] == renamed["revision"]
+        assert by_id[homonym["id"]]["status"] == "RETIRED_METADATA_ONLY"
+        assert by_id[homonym["id"]]["name"] == "Ava Ravenwood"
+        assert all(item["installed"] is False for item in after["players"])
+        assert len(api(base)["players"]) == 64
+        with post(base, "/api/arena/launch", GOOD, server.arena_token) as response:
+            assert response.status == 202
+        assert wait_for(server.arena_manager, "COMPLETED")["status"] == "COMPLETED"
+
+
+def test_custom_library_rejects_missing_symlink_or_file(rodent_stub, tmp_path):
+    from chesssim.custom_profiles import create_fictional
+    missing = tmp_path / "missing"
+    with pytest.raises(ValueError, match="inexistente"):
+        with arena_server(rodent_stub, custom_library=missing):
+            pytest.fail("Should reject missing custom library")
+    assert not rodent_stub[1].exists(), "preflight must not create arena workspace"
+    file_path = tmp_path / "file.json"
+    file_path.write_bytes(b"{}")
+    with pytest.raises(ValueError, match="deve ser diretório"):
+        with arena_server(rodent_stub, custom_library=file_path):
+            pytest.fail("Should reject non-directory custom library")
+    assert not rodent_stub[1].exists(), "invalid source must not create workspace"
+    folder = tmp_path / "real"
+    create_fictional(folder, "Ava Ravenwood")
+    shortcut = tmp_path / "shortcut"
+    shortcut.symlink_to(folder, target_is_directory=True)
+    with pytest.raises(ValueError, match="symlink"):
+        with arena_server(rodent_stub, custom_library=shortcut):
+            pytest.fail("Should reject linked custom library")
+
+
+def test_corrupt_custom_library_only_fails_isolated_endpoint(rodent_stub, tmp_path):
+    from chesssim.custom_profiles import create_fictional
+    library = tmp_path / "fiction"
+    item = create_fictional(library, "Ava Ravenwood")
+    target = library / (item["id"] + ".json")
+    original = target.read_bytes()
+    with arena_server(rodent_stub, custom_library=library) as (server, base):
+        assert len(api(base, "/api/arena/custom-players")["players"]) == 1
+        target.write_bytes(original.replace(b"Ravenwood", b"Changedxx"))
+        with pytest.raises(HTTPError) as failure:
+            urlopen(base + "/api/arena/custom-players")
+        assert failure.value.code == 503
+        assert b"indispon" in failure.value.read()
+        assert len(api(base)["players"]) == 64
+        assert api(base)["busy"] is False
+        with post(base, "/api/arena/launch", GOOD, server.arena_token) as response:
+            assert response.status == 202
+        assert wait_for(server.arena_manager, "COMPLETED")["status"] == "COMPLETED"
+
+
+def test_arena_custom_catalog_markup_is_inert_and_explicitly_unplayable():
+    source = Path(__file__).resolve().parents[1] / "src" / "chesssim" / "data"
+    html = (source / "arena.html").read_text(encoding="utf-8")
+    js = (source / "arena.js").read_text(encoding="utf-8")
+    assert 'id="custom-profile-status"' in html
+    assert 'id="custom-profile-list"' in html
+    assert 'aria-live="polite"' in html
+    assert 'fetch("/api/arena/custom-players"' in js
+    assert "textContent" in js
+    assert "innerHTML" not in js and "eval(" not in js
+
+
+def test_arena_cli_custom_library_forwarded_only_when_explicit(rodent_stub,
+                                                               tmp_path, monkeypatch):
+    from chesssim.cli import main
+    captured = []
+    def fake_serve(root, workspace, **kwargs):
+        captured.append((root, workspace, kwargs))
+    monkeypatch.setattr(arena, "serve", fake_serve)
+    root, out = rodent_stub
+    library = tmp_path / "customs"
+    library.mkdir()
+    base = ["arena", "--rodent", str(root), "--out", str(out),
+            "--port", "0"]
+    assert main(base) == 0
+    assert captured[-1][2]["custom_library"] is None
+    assert main([*base, "--custom-library", str(library)]) == 0
+    assert captured[-1][2]["custom_library"] == library
+    assert captured[-1][0] == root
+    assert captured[-1][1] == out
+    assert not list(library.iterdir()), "CLI forwarding does not mutate catalog"
