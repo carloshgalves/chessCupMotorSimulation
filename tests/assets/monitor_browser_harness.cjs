@@ -588,7 +588,9 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal(toggleEditorial.attributes["aria-pressed"],"false");
   vm.runInContext("feed.duel.games[0].fictional_editorial=" +
     JSON.stringify(narr) +
-    ";feed.duel.games[0].status='COMPLETED';cursor=0;render()",commentary.context);
+    ";feed.duel.games[0].status='COMPLETED';" +
+    "feed.duel.games[0].result='1-0';feed.duel.games[0].live=false;" +
+    "cursor=0;render()",commentary.context);
   assert.equal(commentary.elements.get("editorial-current").hidden,true);
   assert.equal(commentary.elements.get("editorial-postgame").hidden,true);
   toggleEditorial.events.click();
@@ -606,6 +608,18 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
     "Pergunta editorial"));
   assert(commentary.elements.get("editorial-answer").textContent.includes(
     "Resposta fictícia do narrador"));
+  // Postgame must fail closed on a live, unknown-result or running receipt
+  // even if an earlier response included a stale editorial object.
+  vm.runInContext("feed.duel.games[0].live=true;render()",commentary.context);
+  assert.equal(commentary.elements.get("editorial-postgame").hidden,true);
+  vm.runInContext("feed.duel.games[0].live=false;feed.duel.games[0].result='*';render()",
+                  commentary.context);
+  assert.equal(commentary.elements.get("editorial-postgame").hidden,true);
+  vm.runInContext("feed.duel.games[0].result='1-0';feed.duel.games[0].status='RUNNING';render()",
+                  commentary.context);
+  assert.equal(commentary.elements.get("editorial-postgame").hidden,true);
+  vm.runInContext("feed.duel.games[0].status='COMPLETED';render()",commentary.context);
+  assert.equal(commentary.elements.get("editorial-postgame").hidden,false);
   vm.runInContext("cursor=1;render()",commentary.context);
   assert.equal(commentary.elements.get("editorial-postgame").hidden,true,
                "seeking backward immediately hides all future-result text");
