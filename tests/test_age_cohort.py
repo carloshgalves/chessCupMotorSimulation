@@ -26,6 +26,7 @@ BIRTH = "1990-11-30"
 
 def _pgn(index, played, *, white=NAME, black="Opponent",
          result="1-0"):
+    assert isinstance(played, str), "fixture date must be a single PGN date"
     board = chess.Board()
     game = chess.pgn.Game()
     game.headers["White"] = white
@@ -138,11 +139,9 @@ def test_age_cohort_only_exports_train_and_preserves_strict_time_order(tmp_path)
 
 
 def test_same_date_never_crosses_training_validation_holdout(tmp_path):
-    payload = "".join(
-        _pgn(i, ["2011.12.01"] * 7 + ["2012.01.01"] * 2 +
-             ["2012.02.01"] * 2 + ["2012.03.01"] * 2)
-        for i in range(13)
-    )
+    days = (["2011.12.01"] * 7 + ["2012.01.01"] * 2 +
+            ["2012.02.01"] * 2 + ["2012.03.01"] * 2)
+    payload = "".join(_pgn(i, day) for i, day in enumerate(days))
     cache = _cache(tmp_path, payload)
     info = _cohort(cache, tmp_path / "derived")
     assert [info["partitions"][arm]["games"] for arm in
