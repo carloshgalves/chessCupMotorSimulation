@@ -7,7 +7,6 @@ but neither checksums nor an operator name establish authentic authorship.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import json
 from pathlib import Path
 import re
 
