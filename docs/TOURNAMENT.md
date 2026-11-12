@@ -221,10 +221,51 @@ reincorporada à classificação sem ser jogada novamente. Tentativas já
 registradas que perderam o resumo, arquivos corrompidos e diretórios/arquivos
 simbólicos provocam erro explícito, em vez de recuperação insegura.
 
+## Fatia de durabilidade POSIX — checkpoints de confirmação (#27)
+
+As gravações de confirmação `tournament.json`, `summary.json`,
+`jogo_N.pgn` e `duelo.pgn` passaram a usar **publicação atômica com
+sincronização explícita** em sistemas POSIX (incluindo Debian):
+
+1. Criar arquivo temporário na **mesma pasta** do destino; escrever e
+   `flush()` seguido de `fsync()` no descritor do temporário.
+2. Substituir o destino via `Path.replace()` (rename atômico dentro do mesmo
+   filesystem).
+3. `fsync()` no diretório que contém o arquivo e seus ancestrais, para
+   solicitar persistência dos nomes, inclusive pastas de tentativa recém-criadas.
+4. **Se qualquer sincronização falhar, a operação lança exceção.** Antes
+   do rename, o destino antigo continua íntegro. Depois do rename, o destino
+   novo pode estar visível mas não foi confirmado como durável: o operador
+   precisa executar a inspeção de recuperação, **não presumir commit**.
+
+Em POSIX, o marcador `.stop-requested.json` também faz `flush/fsync`
+antes do retorno de solicitação de parada, com diretórios sincronizados;
+a remoção pelo comando `tournament-clear-stop` sincroniza a pasta.
+Em ambientes não POSIX, permanece a semântica preexistente de substituição
+atômica, **sem alegação de durabilidade por `fsync`**.
+
+**Escolha deliberada de desempenho:** `jogo_N.partial.pgn` continua sendo
+gravado atomicamente **sem fsync a cada meio-lance**. Isso reduz latência,
+uso de SSD e interferência no motor, mas significa que, após queda de energia,
+a última posição pode não ter sido persistida. Checkpoints parciais não
+são resultados oficiais, e qualquer tentativa incompleta exige
+reconciliação e autorização explícita para novo jogo.
+
+A sincronização explícita melhora o pedido de persistência ao sistema de
+arquivos; **não é prova de durabilidade física** contra controladoras com
+cache volátil, dispositivos com `fsync` ineficaz, erros de hardware ou
+falha elétrica. Renomeação de vários arquivos **não é transação atômica
+entre arquivos**: uma queda pode ocorrer entre PGN e resumo; a recuperação
+existente deve verificar coerência dos artefatos, sem dupla contagem.
+
+**Gates de validação:** testes de injeção de falha verificam ordem
+`fsync(file) → rename → fsync(directory)`, integridade do arquivo anterior
+se o sync do temporário falhar, propagação de falha de sync após rename,
+ausência de arquivos temporários órfãos e durabilidade do marcador de
+parada. Testes automatizados não simulam os caches do SSD, SIGKILL
+do Rodent nem falha elétrica real.
+
 **Limites:** o comando de inspeção é um *snapshot* e não segura lock; executar
-somente sem uma partida simultânea. Os testes simulam estados de crash,
-não equivalem a ensaio físico com SIGKILL, queda de energia, persistência
-garantida por fsync ou ausência de processos UCI órfãos após morte do
-aplicativo. Tampouco instituem quota rígida de CPU/RAM no kernel. Os testes
-operacionais reais e os limites de recursos continuam pendentes nas issues
-#27 e #83.
+somente sem partida simultânea. A validação física Debian/Rodent, ausência
+de processos UCI órfãos e cotas efetivas de CPU/RAM continuam pendentes
+em #27 e #83 (`NOT_RUN`).
