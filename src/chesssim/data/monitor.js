@@ -364,6 +364,116 @@ function renderAnalysis(game) {
     " · profundidade " + entry.depth + " · perda " + entry.loss_cp +
     " cp. Relatório pré-calculado; não é uma análise ao vivo.";
 }
+// Single-game, verified-and-completed postgame chart. Never infer from
+// live UCI states or selected, non-independent fast-statistical results.
+const QUALITY_PHASES = [
+  ["opening", "Abertura (1–16)"],
+  ["middle", "Intermediária (17–60)"],
+  ["late", "Tardia (61+)"]
+];
+function qualityMetricValid(metric) {
+  return metric && Number.isInteger(metric.sampled) && metric.sampled >= 0 &&
+    Number.isInteger(metric.usable) && metric.usable >= 0 &&
+    Number.isInteger(metric.excluded) && metric.excluded >= 0 &&
+    Number.isInteger(metric.critical) && metric.critical >= 0 &&
+    metric.sampled === metric.usable + metric.excluded &&
+    metric.critical <= metric.usable &&
+    (metric.usable === 0 ? metric.mean_loss_cp === null :
+      typeof metric.mean_loss_cp === "number" &&
+      Number.isFinite(metric.mean_loss_cp) &&
+      metric.mean_loss_cp >= 0 && metric.mean_loss_cp <= 100000);
+}
+function drawQualityBars(id, rows) {
+  const holder = $(id);
+  holder.replaceChildren();
+  const valid = rows.filter(([_, metric]) => qualityMetricValid(metric));
+  const max = Math.max(0, ...valid.map(([_, m]) => m.mean_loss_cp ?? 0));
+  for (const [name, metric] of valid) {
+    const row = document.createElement("div");
+    row.className = "quality-bar-row";
+    row.setAttribute("role", "listitem");
+    const heading = document.createElement("strong");
+    heading.className = "quality-bar-heading";
+    heading.textContent = name;
+    const value = document.createElement("span");
+    value.className = "quality-bar-value";
+    const hasEvidence = metric.mean_loss_cp !== null;
+    value.textContent = hasEvidence ?
+      metric.mean_loss_cp.toFixed(2) + " cp de perda média · N=" +
+      metric.usable + " · " + metric.critical + " críticos" :
+      "Indisponível · N=0 elegíveis";
+    const rail = document.createElement("div");
+    rail.className = "quality-bar-track";
+    rail.setAttribute("role", "img");
+    rail.setAttribute("aria-label", name + ": " + value.textContent);
+    const fill = document.createElement("div");
+    fill.className = "quality-bar-fill";
+    fill.style.width = hasEvidence && max > 0 ?
+      (100 * metric.mean_loss_cp / max).toFixed(2) + "%" : "0%";
+    rail.appendChild(fill);
+    const accounting = document.createElement("span");
+    accounting.className = "quality-bar-accounting";
+    accounting.textContent = "Amostras: " + metric.sampled +
+      " · Excluídas da média: " + metric.excluded;
+    row.append(heading, value, rail, accounting);
+    holder.appendChild(row);
+  }
+}
+function renderQualityStats(game) {
+  const status = $("quality-stats-status");
+  const provenance = $("quality-stats-provenance");
+  const filter = $("quality-phase-filter");
+  // Pinned objects are snapshots. Never show stale quality evidence from an
+  // older poll or another match after source PGNs have changed.
+  const fresh = game && availableGames().find(g => g.id === game.id);
+  const samePosition = !!fresh && (!pinned || (
+    fresh.states.length === pinned.states.length &&
+    fresh.states[cursor]?.fen === pinned.states[cursor]?.fen));
+  const stats = samePosition ? fresh.quality_stats : null;
+  const valid = stats?.schema === "chesssim-verified-quality-stats-v1" &&
+    stats.status === "DESCRIPTIVE_SINGLE_COMPLETED_GAME_NOT_RATING" &&
+    qualityMetricValid(stats.coverage) &&
+    stats.players && stats.by_phase && stats.by_side && stats.by_phase_side &&
+    stats.provenance && fresh.status === "COMPLETED" &&
+    ["1-0", "0-1", "1/2-1/2"].includes(fresh.result);
+  if (!valid || (!pinned && game && cursor < game.states.length - 1)) {
+    filter.disabled = true;
+    status.textContent = !valid ?
+      "Indisponível: exige PGN concluído, recibo e relatório Stockfish compatível." :
+      "Aguardando completar a reprodução visual; navegue no replay para inspecionar.";
+    provenance.textContent = "";
+    $("quality-stats-phases").replaceChildren();
+    $("quality-stats-players").replaceChildren();
+    return;
+  }
+  filter.disabled = false;
+  const selected = ["opening", "middle", "late"].includes(filter.value) ?
+    filter.value : "all";
+  const chosenPhases = QUALITY_PHASES.filter(([key]) =>
+    selected === "all" || key === selected);
+  const phaseRows = chosenPhases.map(([key, name]) => [name, stats.by_phase[key]]);
+  const players = ["white", "black"].map(side => {
+    const person = stats.players[side] || {};
+    const label = (side === "white" ? "Brancas" : "Pretas") +
+      ": " + String(person.name || "não identificado").slice(0, 100);
+    const evidence = selected === "all" ?
+      stats.by_side[side] : stats.by_phase_side[selected]?.[side];
+    return [label, evidence];
+  });
+  drawQualityBars("quality-stats-phases", phaseRows);
+  drawQualityBars("quality-stats-players", players);
+  status.textContent = "PGN completo: " + stats.coverage.sampled + " de " +
+    stats.total_plies + " meios-lances amostrados; " +
+    stats.coverage.usable + " decisões aptas à média e " +
+    stats.coverage.excluded + " excluídas (mate, instabilidade ou sinal ausente).";
+  const prov = stats.provenance;
+  provenance.textContent = "Fonte: " + String(prov.source || "desconhecida") +
+    " · " + String(prov.engine || "motor não identificado") +
+    " · profundidade " + String(prov.depth) +
+    " · PGN SHA-256 " + String(prov.pgn_sha256_prefix) +
+    " · motor SHA-256 " + String(prov.stockfish_sha256_prefix) +
+    ". Metadados declarados no relatório, não verificação de identidade histórica.";
+}
 function displayMoves(game) {
   const list = $("moves");
   // The notation must advance with the paced board, not reveal future plies.
@@ -573,6 +683,7 @@ function render() {
   paintClocks();
   renderGuess(game);
   renderAnalysis(game);
+  renderQualityStats(game);
   const tournament = feed && feed.tournament;
   const duel = feed && feed.duel;
   const chosenMatch = tournament && feed.selection &&
@@ -768,6 +879,7 @@ $("board").addEventListener("pointerup",event=>{
 for(const event of ["pointercancel","lostpointercapture"])
   $("board").addEventListener(event,()=>{guessDrag=null;});
 
+$("quality-phase-filter").addEventListener("change", () => renderQualityStats(currentGame()));
 $("moves").addEventListener("scroll", () => {
   if (automaticMoveScroll) return;
   const list = $("moves");
