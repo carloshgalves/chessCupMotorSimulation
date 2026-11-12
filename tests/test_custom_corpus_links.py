@@ -237,7 +237,6 @@ def test_recomputed_event_hash_cannot_change_id_or_counts(tmp_path):
     original = event_file.read_bytes()
     data = json.loads(original)
     data["event"]["link"]["games"] = 99
-    data["event"]["sha256"] = core._sha(data["event"])
     data["sha256"] = core._sha(data["event"])
     event_file.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(ValueError, match="incoerentes"):
