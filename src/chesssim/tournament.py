@@ -14,7 +14,7 @@ import time
 import chess.pgn
 
 from .catalog import find_player
-from .matches import _atomic_text, _fsync_directory_tree, file_hash, official_book_hashes, play_duel, validate
+from .matches import _atomic_text, _fsync_directory_tree, _publish_exclusive_text, file_hash, official_book_hashes, play_duel, validate
 from .game_diversity import mainline_identity
 from .peak_windows import CLOCK_PRESETS
 from .protocol import OFFICIAL
@@ -51,18 +51,22 @@ def request_stop(directory: Path, *, reason: str = "Solicitado pelo operador") -
     if not reason or len(reason) > 256:
         raise ValueError("Motivo deve conter de 1 a 256 caracteres")
     path = _stop_file(directory)
+    payload = json.dumps({"requested_utc": datetime.now(timezone.utc).isoformat(),
+                          "reason": reason}, ensure_ascii=False) + "\n"
     try:
-        with path.open("x", encoding="utf-8") as stream:
-            json.dump({"requested_utc": datetime.now(timezone.utc).isoformat(),
-                       "reason": reason}, stream, ensure_ascii=False)
-            stream.write("\n")
-            if os.name == "posix":
-                stream.flush()
-                os.fsync(stream.fileno())
+        if os.name == "posix":
+            # Hard-link publication makes the completed, synced flag visible
+            # atomically and never overwrites a concurrent stop request.
+            _publish_exclusive_text(path, payload)
+        else:
+            # Preserve existing portable semantics without a durability claim.
+            with path.open("x", encoding="utf-8") as stream:
+                stream.write(payload)
     except FileExistsError:
-        pass
-    if os.name == "posix":
-        _fsync_directory_tree(path.parent)
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("Existing stop flag is not a regular file")
+        if os.name == "posix":
+            _fsync_directory_tree(path.parent)
     return tournament_status(directory)
 
 
