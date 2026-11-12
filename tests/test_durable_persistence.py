@@ -239,3 +239,18 @@ def test_failed_postpublication_sync_is_retryable_without_replacing_stop(
     assert tournament.request_stop(tmp_path, reason="second request")["stop_requested"]
     assert marker.read_bytes() == original
     assert len(calls) == 2
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX hardlink publication only")
+def test_repeated_stop_does_not_allocate_when_already_requested(tmp_path, monkeypatch):
+    monkeypatch.setattr(tournament, "load_tournament", lambda run: {})
+    monkeypatch.setattr(tournament, "tournament_status", lambda run: {
+        "stop_requested": (Path(run) / tournament.STOP_FILE).is_file()})
+    assert tournament.request_stop(tmp_path, reason="original")["stop_requested"]
+    marker = tmp_path / tournament.STOP_FILE
+    before = marker.read_bytes()
+    def forbidden_write(*args, **kwargs):
+        raise OSError("injected disk-full while already stopped")
+    monkeypatch.setattr(tournament, "_publish_exclusive_text", forbidden_write)
+    assert tournament.request_stop(tmp_path, reason="duplicate")["stop_requested"]
+    assert marker.read_bytes() == before
