@@ -56,7 +56,9 @@ regras anteriores de elegibilidade UCI do servidor.
   A interface elimina opções antigas na ocorrência de erro, sem
   usar dados personalizados em cache como se fossem confiáveis.
 - O catálogo local é lido em polling menos frequente do que a
-  posição ao vivo; o backend usa o lock cooperativo da biblioteca
+  posição ao vivo. No navegador, requisições opcionais usam timeout
+  de cinco segundos e não bloqueiam a atualização das partidas.
+  O backend usa o lock cooperativo da biblioteca
   ao ler, de modo que a primeira consulta pode criar o arquivo
   técnico de lock em uma biblioteca vazia. **Nenhum registro de
   personagem é alterado pela consulta.** Não há alteração de
