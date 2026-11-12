@@ -9,6 +9,9 @@ const token = "arena-capability-token-that-is-secret-and-long";
 const calls = [];
 let current = null;
 let customCatalogUnavailable = false;
+let customCatalogHang = false;
+let timeoutNextId = 0;
+const pendingTimeouts = new Map();
 const fictional = [{
   id:"user-1234567890abcdef1234567890abcdef",
   name:"Ava <img src=x onerror=alert(1)>",
@@ -66,6 +69,14 @@ const document={
 const $=id=>document.getElementById(id);
 const fetch=async(path,request={})=>{
   if(path==="/api/arena/custom-players"){
+    if(customCatalogHang){
+      return new Promise((resolve,reject)=>{
+        assert(request.signal, "Hanging catalog request must have abort signal");
+        request.signal.addEventListener("abort",()=>{
+          reject(new Error("catalog fetch aborted"));
+        },{once:true});
+      });
+    }
     return customCatalogUnavailable ?
       {ok:false,status:503,json:async()=>({error:"Corrupted"})} :
       {ok:true,json:async()=>({
@@ -98,6 +109,14 @@ const window={
 };
 const ctx=vm.createContext({
   document,window,URLSearchParams,fetch,Number,String,Date,Math,
+  AbortController,
+  setTimeout(callback,ms){
+    assert.equal(ms,5000);
+    const id=++timeoutNextId;
+    pendingTimeouts.set(id,callback);
+    return id;
+  },
+  clearTimeout(id){pendingTimeouts.delete(id);},
   setInterval(){return 1;},console
 });
 vm.runInContext(source,ctx,{filename:"arena.js",timeout:3000});
@@ -184,5 +203,18 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal($("custom-profile-list").children.length,0);
   assert.equal($("launch").disabled,true, "Busy state remains independent");
   assert.equal(calls.length,2);
+  assert.equal(pendingTimeouts.size,0);
+  customCatalogUnavailable=false;
+  customCatalogHang=true;
+  const hanging=vm.runInContext("refreshCustomCatalog()",ctx);
+  await flush();
+  assert.equal(pendingTimeouts.size,1);
+  const abort=[...pendingTimeouts.values()][0];
+  abort();
+  await hanging;
+  assert.equal(pendingTimeouts.size,0);
+  assert($("custom-profile-status").textContent.includes("Não foi possível"));
+  assert.equal($("custom-profile-list").children.length,0);
+  assert.equal(calls.length,2, "Timeout must not touch engine controls");
   console.log("Arena browser controls: PASS");
 })().catch(err=>{console.error(err);process.exitCode=1;});
