@@ -174,6 +174,27 @@
              a escolha do lance. Apenas amostras realmente analisadas aparecem;
              não representam probabilidade de vitória, Elo ou fidelidade histórica.</p>
         </section>
+        <section class="panel quality-stats-panel" aria-label="Estatísticas Stockfish da partida concluída">
+          <div class="panel-kicker">ESTATÍSTICAS · EVIDÊNCIA AMOSTRADA</div>
+          <h2>Perdas de avaliação por faixa e participante</h2>
+          <p id="quality-stats-status" role="status" aria-live="polite">Indisponível: selecione uma partida concluída com análise correspondente.</p>
+          <label for="quality-phase-filter">Filtrar faixa de lances</label>
+          <select id="quality-phase-filter" aria-label="Faixa cronológica para comparar participantes">
+            <option value="all">Todas as faixas</option>
+            <option value="opening">Abertura · plies 1–16</option>
+            <option value="middle">Intermediária · plies 17–60</option>
+            <option value="late">Tardia · ply 61 em diante</option>
+          </select>
+          <h3>Faixas cronológicas</h3>
+          <div id="quality-stats-phases" class="quality-bars" role="list" aria-label="Amostras por faixa de lance"></div>
+          <h3>Participantes declarados no PGN</h3>
+          <div id="quality-stats-players" class="quality-bars" role="list" aria-label="Amostras por participante e lado"></div>
+          <p id="quality-stats-provenance" class="small-meta"></p>
+          <p class="hint">Larguras relativas à maior média exibida, não à chance de vitória.
+            Amostra de apenas uma partida; decisões correlacionadas.
+            Faixas por ordem do lance, não fases xadrezísticas detectadas.
+            Resultados e perfis são declarados no PGN, não certificações de fidelidade histórica.</p>
+        </section>
         <section class="panel history">
           <div class="panel-kicker">LANCES</div>
           <div class="headline" id="headline" aria-live="polite">Posição inicial</div>
