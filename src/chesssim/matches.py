@@ -433,7 +433,8 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
                                "internal engine book/engine search randomness is not controlled by this seed."),
                },
                "games": [], "diversity": audit_mainlines([])[1]}
-    _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n",\n                 durable=os.name == "posix")
+    _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+                 durable=os.name == "posix")
     lineups = [(white, black)] + ([(black, white)] if reverse else [])
     try:
         for i, (w, b) in enumerate(lineups, 1):
@@ -457,11 +458,14 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
                 raise RuntimeError("PGN/mainline ply count disagrees with engine record")
             meta.update({"mainline_sha256": digest, "source": f"game_{i}"})
             games.append(game)
-            _atomic_text(folder / f"jogo_{i}.pgn", str(game) + "\n\n",\n                         durable=os.name == "posix")
-            _atomic_text(folder / "duelo.pgn", "\n\n".join(str(g) for g in games) + "\n\n",\n                         durable=os.name == "posix")
+            _atomic_text(folder / f"jogo_{i}.pgn", str(game) + "\n\n",
+                         durable=os.name == "posix")
+            _atomic_text(folder / "duelo.pgn", "\n\n".join(str(g) for g in games) + "\n\n",
+                         durable=os.name == "posix")
             summary["games"].append(meta)
             summary["games"], summary["diversity"] = audit_mainlines(summary["games"])
-            _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n",\n                 durable=os.name == "posix")
+            _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+                 durable=os.name == "posix")
             print(f"Resultado: {meta['result']} ({meta['termination']})", flush=True)
             # Partidas limitadas por plies continuam úteis para auditoria de
             # diversidade; somente parada/timeout operacional cancela o par.
@@ -477,6 +481,7 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
         summary["error"] = f"{type(ex).__name__}: {ex}"
         raise
     finally:
-        _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n",\n                 durable=os.name == "posix")
+        _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+                 durable=os.name == "posix")
         print(f"\nArquivos do confronto: {folder}", flush=True)
     return folder
