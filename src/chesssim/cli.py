@@ -117,6 +117,19 @@ def main(argv: list[str] | None = None) -> int:
     custom_restore.add_argument("--library", type=Path, required=True)
     custom_restore.add_argument("--id", required=True)
 
+    custom_rename = sub.add_parser(
+        "custom-player-rename", help="Acrescenta revisão de nome sem reescrever identidade")
+    custom_rename.add_argument("--library", type=Path, required=True)
+    custom_rename.add_argument("--id", required=True)
+    custom_rename.add_argument("--name", required=True, help="Novo nome fictício validado")
+    custom_rename.add_argument("--expected-head", required=True,
+                               help="revision_sha256 atual obtido em list/history; impede edição obsoleta")
+
+    custom_history = sub.add_parser(
+        "custom-player-history", help="Consulta a cadeia auditável de renomeações locais")
+    custom_history.add_argument("--library", type=Path, required=True)
+    custom_history.add_argument("--id", required=True)
+
     diversity = sub.add_parser(
         "diversity-report", help="Compara sequências PGN reais de múltiplos duelos, sem alterar motores")
     diversity.add_argument("--runs", type=Path, nargs="+", required=True,
@@ -629,12 +642,23 @@ def main(argv: list[str] | None = None) -> int:
         if args.command in {
             "custom-player-create", "custom-player-list",
             "custom-player-export", "custom-player-import", "custom-player-retire",
-            "custom-player-restore",
+            "custom-player-restore", "custom-player-rename", "custom-player-history",
         }:
             from .custom_profiles import (
                 create_fictional, list_fictional, export_fictional,
                 import_fictional, retire_fictional, restore_fictional,
             )
+            if args.command == "custom-player-rename":
+                from .custom_profile_history import rename_fictional
+                result = rename_fictional(
+                    args.library, args.id, args.name, args.expected_head)
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0
+            if args.command == "custom-player-history":
+                from .custom_profile_history import history_fictional
+                result = history_fictional(args.library, args.id)
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0
             if args.command == "custom-player-create":
                 result = create_fictional(args.library, args.name)
             elif args.command == "custom-player-list":

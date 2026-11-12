@@ -83,7 +83,7 @@ def _library(folder: Path, *, create: bool = False) -> Path:
     return root
 
 
-def _read_regular(path: Path) -> bytes:
+def _read_regular(path: Path, *, max_bytes: int = MAX_RECORD_BYTES) -> bytes:
     _safe_path(path)
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
     try:
@@ -92,10 +92,10 @@ def _read_regular(path: Path) -> bytes:
         raise ValueError("Registro ausente ou inacessível") from exc
     with os.fdopen(fd, "rb") as stream:
         info = os.fstat(stream.fileno())
-        if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_RECORD_BYTES:
+        if not stat.S_ISREG(info.st_mode) or info.st_size > max_bytes:
             raise ValueError("Registro não regular ou excessivo")
-        raw = stream.read(MAX_RECORD_BYTES + 1)
-    if len(raw) > MAX_RECORD_BYTES or b"\x00" in raw:
+        raw = stream.read(max_bytes + 1)
+    if len(raw) > max_bytes or b"\x00" in raw:
         raise ValueError("Registro excede limite ou é binário")
     return raw
 
@@ -216,9 +216,11 @@ def _inventory(root: Path) -> list[dict]:
 
 
 def _summary(root: Path, doc: dict) -> dict:
+    from .custom_profile_history import current_name
     p = doc["profile"]
+    projection = current_name(root, doc)
     return {
-        "id": p["id"], "display_name": p["display_name"], "kind": KIND,
+        "id": p["id"], **projection, "kind": KIND,
         "status": "RETIRED_METADATA_ONLY" if _read_retirement(root, doc) else STATUS,
         "created_utc": p["created_utc"], "profile_sha256": doc["sha256"],
         "uci_eligible": False, "historical_fidelity_validated": False,
@@ -300,34 +302,18 @@ def export_fictional(library: Path, identifier: str, output: Path) -> dict:
             raise ValueError("Exportação deve ficar fora da biblioteca")
         if not destination.parent.is_dir():
             raise ValueError("Diretório de exportação inexistente")
-        _publish_exclusive(destination, raw)
+        from .custom_profile_history import export_bytes
+        portable = export_bytes(root, doc, raw)
+        _publish_exclusive(destination, portable)
         return {**_summary(root, doc), "exported_to": str(destination)}
 
 
 def import_fictional(library: Path, source: Path) -> dict:
-    # Import validation happens BEFORE creating the destination library.
-    raw = _read_regular(source)
-    doc = _validate_record(raw)
-    root = _library(library, create=True)
-    with _exclusive_library(root):
-        identity = doc["profile"]["id"]
-        target = _record_path(root, identity)
-        if target.exists() or target.is_symlink():
-            stored, _ = _read_id(root, identity)
-            if stored != doc:
-                raise FileExistsError("Mesmo ID com conteúdo divergente; importação recusada")
-            return {**_summary(root, stored), "operation": "ALREADY_PRESENT"}
-        if len(_inventory(root)) >= MAX_LIBRARY_PROFILES:
-            raise ValueError("Biblioteca cheia (256 perfis)")
-        root = _library(root, create=True)
-        try:
-            _publish_exclusive(target, _encode(doc))
-        except FileExistsError:
-            stored, _ = _read_id(root, identity)
-            if stored != doc:
-                raise FileExistsError("ID em conflito após corrida de importação")
-            return {**_summary(root, stored), "operation": "ALREADY_PRESENT"}
-        return {**_summary(root, doc), "operation": "IMPORTED_METADATA_ONLY"}
+    # Source is validated before opening the destination library. Portable
+    # v2 may contain complete immutable rename history, unlike legacy v1.
+    from .custom_profile_history import MAX_PORTABLE_BYTES, import_portable
+    raw = _read_regular(source, max_bytes=MAX_PORTABLE_BYTES)
+    return import_portable(library, raw)
 
 
 def retire_fictional(library: Path, identifier: str) -> dict:
