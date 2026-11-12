@@ -41,9 +41,10 @@ uci_eligible=false e historical_fidelity_validated=false.
   Restaurar exige uma ação explícita e conserva ID e metadados originais.
 - Exportação copia somente a identidade, não o estado local de desativação.
   Importá-la em outra biblioteca não exporta a decisão de desativação.
-- Um lock de arquivo por biblioteca serializa escritores cooperativos
-  (criar, importar, desativar e restaurar), protegendo cotas e transições
-  de estado entre processos. Em POSIX usa flock; em Windows, locking.
+- Um lock de arquivo por biblioteca serializa operações cooperativas
+  de criação, listagem, exportação, importação, desativação e restauração,
+  protegendo cotas e transições de estado entre processos. Em POSIX
+  usa flock; em Windows, locking. Um lock simbólico é recusado.
   O lock é consultivo, não uma barreira de autenticação contra quem
   pode modificar os arquivos diretamente. Não existe transação
   multiarquivo nem histórico append-only de renomeações nesta fatia.
