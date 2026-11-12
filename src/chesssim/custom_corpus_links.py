@@ -106,10 +106,17 @@ def _check_link(obj: object) -> None:
         raise ValueError("Estatísticas do corpus incoerentes")
 
 
-def _selection(cache: Path, name: str) -> dict:
-    """Verify the entire local rights-attested cache before selecting anything."""
+def _selection(cache: Path, name: str, *,
+               snapshot: tuple | None = None) -> dict:
+    """Verify a cache, or reuse one already verified immutable in-memory snapshot.
+
+    Downstream training must re-use the exact parsed games for the receipt
+    reconciliation: reading the mutable cache a second time creates a TOCTOU
+    gap between provenance and training export.
+    """
     normalized = _clean_name(name)
-    report, games = _cache_snapshot(cache.expanduser())
+    report, games = (snapshot if snapshot is not None else
+                     _cache_snapshot(cache.expanduser()))
     source_hash = report.get("source_catalog_sha256")
     if not isinstance(source_hash, str) or not core.DIGEST.fullmatch(source_hash):
         raise ValueError("Hash do catálogo de direitos ausente")
