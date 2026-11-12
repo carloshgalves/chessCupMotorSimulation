@@ -36,3 +36,20 @@ Abra o URL loopback informado pelo comando. Somente a partida exata cujo arquivo
 ## Gate
 
 Testes Python de formato/versão/PGN/hash, `ply` e UCI/FEN, números finitos, symlinks e HTTP somente leitura; harness Node para renderização de score e estado desconhecido. A homologação real de Chrome, zoom, Stockfish e Rodent IV pertence à #83 e permanece `NOT_RUN` até ocorrer. Estatísticas agregadas/fases por perfil ficam para a segunda fatia da #24.
+
+
+## Incremento 2 — gráficos descritivos por faixa/participante (#24)
+
+No mesmo comando `watch --quality-report` do incremento 1, o painel **Perdas de avaliação por faixa e participante** aparece **somente** quando todas estas condições são verdadeiras: arquivo final `jogo_N.pgn` com SHA-256 idêntico ao relatório; relatório de `analyze-quality` v9.1 válido; recibo `summary.json` com `status=COMPLETED` e resultado compatível com o PGN (`1-0`, `0-1` ou `1/2-1/2`). Um PGN incompleto ou recibo divergente não gera gráfico nem é contado como observação verificada.
+
+- **Faixas cronológicas heurísticas:** meios-lances 1–16, 17–60, 61+. Não são fases calculadas por material ou estratégia. O filtro mostra todas ou uma faixa, mas **não altera** o arquivo, a partida ou a análise Stockfish.
+- **Por participante/lado:** cada lance pertence às brancas se o ply é ímpar, às pretas se é par. Nome e eventual `WhiteModel`/`BlackModel` são **declarações do PGN**, não comprovação da identidade do jogador histórico nem de um perfil calibrado.
+- **Denominador:** `Amostras` = decisões vinculadas ao PGN exato; `N elegível` = somente decisões com `mate_affected == false` e `search_disagreement == false`, explicitamente declarados pelo analisador na profundidade-base. Decisões com mate, divergência da busca ou flags ausentes são **excluídas da média centipawn**, mas **mantidas na contagem de amostras**. Não apresentam zero no lugar de dados ausentes.
+- **Valor:** média aritmética de `cp_loss` dos **N lances elegíveis** naquele grupo. As barras são **relativas ao maior valor visível**; 100% da largura **não** significa precisão, chance de vitória ou intensidade absoluta. N=0 = `Indisponível`.
+- **Proveniência:** nome declarado pelo motor e profundidade-base; prefixos de 12 caracteres dos SHA-256 do PGN e do executável Stockfish. A comparação é descritiva de **uma única partida**; o mesmo jogador em várias partidas não é agregado, porque os lances são correlacionados e a amostragem do analisador não é equivalente a um ensaio independente.
+- **Sem vazamento da reprodução:** durante playback automático de uma partida concluída, os gráficos só são exibidos quando sua última posição é alcançada. Navegar intencionalmente no replay libera a consulta, preservando a posição selecionada.
+- **Exclusões obrigatórias:** nenhuma amostra `fast_statistical`, motor fictício ou relatório histórico não verificado entra no gráfico; não se usa corpus/holdout para calibrar ou selecionar perfis. Os testes de estabilidade por profundidade e comparações pareadas continuam disponíveis em `compare-quality` / `paired-evidence`, com proveniência, sem converter essas comparações em um novo escore de identidade na interface.
+
+A atualização de `/api/state` entrega apenas a estatística calculada pelo servidor junto à partida selecionada. O cliente não lê arquivos locais arbitrários, não inicia processo UCI e não envia POST. Relatórios que não correspondam ao PGN selecionado preservam `Indisponível`.
+
+**Gate de QA:** executar no Chrome/Debian com uma partida Rodent IV real, PGN concluído e análise Stockfish autorizada, alternando replay, partida, faixa e tema; validar teclado, foco, zoom/mobile e cancelamento de stream SSE em #83. Até esse ensaio, marcar `NOT_RUN`, mesmo com CI verde. Este incremento não encerra automaticamente #24.
