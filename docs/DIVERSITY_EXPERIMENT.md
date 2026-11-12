@@ -91,6 +91,11 @@ ainda precisam de homologação física na #83.
 - `execution.json` conserva hash SHA-256 do plano original, impressão do
   desenho pré-registrado, perfis e motores congelados, hash de cada repertório,
   parâmetros, resultado de cada braço e SHA/identidade de cada PGN e resumo.
+  O manifesto também apresenta `game_evidence` e `diversity` usando a
+  função canônica de auditoria de linhas principais: cópias idênticas são
+  preservadas nos PGNs, mas recebem `duplicate_mainline=true` e **não**
+  aumentam `effective_independent_games`. Isso não mede a independência
+  entre trajetórias apenas similares nem valida estilo histórico.
   Antes de contar um braço, o executor **reexecuta deterministicamente** a
   política de seleção do livro na trajetória do PGN, usando seed, partida
   1/2 e posição; compara os lances escolhidos, o traço salvo e as contagens.
