@@ -130,6 +130,28 @@ def main(argv: list[str] | None = None) -> int:
     custom_history.add_argument("--library", type=Path, required=True)
     custom_history.add_argument("--id", required=True)
 
+    corpus_status = sub.add_parser(
+        "custom-corpus-status", help="Consulta vínculo local de corpus, sem habilitar UCI")
+    corpus_status.add_argument("--library", type=Path, required=True)
+    corpus_status.add_argument("--id", required=True)
+
+    corpus_link = sub.add_parser(
+        "custom-corpus-link", help="Vincula cache PGN de direitos atestados sem copiar os lances")
+    corpus_link.add_argument("--library", type=Path, required=True)
+    corpus_link.add_argument("--id", required=True)
+    corpus_link.add_argument("--cache", type=Path, required=True,
+                             help="Pasta pgn-cache --apply previamente verificada")
+    corpus_link.add_argument("--pgn-name", required=True,
+                             help="Nome completo exato White/Black declarado pelo operador")
+    corpus_link.add_argument("--expected-head", required=True,
+                             help="head_sha256 de custom-corpus-status para evitar edição obsoleta")
+
+    corpus_detach = sub.add_parser(
+        "custom-corpus-detach", help="Desvincula corpus local por evento novo, sem alterar cache")
+    corpus_detach.add_argument("--library", type=Path, required=True)
+    corpus_detach.add_argument("--id", required=True)
+    corpus_detach.add_argument("--expected-head", required=True)
+
     diversity = sub.add_parser(
         "diversity-report", help="Compara sequências PGN reais de múltiplos duelos, sem alterar motores")
     diversity.add_argument("--runs", type=Path, nargs="+", required=True,
@@ -641,6 +663,23 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     try:
+        if args.command in {
+            "custom-corpus-status", "custom-corpus-link", "custom-corpus-detach",
+        }:
+            from .custom_corpus_links import (
+                corpus_status, corpus_link, corpus_detach,
+            )
+            if args.command == "custom-corpus-status":
+                report = corpus_status(args.library, args.id)
+            elif args.command == "custom-corpus-link":
+                report = corpus_link(
+                    args.library, args.id, args.cache,
+                    pgn_name=args.pgn_name, expected_head=args.expected_head)
+            else:
+                report = corpus_detach(
+                    args.library, args.id, expected_head=args.expected_head)
+            print(json.dumps(report, ensure_ascii=False, indent=2))
+            return 0
         if args.command in {
             "custom-player-create", "custom-player-list",
             "custom-player-export", "custom-player-import", "custom-player-retire",
