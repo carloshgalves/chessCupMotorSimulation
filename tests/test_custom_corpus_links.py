@@ -232,7 +232,7 @@ def test_source_symlink_is_rejected_before_event(tmp_path):
     assert not _events(library, item["id"])
 
 
-def test_recomputed_event_hash_cannot_change_id_or_counts(tmp_path):
+def test_recomputed_hash_still_rejects_inconsistent_counts_and_wrong_identity(tmp_path):
     library, item, cache = _setup(tmp_path)
     _link(library, item, cache)
     event_file = _events(library, item["id"])[0]
