@@ -171,3 +171,43 @@ def test_unchanged_source_input_and_deterministic_output():
     assert report1 == report2
     assert [len(original[k]) for k in original] == [2, 1, 1]
     assert "train_overlap_reserved" in report1["quarantined_games"]
+
+
+def test_four_field_fen_preserves_legal_en_passant_right():
+    # Two legal ways to reach the same placement/turn after one move:
+    # a double white e-pawn push with a black pawn on d4 allows ...dxe3 e.p.;
+    # a one-square push from e3 does not.
+    setup_double = chess.Board(
+        "4k3/8/8/8/3p4/8/4P3/4K3 w - - 0 1")
+    setup_single = chess.Board(
+        "4k3/8/8/8/3p4/4P3/8/4K3 w - - 0 1")
+    first = chess.pgn.Game()
+    first.setup(setup_double)
+    first.add_variation(chess.Move.from_uci("e2e4"))
+    second = chess.pgn.Game()
+    second.setup(setup_single)
+    second.add_variation(chess.Move.from_uci("e3e4"))
+    count = [0]
+    rights_after_double = next(iter(embargo._positions(
+        {"_game": first}, 1, count)))
+    rights_after_single = next(iter(embargo._positions(
+        {"_game": second}, 1, count)))
+    assert rights_after_double.split()[:3] == rights_after_single.split()[:3]
+    assert rights_after_double.split()[3] == "e3"
+    assert rights_after_single.split()[3] == "-"
+    assert count[0] == 2
+
+
+def test_cutoff_is_counted_from_first_pgn_mainline_move_for_setup_fen():
+    origin = chess.Board(
+        "4k3/8/8/8/3p4/8/4P3/4K3 w - - 28 55")
+    game = chess.pgn.Game()
+    game.setup(origin)
+    game.add_variation(chess.Move.from_uci("e2e4"))
+    states = embargo._positions({"_game": game}, 1, [0])
+    assert len(states) == 1
+    assert embargo._positions({"_game": game}, 2, [0]) == frozenset()
+    _, report = embargo.apply_embargo({
+        "train": [{"_game": game}], "validation": [], "holdout": []
+    }, min_ply=1)
+    assert report["ply_origin"] == "PGN_FIRST_MAINLINE_MOVE_IS_PLY_1_EVEN_WITH_SETUP_FEN"
