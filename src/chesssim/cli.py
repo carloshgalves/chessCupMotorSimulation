@@ -123,6 +123,21 @@ def main(argv: list[str] | None = None) -> int:
     diversity_run.add_argument("--max-plies", type=int, default=400)
     diversity_run.add_argument("--max-game-wall-seconds", type=float, default=600.0)
 
+    age_cohort = sub.add_parser(
+        "age-cohort", help="Extrai recorte etário de cache PGN local com holdout separado")
+    age_cohort.add_argument("--cache", type=Path, required=True,
+                            help="Pasta gerada por pgn-cache --apply (manifest.json + games.pgn)")
+    age_cohort.add_argument("--pgn-name", required=True,
+                            help="Nome completo EXATO presente no PGN; identidade declarada pelo operador")
+    age_cohort.add_argument("--birth-date", required=True,
+                            help="Nascimento completo AAAA-MM-DD, verificado pelo operador")
+    age_cohort.add_argument("--age", type=int, required=True,
+                            help="Idade inteira já completada na data da partida")
+    age_cohort.add_argument("--min-train", type=int, default=100,
+                            help="Limiar descritivo de jogos únicos de treino (padrão 100)")
+    age_cohort.add_argument("--out", type=Path, required=True,
+                            help="Nova pasta exclusiva para train.pgn e cohort.json")
+
     fast_audit = sub.add_parser(
         "fast-audit", help="Avalia probabilidades fixas da temporada rápida contra partidas UCI verificadas")
     fast_audit.add_argument("--workspace", type=Path, required=True,
@@ -637,6 +652,23 @@ def main(argv: list[str] | None = None) -> int:
                 "estimated_cache_bytes": report["estimated_cache_bytes"],
                 "max_disk_bytes": report["max_disk_bytes"],
                 "cache_pgn_sha256": report["cache_pgn_sha256"],
+            }, ensure_ascii=False, indent=2))
+            return 0
+        if args.command == "age-cohort":
+            from .age_cohort import build_age_cohort
+            report = build_age_cohort(
+                args.cache, args.out, pgn_name=args.pgn_name,
+                birth_date=args.birth_date, age=args.age,
+                min_train=args.min_train)
+            print(json.dumps({
+                "out": str(args.out), "status": report["status"],
+                "age": report["age_completed_years"],
+                "eligible_games": report["eligible_exact_age_unique_games"],
+                "train_games": report["partitions"]["train"]["games"],
+                "validation_games": report["partitions"]["validation"]["games"],
+                "holdout_games": report["partitions"]["holdout"]["games"],
+                "profile_available": report["profile_available"],
+                "train_pgn_sha256": report["train_pgn_sha256"],
             }, ensure_ascii=False, indent=2))
             return 0
         if args.command == "fast-audit":
