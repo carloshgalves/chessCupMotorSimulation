@@ -567,5 +567,68 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert(!quality.requests.some(uri=>uri.includes("quality-report")),
          "the browser cannot fetch local reports or start Stockfish via HTTP");
 
+  // #66: fictional editorial must be opt-in, text-only and paced by
+  // the *displayed* move. Never expose postgame when playback is behind.
+  const commentary=browser();
+  await flush();
+  const narr={
+    schema:"chesssim-fictional-editorial-v1",
+    label:"Comentário editorial fictício",
+    events:[
+      {ply:1,uci:"e2e4",kind:"opening",
+       text:"<img src=x onerror=alert(1)> lance e4 apenas no tabuleiro"},
+      {ply:2,uci:"e7e5",kind:"check",
+       text:"O lance e5 foi registrado nesta simulação."}],
+    postgame:{
+      question:"Qual foi o resultado fictício deste confronto?",
+      answer:"As brancas venceram a partida registrada, por 1–0."
+    }
+  };
+  const toggleEditorial=commentary.elements.get("editorial-toggle");
+  assert.equal(toggleEditorial.attributes["aria-pressed"],"false");
+  vm.runInContext("feed.duel.games[0].fictional_editorial=" +
+    JSON.stringify(narr) +
+    ";feed.duel.games[0].status='COMPLETED';cursor=0;render()",commentary.context);
+  assert.equal(commentary.elements.get("editorial-current").hidden,true);
+  assert.equal(commentary.elements.get("editorial-postgame").hidden,true);
+  toggleEditorial.events.click();
+  assert.equal(toggleEditorial.attributes["aria-pressed"],"true");
+  assert(commentary.elements.get("editorial-status").textContent.includes("Nenhum evento"));
+  vm.runInContext("cursor=1;render()",commentary.context);
+  assert.equal(commentary.elements.get("editorial-current").hidden,false);
+  assert.equal(commentary.elements.get("editorial-text").textContent,
+               narr.events[0].text,
+               "unsafe fixture text is assigned as inert textContent, not HTML");
+  assert.equal(commentary.elements.get("editorial-postgame").hidden,true);
+  vm.runInContext("cursor=currentGame().states.length-1;render()",commentary.context);
+  assert.equal(commentary.elements.get("editorial-postgame").hidden,false);
+  assert(commentary.elements.get("editorial-question").textContent.includes(
+    "Pergunta editorial"));
+  assert(commentary.elements.get("editorial-answer").textContent.includes(
+    "Resposta fictícia do narrador"));
+  vm.runInContext("cursor=1;render()",commentary.context);
+  assert.equal(commentary.elements.get("editorial-postgame").hidden,true,
+               "seeking backward immediately hides all future-result text");
+  toggleEditorial.events.click();
+  assert.equal(commentary.elements.get("editorial-current").hidden,true);
+  assert.equal(commentary.elements.get("editorial-postgame").hidden,true);
+  assert.equal(commentary.elements.get("editorial-text").textContent,"");
+  toggleEditorial.events.click();
+  vm.runInContext("freezeView();render()",commentary.context);
+  assert.equal(commentary.elements.get("editorial-current").hidden,false);
+  vm.runInContext(
+    "feed.duel.games[0]={...feed.duel.games[0]," +
+    "states:feed.duel.games[0].states.map(s=>({...s}))};" +
+    "feed.duel.games[0].states[1].uci='e2e3';render()",commentary.context);
+  assert.equal(commentary.elements.get("editorial-current").hidden,true,
+               "stale pinned narrations must not follow changed PGN identity");
+  assert(commentary.elements.get("editorial-status").textContent.includes("Indisponível"));
+  commentary.location.hash="#match=r01-m01";
+  await flush();
+  assert.equal(commentary.elements.get("editorial-current").hidden,true);
+  assert.equal(commentary.elements.get("editorial-postgame").hidden,true);
+  assert(commentary.requests.every(url=>url.startsWith("/api/state")),
+         "editorial opt-in must never send POST, fetch extra assets or trigger UCI");
+
   console.log("Live bracket browser smoke: PASS");
 })().catch(error=>{console.error(error);process.exitCode=1;});
