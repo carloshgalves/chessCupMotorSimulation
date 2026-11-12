@@ -62,6 +62,11 @@ def _environment(tmp_path, monkeypatch):
             game = chess.pgn.Game()
             game.headers["White"] = white_player.name
             game.headers["Black"] = black_player.name
+            game.headers["WhiteModel"] = f"RodentIV:{white_player.rodent_alias}"
+            game.headers["BlackModel"] = f"RodentIV:{black_player.rodent_alias}"
+            game.headers["WhiteProfileSHA256"] = execution.file_hash(paths[white_player.slug])
+            game.headers["BlackProfileSHA256"] = execution.file_hash(paths[black_player.slug])
+            game.headers["EngineSHA256"] = execution.file_hash(exe)
             game.headers["Result"] = "1-0"
             game.headers["BookMode"] = (
                 "historical-v09-exploratory" if options["historical_openings"] else "disabled")
@@ -428,3 +433,21 @@ def test_engine_drift_after_last_arm_is_also_detected(
     summary = json.loads((out / "execution.json").read_text())
     assert summary["arms_completed"] == 2
     assert summary["status"] == execution.STATUS_FAILED
+
+
+def test_pgn_profile_header_cannot_forge_a_completed_arm(tmp_path, monkeypatch):
+    root, calls, _ = _environment(tmp_path, monkeypatch)
+    original = execution.play_duel
+    def corrupt_profile(*args, **kwargs):
+        folder = original(*args, **kwargs)
+        p = folder / "jogo_2.pgn"
+        data = p.read_text(encoding="utf-8")
+        data = data.replace('[EngineSHA256 "', '[EngineSHA256 "forged-')
+        p.write_text(data, encoding="utf-8")
+        return folder
+    monkeypatch.setattr(execution, "play_duel", corrupt_profile)
+    out = tmp_path / "trial"
+    with pytest.raises(ValueError, match="perfil ou cabeçalho"):
+        _run(root, _plan(tmp_path), out)
+    assert json.loads((out / "execution.json").read_text())["arms_completed"] == 0
+    assert len(calls) == 1
