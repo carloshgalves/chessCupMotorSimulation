@@ -71,6 +71,72 @@ autentica a origem de licenças ou jogadores.
   tenta limpá-la. Não se afirma resiliência comprovada a falha
   de energia ou corrupção de filesystem físico.
 
+## Slice 6 — embargo posicional experimental (opt-in)
+
+Para auditar **sobreposição de posições** entre as partições, acrescente
+`--embargo-min-ply 2` (ou um limite escolhido entre 1 e 80). Sem essa
+flag, a saída v1 continua compatível e `position_embargo.status=NOT_RUN`:
+**não pode ser descrita como auditada por posições**.
+
+```bash
+chesssim custom-corpus-train \
+  --library /dados/criador \
+  --id user-0123456789abcdef0123456789abcdef \
+  --cache /dados/cache-pgn-autorizado \
+  --expected-head SHA256_ATUAL_DO_VINCULO \
+  --out /dados/treino-com-embargo-novo \
+  --min-train 20 \
+  --embargo-min-ply 2
+```
+
+A partir do meio-lance escolhido, o sistema examina todas as posições
+**após cada lance, inclusive o último**, usando o estado FEN de quatro
+campos: peças, lado a jogar, roque e en passant, excluindo relógios de
+lances. A regra usa igualdade **exata de posição** — transposições de
+lances que chegam ao mesmo estado FEN são detectadas. Não examina
+posições anteriores ao limite escolhido; o corte deve ser interpretado
+como uma decisão metodológica do operador, nunca como garantia de
+ausência de vazamento fora desse intervalo.
+
+A regra é conservadora e determinística:
+
+- O **holdout** tem prioridade máxima e nunca é descartado nem
+  exportado para viabilizar um status verde.
+- Partidas de **validação** que compartilhem alguma posição auditada
+  com holdout são colocadas em quarentena (não entram na partição
+  de validação restante).
+- Partidas de **treino** que compartilhem qualquer posição auditada
+  com **toda a validação original ou holdout original** são descartadas
+  do arquivo de treino, mesmo que o jogo conflitante de validação
+  também tenha sido colocado em quarentena.
+- Partidas de treino curtas demais para produzir posição no intervalo
+  auditado também são descartadas. Partidas reservadas curtas demais
+  impedem o status `AUDITED_DISJOINT` e geram
+  `INCOMPLETE_RESERVED_POSITION_COVERAGE`. Se a cobertura reservada
+  for incompleta, o status geral será
+  `INSUFFICIENT_POSITION_EVIDENCE`, jamais `PREPARED`.
+
+O `split.json` registra apenas **contagens** de conflitos anteriores,
+jogos em quarentena, posições examinadas (quota de 200.000), limites
+do corte e o estado final. `AUDITED_DISJOINT` atesta somente **que
+os jogos retidos não compartilham estados FEN pós-lance no intervalo
+auditado**. Se a quarentena esvaziar treino ou validação, o status
+geral continuará `INSUFFICIENT_PARTITION_EVIDENCE`; não se
+fabricam partidas para atingir o mínimo.
+
+Nenhum movimento/posição individual das partições reservadas é
+incluído na saída, e os hashes de jogos reservados permanecem
+ocultos como na Slice 5. O hash do treino refere-se **apenas ao treino
+remanescente**. Não se alteram o `pgn-cache`, as identidades e os
+recibos de vínculo. O limite de posições produz **falha explícita**,
+não análise truncada que aparente sucesso.
+
+Mesmo `AUDITED_DISJOINT` **não equivale a holdout selado**, ausência
+de posições comuns antes do corte, independência estatística de jogos,
+verificação de licença/identidade ou validação da força e estilo UCI.
+O cache original continua acessível e a avaliação física no Debian
+permanece `NOT_RUN` na #83.
+
 ## Limitações relevantes
 
 O cache PGN original **continua contendo todos os jogos**, inclusive
@@ -78,7 +144,9 @@ os reservados: não existe isolamento criptográfico, controle de
 acesso multiusuário ou `sealed holdout`. Posições de xadrez
 similares/transposições podem aparecer em partidas distintas
 entre partições, pois esta política separa **jogos/datas**, não
-impõe embargo de posições compartilhadas. A restrição de uso
+impõe embargo de posições compartilhadas **sem a flag opt-in da
+Slice 6**; mesmo com a flag, somente o intervalo pós-lance
+selecionado é auditado. A restrição de uso
 `derived_openings` é atestada pelo operador, não verificada
 judicialmente; redistribuição e publicação não são autorizadas
 automaticamente por este comando.
