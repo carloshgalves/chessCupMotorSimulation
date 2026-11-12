@@ -142,7 +142,8 @@ def _load_books(plan: dict, white, black, white_book: Path | None,
     return books, provenance
 
 
-def _audit_completed_pair(folder: Path, *, players: list[str], seed: int,
+def _audit_completed_pair(folder: Path, *, players: list[str],
+                          player_objects: dict, seed: int,
                           expected_hashes: dict, book_sources: dict) -> dict:
     """Reconcile disk receipts and both UCI PGNs before recording completion."""
     has_books = bool(book_sources)
@@ -186,13 +187,22 @@ def _audit_completed_pair(folder: Path, *, players: list[str], seed: int,
         if game is None or game.errors or chess.pgn.read_game(stream) is not None:
             raise ValueError("PGN não contém exatamente uma partida legal")
         trajectory, plies = mainline_identity(game)
+        white_player = player_objects[record["white"]]
+        black_player = player_objects[record["black"]]
         if (type(record.get("plies")) is not int or record["plies"] != plies or
                 record.get("mainline_sha256") != trajectory or
                 game.headers.get("Result") != record["result"] or
                 game.headers.get("BookMode") != expected_mode or
+                game.headers.get("White") != white_player.name or
+                game.headers.get("Black") != black_player.name or
+                game.headers.get("WhiteModel") != f"RodentIV:{white_player.rodent_alias}" or
+                game.headers.get("BlackModel") != f"RodentIV:{black_player.rodent_alias}" or
+                game.headers.get("WhiteProfileSHA256") != expected_hashes[record["white"]] or
+                game.headers.get("BlackProfileSHA256") != expected_hashes[record["black"]] or
+                game.headers.get("EngineSHA256") != expected_hashes["exe"] or
                 (has_books and (game.headers.get("OpeningSeed") != str(seed) or
                                 game.headers.get("OpeningMinCount") != "1"))):
-            raise ValueError("Recibo diverge da trajetória, seed ou cabeçalho do PGN")
+            raise ValueError("Recibo diverge da trajetória, seed, perfil ou cabeçalho do PGN")
         # A receipt claiming a different opening seed/round must not be
         # counted as a controlled observation even when its PGN is legal.
         trace = record.get("opening_trace")
@@ -224,6 +234,7 @@ def _audit_completed_pair(folder: Path, *, players: list[str], seed: int,
             "game": index, "pgn_sha256": sha256(payload).hexdigest(),
             "mainline_sha256": trajectory, "plies": plies,
             "white": record["white"], "black": record["black"], "result": record["result"],
+            "white_name": white_player.name, "black_name": black_player.name,
             "opening_moves": record.get("opening_moves"),
             "opening_seed": record.get("opening_seed"),
             "opening_trace": record.get("opening_trace"),
@@ -239,9 +250,13 @@ def _audit_completed_pair(folder: Path, *, players: list[str], seed: int,
             if game.errors or len(duo_games) >= 2:
                 raise ValueError("PGN consolidado corrompido ou com partidas extras")
             identity, count = mainline_identity(game)
-            duo_games.append((identity, count, game.headers.get("Result")))
+            duo_games.append((
+                identity, count, game.headers.get("Result"),
+                game.headers.get("White"), game.headers.get("Black"),
+                game.headers.get("EngineSHA256")))
     expected = [
-        (item["mainline_sha256"], item["plies"], item["result"])
+        (item["mainline_sha256"], item["plies"], item["result"],
+         item["white_name"], item["black_name"], expected_hashes["exe"])
         for item in receipts
     ]
     if duo_games != expected:
@@ -345,7 +360,8 @@ def execute_plan(root: Path, plan_path: Path, out: Path, *,
                 # the UCI processes were running, including the very last arm.
                 assert_frozen_inputs()
                 receipt = _audit_completed_pair(
-                    folder, players=plan["players"], seed=arm["seed"],
+                    folder, players=plan["players"],
+                    player_objects={p.slug: p for p in players}, seed=arm["seed"],
                     expected_hashes=frozen, book_sources=book_sources)
                 manifest["arms"].append({
                     "block": block["block"], "condition": expected_condition,
