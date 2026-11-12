@@ -395,9 +395,9 @@ def test_legacy_train_only_export_explicitly_marks_position_embargo_not_run(tmp_
     result = _prepare(
         library, profile, cache, link, tmp_path / "unembargoed", min_train=5)
     assert result["schema"] == train.SCHEMA
-    assert result["position_embargo"]["status"] == "NOT_RUN"
+    assert "position_embargo" not in result, "v1 must keep its original field set"
     assert result["status"] == "TRAIN_ONLY_PREPARED_NOT_VALIDATED"
-    assert result["position_embargo"]["reason"].startswith("The historical")
+    assert "Without --embargo-min-ply" in result["limits"][3]
 
 
 def test_transposed_training_positions_are_quarantined_not_exported(tmp_path):
