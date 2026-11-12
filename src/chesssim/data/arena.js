@@ -5,6 +5,7 @@ const token = new URLSearchParams(window.location.hash.slice(1)).get("token");
 let roster = [];
 let customPlayers = [];
 let customRefreshCounter = 0;
+let customLoading = false;
 let busy = false;
 let duelBusy = false;
 let currentSession = null;
@@ -86,6 +87,8 @@ function applyCustomCatalog(data) {
   updateForm();
 }
 async function refreshCustomCatalog() {
+  if (customLoading) return;
+  customLoading = true;
   try {
     const response = await fetch("/api/arena/custom-players", {cache:"no-store"});
     if (!response.ok) throw new Error("Biblioteca local indisponível");
@@ -100,6 +103,8 @@ async function refreshCustomCatalog() {
     fillPlayer($("white"), "fischer");
     fillPlayer($("black"), "tal");
     updateForm();
+  } finally {
+    customLoading = false;
   }
 }
 function displayProfile(slot, slug) {
@@ -258,7 +263,7 @@ async function refresh() {
     renderSession();
     // The optional catalog is independent of /api/arena and never blocks
     // historical launches. Poll it less often than the live game state.
-    if (++customRefreshCounter % 10 === 1) await refreshCustomCatalog();
+    if (++customRefreshCounter % 10 === 1) void refreshCustomCatalog();
   } catch (err) {
     $("connection").textContent = "● Sem conexão com a arena";
     $("connection").className = "offline";
