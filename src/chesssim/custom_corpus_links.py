@@ -238,6 +238,10 @@ def _project(root: Path, doc: dict, events: list[dict]) -> dict:
         "head_sha256": events[-1]["sha256"] if events else doc["sha256"],
         "linked": active,
         "corpus": linked,
+        # The path is deliberately not stored. A link is an audit receipt,
+        # never an assertion that its external PGNs remain accessible.
+        "source_availability": (
+            "NOT_RECHECKED_AFTER_LINK" if active else "NOT_APPLICABLE"),
         "uci_eligible": False,
         "historically_validated": False,
         "limit": "PGN name, source rights and identity are operator-attested; UCI is not enabled",
