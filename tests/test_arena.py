@@ -809,11 +809,13 @@ def test_custom_library_rejects_missing_symlink_or_file(rodent_stub, tmp_path):
     with pytest.raises(ValueError, match="inexistente"):
         with arena_server(rodent_stub, custom_library=missing):
             pytest.fail("Should reject missing custom library")
+    assert not rodent_stub[1].exists(), "preflight must not create arena workspace"
     file_path = tmp_path / "file.json"
     file_path.write_bytes(b"{}")
-    with pytest.raises(ValueError, match="inexistente"):
+    with pytest.raises(ValueError, match="deve ser diretório"):
         with arena_server(rodent_stub, custom_library=file_path):
             pytest.fail("Should reject non-directory custom library")
+    assert not rodent_stub[1].exists(), "invalid source must not create workspace"
     folder = tmp_path / "real"
     create_fictional(folder, "Ava Ravenwood")
     shortcut = tmp_path / "shortcut"
