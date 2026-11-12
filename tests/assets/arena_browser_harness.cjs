@@ -133,6 +133,19 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal($("white").children.at(-1).children[0].disabled,true);
   assert.equal($("black").children.at(-1).children[0].disabled,true);
   assert($("custom-profile-status").textContent.includes("nenhum perfil UCI"));
+  assert($("custom-profile-list").children[0].textContent.includes(fictional[0].id));
+  const sameName = {...fictional[0],id:"user-fedcba0987654321fedcba0987654321"};
+  fictional.push(sameName);
+  await vm.runInContext("refreshCustomCatalog()",ctx);
+  assert.equal($("custom-profile-list").children.length,2);
+  assert($("custom-profile-list").children[0].textContent.includes(fictional[0].id));
+  assert($("custom-profile-list").children[1].textContent.includes(sameName.id));
+  assert($("white").children.at(-1).children[0].textContent.includes(fictional[0].id));
+  assert($("white").children.at(-1).children[1].textContent.includes(sameName.id));
+  assert($("white").children.at(-1).children.every(item=>item.disabled));
+  fictional.pop();
+  await vm.runInContext("refreshCustomCatalog()",ctx);
+  assert.equal($("custom-profile-list").children.length,1);
   assert($("white-profile").children.some(el=>
     String(el.textContent).includes("NÃO VALIDADA")));
 
