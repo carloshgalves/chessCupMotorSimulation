@@ -9,10 +9,10 @@ PGN, abertura, calibração, rating ou alegação de fidelidade histórica.
 
     chesssim custom-player-create --library /dados/criador --name "Ava Ravenwood"
     chesssim custom-player-list --library /dados/criador
-    chesssim custom-player-export --library /dados/criador --id user-<32hex> --out /dados/portable.json
+    chesssim custom-player-export --library /dados/criador --id user-0123456789abcdef0123456789abcdef --out /dados/portable.json
     chesssim custom-player-import --library /dados/outra --file /dados/portable.json
-    chesssim custom-player-retire --library /dados/criador --id user-<32hex>
-    chesssim custom-player-restore --library /dados/criador --id user-<32hex>
+    chesssim custom-player-retire --library /dados/criador --id user-0123456789abcdef0123456789abcdef
+    chesssim custom-player-restore --library /dados/criador --id user-0123456789abcdef0123456789abcdef
 
 Os IDs são gerados automaticamente com prefixo user- e UUID aleatório.
 Dois nomes idênticos são identidades distintas. Um nome pode coincidir
@@ -41,9 +41,12 @@ uci_eligible=false e historical_fidelity_validated=false.
   Restaurar exige uma ação explícita e conserva ID e metadados originais.
 - Exportação copia somente a identidade, não o estado local de desativação.
   Importá-la em outra biblioteca não exporta a decisão de desativação.
-- Sem transação multioperador: tarefas administrativas simultâneas
-  devem ser serializadas pelo operador. A publicação exclusiva protege
-  os bytes do registro, mas não há lock de biblioteca interprocessos.
+- Um lock de arquivo por biblioteca serializa escritores cooperativos
+  (criar, importar, desativar e restaurar), protegendo cotas e transições
+  de estado entre processos. Em POSIX usa flock; em Windows, locking.
+  O lock é consultivo, não uma barreira de autenticação contra quem
+  pode modificar os arquivos diretamente. Não existe transação
+  multiarquivo nem histórico append-only de renomeações nesta fatia.
 - Nenhuma prova de tolerância a falha física, direitos de PGN ou
   autenticação de quem criou um personagem é feita nesta entrega.
 
