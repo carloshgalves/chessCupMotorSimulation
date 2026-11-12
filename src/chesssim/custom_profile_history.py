@@ -75,10 +75,15 @@ def _check_chain(doc: dict, rows: list[dict]) -> tuple[str, str]:
         raise ValueError("Limite de 64 renomeações excedido")
     name = doc["profile"]["display_name"]
     previous_hash = doc["sha256"]
+    previous_time = doc["profile"]["created_utc"]
     for revision, row in enumerate(rows, 1):
         name, previous_hash = _verify_event(
             row, doc, expected_revision=revision,
             previous_hash=previous_hash, previous_name=name)
+        recorded = row["event"]["recorded_utc"]
+        if recorded < previous_time:
+            raise ValueError("Cronologia de revisões anterior à criação ou regressiva")
+        previous_time = recorded
     return name, previous_hash
 
 
