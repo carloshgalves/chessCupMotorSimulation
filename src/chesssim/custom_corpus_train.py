@@ -188,7 +188,9 @@ def prepare_custom_train(library: Path, identifier: str, cache: Path, out: Path,
             "excluded": dict(sorted(excluded.items())),
             "minimum_train_games": min_train,
             "partition_policy": "chronological 60/20/20 targets; civil dates not split",
-            "position_embargo": embargo,
+            # Preserve v1 manifest field names exactly. Only v2 carries
+            # new audit fields and the opt-in FEN quarantine contract.
+            **({"position_embargo": embargo} if embargo_min_ply is not None else {}),
             "partitions": {
                 part: _partition_record(rows, expose_train=part == "train")
                 for part, rows in pieces.items()
