@@ -36,8 +36,9 @@ function fillPlayer(select, preferred) {
       const option = document.createElement("option");
       option.value = p.id;
       option.disabled = true;
-      option.textContent = p.name + (p.status === "RETIRED_METADATA_ONLY" ?
-        " · desativado · não jogável" : " · não jogável");
+      option.textContent = p.name + " · " + p.id +
+        (p.status === "RETIRED_METADATA_ONLY" ?
+          " · desativado · não jogável" : " · não jogável");
       group.appendChild(option);
     }
     select.appendChild(group);
@@ -73,7 +74,7 @@ function applyCustomCatalog(data) {
   list.replaceChildren();
   for (const p of entries) {
     const row = document.createElement("li");
-    row.textContent = p.name + " · " +
+    row.textContent = p.name + " · ID " + p.id + " · " +
       (p.status === "RETIRED_METADATA_ONLY" ? "desativado" : "cadastrado") +
       " · revisão " + p.revision + " · NÃO JOGÁVEL";
     list.appendChild(row);
