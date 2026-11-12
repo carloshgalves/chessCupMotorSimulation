@@ -161,3 +161,13 @@ button.accent{flex:1;font-size:.81rem}
 .quality-stats-panel p{overflow-wrap:anywhere}
 @media(max-width:470px){.quality-bar-row{padding:8px}}
 @media(prefers-reduced-motion:reduce){.quality-bar-fill{transition:none}}
+
+
+/* #66 opt-in fictional editorial commentary: readable without animations. */
+.editorial-panel button{width:100%;margin:9px 0 7px}
+.editorial-current,.editorial-postgame{margin-top:10px;padding:12px;
+  background:#10232b;border:1px solid #42606b;border-radius:9px;
+  overflow-wrap:anywhere}
+.editorial-current strong,.editorial-postgame h3{font-size:.92rem;color:#f1d58f}
+.editorial-current p,.editorial-postgame p{margin-top:7px;white-space:normal}
+.editorial-current[hidden],.editorial-postgame[hidden]{display:none}

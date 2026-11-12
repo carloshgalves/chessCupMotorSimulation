@@ -25,6 +25,8 @@ let automaticMoveScroll = false;
 const LIVE_MOVE_INTERVAL_MS = 650;
 let liveGameId = "";
 let lastPresentedAt = 0;
+// Opt-in only, never persisted or used as input to any UCI command.
+let editorialEnabled = false;
 
 // Optional observer-only game. The real board never submits guesses to UCI.
 const guess = {enabled:false,selected:null,pending:null,promotion:null,
@@ -688,6 +690,75 @@ function renderBracket() {
   holder.replaceChildren(fragment);
   holder.scrollTop = oldScroll;
 }
+function renderEditorial(game) {
+  const status = $("editorial-status");
+  const current = $("editorial-current");
+  const postgame = $("editorial-postgame");
+  current.hidden = true;
+  postgame.hidden = true;
+  $("editorial-text").textContent = "";
+  $("editorial-question").textContent = "";
+  $("editorial-answer").textContent = "";
+  $("editorial-toggle").textContent = editorialEnabled ?
+    "Desativar comentários" : "Ativar comentários";
+  $("editorial-toggle").setAttribute("aria-pressed", String(editorialEnabled));
+  if (!editorialEnabled) {
+    status.textContent = "Desativado. Ative para ver a narração.";
+    return;
+  }
+  const fresh = game && availableGames().find(g => g.id === game.id);
+  // A pinned game may have changed on disk. Refuse to display old comments
+  // against a different position/receipt even if its UI id is reused.
+  const sameTrajectory = !!fresh && (!pinned || (
+    fresh.states.length === pinned.states.length &&
+    fresh.states.every((s, i) => s.uci === pinned.states[i].uci &&
+      s.fen === pinned.states[i].fen)));
+  const editorial = sameTrajectory ? fresh.fictional_editorial : null;
+  if (!editorial || editorial.schema !== "chesssim-fictional-editorial-v1" ||
+      !Array.isArray(editorial.events) || !game || !Array.isArray(game.states)) {
+    status.textContent = "Indisponível: nenhum comentário verificável nesta seleção.";
+    return;
+  }
+  const visible = Math.min(Math.max(0, cursor), game.states.length - 1);
+  const candidates = editorial.events.filter(e =>
+    e && Number.isInteger(e.ply) && e.ply >= 1 && e.ply <= visible &&
+    e.ply < game.states.length && typeof e.text === "string" &&
+    e.text.length <= 280 && e.uci === game.states[e.ply].uci);
+  const last = candidates.length ? candidates[candidates.length - 1] : null;
+  if (last) {
+    const labels = {
+      opening:"Abertura",capture:"Captura",check:"Xeque",castle:"Roque",
+      promotion:"Promoção",checkmate:"Xeque-mate",milestone:"Sequência"
+    };
+    if (!Object.prototype.hasOwnProperty.call(labels, last.kind)) {
+      status.textContent = "Indisponível: tipo de evento não reconhecido.";
+    } else {
+      $("editorial-kind").textContent =
+        labels[last.kind] + " · meio-lance " + last.ply;
+      $("editorial-text").textContent = last.text;
+      current.hidden = false;
+      status.textContent = "Comentário fictício baseado em lance registrado.";
+    }
+  } else {
+    status.textContent = "Nenhum evento editorial até esta posição.";
+  }
+  // Never leak the result while the observer's paced replay is behind the
+  // actual final move. Receipt check happens on the server, not in JavaScript.
+  const afterLastMove = visible === game.states.length - 1;
+  const interview = editorial.postgame;
+  if (afterLastMove && fresh.status === "COMPLETED" && fresh.live === false &&
+      ["1-0", "0-1", "1/2-1/2"].includes(fresh.result) &&
+      interview && typeof interview.question === "string" &&
+      typeof interview.answer === "string" &&
+      interview.question.length <= 180 && interview.answer.length <= 280) {
+    $("editorial-question").textContent = "Pergunta editorial: " +
+      interview.question;
+    $("editorial-answer").textContent = "Resposta fictícia do narrador: " +
+      interview.answer;
+    postgame.hidden = false;
+  }
+}
+
 function render() {
   updateSelector();
   updateAttemptSelector();
@@ -701,6 +772,7 @@ function render() {
   renderGuess(game);
   renderAnalysis(game);
   renderQualityStats(game);
+  renderEditorial(game);
   const tournament = feed && feed.tournament;
   const duel = feed && feed.duel;
   const chosenMatch = tournament && feed.selection &&
@@ -896,6 +968,10 @@ $("board").addEventListener("pointerup",event=>{
 for(const event of ["pointercancel","lostpointercapture"])
   $("board").addEventListener(event,()=>{guessDrag=null;});
 
+$("editorial-toggle").addEventListener("click", () => {
+  editorialEnabled = !editorialEnabled;
+  renderEditorial(currentGame());
+});
 $("quality-phase-filter").addEventListener("change", () => renderQualityStats(currentGame()));
 $("moves").addEventListener("scroll", () => {
   if (automaticMoveScroll) return;
