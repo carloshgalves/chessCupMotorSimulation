@@ -2,12 +2,9 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
-from hashlib import sha256
 import json
-from pathlib import Path
 import socket
 import subprocess
-import sys
 import unicodedata
 
 import pytest
@@ -277,3 +274,31 @@ def test_cli_create_list_export_import_retire_smoke(tmp_path, capsys):
     retired = json.loads(capsys.readouterr().out)
     assert retired["status"] == "RETIRED_METADATA_ONLY"
     assert len(load_roster()) == 64
+
+
+def test_restore_requires_valid_receipt_and_preserves_the_same_uuid(tmp_path):
+    root, created = _new(tmp_path)
+    record = _record(root, created["id"])
+    original_bytes = record.read_bytes()
+    assert profiles.restore_fictional(root, created["id"])["operation"] == "ALREADY_ACTIVE"
+    profiles.retire_fictional(root, created["id"])
+    restored = profiles.restore_fictional(root, created["id"])
+    assert restored["operation"] == "RESTORED_METADATA_ONLY"
+    assert restored["status"] == profiles.STATUS
+    assert restored["id"] == created["id"]
+    assert record.read_bytes() == original_bytes
+    assert not (root / (created["id"] + ".retired.json")).exists()
+    assert profiles.restore_fictional(root, created["id"])["operation"] == "ALREADY_ACTIVE"
+    profiles.retire_fictional(root, created["id"])
+    assert profiles.list_fictional(root)[0]["status"] == "RETIRED_METADATA_ONLY"
+    assert len(load_roster()) == 64
+
+
+def test_restore_rejects_forged_retirement_marker(tmp_path):
+    root, created = _new(tmp_path)
+    profiles.retire_fictional(root, created["id"])
+    marker = root / (created["id"] + ".retired.json")
+    marker.write_text('{"schema":"unexpected"}', encoding="utf-8")
+    with pytest.raises(ValueError, match="inconsistente"):
+        profiles.restore_fictional(root, created["id"])
+    assert marker.exists(), "corrupt retirement marker not silently deleted"
