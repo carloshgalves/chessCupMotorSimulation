@@ -83,6 +83,16 @@ def _normalize_name(name: object) -> str:
     return normalized
 
 
+def _header_name(value: object) -> str:
+    # Unlike the explicitly selected identity, unrelated historical PGNs may
+    # have unknown/missing player headers. Exclude, rather than crash or
+    # accidentally match an alias/name fragment.
+    if not isinstance(value, str) or len(value) > 150:
+        return ""
+    normalized = " ".join(value.split()).casefold()
+    return normalized if normalized != "?" else ""
+
+
 def _cache_snapshot(folder: Path) -> tuple[dict, list[tuple[chess.pgn.Game, str]]]:
     if folder.is_symlink() or any(p.is_symlink() for p in folder.parents):
         raise ValueError("Caminho simbólico do cache não permitido")
@@ -101,14 +111,17 @@ def _cache_snapshot(folder: Path) -> tuple[dict, list[tuple[chess.pgn.Game, str]
     sources = report.get("sources")
     if (not isinstance(sources, list) or not sources
             or any(not isinstance(s, dict) or
-                   "derived_openings" not in s.get("allowed_uses", [])
+                   not isinstance(s.get("allowed_uses"), list) or
+                   "derived_openings" not in s["allowed_uses"] or
+                   not all(isinstance(use, str) for use in s["allowed_uses"])
                    for s in sources)):
         raise ValueError("Todos os PGNs precisam autorizar explicitamente derived_openings")
-    source_ids = {s.get("id") for s in sources}
-    if len(source_ids) != len(sources) or not all(
-        isinstance(x, str) and x for x in source_ids
-    ):
+    source_ids = [s.get("id") for s in sources]
+    if (any(not isinstance(source_id, str) or not source_id
+            for source_id in source_ids) or
+            len(source_ids) != len(set(source_ids))):
         raise ValueError("IDs de fontes do cache inválidos")
+    source_ids = set(source_ids)
     games = report.get("games")
     if (not isinstance(games, list) or not 1 <= len(games) <= MAX_GAMES or
             type(report.get("games_distinct")) is not int
@@ -136,8 +149,9 @@ def _cache_snapshot(folder: Path) -> tuple[dict, list[tuple[chess.pgn.Game, str]
                 or row["plies"] <= 0 or row.get("result") not in
                 {"1-0", "0-1", "1/2-1/2", "*"}
                 or not isinstance(source_refs, list) or not source_refs
-                or len(source_refs) != len(set(source_refs))
-                or any(src not in source_ids for src in source_refs)):
+                or any(not isinstance(src, str) or src not in source_ids
+                       for src in source_refs)
+                or len(source_refs) != len(set(source_refs))):
             raise ValueError("Registro do manifesto não é verificável")
         game = chess.pgn.read_game(stream)
         if game is None or game.errors:
@@ -201,12 +215,13 @@ def build_age_cohort(cache: Path, out: Path, *, pgn_name: str, birth_date: str,
     identities_seen = Counter()
     today = date.today()
     for game, digest in parsed:
-        white = _normalize_name(game.headers.get("White"))
-        black = _normalize_name(game.headers.get("Black"))
+        white = _header_name(game.headers.get("White"))
+        black = _header_name(game.headers.get("Black"))
         same_white = white == key
         same_black = black == key
         if not same_white and not same_black:
-            rejected["other_player"] += 1
+            rejected["unresolved_player_headers" if not white or not black
+                     else "other_player"] += 1
             continue
         if same_white and same_black:
             rejected["ambiguous_both_sides"] += 1
