@@ -7,7 +7,6 @@ append-only local receipt, serialized by the existing library lock.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from hashlib import sha256
 from pathlib import Path
 import re
 
