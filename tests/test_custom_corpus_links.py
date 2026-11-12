@@ -5,7 +5,6 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from hashlib import sha256
 import json
-from pathlib import Path
 import socket
 import subprocess
 
