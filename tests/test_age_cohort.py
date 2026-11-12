@@ -291,3 +291,35 @@ def test_cli_prints_attested_not_validated_cohort(tmp_path, capsys):
     assert report["eligible_games"] == 1
     assert report["status"] == "INSUFFICIENT_EXACT_AGE_EVIDENCE"
     assert report["train_pgn_sha256"] == sha256((out / "train.pgn").read_bytes()).hexdigest()
+
+
+def test_unknown_or_missing_participant_headers_are_excluded_not_matched(tmp_path):
+    text = _pgn(0, "2012.01.01", white="?", black="?")
+    text += _pgn(1, "2012.01.02", white="Another Person", black="Missing")
+    text += _pgn(2, "2012.01.03")
+    data = _cohort(_cache(tmp_path, text), tmp_path / "derived")
+    assert data["eligible_exact_age_unique_games"] == 1
+    assert data["excluded"]["unresolved_player_headers"] == 1
+    assert data["excluded"]["other_player"] == 1
+
+
+def test_manifest_source_rights_must_be_typed_list_not_string(tmp_path):
+    folder = _cache(tmp_path, _pgn(0, "2012.01.01"))
+    manifest = folder / "manifest.json"
+    report = json.loads(manifest.read_text(encoding="utf-8"))
+    report["sources"][0]["allowed_uses"] = "derived_openings"
+    manifest.write_text(json.dumps(report), encoding="utf-8")
+    with pytest.raises(ValueError, match="derived_openings"):
+        _cohort(folder, tmp_path / "derived")
+    assert not (tmp_path / "derived").exists()
+
+
+def test_unhashable_source_ref_fails_closed_without_type_error(tmp_path):
+    folder = _cache(tmp_path, _pgn(0, "2012.01.01"))
+    manifest = folder / "manifest.json"
+    report = json.loads(manifest.read_text(encoding="utf-8"))
+    report["games"][0]["sources"] = [{"unexpected": "nested"}]
+    manifest.write_text(json.dumps(report), encoding="utf-8")
+    with pytest.raises(ValueError, match="Registro do manifesto"):
+        _cohort(folder, tmp_path / "derived")
+    assert not (tmp_path / "derived").exists()
