@@ -6,6 +6,7 @@ from hashlib import sha256
 from pathlib import Path
 import json
 import math
+import os
 import threading
 import uuid
 import re
@@ -89,13 +90,48 @@ def _open_engine(root: Path, executable: Path, p: Player, *, book: bool | None =
         raise
 
 
-def _atomic_text(path: Path, contents: str) -> None:
+def _fsync_directory_tree(directory: Path) -> None:
+    """Sync the containing directory and its ancestors after publishing.
+
+    The ancestor pass also persists newly created attempt directories; a
+    rename in an unsynced child directory alone is not a power-loss guarantee.
+    POSIX only: callers explicitly choose this stricter durability boundary.
+    """
+    if os.name != "posix":
+        raise OSError("Directory fsync durability requires POSIX")
+    current = directory
+    while True:
+        flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+        fd = os.open(current, flags)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        if current == current.parent:
+            break
+        current = current.parent
+
+
+def _atomic_text(path: Path, contents: str, *, durable: bool = False) -> None:
+    """Publish by same-directory rename; durable mode also orders fsyncs.
+
+    On an fsync failure after rename, the new file may be visible: propagate
+    the exception rather than pretending the durable commit was confirmed.
+    Per-move partial PGNs intentionally use the fast (non-fsynced) mode.
+    """
+    if durable and os.name != "posix":
+        raise OSError("Durable checkpoint mode requires POSIX")
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     try:
         with temp.open("x", encoding="utf-8", newline="\n") as f:
             f.write(contents)
+            if durable:
+                f.flush()
+                os.fsync(f.fileno())
         temp.replace(path)
+        if durable:
+            _fsync_directory_tree(path.parent)
     finally:
         temp.unlink(missing_ok=True)
 
@@ -397,7 +433,7 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
                                "internal engine book/engine search randomness is not controlled by this seed."),
                },
                "games": [], "diversity": audit_mainlines([])[1]}
-    _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
+    _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n",\n                 durable=os.name == "posix")
     lineups = [(white, black)] + ([(black, white)] if reverse else [])
     try:
         for i, (w, b) in enumerate(lineups, 1):
@@ -421,11 +457,11 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
                 raise RuntimeError("PGN/mainline ply count disagrees with engine record")
             meta.update({"mainline_sha256": digest, "source": f"game_{i}"})
             games.append(game)
-            _atomic_text(folder / f"jogo_{i}.pgn", str(game) + "\n\n")
-            _atomic_text(folder / "duelo.pgn", "\n\n".join(str(g) for g in games) + "\n\n")
+            _atomic_text(folder / f"jogo_{i}.pgn", str(game) + "\n\n",\n                         durable=os.name == "posix")
+            _atomic_text(folder / "duelo.pgn", "\n\n".join(str(g) for g in games) + "\n\n",\n                         durable=os.name == "posix")
             summary["games"].append(meta)
             summary["games"], summary["diversity"] = audit_mainlines(summary["games"])
-            _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
+            _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n",\n                 durable=os.name == "posix")
             print(f"Resultado: {meta['result']} ({meta['termination']})", flush=True)
             # Partidas limitadas por plies continuam úteis para auditoria de
             # diversidade; somente parada/timeout operacional cancela o par.
@@ -441,6 +477,6 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
         summary["error"] = f"{type(ex).__name__}: {ex}"
         raise
     finally:
-        _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
+        _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n",\n                 durable=os.name == "posix")
         print(f"\nArquivos do confronto: {folder}", flush=True)
     return folder
