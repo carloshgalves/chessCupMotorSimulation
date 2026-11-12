@@ -592,3 +592,39 @@ def test_cli_diversity_run_propagates_controls_and_never_reinterprets_plan(
     assert observed[0][3]["max_game_wall_seconds"] == 30.0
     assert json.loads(capsys.readouterr().out)["status"] == execution.STATUS_SUBSET
     assert not out.exists()
+
+
+def test_completed_receipt_requires_terminal_board_not_just_result_tag(
+    tmp_path, monkeypatch
+):
+    root, calls, _ = _environment(tmp_path, monkeypatch)
+    original = execution.play_duel
+
+    def false_completion(*args, **kwargs):
+        folder = original(*args, **kwargs)
+        source = folder / "jogo_1.pgn"
+        with source.open(encoding="utf-8") as stream:
+            game = chess.pgn.read_game(stream)
+        shortened = chess.pgn.Game()
+        shortened.headers.update(dict(game.headers))
+        node = shortened
+        for move in list(game.mainline_moves())[:-1]:
+            node = node.add_variation(move)
+        assert shortened.end().board().outcome(claim_draw=True) is None
+        source.write_text(str(shortened) + "\n\n", encoding="utf-8")
+        receipt_path = folder / "summary.json"
+        summary = json.loads(receipt_path.read_text(encoding="utf-8"))
+        digest, n = mainline_identity(shortened)
+        summary["games"][0]["mainline_sha256"] = digest
+        summary["games"][0]["plies"] = n
+        receipt_path.write_text(json.dumps(summary), encoding="utf-8")
+        return folder
+
+    monkeypatch.setattr(execution, "play_duel", false_completion)
+    out = tmp_path / "trial"
+    with pytest.raises(ValueError, match="resultado terminal verificável"):
+        _run(root, _plan(tmp_path), out)
+    manifest = json.loads((out / "execution.json").read_text())
+    assert manifest["status"] == execution.STATUS_FAILED
+    assert manifest["arms_completed"] == 0
+    assert len(calls) == 1
