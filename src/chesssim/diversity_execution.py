@@ -30,6 +30,7 @@ SHA64 = re.compile(r"[0-9a-f]{64}\Z")
 STATUS_PLANNED = "REGISTERED_NOT_RUN"
 STATUS_RUNNING = "RUNNING_UNVERIFIED"
 STATUS_COMPLETED = "EXECUTED_RESULTS_NOT_CALIBRATED"
+STATUS_SUBSET = "EXECUTED_SUBSET_NOT_CALIBRATED"
 STATUS_FAILED = "FAILED_REQUIRES_MANUAL_INSPECTION"
 CONDITIONS = ("A1_RESEARCH_CONTROL", "A2_EXACT_REPLICATE", "B_ALTERNATE_SEED")
 
@@ -156,8 +157,13 @@ def _audit_completed_pair(folder: Path, *, players: list[str], seed: int,
                 record.get("white") != expected_colors[index - 1][0] or
                 record.get("black") != expected_colors[index - 1][1] or
                 type(record.get("round")) is not int or record["round"] != index or
-                record.get("result") not in {"1-0", "0-1", "1/2-1/2"}):
-            raise ValueError("Recibo UCI não confirma ambas as cores")
+                record.get("result") not in {"1-0", "0-1", "1/2-1/2"} or
+                record.get("opening_mode") != (
+                    "historical-v09-exploratory" if has_books else "disabled") or
+                type(record.get("opening_seed")) is not (
+                    int if has_books else type(None)) or
+                (has_books and record["opening_seed"] != seed)):
+            raise ValueError("Recibo UCI não confirma ambas as cores, seed e política")
         pgn_path = folder / f"jogo_{index}.pgn"
         payload = _read_regular(pgn_path, MAX_PGN_BYTES)
         from io import StringIO
@@ -170,6 +176,19 @@ def _audit_completed_pair(folder: Path, *, players: list[str], seed: int,
                 record.get("mainline_sha256") != trajectory or
                 game.headers.get("Result") != record["result"]):
             raise ValueError("Recibo diverge da trajetória ou resultado do PGN")
+        # A receipt claiming a different opening seed/round must not be
+        # counted as a controlled observation even when its PGN is legal.
+        trace = record.get("opening_trace")
+        if not isinstance(trace, list) or any(
+            not isinstance(entry, dict) or entry.get("seed") != seed or
+            entry.get("round") != index or
+            entry.get("player") not in players or
+            type(entry.get("ply")) is not int or not 1 <= entry["ply"] <= plies
+            for entry in trace
+        ):
+            raise ValueError("Traço de abertura sem seed/rodada verificável")
+        if not has_books and trace:
+            raise ValueError("Traço de abertura presente sem repertório declarado")
         receipts.append({
             "game": index, "pgn_sha256": sha256(payload).hexdigest(),
             "mainline_sha256": trajectory, "plies": plies,
@@ -178,7 +197,24 @@ def _audit_completed_pair(folder: Path, *, players: list[str], seed: int,
             "opening_seed": record.get("opening_seed"),
             "opening_trace": record.get("opening_trace"),
         })
+    # A separately aggregated duel PGN must contain exactly the two
+    # verified trajectories, in order. Hashing it without parsing would
+    # silently bless an unrelated PGN as consolidated evidence.
     duo = _read_regular(folder / "duelo.pgn", MAX_PGN_BYTES * 2)
+    from io import StringIO
+    with StringIO(duo.decode("utf-8-sig")) as stream:
+        duo_games = []
+        while (game := chess.pgn.read_game(stream)) is not None:
+            if game.errors or len(duo_games) >= 2:
+                raise ValueError("PGN consolidado corrompido ou com partidas extras")
+            identity, count = mainline_identity(game)
+            duo_games.append((identity, count, game.headers.get("Result")))
+    expected = [
+        (item["mainline_sha256"], item["plies"], item["result"])
+        for item in receipts
+    ]
+    if duo_games != expected:
+        raise ValueError("PGN consolidado diverge das duas partidas individuais")
     return {
         "folder": str(folder), "summary_sha256": sha256(raw).hexdigest(),
         "duel_pgn_sha256": sha256(duo).hexdigest(), "games": receipts,
@@ -231,6 +267,7 @@ def execute_plan(root: Path, plan_path: Path, out: Path, *,
         "design_sha256": plan["design_sha256"],
         "seed_effectiveness": plan["seed_effectiveness"],
         "players": plan["players"], "blocks_requested": blocks,
+        "blocks_total_in_plan": plan["trials"],
         "arms_planned": 3 * blocks, "arms_completed": 0,
         "inputs": inputs, "arms": [],
         "warning": ("Executed UCI observations only; no claim of improved diversity, "
@@ -278,7 +315,9 @@ def execute_plan(root: Path, plan_path: Path, out: Path, *,
                 })
                 manifest["arms_completed"] += 1
                 checkpoint()
-        manifest["status"] = STATUS_COMPLETED
+        manifest["status"] = (
+            STATUS_COMPLETED if blocks == plan["trials"] else STATUS_SUBSET)
+        manifest["finished_utc"] = datetime.now(timezone.utc).isoformat()
     except BaseException as exc:
         manifest["status"] = STATUS_FAILED
         manifest["error"] = type(exc).__name__ + ": " + str(exc)[:250]
