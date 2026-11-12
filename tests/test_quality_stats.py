@@ -9,6 +9,7 @@ import chess.pgn
 import pytest
 
 from chesssim import live_board
+from chesssim.game_diversity import mainline_identity
 from chesssim.quality_overlay import QualityOverlay, PROTOCOL
 from chesssim.quality_stats import phase_for_ply, summarize_quality
 
@@ -132,9 +133,11 @@ def _verified_game(tmp_path):
         node = node.add_variation(chess.Move.from_uci(uci))
     pgn = run / "jogo_1.pgn"
     pgn.write_text(str(game) + "\n", encoding="utf-8")
+    trajectory, plies = mainline_identity(game)
     (run / "summary.json").write_text(
         json.dumps({"status": "COMPLETED", "games": [
-            {"status": "COMPLETED", "result": "1-0"}]}), encoding="utf-8")
+            {"status": "COMPLETED", "result": "1-0",
+             "mainline_sha256": trajectory, "plies": plies}]}), encoding="utf-8")
     states = live_board._states(game)
     rows = [
         {"game_index": 0, "ply": 1, "fen": states[0]["fen"], "played": "e2e4",
@@ -182,11 +185,12 @@ def test_incomplete_or_conflicting_receipt_cannot_claim_verified_stats(tmp_path)
     run, _, report, _ = _verified_game(tmp_path)
     overlay = QualityOverlay(report)
     summary_file = run / "summary.json"
+    valid = json.loads(summary_file.read_text(encoding="utf-8"))["games"][0]
     for status, result in (("INCOMPLETE", "1-0"), ("COMPLETED", "0-1"),
                            ("RUNNING", "1-0")):
         summary_file.write_text(
             json.dumps({"status": status, "games": [
-                {"status": status, "result": result}]}), encoding="utf-8")
+                {**valid, "status": status, "result": result}]}), encoding="utf-8")
         x = live_board.snapshot(run, quality_overlay=overlay)["duel"]["games"][0]
         assert "quality_stats" not in x
         assert "evaluation" in x["states"][1]
@@ -198,3 +202,19 @@ def test_report_depth_mismatch_does_not_mix_in_quantitative_mean(tmp_path):
     report.write_text(json.dumps(doc), encoding="utf-8")
     with pytest.raises(ValueError):
         QualityOverlay(report)
+
+
+def test_receipt_ply_and_mainline_hash_must_match_exact_game(tmp_path):
+    run, _, report, _ = _verified_game(tmp_path)
+    overlay = QualityOverlay(report)
+    summary_path = run / "summary.json"
+    original = json.loads(summary_path.read_text(encoding="utf-8"))
+    for field, invalid in (("plies", 999), ("mainline_sha256", "a" * 64),
+                           ("plies", True)):
+        changed = json.loads(json.dumps(original))
+        changed["games"][0][field] = invalid
+        summary_path.write_text(json.dumps(changed), encoding="utf-8")
+        g = live_board.snapshot(run, quality_overlay=overlay)["duel"]["games"][0]
+        assert "quality_stats" not in g
+        assert "evaluation" in g["states"][1], (
+            "Position-local display remains distinct from aggregated claims")
