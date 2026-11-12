@@ -136,6 +136,31 @@ def _atomic_text(path: Path, contents: str, *, durable: bool = False) -> None:
         temp.unlink(missing_ok=True)
 
 
+
+def _publish_exclusive_text(path: Path, contents: str) -> None:
+    """POSIX durable create-if-absent; readers never see a half-written flag.
+
+    Unlike rename, link(2) fails if the destination already exists. The
+    temporary file is synced before publication, and the directory is synced
+    after removing the temporary hard link. The caller owns idempotency.
+    """
+    if os.name != "posix":
+        raise OSError("Exclusive durable publish requires POSIX")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        with temporary.open("x", encoding="utf-8", newline="\n") as stream:
+            stream.write(contents)
+            stream.flush()
+            os.fsync(stream.fileno())
+        # Atomic create-if-absent: never clobber an earlier stop request.
+        os.link(temporary, path)
+        temporary.unlink()
+        _fsync_directory_tree(path.parent)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 def _play_one(root: Path, exe: Path, white: Player, black: Player,
               depth: int | None, movetime: float | None, max_plies: int, round_number: int,
               hashes: dict[str, str], *, clock: tuple[int, int] | None = None,
