@@ -155,3 +155,87 @@ def test_stop_marker_is_synced_and_clear_commits_directory(tmp_path, monkeypatch
     assert (tmp_path / tournament.STOP_FILE).read_bytes() == first_bytes
     assert tournament.clear_stop(tmp_path)["stop_requested"] is False
     assert events[-1] == "directory-chain"
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX hardlink publication only")
+def test_exclusive_flag_is_published_only_after_data_sync(tmp_path, monkeypatch):
+    path = tmp_path / ".stop-requested.json"
+    events = []
+    real_fsync = os.fsync
+    real_link = os.link
+    def traced_fsync(fd):
+        events.append("file-fsync" if stat.S_ISREG(os.fstat(fd).st_mode) else "dir-fsync")
+        return real_fsync(fd)
+    def traced_link(src, dst):
+        assert Path(src).parent == Path(dst).parent
+        assert not path.exists(), "stop flag must not exist during initial write"
+        events.append("publish")
+        return real_link(src, dst)
+    monkeypatch.setattr(matches.os, "fsync", traced_fsync)
+    monkeypatch.setattr(matches.os, "link", traced_link)
+    matches._publish_exclusive_text(path, '{"reason":"operator"}\n')
+    assert events[:3] == ["file-fsync", "publish", "dir-fsync"]
+    assert path.read_text(encoding="utf-8") == '{"reason":"operator"}\n'
+    assert not list(tmp_path.glob("..stop-requested.json.*.tmp"))
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX hardlink publication only")
+def test_exclusive_flag_data_sync_failure_never_publishes_partial_marker(
+    tmp_path, monkeypatch
+):
+    path = tmp_path / ".stop-requested.json"
+    def fail_on_sync(fd):
+        raise OSError("injected stop data fsync failure")
+    monkeypatch.setattr(matches.os, "fsync", fail_on_sync)
+    with pytest.raises(OSError, match="stop data"):
+        matches._publish_exclusive_text(path, '{"reason":"operator"}\n')
+    assert not path.exists()
+    assert not list(tmp_path.glob("..stop-requested.json.*.tmp"))
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX hardlink publication only")
+def test_exclusive_flag_is_idempotent_and_does_not_replace_existing(tmp_path):
+    path = tmp_path / ".stop-requested.json"
+    path.write_text("first", encoding="utf-8")
+    with pytest.raises(FileExistsError):
+        matches._publish_exclusive_text(path, "second")
+    assert path.read_text(encoding="utf-8") == "first"
+    assert not list(tmp_path.glob("..stop-requested.json.*.tmp"))
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX hardlink publication only")
+def test_stop_request_refuses_existing_symlink(tmp_path, monkeypatch):
+    monkeypatch.setattr(tournament, "load_tournament", lambda run: {})
+    outside = tmp_path / "elsewhere.json"
+    path = tmp_path / tournament.STOP_FILE
+    path.symlink_to(outside)  # dangling symlink must also be rejected
+    with pytest.raises(ValueError, match="not a regular file"):
+        tournament.request_stop(tmp_path, reason="stop")
+    assert not outside.exists()
+    assert path.is_symlink()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX hardlink publication only")
+def test_failed_postpublication_sync_is_retryable_without_replacing_stop(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(tournament, "load_tournament", lambda run: {})
+    monkeypatch.setattr(tournament, "tournament_status", lambda run: {
+        "stop_requested": (Path(run) / tournament.STOP_FILE).is_file()})
+    original_sync = tournament._fsync_directory_tree
+    calls = []
+    def intermittent(path):
+        calls.append(path)
+        if len(calls) == 1:
+            raise OSError("injected stop directory sync failure")
+        return original_sync(path)
+    monkeypatch.setattr(tournament, "_fsync_directory_tree", intermittent)
+    monkeypatch.setattr(matches, "_fsync_directory_tree", intermittent)
+    with pytest.raises(OSError, match="directory sync"):
+        tournament.request_stop(tmp_path, reason="first request")
+    marker = tmp_path / tournament.STOP_FILE
+    original = marker.read_bytes()
+    assert json.loads(original)["reason"] == "first request"
+    assert tournament.request_stop(tmp_path, reason="second request")["stop_requested"]
+    assert marker.read_bytes() == original
+    assert len(calls) == 2
