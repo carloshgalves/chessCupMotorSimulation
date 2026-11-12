@@ -161,6 +161,13 @@ def test_three_controlled_arms_keep_a1_a2_identical_seed_and_b_alternate(
     assert all(len(a["receipt"]["games"]) == 2 for a in report["arms"])
     assert all(g["pgn_sha256"] for a in report["arms"] for g in a["receipt"]["games"])
     assert report["seed_effectiveness"] == "NO_EFFECT_EXPECTED_WITHOUT_EXTERNAL_REPERTOIRE"
+    assert report["diversity"]["games_total"] == 6
+    assert report["diversity"]["games_distinct"] == 1
+    assert report["diversity"]["games_duplicate"] == 5
+    assert len(report["game_evidence"]) == 6
+    assert sum(item["eligible_for_independent_evidence"] for item in
+               report["game_evidence"]) == 1
+    assert all(item["duplicate_mainline"] for item in report["game_evidence"][1:])
     assert json.loads((tmp_path / "experiment" / "execution.json").read_text()) == report
     assert sha256(plan.read_bytes()).hexdigest() == report["plan_file_sha256"]
     assert plan.read_bytes() == (tmp_path / "plan.json").read_bytes()
@@ -176,6 +183,9 @@ def test_first_two_blocks_preserve_plan_order_and_same_game_number_policy(
     report = _run(root, _plan(tmp_path), tmp_path / "trial", blocks=2)
     assert len(report["arms"]) == 6
     assert report["status"] == execution.STATUS_COMPLETED
+    assert report["diversity"]["games_total"] == 12
+    assert report["diversity"]["games_distinct"] == 1
+    assert report["diversity"]["games_duplicate"] == 11
     assert [c["seed"] for c in calls] == [2029, 2029, 2031, 2030, 2030, 2032]
     assert [a["block"] for a in report["arms"]] == [1, 1, 1, 2, 2, 2]
     assert all(a["game_number_policy"] == "1,2 per arm" for a in report["arms"])
