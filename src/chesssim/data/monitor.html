@@ -195,6 +195,25 @@
             Faixas por ordem do lance, não fases xadrezísticas detectadas.
             Resultados e perfis são declarados no PGN, não certificações de fidelidade histórica.</p>
         </section>
+        <section class="panel editorial-panel" aria-label="Comentário editorial fictício de xadrez">
+          <div class="panel-kicker">NARRATIVA OPCIONAL · FICÇÃO EDITORIAL</div>
+          <h2>Comentários e coletiva fictícia</h2>
+          <button type="button" id="editorial-toggle" aria-pressed="false">Ativar comentários</button>
+          <p class="hint">Interpretação editorial baseada somente em lances registrados.
+            Nunca são declarações, pensamentos ou entrevistas reais dos enxadristas históricos.
+            Não altera motor, PGN, relógio ou classificação.</p>
+          <p id="editorial-status" role="status" aria-live="polite">Desativado. Ative para ver a narração.</p>
+          <div id="editorial-current" class="editorial-current" hidden>
+            <strong id="editorial-kind">Comentário do tabuleiro</strong>
+            <p id="editorial-text"></p>
+          </div>
+          <div id="editorial-postgame" class="editorial-postgame" hidden>
+            <h3>Coletiva editorial pós-partida — fictícia</h3>
+            <p id="editorial-question"></p>
+            <p id="editorial-answer"></p>
+            <p class="hint">Baseada em resultado terminal e recibo reconciliado; não é fala atribuída a qualquer pessoa real.</p>
+          </div>
+        </section>
         <section class="panel history">
           <div class="panel-kicker">LANCES</div>
           <div class="headline" id="headline" aria-live="polite">Posição inicial</div>
