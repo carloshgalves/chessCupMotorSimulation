@@ -105,6 +105,7 @@ def apply_embargo(pieces: dict[str, list[dict]], *, min_ply: int
         "schema": SCHEMA,
         "status": status,
         "min_ply": min_ply,
+        "ply_origin": "PGN_FIRST_MAINLINE_MOVE_IS_PLY_1_EVEN_WITH_SETUP_FEN",
         "position_key": "POST_MOVE_FEN_FIELDS_1_TO_4_NO_CLOCKS",
         "max_replayed_states": MAX_REPLAYED_STATES,
         "replayed_states": budget[0],
@@ -127,8 +128,9 @@ def apply_embargo(pieces: dict[str, list[dict]], *, min_ply: int
         "limitations": [
             "No assurance about positions before min_ply.",
             "No export or mutation of holdout games; source cache remains accessible.",
-            "No transposition-based near-duplicate or engine-strength claim.",
-            "The embargo is on FEN position equality, not statistical independence.",
+            "Move-order transpositions into exactly the same FEN are detected; near-duplicates are not.",
+            "The embargo is on FEN position equality, not statistical independence or game-history equivalence.",
+            "Fifty-move counters and threefold repetition histories are outside the four-field FEN key.",
             "No UCI engine or sealed filesystem holdout is created.",
         ],
     }
