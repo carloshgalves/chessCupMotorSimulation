@@ -513,3 +513,72 @@ def test_forged_opening_trace_cannot_claim_repertoire_evidence(
         _run(root, plan, out, white_book=file)
     assert len(calls) == 1
     assert json.loads((out / "execution.json").read_text())["arms_completed"] == 0
+
+
+def test_output_cannot_live_inside_rodent_installation(tmp_path, monkeypatch):
+    root, calls, _ = _environment(tmp_path, monkeypatch)
+    out = root / "runs" / "trial"
+    with pytest.raises(ValueError, match="fora da instalação Rodent"):
+        _run(root, _plan(tmp_path), out)
+    assert not out.exists()
+    assert not calls
+
+
+def test_uci_cannot_return_receipts_from_outside_isolated_arm(
+    tmp_path, monkeypatch
+):
+    root, calls, _ = _environment(tmp_path, monkeypatch)
+    original = execution.play_duel
+    forged = tmp_path / "outside"
+    forged.mkdir()
+
+    def escape(*args, **kwargs):
+        original(*args, **kwargs)
+        return forged
+
+    monkeypatch.setattr(execution, "play_duel", escape)
+    out = tmp_path / "trial"
+    with pytest.raises(ValueError, match="fora do braço isolado"):
+        _run(root, _plan(tmp_path), out)
+    manifest = json.loads((out / "execution.json").read_text())
+    assert manifest["status"] == execution.STATUS_FAILED
+    assert manifest["arms_completed"] == 0
+    assert len(calls) == 1
+
+
+def test_cli_diversity_run_propagates_controls_and_never_reinterprets_plan(
+    tmp_path, monkeypatch, capsys
+):
+    from chesssim.cli import main
+    root = tmp_path / "rodent"
+    root.mkdir()
+    plan = tmp_path / "existing-plan.json"
+    plan.write_text("placeholder", encoding="utf-8")
+    out = tmp_path / "new-trial"
+    observed = []
+
+    def fake_execute(root_arg, plan_arg, out_arg, **options):
+        observed.append((root_arg, plan_arg, out_arg, options))
+        return {
+            "status": execution.STATUS_SUBSET,
+            "arms_completed": 3, "arms_planned": 3,
+            "design_sha256": "d" * 64,
+            "warning": "Not calibrated",
+        }
+
+    monkeypatch.setattr(execution, "execute_plan", fake_execute)
+    result = main([
+        "diversity-run", "--plan", str(plan),
+        "--rodent", str(root), "--out", str(out),
+        "--blocks", "1", "--depth", "8", "--max-plies", "300",
+        "--max-game-wall-seconds", "30",
+    ])
+    assert result == 0
+    assert len(observed) == 1
+    assert observed[0][:3] == (root, plan, out)
+    assert observed[0][3]["blocks"] == 1
+    assert observed[0][3]["depth"] == 8
+    assert observed[0][3]["max_plies"] == 300
+    assert observed[0][3]["max_game_wall_seconds"] == 30.0
+    assert json.loads(capsys.readouterr().out)["status"] == execution.STATUS_SUBSET
+    assert not out.exists()
