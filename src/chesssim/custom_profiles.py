@@ -299,3 +299,21 @@ def retire_fictional(library: Path, identifier: str) -> dict:
         if not _read_retirement(root, doc):
             raise
     return {**_summary(root, doc), "operation": "RETIRED_METADATA_ONLY"}
+
+
+def restore_fictional(library: Path, identifier: str) -> dict:
+    """Reactivate a locally retired identity without changing its UUID/content.
+
+    The previous retirement marker is removed only after a strict receipt
+    check; any marker corruption is fail-closed. This is a local user action,
+    not a change to historical roster membership or engine eligibility.
+    """
+    root = _library(library)
+    doc, _ = _read_id(root, identifier)
+    if not _read_retirement(root, doc):
+        return {**_summary(root, doc), "operation": "ALREADY_ACTIVE"}
+    marker = _retirement_path(root, identifier)
+    marker.unlink()
+    if os.name == "posix":
+        _fsync_directory_tree(root)
+    return {**_summary(root, doc), "operation": "RESTORED_METADATA_ONLY"}
