@@ -75,8 +75,11 @@ autentica a origem de licenças ou jogadores.
 
 Para auditar **sobreposição de posições** entre as partições, acrescente
 `--embargo-min-ply 2` (ou um limite escolhido entre 1 e 80). Sem essa
-flag, a saída v1 continua compatível e `position_embargo.status=NOT_RUN`:
-**não pode ser descrita como auditada por posições**.
+flag, a saída `chesssim-custom-train-only-split-v1` continua compatível e
+`position_embargo.status=NOT_RUN`: **não pode ser descrita como auditada
+por posições**. Com a flag, o manifesto passa a ter o novo schema
+`chesssim-custom-train-only-split-v2`; um consumidor que só reconheça
+v1 deverá rejeitar v2 em vez de presumir equivalência de critérios.
 
 ```bash
 chesssim custom-corpus-train \
@@ -92,7 +95,11 @@ chesssim custom-corpus-train \
 A partir do meio-lance escolhido, o sistema examina todas as posições
 **após cada lance, inclusive o último**, usando o estado FEN de quatro
 campos: peças, lado a jogar, roque e en passant, excluindo relógios de
-lances. A regra usa igualdade **exata de posição** — transposições de
+lances. **Ply 1** significa sempre o primeiro lance do PGN carregado,
+inclusive com `SetUp/FEN` inicial; não é o número absoluto de lances
+da partida no tabuleiro. O campo de en passant é canonizado segundo
+a representação legal da biblioteca de xadrez. O histórico de repetição
+e o contador de 50 lances não integram a comparação. A regra usa igualdade **exata de posição** — transposições de
 lances que chegam ao mesmo estado FEN são detectadas. Não examina
 posições anteriores ao limite escolhido; o corte deve ser interpretado
 como uma decisão metodológica do operador, nunca como garantia de
