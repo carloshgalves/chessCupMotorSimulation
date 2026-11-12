@@ -478,5 +478,71 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
                "Avaliação não disponível para esta posição");
   delete states[1].evaluation;
 
+  // #24 slice 2: only a completed, hash-matched PGN may supply a chart.
+  const missing={sampled:0,usable:0,excluded:0,critical:0,mean_loss_cp:null};
+  const active={sampled:2,usable:1,excluded:1,critical:1,mean_loss_cp:100};
+  const one={sampled:1,usable:1,excluded:0,critical:1,mean_loss_cp:100};
+  const excluded={sampled:1,usable:0,excluded:1,critical:0,mean_loss_cp:null};
+  const stats={
+    schema:"chesssim-verified-quality-stats-v1",
+    status:"DESCRIPTIVE_SINGLE_COMPLETED_GAME_NOT_RATING",
+    total_plies:2,coverage:active,
+    players:{
+      white:{name:"<img onerror=alert(1)>",model_declared:"RodentIV:Fischer"},
+      black:{name:"Tal",model_declared:"RodentIV:Tal"}
+    },
+    by_phase:{opening:active,middle:missing,late:missing},
+    by_side:{white:one,black:excluded},
+    by_phase_side:{
+      opening:{white:one,black:excluded},
+      middle:{white:missing,black:missing},
+      late:{white:missing,black:missing}
+    },
+    provenance:{
+      source:"independent-stockfish-postgame-v9.1",
+      pgn_sha256_prefix:"a".repeat(12),
+      stockfish_sha256_prefix:"b".repeat(12),
+      engine:"Stockfish",depth:18
+    }
+  };
+  vm.runInContext("feed.duel.games[0].quality_stats=" + JSON.stringify(stats) +
+    ";feed.duel.games[0].status='COMPLETED';" +
+    "feed.duel.games[0].result='1-0';cursor=1;render()",quality.context);
+  const playerBars=quality.elements.get("quality-stats-players");
+  const phaseBars=quality.elements.get("quality-stats-phases");
+  assert.equal(phaseBars.children.length,3);
+  assert.equal(playerBars.children.length,2);
+  assert.equal(phaseBars.children[0].children[1].textContent,
+               "100.00 cp de perda média · N=1 · 1 críticos");
+  assert.equal(phaseBars.children[0].children[2].children[0].style.width,"100.00%");
+  assert(playerBars.children[0].children[0].textContent.includes("<img onerror"),
+         "untrusted PGN player headers must remain inert text");
+  assert(playerBars.children[1].children[1].textContent.includes("Indisponível"),
+         "no eligible black scores must not be represented as zero");
+  assert(quality.elements.get("quality-stats-status").textContent.includes(
+         "2 de 2 meios-lances amostrados"));
+  assert(quality.elements.get("quality-stats-provenance").textContent.includes(
+         "PGN SHA-256 aaaaaaaaaaaa"));
+  const qualityFilter=quality.elements.get("quality-phase-filter");
+  qualityFilter.value="middle";
+  qualityFilter.events.change();
+  assert.equal(phaseBars.children.length,1,"filter only shows one phase");
+  assert(phaseBars.children[0].children[1].textContent.includes("Indisponível"));
+  assert(playerBars.children.every(row=>
+    row.children[1].textContent.includes("Indisponível")),
+    "phase filter applies equally to both sides");
+  qualityFilter.value="all";qualityFilter.events.change();
+  assert.equal(phaseBars.children.length,3);
+
+  // A new selected game must never inherit cached statistics of the old PGN.
+  quality.location.hash="#match=r01-m01";
+  await flush();
+  assert.equal(phaseBars.children.length,0);
+  assert.equal(playerBars.children.length,0);
+  assert(quality.elements.get("quality-stats-status").textContent.includes("Indisponível"));
+  assert.equal(qualityFilter.disabled,true);
+  assert(!quality.requests.some(uri=>uri.includes("quality-report")),
+         "the browser cannot fetch local reports or start Stockfish via HTTP");
+
   console.log("Live bracket browser smoke: PASS");
 })().catch(error=>{console.error(error);process.exitCode=1;});
