@@ -456,9 +456,16 @@ function renderQualityStats(game) {
     const person = stats.players[side] || {};
     const label = (side === "white" ? "Brancas" : "Pretas") +
       ": " + String(person.name || "não identificado").slice(0, 100);
+    // Metadata are *declared in the signed-off PGN*, not independent proof
+    // that a historical personality is calibrated or faithfully simulated.
+    const profile = person.model_declared ?
+      " · modelo PGN " + String(person.model_declared).slice(0, 70) +
+      (person.profile_sha256_prefix ?
+        " · perfil SHA-256 " + String(person.profile_sha256_prefix) : "") :
+      " · modelo não identificado";
     const evidence = selected === "all" ?
       stats.by_side[side] : stats.by_phase_side[selected]?.[side];
-    return [label, evidence];
+    return [label + profile, evidence];
   });
   drawQualityBars("quality-stats-phases", phaseRows);
   drawQualityBars("quality-stats-players", players);
