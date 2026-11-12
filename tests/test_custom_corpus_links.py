@@ -264,7 +264,7 @@ def test_missing_or_symbolic_event_fails_closed(tmp_path):
     outside = tmp_path / "sensitive"
     outside.write_bytes(b"do-not-touch")
     second.symlink_to(outside)
-    with pytest.raises(ValueError, match="simbólic"):
+    with pytest.raises(ValueError, match="symlink"):
         links.corpus_status(library, item["id"])
     assert outside.read_bytes() == b"do-not-touch"
 
