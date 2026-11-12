@@ -352,3 +352,130 @@ def test_default_minimum_does_not_promote_small_training_partition(tmp_path):
     assert report["status"] == "INSUFFICIENT_PARTITION_EVIDENCE"
     assert report["uci_eligible"] is False
     assert report["historically_validated"] is False
+
+
+def _scripted_game(moves: str, played: str) -> str:
+    game = chess.pgn.Game()
+    game.headers["White"] = NAME
+    game.headers["Black"] = OTHER
+    game.headers["Date"] = played
+    game.headers["Result"] = "1-0"
+    board = game.board()
+    node = game
+    for text in moves.split():
+        move = chess.Move.from_uci(text)
+        assert move in board.legal_moves
+        node = node.add_variation(move)
+        board.push(move)
+    return str(game) + "\n\n"
+
+
+def test_explicit_position_embargo_keeps_disjoint_short_games_and_is_audited(tmp_path):
+    library, profile, cache, link = _setup(tmp_path)
+    out = tmp_path / "with-embargo"
+    doc = _prepare(
+        library, profile, cache, link, out,
+        min_train=5, embargo_min_ply=2)
+    assert doc["position_embargo"]["status"] == "AUDITED_DISJOINT"
+    assert doc["position_embargo"]["min_ply"] == 2
+    assert doc["position_embargo"]["post_quarantine_cross_partition_overlap_unique_positions"] == 0
+    assert doc["status"] == "TRAIN_ONLY_PREPARED_NOT_VALIDATED"
+    assert doc["uci_eligible"] is False
+    assert doc["historically_validated"] is False
+    assert doc["position_embargo"]["original_partition_games"] == {
+        "train": 11, "validation": 3, "holdout": 4}
+    assert doc["position_embargo"]["output_partition_games"] == {
+        key: value["games"] for key, value in doc["partitions"].items()}
+    assert (out / "train.pgn").is_file()
+
+
+def test_legacy_train_only_export_explicitly_marks_position_embargo_not_run(tmp_path):
+    library, profile, cache, link = _setup(tmp_path)
+    result = _prepare(
+        library, profile, cache, link, tmp_path / "unembargoed", min_train=5)
+    assert result["position_embargo"]["status"] == "NOT_RUN"
+    assert result["status"] == "TRAIN_ONLY_PREPARED_NOT_VALIDATED"
+    assert result["position_embargo"]["reason"].startswith("The historical")
+
+
+def test_transposed_training_positions_are_quarantined_not_exported(tmp_path):
+    games = [
+        _scripted_game("g1f3 g8f6 g2g3 g7g6", "2026.01.01"),
+        _scripted_game("g2g3 g7g6 g1f3 g8f6", "2026.02.01"),
+        _scripted_game("e2e4 e7e5 g1f3 b8c6", "2026.03.01"),
+    ]
+    library, profile, cache, link = _setup(tmp_path, games=games)
+    out = tmp_path / "transposition"
+    result = _prepare(
+        library, profile, cache, link, out,
+        min_train=1, embargo_min_ply=4)
+    assert result["position_embargo"]["status"] == "AUDITED_DISJOINT"
+    assert result["position_embargo"]["quarantined_games"]["train_overlap_reserved"] == 1
+    assert result["status"] == "INSUFFICIENT_PARTITION_EVIDENCE"
+    assert result["partitions"]["train"]["games"] == 0
+    assert result["train_pgn_bytes"] == 0
+    assert (out / "train.pgn").read_bytes() == b""
+    assert result["partitions"]["validation"]["mainline_sha256"] is None
+    assert result["partitions"]["holdout"]["mainline_sha256"] is None
+
+
+def test_validation_overlap_holdout_quarantined_without_moving_holdout(tmp_path):
+    games = [
+        _scripted_game("e2e4 e7e5 g1f3 b8c6", "2026.01.01"),
+        _scripted_game("g2g3 g7g6 g1f3 g8f6", "2026.02.01"),
+        _scripted_game("g1f3 g8f6 g2g3 g7g6", "2026.03.01"),
+    ]
+    library, profile, cache, link = _setup(tmp_path, games=games)
+    result = _prepare(
+        library, profile, cache, link, tmp_path / "reserved-overlap",
+        min_train=1, embargo_min_ply=4)
+    assert result["position_embargo"]["quarantined_games"]["validation_overlap_holdout"] == 1
+    assert result["partitions"]["validation"]["games"] == 0
+    assert result["partitions"]["holdout"]["games"] == 1
+    assert result["status"] == "INSUFFICIENT_PARTITION_EVIDENCE"
+    assert result["partitions"]["holdout"]["mainline_sha256"] is None
+
+
+def test_embargo_after_game_end_yields_no_false_clean_certification(tmp_path):
+    library, profile, cache, link = _setup(tmp_path)
+    out = tmp_path / "too-short-for-embargo"
+    doc = _prepare(
+        library, profile, cache, link, out,
+        min_train=1, embargo_min_ply=3)
+    assert doc["position_embargo"]["status"] == "INCOMPLETE_RESERVED_POSITION_COVERAGE"
+    assert doc["status"] == "INSUFFICIENT_POSITION_EVIDENCE"
+    assert doc["position_embargo"]["reserved_games_with_no_audited_position"] > 0
+    assert doc["partitions"]["train"]["games"] == 0
+    assert (out / "train.pgn").read_bytes() == b""
+    assert not list(out.glob("*holdout*"))
+
+
+@pytest.mark.parametrize("invalid", [0, -1, 81, True, 1.5, "4"])
+def test_embargo_min_ply_bad_input_has_no_output(tmp_path, invalid):
+    library, profile, cache, link = _setup(tmp_path)
+    dest = tmp_path / "bad-embargo"
+    with pytest.raises(ValueError, match="1 a 80"):
+        _prepare(
+            library, profile, cache, link, dest,
+            embargo_min_ply=invalid)
+    assert not dest.exists()
+
+
+def test_embargo_cli_opt_in_publishes_manifest_and_no_reserved_pgn(
+        tmp_path, capsys):
+    library, profile, cache, link = _setup(tmp_path)
+    out = tmp_path / "via-cli"
+    args = [
+        "custom-corpus-train", "--library", str(library),
+        "--id", profile["id"], "--cache", str(cache),
+        "--expected-head", link["head_sha256"],
+        "--out", str(out), "--min-train", "5",
+        "--embargo-min-ply", "2",
+    ]
+    assert main(args) == 0
+    response = json.loads(capsys.readouterr().out)
+    assert response["position_embargo"]["status"] == "AUDITED_DISJOINT"
+    assert sorted(p.name for p in out.iterdir()) == ["split.json", "train.pgn"]
+    assert json.loads((out / "split.json").read_text()) == response
+    assert all(name not in json.dumps(response) for name in (
+        "g1f3", "e2e4", "rnbqkbnr/pppp"))
