@@ -1,0 +1,288 @@
+"""Controlled UCI pilot for pre-registered A1/A2/B opening-seed experiments.
+
+One immutable plan, three isolated two-game arms per block. This executor
+records REAL results when run with the operator's authorized Rodent files,
+but never treats variation as historical similarity or independent evidence.
+"""
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from hashlib import sha256
+import json
+import math
+import os
+from pathlib import Path
+import re
+import stat
+
+import chess.pgn
+
+from .catalog import find_player
+from .diversity_experiment import design
+from .game_diversity import mainline_identity
+from .matches import _atomic_text, file_hash, play_duel, validate
+from .opening_books import load_opening_book
+
+MAX_PLAN_BYTES = 256 * 1024
+MAX_SUMMARY_BYTES = 256 * 1024
+MAX_PGN_BYTES = 2 * 1024 * 1024
+SHA64 = re.compile(r"[0-9a-f]{64}\Z")
+STATUS_PLANNED = "REGISTERED_NOT_RUN"
+STATUS_RUNNING = "RUNNING_UNVERIFIED"
+STATUS_COMPLETED = "EXECUTED_RESULTS_NOT_CALIBRATED"
+STATUS_FAILED = "FAILED_REQUIRES_MANUAL_INSPECTION"
+CONDITIONS = ("A1_RESEARCH_CONTROL", "A2_EXACT_REPLICATE", "B_ALTERNATE_SEED")
+
+
+def _read_regular(path: Path, cap: int) -> bytes:
+    """Bounded, single-FD POSIX read. Reject aliases and nonregular files."""
+    if path.is_symlink():
+        raise ValueError(f"Arquivo simbólico não permitido: {path.name}")
+    try:
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    except OSError as exc:
+        raise ValueError(f"Arquivo inacessível: {path.name}") from exc
+    with os.fdopen(fd, "rb") as source:
+        info = os.fstat(source.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_size > cap:
+            raise ValueError(f"Arquivo inválido ou excessivo: {path.name}")
+        data = source.read(cap + 1)
+    if len(data) > cap:
+        raise ValueError(f"Arquivo cresceu além do limite: {path.name}")
+    return data
+
+
+def _unique_pairs(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Chaves JSON duplicadas no plano")
+        result[key] = value
+    return result
+
+
+def load_registered_plan(path: Path) -> tuple[dict, str]:
+    """Regenerate the deterministic contract before accepting any UCI work."""
+    raw = _read_regular(path, MAX_PLAN_BYTES)
+    try:
+        plan = json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_pairs)
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError("Plano JSON inválido") from exc
+    if not isinstance(plan, dict):
+        raise ValueError("Plano deve ser objeto JSON")
+    players, trials, blocks = plan.get("players"), plan.get("trials"), plan.get("blocks")
+    flag = plan.get("seed_effectiveness")
+    declared = flag == "OPERATOR_DECLARED_EXTERNAL_REPERTOIRE_UNVERIFIED"
+    if flag not in {
+        "OPERATOR_DECLARED_EXTERNAL_REPERTOIRE_UNVERIFIED",
+        "NO_EFFECT_EXPECTED_WITHOUT_EXTERNAL_REPERTOIRE",
+    }:
+        raise ValueError("Hipótese de repertório inválida")
+    if not (isinstance(players, list) and len(players) == 2 and
+            isinstance(blocks, list) and bool(blocks) and type(trials) is int and
+            2 <= trials <= 40 and len(blocks) == trials):
+        raise ValueError("Estrutura ou N de blocos inválidos")
+    first = blocks[0]
+    if not isinstance(first, dict) or not isinstance(first.get("runs"), list) or not first["runs"]:
+        raise ValueError("Primeiro bloco inválido")
+    seed = first["runs"][0]
+    if not isinstance(seed, dict):
+        raise ValueError("Condição de seed inválida")
+    expected = design(players, seed=seed.get("seed"), trials=trials,
+                      declared_external_repertoire=declared)
+    if plan != expected:
+        raise ValueError("Plano diverge do pré-registro imutável; gere novamente")
+    return plan, sha256(raw).hexdigest()
+
+
+def _no_symbolic_ancestors(path: Path) -> None:
+    if path.is_symlink() or any(parent.is_symlink() for parent in path.parents):
+        raise ValueError("Destino com symlink não permitido")
+    if path.exists():
+        raise FileExistsError("Pasta do ensaio já existe; nenhuma retomada implícita")
+
+
+def _load_books(plan: dict, white, black, white_book: Path | None,
+                black_book: Path | None) -> tuple[dict, dict]:
+    declared = plan["seed_effectiveness"] == "OPERATOR_DECLARED_EXTERNAL_REPERTOIRE_UNVERIFIED"
+    if declared != (white_book is not None or black_book is not None):
+        raise ValueError("Declaração do plano e presença dos livros externos não coincidem")
+    books = {}
+    provenance = {}
+    for player, source in ((white, white_book), (black, black_book)):
+        if source is None:
+            continue
+        if source.is_symlink():
+            raise ValueError("Livro simbólico não autorizado")
+        book = load_opening_book(source, player.slug)
+        info = book.get("source")
+        if not isinstance(info, dict):
+            raise ValueError("Livro sem fonte auditável")
+        provenance_info = info.get("provenance")
+        recorded_sha = info.get("pgn_sha256")
+        if (not isinstance(provenance_info, dict) or
+                provenance_info.get("status") not in {
+                    "FROZEN_V5_TRAIN_ONLY", "PUBLIC_PGN_UNPARTITIONED_EXPLORATORY"
+                } or not isinstance(recorded_sha, str) or not SHA64.fullmatch(recorded_sha)):
+            raise ValueError("Proveniência do repertório ausente ou não reconhecida")
+        books[player.slug] = book
+        provenance[player.slug] = {
+            "file_sha256": file_hash(source),
+            "source_pgn_sha256": recorded_sha,
+            "source_policy": provenance_info["status"],
+            "path": str(source),
+        }
+    return books, provenance
+
+
+def _audit_completed_pair(folder: Path, *, players: list[str], seed: int,
+                          expected_hashes: dict, has_books: bool) -> dict:
+    """Reconcile disk receipts and both UCI PGNs before recording completion."""
+    raw = _read_regular(folder / "summary.json", MAX_SUMMARY_BYTES)
+    report = json.loads(raw)
+    if (not isinstance(report, dict) or report.get("status") != "COMPLETED" or
+            report.get("players") != players or
+            report.get("file_hashes") != expected_hashes or
+            type(report.get("opening_seed")) is not (int if has_books else type(None)) or
+            (has_books and report["opening_seed"] != seed)):
+        raise ValueError("Resumo UCI incompleto ou com recursos diferentes")
+    games = report.get("games")
+    if not isinstance(games, list) or len(games) != 2:
+        raise ValueError("Controle requer duas partidas completas com cores invertidas")
+    expected_colors = (players, list(reversed(players)))
+    receipts = []
+    for index, record in enumerate(games, 1):
+        if (not isinstance(record, dict) or record.get("status") != "COMPLETED" or
+                record.get("white") != expected_colors[index - 1][0] or
+                record.get("black") != expected_colors[index - 1][1] or
+                type(record.get("round")) is not int or record["round"] != index or
+                record.get("result") not in {"1-0", "0-1", "1/2-1/2"}):
+            raise ValueError("Recibo UCI não confirma ambas as cores")
+        pgn_path = folder / f"jogo_{index}.pgn"
+        payload = _read_regular(pgn_path, MAX_PGN_BYTES)
+        from io import StringIO
+        stream = StringIO(payload.decode("utf-8-sig"))
+        game = chess.pgn.read_game(stream)
+        if game is None or game.errors or chess.pgn.read_game(stream) is not None:
+            raise ValueError("PGN não contém exatamente uma partida legal")
+        trajectory, plies = mainline_identity(game)
+        if (type(record.get("plies")) is not int or record["plies"] != plies or
+                record.get("mainline_sha256") != trajectory or
+                game.headers.get("Result") != record["result"]):
+            raise ValueError("Recibo diverge da trajetória ou resultado do PGN")
+        receipts.append({
+            "game": index, "pgn_sha256": sha256(payload).hexdigest(),
+            "mainline_sha256": trajectory, "plies": plies,
+            "white": record["white"], "black": record["black"], "result": record["result"],
+            "opening_moves": record.get("opening_moves"),
+            "opening_seed": record.get("opening_seed"),
+            "opening_trace": record.get("opening_trace"),
+        })
+    duo = _read_regular(folder / "duelo.pgn", MAX_PGN_BYTES * 2)
+    return {
+        "folder": str(folder), "summary_sha256": sha256(raw).hexdigest(),
+        "duel_pgn_sha256": sha256(duo).hexdigest(), "games": receipts,
+        "status": "COMPLETED_RECEIPTS_VERIFIED",
+    }
+
+
+def execute_plan(root: Path, plan_path: Path, out: Path, *,
+                 white_book: Path | None = None, black_book: Path | None = None,
+                 blocks: int = 1, depth: int = 8, max_plies: int = 400,
+                 max_game_wall_seconds: float = 600) -> dict:
+    if type(blocks) is not int or not 1 <= blocks <= 40:
+        raise ValueError("Execução limitada a 1..40 blocos")
+    if type(depth) is not int or not 1 <= depth <= 30:
+        raise ValueError("Profundidade de teste deve ser 1..30")
+    if type(max_plies) is not int or not 2 <= max_plies <= 600:
+        raise ValueError("Limite de meios-lances deve ser 2..600")
+    if (type(max_game_wall_seconds) not in (float, int) or
+            not math.isfinite(max_game_wall_seconds) or
+            not 1 <= max_game_wall_seconds <= 7200):
+        raise ValueError("Orçamento por partida deve ser 1..7200 segundos")
+    plan, plan_file_sha = load_registered_plan(plan_path)
+    if blocks > plan["trials"]:
+        raise ValueError("Blocos solicitados excedem o plano")
+    _no_symbolic_ancestors(out)
+    if out.resolve() == plan_path.resolve() or plan_path.resolve().is_relative_to(out.resolve()):
+        raise ValueError("Plano de origem não pode ficar dentro do destino novo")
+    players = [find_player(slug) for slug in plan["players"]]
+    white, black = players
+    root = root.expanduser().resolve()
+    if not root.is_dir():
+        raise ValueError("Diretório de motor inexistente")
+    executable, paths = validate(root, white, black)
+    books, book_sources = _load_books(plan, white, black, white_book, black_book)
+    frozen = {"exe": file_hash(executable)}
+    frozen.update({slug: file_hash(path) for slug, path in paths.items()})
+    inputs = {"engine_sha256": frozen["exe"],
+              "profiles": {slug: frozen[slug] for slug in plan["players"]},
+              "external_books": book_sources,
+              "depth": depth, "max_plies": max_plies,
+              "max_game_wall_seconds": max_game_wall_seconds,
+              "use_uci_internal_book": False, "two_reversed_colors": True}
+    # Explicit, exclusive creation. Never overwrite or implicitly resume an
+    # uncertain run after a crash (even if some arm folders look complete).
+    out.mkdir(parents=True, exist_ok=False)
+    manifest = {
+        "schema": "chesssim-diversity-execution-v1",
+        "status": STATUS_PLANNED, "created_utc": datetime.now(timezone.utc).isoformat(),
+        "plan_file_sha256": plan_file_sha,
+        "design_sha256": plan["design_sha256"],
+        "seed_effectiveness": plan["seed_effectiveness"],
+        "players": plan["players"], "blocks_requested": blocks,
+        "arms_planned": 3 * blocks, "arms_completed": 0,
+        "inputs": inputs, "arms": [],
+        "warning": ("Executed UCI observations only; no claim of improved diversity, "
+                    "independent observations or historical fidelity. "
+                    "No sealed holdout is loaded or evaluated."),
+    }
+
+    def checkpoint() -> None:
+        _atomic_text(out / "execution.json", json.dumps(
+            manifest, ensure_ascii=False, indent=2) + "\n",
+            durable=os.name == "posix")
+
+    checkpoint()
+    try:
+        manifest["status"] = STATUS_RUNNING
+        checkpoint()
+        for block in plan["blocks"][:blocks]:
+            for expected_condition, arm in zip(CONDITIONS, block["runs"], strict=True):
+                if arm["condition"] != expected_condition:
+                    raise RuntimeError("Condição divergente do plano auditado")
+                # Refuse mutation of engine, profile or book files between
+                # arms: otherwise a seed experiment has changed covariates.
+                exe_now, paths_now = validate(root, white, black)
+                current = {"exe": file_hash(exe_now)}
+                current.update({slug: file_hash(path) for slug, path in paths_now.items()})
+                if current != frozen or exe_now != executable:
+                    raise RuntimeError("Hash do motor/perfis mudou entre braços")
+                for slug, ref in book_sources.items():
+                    source = white_book if slug == white.slug else black_book
+                    if source is None or file_hash(source) != ref["file_sha256"]:
+                        raise RuntimeError("Hash do repertório mudou entre braços")
+                block_dir = out / "arms" / f"block-{block['block']:03d}" / expected_condition.lower()
+                folder = play_duel(
+                    root, block_dir, white, black, depth=depth, movetime=None,
+                    reverse=True, max_plies=max_plies, use_books=False,
+                    historical_openings=books or None, opening_seed=arm["seed"],
+                    opening_min_count=1, max_wall_seconds=max_game_wall_seconds)
+                receipt = _audit_completed_pair(
+                    folder, players=plan["players"], seed=arm["seed"],
+                    expected_hashes=frozen, has_books=bool(books))
+                manifest["arms"].append({
+                    "block": block["block"], "condition": expected_condition,
+                    "seed": arm["seed"], "game_number_policy": "1,2 per arm",
+                    "receipt": receipt,
+                })
+                manifest["arms_completed"] += 1
+                checkpoint()
+        manifest["status"] = STATUS_COMPLETED
+    except BaseException as exc:
+        manifest["status"] = STATUS_FAILED
+        manifest["error"] = type(exc).__name__ + ": " + str(exc)[:250]
+        raise
+    finally:
+        checkpoint()
+    return manifest
