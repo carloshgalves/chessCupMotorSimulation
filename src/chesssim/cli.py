@@ -86,6 +86,37 @@ def main(argv: list[str] | None = None) -> int:
     tournament_resolve.add_argument("--winner", required=True)
     tournament_resolve.add_argument("--reason", required=True, help="Justificativa formal registrada no manifesto")
 
+    custom_create = sub.add_parser(
+        "custom-player-create", help="Registra identidade fictícia local; NÃO instala perfil UCI")
+    custom_create.add_argument("--library", type=Path, required=True)
+    custom_create.add_argument("--name", required=True,
+                               help="Nome fictício original declarado pelo operador")
+
+    custom_list = sub.add_parser(
+        "custom-player-list", help="Lista identidades fictícias separadas do elenco histórico")
+    custom_list.add_argument("--library", type=Path, required=True)
+
+    custom_export = sub.add_parser(
+        "custom-player-export", help="Exporta cópia portátil verificada do registro fictício")
+    custom_export.add_argument("--library", type=Path, required=True)
+    custom_export.add_argument("--id", required=True)
+    custom_export.add_argument("--out", type=Path, required=True)
+
+    custom_import = sub.add_parser(
+        "custom-player-import", help="Importa registro fictício, sem executar arquivos ou motores")
+    custom_import.add_argument("--library", type=Path, required=True)
+    custom_import.add_argument("--file", type=Path, required=True)
+
+    custom_retire = sub.add_parser(
+        "custom-player-retire", help="Desativa cadastro mantendo registro original")
+    custom_retire.add_argument("--library", type=Path, required=True)
+    custom_retire.add_argument("--id", required=True)
+
+    custom_restore = sub.add_parser(
+        "custom-player-restore", help="Reativa cadastro local desativado sem trocar identidade")
+    custom_restore.add_argument("--library", type=Path, required=True)
+    custom_restore.add_argument("--id", required=True)
+
     diversity = sub.add_parser(
         "diversity-report", help="Compara sequências PGN reais de múltiplos duelos, sem alterar motores")
     diversity.add_argument("--runs", type=Path, nargs="+", required=True,
@@ -595,6 +626,32 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     try:
+        if args.command in {
+            "custom-player-create", "custom-player-list",
+            "custom-player-export", "custom-player-import", "custom-player-retire",
+            "custom-player-restore",
+        }:
+            from .custom_profiles import (
+                create_fictional, list_fictional, export_fictional,
+                import_fictional, retire_fictional, restore_fictional,
+            )
+            if args.command == "custom-player-create":
+                result = create_fictional(args.library, args.name)
+            elif args.command == "custom-player-list":
+                result = {
+                    "profiles": list_fictional(args.library),
+                    "source": "LOCAL_METADATA_ONLY_NOT_ROSTER",
+                }
+            elif args.command == "custom-player-export":
+                result = export_fictional(args.library, args.id, args.out)
+            elif args.command == "custom-player-import":
+                result = import_fictional(args.library, args.file)
+            elif args.command == "custom-player-retire":
+                result = retire_fictional(args.library, args.id)
+            else:
+                result = restore_fictional(args.library, args.id)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0
         if args.command == "diversity-plan":
             from .diversity_experiment import export_plan
             plan = export_plan(args.players, args.out, seed=args.seed,
