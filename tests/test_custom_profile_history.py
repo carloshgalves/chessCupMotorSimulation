@@ -303,3 +303,36 @@ def test_hard_limit_sixty_four_revisions_and_no_sixty_fifth(tmp_path):
         _rename(library, previous, "Character 65")
     assert len(_rows(library, original["id"])) == 64
     assert core.list_fictional(library)[0]["revision"] == 64
+
+
+def test_chain_rejects_backdated_revision_with_recomputed_hash(tmp_path):
+    library, original = _created(tmp_path)
+    _rename(library, original, "Mira Ravenwood")
+    row_path = _rows(library, original["id"])[0]
+    row = json.loads(row_path.read_text(encoding="utf-8"))
+    row["event"]["recorded_utc"] = "1900-01-01T00:00:00Z"
+    row["sha256"] = core._sha(row["event"])
+    row_path.write_text(json.dumps(row), encoding="utf-8")
+    with pytest.raises(ValueError, match="Cronologia"):
+        history.history_fictional(library, original["id"])
+
+
+def test_bundle_rejects_regressive_time_with_valid_rehashed_lineage(tmp_path):
+    library, original = _created(tmp_path)
+    one = _rename(library, original, "Mira Ravenwood")
+    _rename(library, one, "Élise Ravenwood")
+    exported = tmp_path / "portable.json"
+    core.export_fictional(library, original["id"], exported)
+    body = json.loads(exported.read_text(encoding="utf-8"))
+    body["revisions"][0]["event"]["recorded_utc"] = "2000-01-01T00:00:00Z"
+    first = body["revisions"][0]
+    first["sha256"] = core._sha(first["event"])
+    body["revisions"][1]["event"]["previous_sha256"] = first["sha256"]
+    body["revisions"][1]["sha256"] = core._sha(body["revisions"][1]["event"])
+    body["sha256"] = core._sha({k: v for k, v in body.items() if k != "sha256"})
+    forged = tmp_path / "forged.json"
+    forged.write_text(json.dumps(body), encoding="utf-8")
+    target = tmp_path / "target"
+    with pytest.raises(ValueError, match="Cronologia"):
+        core.import_fictional(target, forged)
+    assert not target.exists()
