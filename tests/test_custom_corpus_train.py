@@ -5,8 +5,6 @@ from datetime import date
 from hashlib import sha256
 from io import StringIO
 import json
-from pathlib import Path
-import shutil
 import socket
 import subprocess
 
