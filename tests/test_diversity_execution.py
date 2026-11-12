@@ -76,6 +76,8 @@ def _environment(tmp_path, monkeypatch):
                 "plies": plies, "opening_moves": {"white": 0, "black": 0},
                 "opening_seed": options["opening_seed"] if options["historical_openings"] else None,
                 "opening_trace": [],
+                "opening_mode": ("historical-v09-exploratory"
+                                 if options["historical_openings"] else "disabled"),
             })
             text = str(game) + "\n\n"
             (folder / f"jogo_{index}.pgn").write_text(text, encoding="utf-8")
@@ -111,7 +113,9 @@ def test_three_controlled_arms_keep_a1_a2_identical_seed_and_b_alternate(
     root, calls, _ = _environment(tmp_path, monkeypatch)
     plan = _plan(tmp_path)
     report = _run(root, plan, tmp_path / "experiment")
-    assert report["status"] == execution.STATUS_COMPLETED
+    assert report["status"] == execution.STATUS_SUBSET
+    assert report["blocks_total_in_plan"] == 2
+    assert report["blocks_requested"] == 1
     assert report["arms_planned"] == 3
     assert report["arms_completed"] == 3
     assert [c["seed"] for c in calls] == [2029, 2029, 2031]
@@ -135,6 +139,7 @@ def test_first_two_blocks_preserve_plan_order_and_same_game_number_policy(
     root, calls, _ = _environment(tmp_path, monkeypatch)
     report = _run(root, _plan(tmp_path), tmp_path / "trial", blocks=2)
     assert len(report["arms"]) == 6
+    assert report["status"] == execution.STATUS_COMPLETED
     assert [c["seed"] for c in calls] == [2029, 2029, 2031, 2030, 2030, 2032]
     assert [a["block"] for a in report["arms"]] == [1, 1, 1, 2, 2, 2]
     assert all(a["game_number_policy"] == "1,2 per arm" for a in report["arms"])
@@ -301,3 +306,54 @@ def test_caller_destination_symlink_is_rejected(tmp_path, monkeypatch):
         _run(root, plan, alias / "trial")
     assert not (external / "trial").exists()
     assert not calls
+
+
+def test_corrupt_consolidated_duel_is_not_counted(tmp_path, monkeypatch):
+    root, calls, _ = _environment(tmp_path, monkeypatch)
+    original = execution.play_duel
+
+    def corrupt_duo(*args, **kwargs):
+        folder = original(*args, **kwargs)
+        (folder / "duelo.pgn").write_text("not a tournament PGN", encoding="utf-8")
+        return folder
+
+    monkeypatch.setattr(execution, "play_duel", corrupt_duo)
+    out = tmp_path / "trial"
+    with pytest.raises(ValueError, match="PGN consolidado"):
+        _run(root, _plan(tmp_path), out)
+    report = json.loads((out / "execution.json").read_text())
+    assert report["arms_completed"] == 0
+    assert report["status"] == execution.STATUS_FAILED
+    assert len(calls) == 1
+
+
+def test_wrong_per_game_opening_seed_is_never_counted(tmp_path, monkeypatch):
+    root, calls, _ = _environment(tmp_path, monkeypatch)
+    original = execution.play_duel
+
+    def forged_record(*args, **kwargs):
+        folder = original(*args, **kwargs)
+        p = folder / "summary.json"
+        receipt = json.loads(p.read_text())
+        receipt["games"][1]["opening_seed"] = 9
+        p.write_text(json.dumps(receipt))
+        return folder
+
+    monkeypatch.setattr(execution, "play_duel", forged_record)
+    out = tmp_path / "trial"
+    with pytest.raises(ValueError, match="seed e política"):
+        _run(root, _plan(tmp_path), out)
+    assert json.loads((out / "execution.json").read_text())["arms_completed"] == 0
+    assert len(calls) == 1
+
+
+def test_registered_plan_does_not_treat_partial_execution_as_all_trials(
+    tmp_path, monkeypatch
+):
+    root, _, _ = _environment(tmp_path, monkeypatch)
+    p = _plan(tmp_path)
+    report = _run(root, p, tmp_path / "trial", blocks=1)
+    assert report["status"] == execution.STATUS_SUBSET
+    assert report["blocks_requested"] == 1
+    assert report["blocks_total_in_plan"] == 2
+    assert report["arms_planned"] == 3
