@@ -96,8 +96,9 @@ def apply_embargo(pieces: dict[str, list[dict]], *, min_ply: int
     # If any reserved game has no auditable post-move position, no affirmative
     # certification may be issued. A group emptied by quarantine also fails
     # the later train/validation/holdout sufficiency check.
-    complete_reserved = (quarantined["validation_unassessed_short"] == 0 and
-                         unassessed_holdout == 0)
+    complete_reserved = (bool(pieces["validation"]) and bool(pieces["holdout"])
+                         and quarantined["validation_unassessed_short"] == 0
+                         and unassessed_holdout == 0)
     status = ("AUDITED_DISJOINT" if complete_reserved else
               "INCOMPLETE_RESERVED_POSITION_COVERAGE")
     report = {
