@@ -355,3 +355,24 @@ def test_concurrent_retire_and_restore_serialize_without_corrupt_marker(
     statuses = [f.result()["operation"] for f in futures]
     assert sorted(statuses) == ["ALREADY_ACTIVE", "RESTORED_METADATA_ONLY"]
     assert profiles.list_fictional(root)[0]["status"] == profiles.STATUS
+
+
+def test_list_cannot_observe_intermediate_retirement_states(tmp_path):
+    root, profile = _new(tmp_path)
+    def change_state():
+        for _ in range(12):
+            profiles.retire_fictional(root, profile["id"])
+            profiles.restore_fictional(root, profile["id"])
+    def read_state():
+        for _ in range(40):
+            rows = profiles.list_fictional(root)
+            assert len(rows) == 1
+            assert rows[0]["status"] in (
+                profiles.STATUS, "RETIRED_METADATA_ONLY")
+            assert rows[0]["id"] == profile["id"]
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        writer = pool.submit(change_state)
+        reader = pool.submit(read_state)
+        writer.result()
+        reader.result()
+    assert profiles.list_fictional(root)[0]["status"] == profiles.STATUS
