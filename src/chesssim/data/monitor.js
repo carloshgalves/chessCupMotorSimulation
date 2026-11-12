@@ -746,7 +746,8 @@ function renderEditorial(game) {
   // actual final move. Receipt check happens on the server, not in JavaScript.
   const afterLastMove = visible === game.states.length - 1;
   const interview = editorial.postgame;
-  if (afterLastMove && fresh.status === "COMPLETED" &&
+  if (afterLastMove && fresh.status === "COMPLETED" && fresh.live === false &&
+      ["1-0", "0-1", "1/2-1/2"].includes(fresh.result) &&
       interview && typeof interview.question === "string" &&
       typeof interview.answer === "string" &&
       interview.question.length <= 180 && interview.answer.length <= 280) {
