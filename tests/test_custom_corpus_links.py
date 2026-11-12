@@ -155,7 +155,8 @@ def test_name_match_exact_and_ambiguous_self_play_is_excluded(tmp_path):
         _game(0, name="Other", side="white") +
         _game(1, name=NAME + " Jr", side="white") +
         _game(2, name=NAME, side="black", played="2026.01.04") +
-        _game(3, name=NAME, side="white", played="????.??.??")
+        _game(3, name=NAME, side="white", played="????.??.??") +
+        _game(4, name=NAME, side="white").replace(OTHER, NAME)
     )
     library, item, cache = _setup(tmp_path, override_games=content)
     result = _link(library, item, cache)
@@ -385,3 +386,15 @@ def test_source_deleted_after_link_does_not_claim_liveness(tmp_path):
         library, item["id"], expected_head=attached["head_sha256"])
     assert detached["linked"] is False
     assert detached["source_availability"] == "NOT_APPLICABLE"
+
+
+def test_duplicate_pgn_trajectory_is_counted_once_not_multiple_times(tmp_path):
+    repeated = (_game(0, name=NAME, played="2026.01.02") +
+                _game(0, name=NAME, played="2026.01.03"))
+    library, item, cache = _setup(tmp_path, override_games=repeated)
+    manifest = json.loads((cache / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["games_distinct"] == 1
+    assert manifest["games_duplicates"] == 1
+    attached = _link(library, item, cache)
+    assert attached["corpus"]["games"] == 1
+    assert attached["corpus"]["coverage_band"] == "LOW_1_TO_19"
