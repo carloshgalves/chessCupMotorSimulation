@@ -75,11 +75,13 @@ autentica a origem de licenças ou jogadores.
 
 Para auditar **sobreposição de posições** entre as partições, acrescente
 `--embargo-min-ply 2` (ou um limite escolhido entre 1 e 80). Sem essa
-flag, a saída `chesssim-custom-train-only-split-v1` continua compatível e
-`position_embargo.status=NOT_RUN`: **não pode ser descrita como auditada
-por posições**. Com a flag, o manifesto passa a ter o novo schema
-`chesssim-custom-train-only-split-v2`; um consumidor que só reconheça
-v1 deverá rejeitar v2 em vez de presumir equivalência de critérios.
+flag, a saída `chesssim-custom-train-only-split-v1` **conserva
+seus campos anteriores**, sem `position_embargo`; isso significa que a
+auditoria de posições **não foi executada**, como também documentado
+em `limits`. Com a flag, o manifesto passa a ter o novo schema
+`chesssim-custom-train-only-split-v2` e inclui
+`position_embargo.status`; um consumidor que só reconheça v1
+deverá rejeitar v2 em vez de presumir equivalência de critérios.
 
 ```bash
 chesssim custom-corpus-train \
