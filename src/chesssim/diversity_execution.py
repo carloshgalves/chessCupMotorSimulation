@@ -21,7 +21,7 @@ from .catalog import find_player
 from .diversity_experiment import design
 from .game_diversity import mainline_identity
 from .matches import _atomic_text, file_hash, play_duel, validate
-from .opening_books import load_opening_book
+from .opening_books import load_opening_book, select_book_move
 
 MAX_PLAN_BYTES = 256 * 1024
 MAX_SUMMARY_BYTES = 256 * 1024
@@ -144,7 +144,7 @@ def _load_books(plan: dict, white, black, white_book: Path | None,
 
 def _audit_completed_pair(folder: Path, *, players: list[str],
                           player_objects: dict, seed: int,
-                          expected_hashes: dict, book_sources: dict) -> dict:
+                          expected_hashes: dict, books: dict, book_sources: dict) -> dict:
     """Reconcile disk receipts and both UCI PGNs before recording completion."""
     has_books = bool(book_sources)
     expected_mode = "historical-v09-exploratory" if has_books else "disabled"
@@ -216,20 +216,31 @@ def _audit_completed_pair(folder: Path, *, players: list[str],
             raise ValueError("Traço de abertura sem seed/rodada verificável")
         if not has_books and trace:
             raise ValueError("Traço de abertura presente sem repertório declarado")
-        played_uci = [move.uci() for move in game.mainline_moves()]
+        # Regenerate every opening decision against the frozen original books.
+        # Mere agreement of a trace with a PGN is not enough: a fabricated
+        # trace could otherwise be counted as a controlled repertoire choice.
+        board = game.board()
+        expected_trace = []
         counts = {"white": 0, "black": 0}
-        for entry in trace:
-            ply = entry["ply"]
-            side = "white" if ply % 2 else "black"
-            owner = record["white"] if ply % 2 else record["black"]
-            source = book_sources.get(owner)
-            if (entry.get("player") != owner or source is None or
-                    entry.get("book_source_sha256") != source["source_pgn_sha256"] or
-                    entry.get("move") != played_uci[ply - 1]):
-                raise ValueError("Traço de abertura não pertence ao PGN/repertório")
-            counts[side] += 1
-        if record.get("opening_moves") != counts:
-            raise ValueError("Contagens do repertório divergem do traço")
+        for ply, move in enumerate(game.mainline_moves(), 1):
+            side = "white" if board.turn else "black"
+            owner = record["white"] if board.turn else record["black"]
+            book = books.get(owner)
+            expected_move = (select_book_move(book, board, seed=seed,
+                                              game_number=index, min_count=1)
+                             if book is not None else None)
+            if expected_move is not None:
+                if expected_move != move:
+                    raise ValueError("PGN diverge da escolha de abertura pré-registrada")
+                expected_trace.append({
+                    "ply": ply, "player": owner, "move": move.uci(),
+                    "seed": seed, "round": index,
+                    "book_source_sha256": book_sources[owner]["source_pgn_sha256"],
+                })
+                counts[side] += 1
+            board.push(move)
+        if trace != expected_trace or record.get("opening_moves") != counts:
+            raise ValueError("Traço de abertura não reproduz o livro congelado")
         receipts.append({
             "game": index, "pgn_sha256": sha256(payload).hexdigest(),
             "mainline_sha256": trajectory, "plies": plies,
@@ -362,7 +373,7 @@ def execute_plan(root: Path, plan_path: Path, out: Path, *,
                 receipt = _audit_completed_pair(
                     folder, players=plan["players"],
                     player_objects={p.slug: p for p in players}, seed=arm["seed"],
-                    expected_hashes=frozen, book_sources=book_sources)
+                    expected_hashes=frozen, books=books, book_sources=book_sources)
                 manifest["arms"].append({
                     "block": block["block"], "condition": expected_condition,
                     "seed": arm["seed"], "game_number_policy": "1,2 per arm",
