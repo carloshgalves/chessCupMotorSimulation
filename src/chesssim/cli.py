@@ -152,6 +152,20 @@ def main(argv: list[str] | None = None) -> int:
     corpus_detach.add_argument("--id", required=True)
     corpus_detach.add_argument("--expected-head", required=True)
 
+    custom_train = sub.add_parser(
+        "custom-corpus-train", help="Exporta somente PGN de treino de vínculo revalidado, holdout em compromissos")
+    custom_train.add_argument("--library", type=Path, required=True)
+    custom_train.add_argument("--id", required=True)
+    custom_train.add_argument("--cache", type=Path, required=True)
+    custom_train.add_argument("--expected-head", required=True,
+                              help="head_sha256 do vínculo ativo, de custom-corpus-status")
+    custom_train.add_argument("--out", type=Path, required=True,
+                              help="Nova pasta fora da biblioteca e do cache; sem sobrescrita")
+    custom_train.add_argument("--min-train", type=int, default=20,
+                              help="Mínimo de partidas de treino para status preparado (1..1000)")
+    custom_train.add_argument("--max-output-mb", type=int, default=32,
+                              help="Orçamento treino + manifesto em MiB (1..32)")
+
     diversity = sub.add_parser(
         "diversity-report", help="Compara sequências PGN reais de múltiplos duelos, sem alterar motores")
     diversity.add_argument("--runs", type=Path, nargs="+", required=True,
@@ -663,6 +677,14 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     try:
+        if args.command == "custom-corpus-train":
+            from .custom_corpus_train import prepare_custom_train
+            report = prepare_custom_train(
+                args.library, args.id, args.cache, args.out,
+                expected_head=args.expected_head, min_train=args.min_train,
+                max_output_mb=args.max_output_mb)
+            print(json.dumps(report, ensure_ascii=False, indent=2))
+            return 0
         if args.command in {
             "custom-corpus-status", "custom-corpus-link", "custom-corpus-detach",
         }:
