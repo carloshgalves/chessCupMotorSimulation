@@ -196,7 +196,7 @@ def test_mutating_engine_between_arms_stops_before_next_uci(
     root, calls, state = _environment(tmp_path, monkeypatch)
     state["modify_exe"] = True
     out = tmp_path / "trial"
-    with pytest.raises(RuntimeError, match="Hash do motor"):
+    with pytest.raises(RuntimeError, match="Hash/caminho"):
         _run(root, _plan(tmp_path), out)
     saved = json.loads((out / "execution.json").read_text())
     assert saved["arms_completed"] == 0
