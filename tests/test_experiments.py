@@ -130,7 +130,8 @@ class PipelineOrchestration(unittest.TestCase):
                 n=len(positions)
                 good=int(n*.5)+(int('OwnAttack value 110' not in text) if n>3 else 0)
                 return {'decisions':n,'correct':good, 'top1':good/n,
-                        'white':n,'black':0}
+                        'white':n,'black':0,
+                        '_predicted_moves':['e2e4']*good + ['d2d4']*(n-good)}
             with patch('chesssim.calibration.extract_decisions', return_value=(raw,source)), \
                  patch('chesssim.calibration.evaluate_candidate', side_effect=evaluation):
                 out=Path(d)/'output'
@@ -189,9 +190,16 @@ class CalibrationDiagnostics(unittest.TestCase):
             def evaluation(root, rel, positions, depth):
                 contents=(root/'personalities'/rel).read_text()
                 good = len(positions)//2 + int('OwnAttack value 110' not in contents)
-                return {'decisions':len(positions),'correct':good,
-                        'top1':good/len(positions), 'white':len(positions), 'black':0,
-                        '_predicted_moves':['e2e4' if 'OwnAttack value 110' in contents else 'd2d4'] * len(positions)}
+                # Give each synthetic decision a prediction consistent with
+                # its reported accuracy; never fabricate incompatible counts.
+                n = len(positions)
+                baseline = 'OwnAttack value 110' in contents
+                predicted = (['e2e4'] * good + ['d2d4'] * (n - good)
+                             if baseline else
+                             ['c2c4'] * (n - good) + ['e2e4'] * good)
+                return {'decisions':n,'correct':good,
+                        'top1':good/n, 'white':n, 'black':0,
+                        '_predicted_moves':predicted}
             with patch.dict(cal.PARAM_RANGES, {'OwnAttack': (75,230)}, clear=True), \
                  patch('chesssim.calibration.extract_decisions', return_value=(raw,source)), \
                  patch('chesssim.calibration.evaluate_candidate', side_effect=evaluation):
@@ -203,6 +211,9 @@ class CalibrationDiagnostics(unittest.TestCase):
             self.assertFalse(report['profile_is_baseline_copy'])
             self.assertGreater(report['training_gain'], 0)
             self.assertGreater(report['trials_with_changed_moves'], 0)
-            self.assertEqual(report['candidate_holdout']['moves_changed_vs_baseline'], 10)
+            # Baseline hits 5 and candidate hits 6 of the same 10 targets;
+            # at least one correct decision must overlap (5 + 6 > 10).
+            self.assertEqual(report['candidate_holdout']['moves_changed_vs_baseline'], 9)
+            self.assertEqual(report['paired_holdout_decisions']['paired_counts']['both_correct'], 1)
             self.assertTrue((out/'mequinho_EXPERIMENTAL_NAO_VALIDADO.txt').is_file())
             self.assertNotIn('ph-karpov2.bin', Path(report['candidate']).read_text())
