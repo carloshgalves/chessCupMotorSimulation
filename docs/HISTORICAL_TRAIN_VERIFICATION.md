@@ -34,7 +34,11 @@ lacrado, nem o de validação para este comando.
 2. A lista de partidas de treino é reconstruída **somente a partir dos
    hashes e datas do índice**; não são lidos lances/PGNs reservados.
 3. Cada partida do PGN de treino é interpretada por `python-chess` com
-   validação lexical de movetext, sintaxe e legalidade de lances.
+   validação lexical de movetext, sintaxe e legalidade de lances. O arquivo
+   deve conter apenas linhas principais, sem comentários, variantes
+   secundárias, NAGs ou escape lines PGN — esses conteúdos não aparecem
+   em `mainline_identity` e poderiam ocultar decisões reservadas.
+   Cada partida deve terminar com seu próprio token explícito de resultado.
 4. O hash de cada jogo cobre a **posição FEN inicial e a sequência inteira
    de lances UCI**, usando `game_diversity.mainline_identity`.
 5. O número e a identidade das partidas devem corresponder exatamente

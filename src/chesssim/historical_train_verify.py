@@ -60,6 +60,21 @@ def _result_terminates_game(segment: str) -> bool:
     return FINAL_RESULT.search(text) is not None
 
 
+def _require_mainline_only(pgn_text: str) -> None:
+    """No comments, alternate variations, NAGs or PGN escape lines.
+
+    These can contain data not reflected by mainline_identity(), potentially
+    including moves from reserved cohorts. This train-only verifier must not
+    silently accept them simply because the hashed mainline is unchanged.
+    Header values are excluded from this lexical scan.
+    """
+    movetext = "\n".join(
+        line for line in pgn_text.splitlines()
+        if not line.lstrip().startswith("["))
+    if any(marker in movetext for marker in "{}();$%"):
+        raise ValueError("Training PGN must contain mainline moves only")
+
+
 def _training_index(index: dict) -> tuple[dict, dict[str, dict]]:
     # Validate full *index metadata*, not raw reserved moves or FENs.
     manifest = build_historical_split_manifest(index)
@@ -92,6 +107,8 @@ def verify_historical_training_pgn(index: dict, pgn_bytes: bytes) -> dict:
     if FINAL_RESULT.search(decoded) is None:
         raise ValueError("Training PGN must end with an explicit result")
     # The python-chess parser otherwise discards non-SAN garbage. Reject it.
+    # Training input must also carry no ignored side-variation/comment data.
+    _require_mainline_only(decoded)
     _strict_movetext(decoded)
 
     stream = StringIO(decoded)
