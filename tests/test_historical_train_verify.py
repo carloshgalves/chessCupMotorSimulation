@@ -336,7 +336,7 @@ def test_concurrent_report_owner_is_not_overwritten(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize("annotation", [
     "inline_comment", "semicolon_comment", "side_variation",
-    "nag", "escape_line",
+    "nag", "symbolic_nag", "escape_line",
 ])
 def test_training_pgn_rejects_nonmainline_material_even_if_hashes_match(
         tmp_path, annotation):
@@ -348,6 +348,8 @@ def test_training_pgn_rejects_nonmainline_material_even_if_hashes_match(
         raw = raw.replace("1-0\n\n", ";synthetic reserved-side note\n1-0\n\n", 1)
     elif annotation == "nag":
         raw = raw.replace("1-0\n\n", "$1 1-0\n\n", 1)
+    elif annotation == "symbolic_nag":
+        raw = raw.replace("1-0\n\n", "!? 1-0\n\n", 1)
     elif annotation == "escape_line":
         raw = raw.replace("1-0\n\n", "% synthetic reserved-side note\n1-0\n\n", 1)
     else:
