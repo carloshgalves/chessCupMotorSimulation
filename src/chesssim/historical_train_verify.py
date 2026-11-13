@@ -44,7 +44,10 @@ def _require_sanitized_headers(game: chess.pgn.Game) -> None:
            or any(ord(ch) < 32 or ord(ch) == 127 for ch in value)
            for value in game.headers.values()):
         raise ValueError("Training PGN contains invalid or oversized headers")
-    if ("FEN" in game.headers) != (game.headers.get("SetUp") == "1"):
+    setup = game.headers.get("SetUp")
+    if setup is not None and setup not in {"0", "1"}:
+        raise ValueError("Training PGN has invalid SetUp header")
+    if ("FEN" in game.headers) != (setup == "1"):
         raise ValueError("Training PGN SetUp/FEN declaration inconsistent")
 
 
