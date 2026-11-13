@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import chess
+import json
 import pytest
 
 from chesssim.shared_fen_controls import compare_shared_fen_assignments
@@ -184,3 +185,25 @@ def test_name_swap_is_only_a_label_control_not_scientific_proof():
     assert result["limitations"]["split_provenance"] == "NOT_VERIFIED"
     assert result["limitations"]["inference"] == "DESCRIPTIVE_NO_INDEPENDENCE_CLAIM"
     assert "independent historical validation" in result["limitations"]["interpretation"].lower()
+
+
+def test_complete_fen_not_only_piece_placement_controls_matching():
+    fen_a = _fen_white()
+    board = chess.Board()
+    board.fullmove_number = 10
+    fen_b = board.fen()  # Same pieces, different fullmove and therefore different FEN.
+    rows = [_row("A", "A1", fen_a, "e2e4"),
+            _row("B", "B1", fen_b, "d2d4")]
+    result = _compare(rows, {"profile_A": {}, "profile_B": {}})
+    assert result["matched_fens"] == 0
+    assert result["status"] == "NO_EXACT_SHARED_FENS"
+
+
+def test_report_never_contains_raw_historical_fens_or_move_traces():
+    rows, choices = _case()
+    result = _compare(rows, choices)
+    rendered = json.dumps(result, sort_keys=True)
+    for row in rows:
+        assert row["fen"] not in rendered
+        assert row["move"] not in rendered
+    assert result["limitations"]["split_provenance"] == "NOT_VERIFIED"
