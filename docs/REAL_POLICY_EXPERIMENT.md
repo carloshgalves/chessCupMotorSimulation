@@ -142,3 +142,33 @@ de engine durante o treinamento. O manifesto indica
 L2_ADAGRAD_CONDITIONAL_LOGIT_OVER_LEGAL_MOVES e conserva as perdas de treino
 por época. Mantém-se exatamente o mesmo protocolo de validação por anos
 e o controle Rodent IV real.
+
+## Resultado da regressão logística condicional no conjunto real
+
+Com 1.200 observações reais por jogador (4.800 no total) e 24
+posições de validação por jogador (96 no total), a perda logarítmica
+de treino caiu em todas as personalidades. Porém, acertos top-1
+observados foram:
+
+| Alvo humano | Política logística correta | Política genérica | Rodent correto | Rodent Simple |
+| --- | ---: | ---: | ---: | ---: |
+| Fischer | 3/24 | 6/24 | 10/24 | 12/24 |
+| Karpov | 2/24 | 5/24 | 12/24 | 11/24 |
+| Kasparov | 2/24 | 1/24 | 11/24 | 10/24 |
+| Tal | 3/24 | 2/24 | 11/24 | 9/24 |
+| Total | 10/96 | 14/96 | 44/96 | 42/96 |
+
+Conclusão: regularização e imitação supervisionada **não** produziram,
+nesta amostra, melhor representação da identidade histórica que o
+modelo genérico. O programa inclui style_diagnostics para a diferença
+entre política correta/genérica, comparação com melhor rótulo trocado
+e contraste Rodent nomeado/controle Simple. profile_identity_accepted
+é explicitamente false e model_promotion fica DENIED até protocolo
+científico independente.
+
+Esta iteração ajustou o método usando anos de **validação**. Não
+interpretar novas inspeções de validação como teste final independente;
+o braço holdout continua fora da seleção e só deve ser aberto após
+congelamento de protocolo. As evidências de rodadas anteriores
+permanecem registradas no histórico da PR, sem substituir resultados
+negativos por linguagem de sucesso.
