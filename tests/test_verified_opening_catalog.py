@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from hashlib import sha256
 import json
+import os
 
 import chess
 import pytest
@@ -173,5 +174,17 @@ def test_no_source_files_read_without_acknowledgement(tmp_path):
     source.unlink()
     with pytest.raises(ValueError, match="acknowledgement"):
         run_shared_fen_file(inp, out, ack_unsealed=False,
+                            opening_catalog_source=source)
+    assert not out.exists()
+
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="POSIX-only FIFO regression")
+def test_catalog_fifo_is_rejected_without_waiting_for_a_writer(tmp_path):
+    inp, source, out, _ = _case(tmp_path)
+    source.unlink()
+    os.mkfifo(source)
+    with pytest.raises(ValueError, match="regular file"):
+        run_shared_fen_file(inp, out, ack_unsealed=True,
                             opening_catalog_source=source)
     assert not out.exists()

@@ -365,7 +365,8 @@ def run_shared_fen_file(input_path: Path, output_path: Path, *,
             raise ValueError("Opening catalog source must not be a symlink")
         try:
             fd_catalog = os.open(
-                catalog_path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+                catalog_path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+                | getattr(os, "O_NONBLOCK", 0))
         except OSError as exc:
             raise ValueError("Cannot securely open opening catalog source") from exc
         with os.fdopen(fd_catalog, "rb") as catalog_stream:
