@@ -80,3 +80,45 @@ outro protocolo controlado e aprovação humana.
 O objetivo desta fatia não é produzir uma métrica de fidelidade histórica
 nem avaliar força de jogo. Nenhuma promoção de perfil ou análise de
 identidade ocorre neste fluxo.
+
+## Gate opcional: compromissos do índice congelado antes da leitura do PGN
+
+Para detectar alterações do índice entre a aprovação do preflight e a
+verificação do PGN de treino, registre os dois compromissos **fora do
+diretório de trabalho mutável** quando aprovar o manifesto:
+
+- `input_evidence_sha256` do `historical-split-preflight`;
+- `partitions.train.game_commitment_sha256` do mesmo manifesto.
+
+Passe os dois valores originais (64 hexadecimais minúsculos) à CLI:
+
+```bash
+chesssim historical-train-verify \
+  --index indice-nao-lacrado.json \
+  --train-pgn train-only.pgn \
+  --out relatorio-congelado-novo.json \
+  --ack-train-only \
+  --expect-index-evidence-sha256 "HASH_DO_INDICE_APROVADO" \
+  --expect-train-partition-sha256 "HASH_DA_PARTICAO_DE_TREINO_APROVADA"
+```
+
+Os valores acima são placeholders, **não hashes válidos**. O comando
+exige os dois argumentos ou nenhum; valores inválidos ou divergentes
+causam falha **antes de abrir os bytes do PGN de treino**. Isso cobre
+alterações posteriores nos metadados, na declaração das fontes ou na
+partição de holdout mesmo que as partidas de treino permaneçam iguais.
+Também impede que o verificador avance silenciosamente com um índice
+alterado desde uma aprovação humana anterior.
+
+Quando os dois compromissos correspondem, o relatório acrescenta
+`pin_verification.status = MATCHED_OPERATOR_SUPPLIED_PINS_NOT_AUTHENTICATED`,
+sem modificar os campos/relatórios anteriores na execução sem pins.
+
+**Fronteira importante:** hashes guardados e fornecidos pelo mesmo
+operador não comprovam independência nem imutabilidade criptográfica
+contra um atacante capaz de mudar também os valores aprovados.
+Arquive os hashes com controle de acesso, revisão e trilha de mudança
+separados do checkout (por exemplo, registro administrativo aprovado).
+Esta opção não verifica licença, direitos, selagem de dados ou acesso
+externo a conjuntos reservados, e nunca deve ser apresentada como
+autenticação científica do corpus.
