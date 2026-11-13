@@ -149,3 +149,20 @@ def test_training_jsonl_mutation_after_fitting_is_rejected(tmp_path):
             cohorts, tmp_path / "model.json", tmp_path / "invalid.json",
             archive_dir=sources, per_player=5)
     assert not (tmp_path / "invalid.json").exists()
+
+
+def test_supervised_conditional_likelihood_learns_real_move_preference():
+    from chesssim.real_policy_experiment import _train_logit, _encode_choice
+    board = chess.Board()
+    choice = {"policy_input": {"fen": board.fen()},
+              "policy_target": {"move_uci": "e2e4"}}
+    features, target_index = _encode_choice(choice)
+    weights, loss = _train_logit(
+        [(features, target_index)] * 30,
+        epochs=4, rate=0.25, shrinkage=0.001)
+    assert loss[-1] < loss[0]
+    assert weights
+    def score(tokens):
+        return sum(weights.get(f, 0.0) for f in tokens)
+    assert score(features[target_index]) > max(
+        score(tokens) for i, tokens in enumerate(features) if i != target_index)
