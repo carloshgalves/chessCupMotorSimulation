@@ -15,6 +15,7 @@ from pathlib import Path
 import re
 import stat
 import tempfile
+from urllib.parse import urlsplit
 
 INDEX_SCHEMA = "chesssim-historical-game-index-v1"
 REPORT_SCHEMA = "chesssim-historical-split-preflight-v1"
@@ -45,7 +46,8 @@ def _digest(data: object) -> str:
 
 def _field_string(value: object, field: str, limit: int = 512) -> str:
     if (not isinstance(value, str) or not value.strip()
-            or len(value) > limit or value != value.strip()):
+            or len(value) > limit or value != value.strip()
+            or any(ord(char) < 32 or ord(char) == 127 for char in value)):
         raise ValueError(f"{field} must be a bounded nonblank string")
     return value
 
@@ -94,8 +96,17 @@ def _sources(raw: object) -> list[dict]:
         license_id = _field_string(item["license_id"], "license id", 64)
         evidence = _field_string(
             item["license_evidence_uri"], "license evidence uri", 512)
-        if not evidence.startswith("https://"):
-            raise ValueError("License evidence must have an HTTPS URI")
+        try:
+            parsed_uri = urlsplit(evidence)
+            valid_uri = (parsed_uri.scheme == "https"
+                         and parsed_uri.hostname is not None
+                         and parsed_uri.username is None
+                         and parsed_uri.password is None
+                         and not any(char.isspace() for char in evidence))
+        except ValueError:
+            valid_uri = False
+        if not valid_uri:
+            raise ValueError("License evidence must be a valid HTTPS URI")
         normalized.append({
             "id": sid, "sha256": digest, "license_id": license_id,
             "license_evidence_uri": evidence,
