@@ -66,10 +66,11 @@ def _digest(obj) -> str:
                             separators=(",", ":"), allow_nan=False).encode()).hexdigest()
 
 
-def _features(board: chess.Board, move: chess.Move) -> tuple[str, ...]:
+def _features(board: chess.Board, move: chess.Move, *,
+              assumed_legal: bool = False) -> tuple[str, ...]:
     """All features are computed from the position *before* the played move."""
     piece = board.piece_at(move.from_square)
-    if piece is None or move not in board.legal_moves:
+    if piece is None or (not assumed_legal and move not in board.legal_moves):
         raise ValueError("Illegal candidate move")
     symbol = piece.symbol().upper()
     dest = chess.square_name(move.to_square)
@@ -189,9 +190,9 @@ def _learn_stats(rows: list[dict]):
         legal = list(board.legal_moves)
         denominator = len(legal)
         for move in legal:
-            for feature in _features(board, move):
+            for feature in _features(board, move, assumed_legal=True):
                 exposed[feature] += 1 / denominator
-        selected.update(_features(board, target))
+        selected.update(_features(board, target, assumed_legal=True))
     return selected, exposed
 
 
@@ -285,7 +286,7 @@ def predict(model: dict, board: chess.Board, slug: str, band: str,
         raise ValueError("No legal prediction from terminal board")
     score_move = lambda move: sum(
         weights.get(f, 0.0) + 2.0 * personal.get(f, 0.0) +
-        1.3 * career.get(f, 0.0) for f in _features(board, move))
+        1.3 * career.get(f, 0.0) for f in _features(board, move, assumed_legal=True))
     # Stable lexical tie break, with all profiles evaluating identical legal
     # move sets. This is a statistical choice policy, not search/evaluation.
     return max(candidates, key=lambda move: (score_move(move), -int.from_bytes(
