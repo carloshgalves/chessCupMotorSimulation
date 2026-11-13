@@ -246,7 +246,6 @@ def fit_policy(cohorts: Path, out: Path, *, max_per_player: int = 1200,
         rel: sha256((cohorts / rel).read_bytes()).hexdigest()
         for rel in manifest["training_files"]
     }
-    chosen = {}
     grouped = defaultdict(list)
     for row in _validated_training_rows(cohorts, manifest):
         grouped[row["player"]].append(row)
@@ -540,6 +539,30 @@ def evaluate_policy(cohorts: Path, model_path: Path, out: Path, *,
             "depth": rodent_depth, "seconds_per_position": rodent_seconds,
             "books": "OFF", "predictors": ["rodent_" + s for s in predictions],
         }
+    # A fitting objective can improve while out-of-period style identity
+    # deteriorates. Never promote from training loss or raw win rates.
+    diagnostics = {}
+    for slug in slugs:
+        rows = metrics[slug]
+        own = rows["trained_" + slug]["top1"]
+        general = rows["generic_trained"]["top1"]
+        swapped = {other: rows["trained_" + other]["top1"] for other in slugs
+                   if other != slug}
+        diagnostic = {
+            "personalized_minus_generic_top1": round(own - general, 8),
+            "correct_label_minus_best_swapped_top1":
+                round(own - max(swapped.values()), 8),
+            "best_swapped_profile": min(
+                (other for other, value in swapped.items()
+                 if value == max(swapped.values()))),
+            "profile_identity_accepted": False,
+            "status": "EXPLORATORY_NO_STYLE_ACCEPTANCE",
+        }
+        if rodent_root is not None:
+            diagnostic["rodent_named_minus_simple_top1"] = round(
+                rows["rodent_" + slug]["top1"] -
+                rows["rodent_generic_rodent"]["top1"], 8)
+        diagnostics[slug] = diagnostic
     summary = {
         "schema": REPORT_SCHEMA,
         "status": "REAL_HELDOUT_HUMAN_MOVE_AGREEMENT_NOT_STYLE_VALIDATION",
@@ -551,6 +574,8 @@ def evaluate_policy(cohorts: Path, model_path: Path, out: Path, *,
         "max_decisions_per_game": per_game,
         "excluded": dict(excluded),
         "evaluation": metrics,
+        "style_diagnostics": diagnostics,
+        "model_promotion": "DENIED_NO_INDEPENDENT_STYLE_ACCEPTANCE",
         "rodent": rodent_evidence,
         "limitations": [
             "Exact human move agreement, not chess strength, Elo or proof of player identity.",
