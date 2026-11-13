@@ -918,8 +918,8 @@ def main(argv: list[str] | None = None) -> int:
                 "output": str(args.out),
                 "status": report["status"],
                 "matched_fens": report["matched_fens"],
-                "players": [report["accuracy_by_profile_and_player"][name]
-                            for name in report["accuracy_by_profile_and_player"]],
+                "accuracy_by_profile_and_player":
+                    report["accuracy_by_profile_and_player"],
                 "contrast": report["contrast"],
             }, ensure_ascii=False, indent=2))
         elif args.command == 'style-audit':
