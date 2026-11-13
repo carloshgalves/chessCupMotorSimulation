@@ -138,3 +138,46 @@ neste filtro. É um controle experimental exploratório, não um classificador
 de abertura nem uma verificação de embargo de treino/validação/teste.
 A elaboração de um catálogo proveniente de fontes licenciadas e o controle
 das partições continuam na issue #10; a validação cega, na #12.
+
+## Fatia #10/#11 — conferência local dos bytes da fonte de abertura (opt-in)
+
+O catálogo `opening_exclusion` pode declarar FENs e um SHA-256 sem conferir o arquivo de origem.
+Para conferir **os bytes e os FENs**, forneça opcionalmente o JSON-fonte ao comando:
+
+```bash
+sha256sum opening-source.json
+chesssim shared-fen-controls --input controle.json --out resultado.json \
+  --ack-unsealed --opening-catalog-source opening-source.json
+```
+
+`opening-source.json` deve conter **somente** a chave `fens` com uma lista não vazia
+de FENs canônicos e sem repetições. Exemplo:
+
+```json
+{"fens": ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 9"]}
+```
+
+Coloque o hash SHA-256 **dos bytes efetivos do arquivo** em
+`opening_exclusion.declared_source_sha256` do JSON de análise e a mesma lista
+de FENs em `opening_exclusion.fens` (a ordem pode mudar, o conteúdo não).
+
+O gate verifica:
+
+- Arquivo regular, sem symlink, com limite máximo de 8 MiB;
+- JSON válido, sem campos extras ou chaves duplicadas;
+- SHA-256 calculado dos bytes, idêntico ao hash declarado;
+- FENs legais, canônicos, não duplicados, equivalentes aos dados incorporados;
+- Falha antes de criar relatórios se qualquer verificação não passar.
+
+Se todas as verificações passam, o relatório acrescenta
+`opening_exclusion.provenance = LOCAL_BYTES_AND_FENS_VERIFIED` e
+`limitations.opening_catalog_source = LOCAL_INTEGRITY_ONLY_LICENSE_COHORT_AND_PREREGISTRATION_NOT_VERIFIED`.
+O `input_evidence_sha256` preserva a mesma semântica: é hash da evidência
+normalizada, não certificado de pesquisa. Sem esse parâmetro CLI, o comportamento
+anterior e o status `DECLARED_NOT_VERIFIED` são mantidos.
+
+**Limites:** verificar bytes e FENs não autentica quem produziu o catálogo,
+direitos sobre PGNs, ausência de vazamento entre splits, pré-registro,
+independência das partidas ou completude de repertório. O operador deve
+preservar a fonte e seus metadados fora da ferramenta. Nunca alimente
+o sistema com o conjunto final lacrado para experimentar a seleção de FENs.
