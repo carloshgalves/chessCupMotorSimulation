@@ -89,6 +89,12 @@ def test_real_cohorts_train_only_player_year_and_deterministic(tmp_path):
             assert row["phase_proxy"] in ("middle_proxy", "late_proxy")
             assert row["age_at_game"] is None
             assert row["result_for_player"] == "draw"
+            assert row["policy_input"]["fen"] == row["fen"]
+            assert row["policy_target"]["move_uci"] == row["move_uci"]
+            assert "result_for_player" not in row["policy_input"]
+            assert "eco" not in row["policy_input"]
+            assert "opponent_elo" not in row["policy_input"]
+            assert set(row["policy_target"]) == {"move_uci"}
             observed += 1
     assert observed == first["training_examples_exported"]
     assert first["holdout_moves_exported"] is False
