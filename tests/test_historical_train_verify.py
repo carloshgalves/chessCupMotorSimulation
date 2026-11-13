@@ -183,7 +183,7 @@ def test_same_moves_from_different_initial_fen_are_not_confused(tmp_path):
         m.uci() for m in games[0].mainline_moves()]
     assert mainline_identity(altered)[0] != mainline_identity(games[0])[0]
     train.write_bytes(_export([altered, *games[1:6]]))
-    with pytest.raises(ValueError, match="training"):
+    with pytest.raises(ValueError, match="Training"):
         run_historical_train_verification(inp, train, out, ack_train_only=True)
     assert not out.exists()
 
@@ -303,3 +303,31 @@ def test_no_file_read_without_acknowledgement(tmp_path):
             tmp_path / "missing-index.json", tmp_path / "missing.pgn",
             tmp_path / "result.json", ack_train_only=False)
     assert not (tmp_path / "result.json").exists()
+
+
+
+def test_intermediate_pgn_missing_result_token_must_not_pass(tmp_path):
+    _, _, inp, train, out = _fixture(tmp_path)
+    # Same indexed moves + headers, but first game has no movetext terminator.
+    raw = train.read_text(encoding="utf-8")
+    assert "1-0\n\n" in raw
+    train.write_text(raw.replace("1-0\n\n", "\n\n", 1), encoding="utf-8")
+    with pytest.raises(ValueError):
+        run_historical_train_verification(inp, train, out, ack_train_only=True)
+    assert not out.exists()
+
+
+def test_concurrent_report_owner_is_not_overwritten(tmp_path, monkeypatch):
+    _, _, inp, train, out = _fixture(tmp_path)
+    actual_link = verifier.os.link
+
+    def competing_writer(staged, destination):
+        destination = type(out)(destination)
+        destination.write_text("other process owns report")
+        return actual_link(staged, destination)
+
+    monkeypatch.setattr(verifier.os, "link", competing_writer)
+    with pytest.raises(FileExistsError):
+        run_historical_train_verification(inp, train, out, ack_train_only=True)
+    assert out.read_text() == "other process owns report"
+    assert list(tmp_path.glob(".chesssim-historical-train-*.tmp")) == []
