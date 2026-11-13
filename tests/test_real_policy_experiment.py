@@ -70,6 +70,10 @@ def test_real_choice_fit_and_reserved_year_evaluation_are_deterministic(tmp_path
         archive_dir=sources, per_player=10, per_game=2)
     assert output["arm"] == "validation"
     assert output["rodent"]["status"] == "NOT_RUN_NO_REAL_ENGINE_SPECIFIED"
+    assert output["model_promotion"] == "DENIED_NO_INDEPENDENT_STYLE_ACCEPTANCE"
+    assert set(output["style_diagnostics"]) == {"fischer", "tal"}
+    assert not any(x["profile_identity_accepted"] for x in
+                   output["style_diagnostics"].values())
     assert set(output["evaluation"]) == {"fischer", "tal"}
     assert all(
         metric["positions"] > 0 and 0 <= metric["top1"] <= 1
