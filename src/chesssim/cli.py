@@ -672,6 +672,15 @@ def main(argv: list[str] | None = None) -> int:
     paired.add_argument('--bootstrap', type=int, default=1000)
     paired.add_argument('--seed', type=int, default=2026)
 
+    shared_fen = sub.add_parser(
+        "shared-fen-controls",
+        help="offline matched-FEN descriptive comparison and reversed-assignment control")
+    shared_fen.add_argument("--input", type=Path, required=True,
+                            help="bounded local JSON: positions, predictions, labels and profiles")
+    shared_fen.add_argument("--out", type=Path, required=True)
+    shared_fen.add_argument("--ack-unsealed", action="store_true", required=True,
+                            help="confirm this does not contain sealed final-test data")
+
     sa9 = sub.add_parser('style-audit', help='postgame style fingerprints (opening/middlegame, by player)')
     sa9.add_argument('--pgn', type=Path, required=True)
     sa9.add_argument('--opening-plies', type=int, default=16)
@@ -900,6 +909,18 @@ def main(argv: list[str] | None = None) -> int:
                     'mean_cp_loss_difference': item['strength_paired_by_game']['mean'],
                     'exact_fen_positions': item['same_position_choices']['exact_fen_positions']
                 } for item in result['pairwise']]
+            }, ensure_ascii=False, indent=2))
+        elif args.command == "shared-fen-controls":
+            from .shared_fen_controls import run_shared_fen_file
+            report = run_shared_fen_file(
+                args.input, args.out, ack_unsealed=args.ack_unsealed)
+            print(json.dumps({
+                "output": str(args.out),
+                "status": report["status"],
+                "matched_fens": report["matched_fens"],
+                "accuracy_by_profile_and_player":
+                    report["accuracy_by_profile_and_player"],
+                "contrast": report["contrast"],
             }, ensure_ascii=False, indent=2))
         elif args.command == 'style-audit':
             from .style_postgame import fingerprint
