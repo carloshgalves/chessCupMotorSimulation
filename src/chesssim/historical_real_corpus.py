@@ -5,7 +5,8 @@ the same archives from a local directory. Raw PGNs are never committed or
 written to the report. The resulting analysis is exploratory, NOT evidence
 that any chess engine reproduces a real person's style.
 
-Sources: https://www.pgnmentor.com/files.html (July 2026 index).
+Original index: https://www.pgnmentor.com/files.html. The CI downloads
+historical PGN snapshots from GitHub mirror rozim/ChessData.
 """
 from __future__ import annotations
 
@@ -32,8 +33,9 @@ PLAYER_FILES = {
     "Karpov": {"surname": "karpov", "published_games": 3529, "min_usable": 2300},
     "Kasparov": {"surname": "kasparov", "published_games": 2128, "min_usable": 1300},
 }
-SOURCE_PAGE = "https://www.pgnmentor.com/files.html"
-SOURCE_BASE = "https://www.pgnmentor.com/players/"
+SOURCE_PAGE = "https://github.com/rozim/ChessData/tree/main/PgnMentor"
+ORIGINAL_CATALOG = "https://www.pgnmentor.com/files.html"
+SOURCE_BASE = "https://raw.githubusercontent.com/rozim/ChessData/main/PgnMentor/"
 MAX_ARCHIVE_BYTES = 24 * 1024 * 1024
 MAX_PGN_BYTES = 80 * 1024 * 1024
 MAX_GAMES_PER_COHORT = 12_000
@@ -46,7 +48,7 @@ DATE = re.compile(r"(\d{4})\.(\d{2})\.(\d{2})\Z")
 def archive_url(name: str) -> str:
     if name not in PLAYER_FILES:
         raise ValueError("Unrecognized historical player archive")
-    return SOURCE_BASE + name + ".zip"
+    return SOURCE_BASE + name + ".pgn"
 
 
 def _read_archive(name: str, *, archive_dir: Path | None,
@@ -55,11 +57,13 @@ def _read_archive(name: str, *, archive_dir: Path | None,
         raise ValueError("Unsupported cohort")
     if archive_dir is not None:
         directory = Path(archive_dir)
-        path = directory / (name + ".zip")
+        pgndata = directory / (name + ".pgn")
+        zipdata = directory / (name + ".zip")
+        path = pgndata if pgndata.is_file() or pgndata.is_symlink() else zipdata
         if any(part.is_symlink() for part in (path, *path.parents)):
             raise ValueError("Source archive path contains a symbolic link")
-        if not path.is_file() or path.stat().st_size > MAX_ARCHIVE_BYTES:
-            raise ValueError("Missing or oversized source archive")
+        if not path.is_file() or path.stat().st_size > MAX_PGN_BYTES:
+            raise ValueError("Missing or oversized source PGN/ZIP")
         blob = path.read_bytes()
     elif fetch:
         # Only four literal, allowlisted HTTPS URLs; no user-controlled hosts,
@@ -69,19 +73,27 @@ def _read_archive(name: str, *, archive_dir: Path | None,
         with urlopen(request, timeout=timeout) as response:
             final = urlsplit(response.url)
             if (final.scheme != "https"
-                    or final.hostname not in {"www.pgnmentor.com", "pgnmentor.com"}
-                    or final.path != "/players/" + name + ".zip"
+                    or final.hostname != "raw.githubusercontent.com"
+                    or final.path != "/rozim/ChessData/main/PgnMentor/" + name + ".pgn"
                     or final.username or final.password or final.query):
                 raise ValueError("Unexpected source archive redirect")
             blob = response.read(MAX_ARCHIVE_BYTES + 1)
     else:
         raise ValueError("Use --fetch or --archive-dir with existing ZIPs")
-    if not blob or len(blob) > MAX_ARCHIVE_BYTES:
-        raise ValueError("Source ZIP is empty or above size limit")
+    limit = MAX_ARCHIVE_BYTES if blob[:4] == b"PK\x03\x04" else MAX_PGN_BYTES
+    if not blob or len(blob) > limit:
+        raise ValueError("Source PGN/ZIP is empty or above size limit")
     return blob
 
 
 def _extract_pgn(name: str, archive: bytes) -> bytes:
+    # The public GitHub mirror provides actual PGNs directly; original
+    # PGN Mentor local downloads may be ZIP archives. Both are real data.
+    if archive[:4] != b"PK\x03\x04":
+        if (not archive or len(archive) > MAX_PGN_BYTES
+                or b"\x00" in archive or b"[" not in archive[:4096]):
+            raise ValueError("Invalid raw player PGN")
+        return archive
     try:
         with ZipFile(BytesIO(archive)) as zf:
             members = [info for info in zf.infolist() if not info.is_dir()]
@@ -186,12 +198,13 @@ def analyze_cohort(name: str, archive: bytes, *, min_ply: int = 17) -> dict:
         raise ValueError("Insufficient years for three historical cohorts")
     return {
         "player": name,
-        "archive_sha256": sha256(archive).hexdigest(),
+        "download_sha256": sha256(archive).hexdigest(),
         "pgn_sha256": sha256(raw).hexdigest(),
-        "archive_bytes": len(archive),
+        "download_bytes": len(archive),
         "pgn_bytes": len(raw),
         "source_url": archive_url(name),
         "source_catalog": SOURCE_PAGE,
+        "original_catalog": ORIGINAL_CATALOG,
         "encoding": encoding,
         "counters": {
             key: counts[key] for key in (
