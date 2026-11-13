@@ -672,6 +672,16 @@ def main(argv: list[str] | None = None) -> int:
     paired.add_argument('--bootstrap', type=int, default=1000)
     paired.add_argument('--seed', type=int, default=2026)
 
+    historical_split = sub.add_parser(
+        "historical-split-preflight",
+        help="offline year-grouped corpus index commitments, without exposing reserved games")
+    historical_split.add_argument("--input", type=Path, required=True,
+                                  help="operator-declared game index JSON (unsealed)")
+    historical_split.add_argument("--out", type=Path, required=True,
+                                  help="new non-overwriting split manifest JSON")
+    historical_split.add_argument("--ack-unsealed", action="store_true", required=True,
+                                  help="confirm no sealed final-test data are supplied")
+
     shared_fen = sub.add_parser(
         "shared-fen-controls",
         help="offline matched-FEN descriptive comparison and reversed-assignment control")
@@ -911,6 +921,19 @@ def main(argv: list[str] | None = None) -> int:
                     'mean_cp_loss_difference': item['strength_paired_by_game']['mean'],
                     'exact_fen_positions': item['same_position_choices']['exact_fen_positions']
                 } for item in result['pairwise']]
+            }, ensure_ascii=False, indent=2))
+        elif args.command == "historical-split-preflight":
+            from .historical_split_index import run_historical_split_preflight
+            report = run_historical_split_preflight(
+                args.input, args.out, ack_unsealed=args.ack_unsealed)
+            print(json.dumps({
+                "output": str(args.out),
+                "status": report["status"],
+                "game_index_count": report["game_index_count"],
+                "eligible_dated_games": report["eligible_dated_games"],
+                "partition_games": {name: value["games"]
+                                    for name, value in report["partitions"].items()},
+                "embargo_status": report["embargo_status"],
             }, ensure_ascii=False, indent=2))
         elif args.command == "shared-fen-controls":
             from .shared_fen_controls import run_shared_fen_file
