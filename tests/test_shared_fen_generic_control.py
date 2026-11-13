@@ -204,3 +204,42 @@ def test_cli_rejects_duplicate_nested_control_prediction_key(tmp_path):
     with pytest.raises(ValueError, match="Invalid JSON input"):
         run_shared_fen_file(inp, out, ack_unsealed=True)
     assert not out.exists()
+
+
+
+def test_cli_explicit_null_generic_profile_fails_closed(tmp_path):
+    positions, predictions = _case()
+    data = {
+        "positions": positions,
+        "predictions": {k: v for k, v in predictions.items() if k != "generic"},
+        "player_a": "A", "player_b": "B",
+        "profile_a": "target_A", "profile_b": "target_B",
+        "generic_profile": None,
+    }
+    inp, out = tmp_path / "source.json", tmp_path / "report.json"
+    inp.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(ValueError, match="cannot be null"):
+        run_shared_fen_file(inp, out, ack_unsealed=True)
+    assert not out.exists()
+
+
+def test_generic_label_changes_digest_without_changing_scores():
+    positions, predictions = _case()
+    first = _compare(positions, predictions)
+    renamed = deepcopy(predictions)
+    renamed["generic-renamed"] = renamed.pop("generic")
+    second = _compare(positions, renamed, generic="generic-renamed")
+    assert first["input_evidence_sha256"] != second["input_evidence_sha256"]
+    assert first["generic_control"]["accuracy_by_player"] == (
+        second["generic_control"]["accuracy_by_player"])
+    assert first["generic_control"]["mean_assigned_minus_generic"] == (
+        second["generic_control"]["mean_assigned_minus_generic"])
+
+
+def test_generic_control_report_does_not_contain_raw_decision_traces():
+    positions, predictions = _case()
+    result = _compare(positions, predictions)
+    rendered = json.dumps(result)
+    for row in positions:
+        assert row["fen"] not in rendered
+        assert row["move"] not in rendered

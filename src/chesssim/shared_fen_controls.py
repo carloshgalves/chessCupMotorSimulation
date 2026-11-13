@@ -283,6 +283,8 @@ def run_shared_fen_file(input_path: Path, output_path: Path, *,
             not required.issubset(document) or
             not set(document).issubset(accepted)):
         raise ValueError("Input JSON has missing or unexpected fields")
+    if "generic_profile" in document and document["generic_profile"] is None:
+        raise ValueError("generic_profile cannot be null when declared")
     report = compare_shared_fen_assignments(
         document["positions"], document["predictions"],
         player_a=document["player_a"], player_b=document["player_b"],
