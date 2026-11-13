@@ -14,11 +14,13 @@ from hashlib import sha256
 import json
 import os
 from pathlib import Path
+import re
 import stat
 
 SCHEMA = "chesssim-shared-fen-negative-control-v1"
 MAX_ROWS = 50_000
 MAX_SHARED_FENS = 4_000
+MAX_OPENING_FENS = 4_000
 MAX_JSON_BYTES = 8 * 1024 * 1024
 
 
@@ -90,6 +92,44 @@ def _validate_positions(positions: list[dict], names: set[str], min_ply: int):
     return canonical, by_fen, duplicates, early_excluded
 
 
+
+def _validate_opening_exclusion(catalog: dict | None) -> dict | None:
+    """Validate declared opening-repertoire FENs; do not assert completeness.
+
+    The source SHA-256 is a declaration by the experiment operator. This
+    module cannot access the source or attest that its SHA matches the file.
+    """
+    if catalog is None:
+        return None
+    if not isinstance(catalog, dict) or set(catalog) != {
+            "fens", "declared_source_sha256"}:
+        raise ValueError("opening_exclusion must declare fens and source digest")
+    raw_fens = catalog["fens"]
+    digest = catalog["declared_source_sha256"]
+    if (not isinstance(raw_fens, list) or
+            not 1 <= len(raw_fens) <= MAX_OPENING_FENS):
+        raise ValueError("opening_exclusion fens must be a bounded nonempty list")
+    if (not isinstance(digest, str) or
+            re.fullmatch(r"[0-9a-f]{64}", digest) is None):
+        raise ValueError("opening_exclusion declared source SHA-256 invalid")
+
+    import chess
+
+    canonical = set()
+    for raw in raw_fens:
+        fen = _required_str(raw, "opening_exclusion FEN")
+        try:
+            board = chess.Board(fen)
+        except ValueError as exc:
+            raise ValueError("Invalid opening_exclusion FEN") from exc
+        if not board.is_valid() or board.fen() != fen:
+            raise ValueError("Noncanonical opening_exclusion FEN")
+        if fen in canonical:
+            raise ValueError("Duplicate opening_exclusion FEN")
+        canonical.add(fen)
+    return {"fens": sorted(canonical), "declared_source_sha256": digest}
+
+
 def compare_shared_fen_assignments(
     positions: list[dict],
     predictions: dict[str, dict[str, str]],
@@ -100,6 +140,7 @@ def compare_shared_fen_assignments(
     profile_b: str,
     min_ply: int = 17,
     generic_profile: str | None = None,
+    opening_exclusion: dict | None = None,
 ) -> dict:
     """Evaluate the requested and swapped profile/target assignments.
 
@@ -124,12 +165,17 @@ def compare_shared_fen_assignments(
     if not isinstance(predictions, dict) or set(predictions) != set(profiles):
         raise ValueError("prediction profiles must match exactly the declared profiles")
 
+    opening_catalog = _validate_opening_exclusion(opening_exclusion)
     canonical, grouped, duplicates, excluded = _validate_positions(
         positions, {player_a, player_b}, min_ply)
-    shared = {fen: both for fen, both in grouped.items()
-              if player_a in both and player_b in both}
-    if len(shared) > MAX_SHARED_FENS:
+    all_shared = {fen: both for fen, both in grouped.items()
+                  if player_a in both and player_b in both}
+    if len(all_shared) > MAX_SHARED_FENS:
         raise ValueError("shared position budget exceeded")
+    excluded_shared = (set(all_shared) & set(opening_catalog["fens"])
+                       if opening_catalog is not None else set())
+    shared = {fen: both for fen, both in all_shared.items()
+              if fen not in excluded_shared}
     expected = set(shared)
     normalized_predictions = {}
     import chess
@@ -148,12 +194,16 @@ def compare_shared_fen_assignments(
              "profile_a": profile_a, "profile_b": profile_b}
     if generic_profile is not None:
         roles["generic_profile"] = generic_profile
-    encoded = json.dumps({
+    evidence = {
         "rows": canonical,
         "predictions": normalized_predictions,
         "min_ply": min_ply,
         "roles": roles,
-    }, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    }
+    if opening_catalog is not None:
+        evidence["opening_exclusion"] = opening_catalog
+    encoded = json.dumps(
+        evidence, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     digest = sha256(encoded.encode("utf-8")).hexdigest()
 
     limits = {
@@ -168,10 +218,14 @@ def compare_shared_fen_assignments(
     }
     if generic_profile is not None:
         limits["generic_control"] = "DECLARED_NOT_VERIFIED"
+    if opening_catalog is not None:
+        limits["opening_exclusion"] = (
+            "UNLISTED_IS_NOT_PROOF_OF_OUT_OF_REPERTOIRE")
     result = {
         "schema": SCHEMA,
-        "status": "NO_EXACT_SHARED_FENS" if not shared
-                  else "DESCRIPTIVE_ONLY_NOT_HISTORICALLY_VALIDATED",
+        "status": ("NO_EXACT_SHARED_FENS" if not all_shared else
+                   "NO_SHARED_FENS_AFTER_OPENING_EXCLUSION" if not shared else
+                   "DESCRIPTIVE_ONLY_NOT_HISTORICALLY_VALIDATED"),
         "input_evidence_sha256": digest,
         "matched_fens": len(shared),
         "early_rows_excluded": excluded,
@@ -202,6 +256,16 @@ def compare_shared_fen_assignments(
             "accuracy_by_player": {player_a: None, player_b: None},
             "assigned_minus_generic_by_player": {player_a: None, player_b: None},
             "mean_assigned_minus_generic": None,
+        }
+    if opening_catalog is not None:
+        result["opening_exclusion"] = {
+            "method": "EXACT_FULL_FEN_CATALOG",
+            "provenance": "DECLARED_NOT_VERIFIED",
+            "declared_source_sha256": opening_catalog["declared_source_sha256"],
+            "catalog_fens": len(opening_catalog["fens"]),
+            "matched_fens_before_exclusion": len(all_shared),
+            "matched_fens_excluded": len(excluded_shared),
+            "remaining_unlisted_fens": len(shared),
         }
     if not shared:
         return result
@@ -278,19 +342,22 @@ def run_shared_fen_file(input_path: Path, output_path: Path, *,
         raise ValueError("Invalid JSON input") from exc
     required = {"positions", "predictions", "player_a", "player_b",
                 "profile_a", "profile_b"}
-    accepted = required | {"min_ply", "generic_profile"}
+    accepted = required | {"min_ply", "generic_profile", "opening_exclusion"}
     if (not isinstance(document, dict) or
             not required.issubset(document) or
             not set(document).issubset(accepted)):
         raise ValueError("Input JSON has missing or unexpected fields")
     if "generic_profile" in document and document["generic_profile"] is None:
         raise ValueError("generic_profile cannot be null when declared")
+    if "opening_exclusion" in document and document["opening_exclusion"] is None:
+        raise ValueError("opening_exclusion cannot be null when declared")
     report = compare_shared_fen_assignments(
         document["positions"], document["predictions"],
         player_a=document["player_a"], player_b=document["player_b"],
         profile_a=document["profile_a"], profile_b=document["profile_b"],
         min_ply=document.get("min_ply", 17),
-        generic_profile=document.get("generic_profile"))
+        generic_profile=document.get("generic_profile"),
+        opening_exclusion=document.get("opening_exclusion"))
     report["input_file_sha256"] = sha256(payload).hexdigest()
     output.parent.mkdir(parents=True, exist_ok=True)
     # Exclusive create protects any preexisting report, even across processes.
