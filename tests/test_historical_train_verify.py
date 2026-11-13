@@ -331,3 +331,34 @@ def test_concurrent_report_owner_is_not_overwritten(tmp_path, monkeypatch):
         run_historical_train_verification(inp, train, out, ack_train_only=True)
     assert out.read_text() == "other process owns report"
     assert list(tmp_path.glob(".chesssim-historical-train-*.tmp")) == []
+
+
+
+@pytest.mark.parametrize("annotation", [
+    "inline_comment", "semicolon_comment", "side_variation",
+    "nag", "escape_line",
+])
+def test_training_pgn_rejects_nonmainline_material_even_if_hashes_match(
+        tmp_path, annotation):
+    _, games, inp, train, out = _fixture(tmp_path)
+    raw = train.read_text(encoding="utf-8")
+    if annotation == "inline_comment":
+        raw = raw.replace("1-0\n\n", "{synthetic reserved-side note} 1-0\n\n", 1)
+    elif annotation == "semicolon_comment":
+        raw = raw.replace("1-0\n\n", ";synthetic reserved-side note\n1-0\n\n", 1)
+    elif annotation == "nag":
+        raw = raw.replace("1-0\n\n", "$1 1-0\n\n", 1)
+    elif annotation == "escape_line":
+        raw = raw.replace("1-0\n\n", "% synthetic reserved-side note\n1-0\n\n", 1)
+    else:
+        candidate = _game(0)
+        first = candidate.variations[0].move
+        other = next(move for move in candidate.board().legal_moves if move != first)
+        candidate.add_variation(other)
+        raw = (candidate.accept(chess.pgn.StringExporter(
+            headers=True, variations=True, comments=False)).rstrip()
+            + "\n\n" + _export(games[1:6]).decode("utf-8"))
+    train.write_text(raw, encoding="utf-8")
+    with pytest.raises(ValueError):
+        run_historical_train_verification(inp, train, out, ack_train_only=True)
+    assert not out.exists()
