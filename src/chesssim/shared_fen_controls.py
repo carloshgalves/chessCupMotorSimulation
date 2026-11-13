@@ -99,6 +99,7 @@ def compare_shared_fen_assignments(
     profile_a: str,
     profile_b: str,
     min_ply: int = 17,
+    generic_profile: str | None = None,
 ) -> dict:
     """Evaluate the requested and swapped profile/target assignments.
 
@@ -113,10 +114,15 @@ def compare_shared_fen_assignments(
         _required_str(value, field)
     if player_a == player_b or profile_a == profile_b:
         raise ValueError("comparison requires two distinct players and profiles")
+    if generic_profile is not None:
+        _required_str(generic_profile, "generic_profile")
+        if generic_profile in (profile_a, profile_b):
+            raise ValueError("generic profile must be distinct from both candidates")
     if type(min_ply) is not int or not 1 <= min_ply <= 500:
         raise ValueError("min_ply must be an integer between 1 and 500")
-    if not isinstance(predictions, dict) or set(predictions) != {profile_a, profile_b}:
-        raise ValueError("exactly two declared prediction profiles are required")
+    profiles = (profile_a, profile_b) + ((generic_profile,) if generic_profile is not None else ())
+    if not isinstance(predictions, dict) or set(predictions) != set(profiles):
+        raise ValueError("prediction profiles must match exactly the declared profiles")
 
     canonical, grouped, duplicates, excluded = _validate_positions(
         positions, {player_a, player_b}, min_ply)
@@ -128,7 +134,7 @@ def compare_shared_fen_assignments(
     normalized_predictions = {}
     import chess
 
-    for profile in (profile_a, profile_b):
+    for profile in profiles:
         choices = predictions[profile]
         if not isinstance(choices, dict) or set(choices) != expected:
             raise ValueError("predictions must match exactly the shared FEN set")
@@ -138,12 +144,15 @@ def compare_shared_fen_assignments(
             clean[fen] = _legal_move(board, choices[fen], "profile prediction")
         normalized_predictions[profile] = clean
 
+    roles = {"player_a": player_a, "player_b": player_b,
+             "profile_a": profile_a, "profile_b": profile_b}
+    if generic_profile is not None:
+        roles["generic_profile"] = generic_profile
     encoded = json.dumps({
         "rows": canonical,
         "predictions": normalized_predictions,
         "min_ply": min_ply,
-        "roles": {"player_a": player_a, "player_b": player_b,
-                  "profile_a": profile_a, "profile_b": profile_b},
+        "roles": roles,
     }, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     digest = sha256(encoded.encode("utf-8")).hexdigest()
 
@@ -157,6 +166,8 @@ def compare_shared_fen_assignments(
             "This assignment contrast is not independent historical validation, "
             "a player identity classifier, a strength measure, or fidelity proof."),
     }
+    if generic_profile is not None:
+        limits["generic_control"] = "DECLARED_NOT_VERIFIED"
     result = {
         "schema": SCHEMA,
         "status": "NO_EXACT_SHARED_FENS" if not shared
@@ -177,18 +188,26 @@ def compare_shared_fen_assignments(
         },
         "accuracy_by_profile_and_player": {
             profile: {player: None for player in (player_a, player_b)}
-            for profile in (profile_a, profile_b)
+            for profile in profiles
         },
         "declared_assignment_score": None,
         "swapped_assignment_score": None,
         "contrast": None,
         "limitations": limits,
     }
+    if generic_profile is not None:
+        result["generic_control"] = {
+            "declared_profile": generic_profile,
+            "provenance": "DECLARED_NOT_VERIFIED",
+            "accuracy_by_player": {player_a: None, player_b: None},
+            "assigned_minus_generic_by_player": {player_a: None, player_b: None},
+            "mean_assigned_minus_generic": None,
+        }
     if not shared:
         return result
 
     scores = result["accuracy_by_profile_and_player"]
-    for profile in (profile_a, profile_b):
+    for profile in profiles:
         for player in (player_a, player_b):
             accuracies = [
                 sum(row["move"] == normalized_predictions[profile][fen]
@@ -202,6 +221,17 @@ def compare_shared_fen_assignments(
     result["declared_assignment_score"] = assigned
     result["swapped_assignment_score"] = swapped
     result["contrast"] = assigned - swapped
+    if generic_profile is not None:
+        generic_scores = scores[generic_profile]
+        by_player = {
+            player_a: scores[profile_a][player_a] - generic_scores[player_a],
+            player_b: scores[profile_b][player_b] - generic_scores[player_b],
+        }
+        result["generic_control"].update({
+            "accuracy_by_player": dict(generic_scores),
+            "assigned_minus_generic_by_player": by_player,
+            "mean_assigned_minus_generic": (by_player[player_a] + by_player[player_b]) / 2,
+        })
     return result
 
 
@@ -248,16 +278,19 @@ def run_shared_fen_file(input_path: Path, output_path: Path, *,
         raise ValueError("Invalid JSON input") from exc
     required = {"positions", "predictions", "player_a", "player_b",
                 "profile_a", "profile_b"}
-    accepted = required | {"min_ply"}
+    accepted = required | {"min_ply", "generic_profile"}
     if (not isinstance(document, dict) or
             not required.issubset(document) or
             not set(document).issubset(accepted)):
         raise ValueError("Input JSON has missing or unexpected fields")
+    if "generic_profile" in document and document["generic_profile"] is None:
+        raise ValueError("generic_profile cannot be null when declared")
     report = compare_shared_fen_assignments(
         document["positions"], document["predictions"],
         player_a=document["player_a"], player_b=document["player_b"],
         profile_a=document["profile_a"], profile_b=document["profile_b"],
-        min_ply=document.get("min_ply", 17))
+        min_ply=document.get("min_ply", 17),
+        generic_profile=document.get("generic_profile"))
     report["input_file_sha256"] = sha256(payload).hexdigest()
     output.parent.mkdir(parents=True, exist_ok=True)
     # Exclusive create protects any preexisting report, even across processes.

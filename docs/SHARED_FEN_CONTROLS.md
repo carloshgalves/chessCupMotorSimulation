@@ -60,3 +60,32 @@ de confiança neste estágio. Não há classificação cega nem porcentagem de f
 Este módulo é **offline**. Não executa motores, downloads, treinamentos, decisões
 de seleção ou abertura de corpora/testes finais. Dados reais e homologação dos
 motores permanecem etapas posteriores de #11 e #12.
+
+
+## Fatia da issue #11: perfil genérico de controle (opcional)
+
+Pode-se declarar um terceiro perfil de comparação no **mesmo conjunto de FENs**.
+Acrescente o campo `generic_profile` ao JSON, por exemplo
+`"generic_profile": "rodent-default"`, e uma tabela correspondente em
+`predictions` para todos os FENs compartilhados. Sem esse campo, o contrato
+de dois perfis e os relatórios anteriores permanecem inalterados.
+
+O relatório acrescenta `accuracy_by_profile_and_player` para o controle e
+`generic_control` com concordância por jogador, diferença da concordância
+da atribuição declarada em relação ao controle para cada jogador e média
+descritiva dessas diferenças. Se não houver FENs compartilhados, as métricas
+são `null`. O controle usa os mesmos FENs, pesos e decisões históricas. A
+declaração do controle altera o hash da evidência normalizada.
+
+**Importante:** `generic_profile` é um nome declarado pelo operador,
+não uma certificação de que esse perfil seja de fato genérico, imparcial
+ou tenha parâmetros equivalentes aos candidatos. O campo
+`limitations.generic_control = DECLARED_NOT_VERIFIED` registra essa
+limitação. Registre externamente SHA-256 de executável e dos arquivos
+de perfil, parâmetros UCI, profundidade, política de livros e recortes
+dos corpora. Compare apenas experimentos com condições equivalentes,
+sem utilizar conjuntos finais lacrados.
+
+A comparação não mede Elo, força independentemente, nem identidade
+ou fidelidade histórica. Não substitui validação cega ou controles
+negativos com dados experimentais reais.
