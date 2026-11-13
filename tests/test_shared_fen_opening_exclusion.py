@@ -1,7 +1,6 @@
 """Issue #11: predeclared exact-FEN exclusion, never inferred historical fidelity."""
 from __future__ import annotations
 
-from copy import deepcopy
 import json
 
 import chess
