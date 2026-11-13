@@ -30,13 +30,13 @@ jobs:
       - name: Actual four-player PGN ingestion and training export
         run: |
           python -m chesssim.real_training_cohorts --fetch \
-            --players fischer tal karpov kasparov --min-ply 17 \
+            --players fischer tal karpov kasparov --min-ply 17 --birthdates-json docs/REAL_BIRTHDATES_4.json \
             --out "$RUNNER_TEMP/real-year-training"
       - name: Actual career-stratified research cohort from four REAL PGNs
         run: |
           python -m chesssim.real_training_cohorts --fetch \
             --players fischer tal karpov kasparov \
-            --split-policy career-stratified --min-ply 17 \
+            --split-policy career-stratified --min-ply 17 --birthdates-json docs/REAL_BIRTHDATES_4.json \
             --out "$RUNNER_TEMP/real-career-training"
       - name: Real-data evidence gate
         run: |
@@ -53,6 +53,10 @@ jobs:
           assert m["validation_moves_exported"] is False
           assert not m["missing_sources"]
           assert m["training_files"]
+          observed = [json.loads(line) for p in (root / "train" / "fischer").glob("*.jsonl")
+                      for line in p.read_text().splitlines()[:2]]
+          assert observed and all(x["age_bounds"] is not None for x in observed)
+          assert all(x["age_at_game"] is None for x in observed)
           for player in ("fischer", "tal", "karpov", "kasparov"):
               for arm in ("train", "validation", "holdout"):
                   assert m["players"][player]["partition_by_whole_year"][arm]["games"] > 0
