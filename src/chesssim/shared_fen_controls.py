@@ -166,7 +166,7 @@ def compare_shared_fen_assignments(
         "early_rows_excluded": excluded,
         "unmatched_fens_excluded": len(grouped) - len(shared),
         "duplicate_records_ignored": duplicates,
-        "distinct_games_by_player": {
+        "distinct_game_ids_by_player": {
             player: len({r["game"] for both in shared.values()
                          for r in both.get(player, [])})
             for player in (player_a, player_b)
