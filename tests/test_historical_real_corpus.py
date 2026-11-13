@@ -161,7 +161,9 @@ def test_duplicate_and_partial_date_are_counted_not_inflated(monkeypatch):
     assert report["counters"]["pgn_records"] == 7
     assert report["counters"]["duplicate_mainline"] >= 1
     assert report["counters"]["missing_or_invalid_full_date"] >= 1
-    assert report["dated_unique_games"] < report["unique_games"]
+    assert report["dated_unique_games"] == report["unique_games"]
+    assert report["counters"]["year_only_date"] == 1
+    assert report["counters"]["unknown_year"] == 0
 
 
 def test_full_fen_key_differs_with_halfmove_or_fullmove_counter():
@@ -175,3 +177,33 @@ def test_full_fen_key_differs_with_halfmove_or_fullmove_counter():
     result = real._compare_two(votes1, votes2)
     assert result["exact_full_fens_shared"] == 0
     assert result["fens_with_different_modal_moves"] == 0
+
+
+
+@pytest.mark.parametrize("input_date,expected", [
+    ("1955.??.??", ("1955", "year_only")),
+    ("1969.01.??", ("1969", "year_only")),
+    ("1971.??.15", ("1971", "year_only")),
+    ("1992.01.15", ("1992", "day_known")),
+    ("1982.13.??", (None, "unknown")),
+    ("1982.02.31", (None, "unknown")),
+    ("????.??.??", (None, "unknown")),
+])
+def test_real_historical_date_precision_without_fabricating_days(input_date, expected):
+    assert real._played_year(input_date) == expected
+
+
+def test_year_only_games_are_eligible_for_whole_year_partitions(monkeypatch):
+    monkeypatch.setitem(real.PLAYER_FILES["Fischer"], "min_usable", 1)
+    games = [_game("Fischer", 1950 + i, i) for i in range(5)]
+    for game in games:
+        game.headers["Date"] = game.headers["Date"][:4] + ".??.??"
+    cohort = real.analyze_cohort("Fischer", _zip("Fischer", games))
+    assert cohort["dated_unique_games"] == 5
+    assert cohort["counters"]["year_only_date"] == 5
+    assert cohort["partitions"]["train"]["games"] == 3
+    assert cohort["partitions"]["validation"]["games"] == 1
+    assert cohort["partitions"]["holdout"]["games"] == 1
+    assert cohort["partitions"]["train"]["first_year"] == 1950
+    assert cohort["partitions"]["train"]["last_year"] == 1952
+    assert "first_date" not in cohort["partitions"]["train"]
