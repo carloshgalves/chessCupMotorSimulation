@@ -183,20 +183,64 @@ def _scan(pgn: bytes, slug: str, surname: str) -> tuple[list[dict], dict]:
     return rows, {"encoding": encoding, **dict(counters)}
 
 
-def _assign(rows: list[dict]) -> dict:
+def _career_split_by_year(rows: list[dict]) -> tuple[dict, list[str]]:
+    """Disjoint calendar years in train/validation/holdout WITHIN each career band.
+
+    Each band contains consecutive ranked observed years. This is a
+    within-career interpolation protocol, NOT an out-of-time forecast.
+    """
+    years = sorted({int(row["date"]) for row in rows})
+    grouped = defaultdict(list)
+    for row in rows:
+        grouped[_career_band(int(row["date"]), years)].append(row)
+    parts = {arm: [] for arm in ARMS}
+    sparse = []
+    for band in ("early_observed", "middle_observed", "late_observed",
+                 "insufficient_year_coverage"):
+        rows_band = grouped.get(band, [])
+        years_band = sorted({int(r["date"]) for r in rows_band})
+        n = len(years_band)
+        if not n:
+            continue
+        if n < 3:
+            # The band cannot supply three disjoint calendar-year arms.
+            # Keep those games isolated from training, not falsely validated.
+            sparse.append(band)
+            continue
+        n_train = max(1, (3 * n + 4) // 5)  # ceil(60% of years)
+        n_validation = max(1, n // 5)
+        if n_train + n_validation >= n:
+            n_train = n - n_validation - 1
+        assignments = {
+            **{y: "train" for y in years_band[:n_train]},
+            **{y: "validation" for y in years_band[n_train:n_train+n_validation]},
+            **{y: "holdout" for y in years_band[n_train+n_validation:]},
+        }
+        for row in rows_band:
+            parts[assignments[int(row["date"])]].append(row)
+    return parts, sparse
+
+
+def _assign(rows: list[dict], policy: str = "chronological") -> tuple[dict, list[str]]:
     dated = [r for r in rows if r["date"] is not None]
-    parts = _split_by_year(dated)
+    if policy == "chronological":
+        parts = _split_by_year(dated)
+        sparse = []
+    elif policy == "career-stratified":
+        parts, sparse = _career_split_by_year(dated)
+    else:
+        raise ValueError("Unknown year partition policy")
     for arm, subset in parts.items():
         for row in subset:
             row["arm"] = arm
     for row in rows:
-        if row["date"] is None:
-            row["arm"] = "unknown"
-    return {
+        if "arm" not in row:
+            row["arm"] = "quarantine"
+    return ({
         arm: {"games": len(parts[arm]),
               "years": sorted({int(r["date"]) for r in parts[arm]})}
         for arm in ARMS
-    }
+    }, sparse)
 
 
 def _iter_verified_games(pgn: bytes, rows: list[dict], surname: str):
@@ -237,8 +281,11 @@ def _phase(ply: int) -> str:
 def _career_band(year: int, years: list[int]) -> str:
     if len(years) < 3:
         return "insufficient_year_coverage"
-    first, last = years[0], years[-1]
-    bucket = min(2, 3 * (year - first) // (last - first + 1))
+    # Quantiles of DISTINCT observed years, rather than elapsed wall-clock
+    # thirds. Sparse late years (e.g., Fischer 1992) remain represented.
+    if year not in years:
+        raise ValueError("Year is not present in the player's corpus")
+    bucket = min(2, 3 * years.index(year) // len(years))
     return ("early_observed", "middle_observed", "late_observed")[bucket]
 
 
@@ -274,6 +321,7 @@ def build_real_training_cohorts(out: Path, *, players: list[str] | None = None,
                                 archive_dir: Path | None = None,
                                 allow_missing: bool = False,
                                 min_ply: int = 17,
+                                split_policy: str = "chronological",
                                 birthdates: dict | None = None,
                                 source_files: dict | None = None) -> dict:
     """Export only real train examples, grouped by focal player and exact year.
@@ -284,6 +332,8 @@ def build_real_training_cohorts(out: Path, *, players: list[str] | None = None,
     """
     if type(min_ply) is not int or not 1 <= min_ply <= MAX_PLIES:
         raise ValueError("min_ply must be 1..500")
+    if split_policy not in ("chronological", "career-stratified"):
+        raise ValueError("Unsupported split policy")
     config = _player_configuration(list(players or DEFAULT_PLAYERS),
                                    birthdates, source_files)
     out = Path(out).expanduser()
@@ -297,6 +347,7 @@ def build_real_training_cohorts(out: Path, *, players: list[str] | None = None,
         cache_dir.mkdir(mode=0o700)
         rows_by_slug = {}
         partitions = {}
+        sparse_bands = {}
         source_summary = {}
         skipped = {}
         # Phase 1: all source bytes are pinned/cached before partitioning.
@@ -318,7 +369,7 @@ def build_real_training_cohorts(out: Path, *, players: list[str] | None = None,
             if not rows:
                 raise ValueError("No verified focal games for " + slug)
             rows_by_slug[slug] = rows
-            partitions[slug] = _assign(rows)
+            partitions[slug], sparse_bands[slug] = _assign(rows, split_policy)
             source_summary[slug] = {
                 "source": cfg["source"] + ".pgn", "origin": origin,
                 "download_sha256": sha256(blob).hexdigest(),
@@ -416,6 +467,7 @@ def build_real_training_cohorts(out: Path, *, players: list[str] | None = None,
                     "birth_date_declared": cfg["birth_date"],
                     "partition_by_whole_year": partitions[slug],
                     "undated_quarantined": sum(r["date"] is None for r in rows),
+                    "sparse_career_bands_quarantined": sparse_bands[slug],
                     "metrics": dict(sorted(metrics.items())),
                     "by_year": {str(year): dict(sorted(data.items()))
                                 for year, data in sorted(by_year.items())},
@@ -430,7 +482,8 @@ def build_real_training_cohorts(out: Path, *, players: list[str] | None = None,
             "schema": SCHEMA, "status": "REAL_PGN_TRAIN_ONLY_DATASET_NOT_MODEL_VALIDATED",
             "snapshot_commit": MIRROR_COMMIT if archive_dir is None else None,
             "min_ply": min_ply,
-            "partition_policy": "PLAYER_WHOLE_YEAR_60_20_20_TARGET_WITH_GLOBAL_TRAJECTORY_AND_EXACT_FEN_EMBARGO",
+            "partition_policy": split_policy,
+            "partition_grouping": "DISJOINT_FULL_YEARS_GLOBAL_TRAJECTORY_AND_EXACT_FEN_EMBARGO",
             "sources": source_summary, "players": player_reports,
             "missing_sources": skipped,
             "accepted_player_game_entries": sum(len(rows) for rows in rows_by_slug.values()),
@@ -443,7 +496,8 @@ def build_real_training_cohorts(out: Path, *, players: list[str] | None = None,
             "holdout_moves_exported": False, "validation_moves_exported": False,
             "notes": [
                 "Focal identity is derived from a declared surname token in PGN headers; ambiguous matches are excluded.",
-                "Career stage is the observed dataset year-span tercile, not a biographical claim.",
+                "Career stage is a tercile of observed distinct calendar years, not a biographical claim.",
+                "Chronological split targets future generalization; career-stratified split targets within-career interpolation.",
                 "Phase labels are ply-number proxies, not Stockfish positional classifications.",
                 "Only exact full FEN equality is embargoed; tactical/semantic analogues can remain.",
                 "Same-trajectory digests may be different historical games with identical moves.",
@@ -482,6 +536,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--source-files-json", type=Path,
                         help="optional source filename mapping by roster slug")
     parser.add_argument("--min-ply", type=int, default=17)
+    parser.add_argument("--split-policy", choices=["chronological", "career-stratified"],
+                        default="chronological")
     parser.add_argument("--out", type=Path, required=True,
                         help="new output directory, never an existing directory")
     args = parser.parse_args(argv)
@@ -494,7 +550,8 @@ def main(argv: list[str] | None = None) -> int:
     report = build_real_training_cohorts(
         args.out, players=slugs, archive_dir=args.archive_dir,
         allow_missing=args.allow_missing, birthdates=birthdates,
-        source_files=files, min_ply=args.min_ply)
+        source_files=files, min_ply=args.min_ply,
+        split_policy=args.split_policy)
     print(json.dumps({
         "status": report["status"],
         "accepted_player_game_entries": report["accepted_player_game_entries"],
