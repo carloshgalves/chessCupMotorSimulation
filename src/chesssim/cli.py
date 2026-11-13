@@ -678,6 +678,10 @@ def main(argv: list[str] | None = None) -> int:
     train_verify.add_argument("--index", type=Path, required=True)
     train_verify.add_argument("--train-pgn", type=Path, required=True)
     train_verify.add_argument("--out", type=Path, required=True)
+    train_verify.add_argument("--expect-index-evidence-sha256",
+                              help="externally recorded normalized index commitment; requires train pin")
+    train_verify.add_argument("--expect-train-partition-sha256",
+                              help="externally recorded train partition commitment; requires index pin")
     train_verify.add_argument("--ack-train-only", action="store_true", required=True,
                               help="confirm input PGN contains training games only, never reserved sets")
 
@@ -935,7 +939,9 @@ def main(argv: list[str] | None = None) -> int:
             from .historical_train_verify import run_historical_train_verification
             report = run_historical_train_verification(
                 args.index, args.train_pgn, args.out,
-                ack_train_only=args.ack_train_only)
+                ack_train_only=args.ack_train_only,
+                expected_index_evidence_sha256=args.expect_index_evidence_sha256,
+                expected_train_partition_sha256=args.expect_train_partition_sha256)
             print(json.dumps({
                 "output": str(args.out),
                 "status": report["status"],
