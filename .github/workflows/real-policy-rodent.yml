@@ -89,7 +89,11 @@ jobs:
           baseline = json.loads((p / "real-policy-baseline.json").read_text())
           assert m["status"] == "REAL_PGN_TRAINED_EXPERIMENTAL_NOT_STYLE_VALIDATED"
           assert m["training_observations_used"] >= 3200
+          assert m["method"] == "L2_ADAGRAD_CONDITIONAL_LOGIT_OVER_LEGAL_MOVES"
+          assert all(len(v["training_loss"]) == 3 for v in m["profiles"].values())
           assert r["arm"] == "validation"
+          assert r["model_promotion"] == "DENIED_NO_INDEPENDENT_STYLE_ACCEPTANCE"
+          assert set(r["style_diagnostics"]) == set(r["evaluation"])
           assert r["rodent"]["status"] == "ACTUAL_UCI_MOVES_MEASURED"
           assert r["rodent"]["binary_sha256"]
           assert r["rodent"]["generic_personality"] == "Simple"
