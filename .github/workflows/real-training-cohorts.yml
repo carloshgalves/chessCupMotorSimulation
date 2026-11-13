@@ -1,0 +1,96 @@
+name: Real historical training cohorts (player/year)
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/real_training_cohorts.py'
+      - 'tests/test_real_training_cohorts.py'
+      - '.github/workflows/real-training-cohorts.yml'
+      - 'docs/REAL_TRAINING_COHORTS.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-player-year-training:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install
+        run: python -m pip install -e '.[dev]'
+      - name: Regression tests
+        run: python -m pytest tests/test_real_training_cohorts.py -q -ra
+      - name: Actual four-player PGN ingestion and training export
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov --min-ply 17 --birthdates-json docs/REAL_BIRTHDATES_4.json \
+            --out "$RUNNER_TEMP/real-year-training"
+      - name: Actual career-stratified research cohort from four REAL PGNs
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov \
+            --split-policy career-stratified --min-ply 17 --birthdates-json docs/REAL_BIRTHDATES_4.json \
+            --out "$RUNNER_TEMP/real-career-training"
+      - name: Real-data evidence gate
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"]) / "real-year-training"
+          m = json.loads((root / "manifest.json").read_text())
+          assert set(m["players"]) == {"fischer", "tal", "karpov", "kasparov"}
+          assert m["accepted_player_game_entries"] >= 6500
+          assert m["globally_distinct_move_trajectories"] > 0
+          assert m["training_examples_exported"] > 0
+          assert m["holdout_moves_exported"] is False
+          assert m["validation_moves_exported"] is False
+          assert not m["missing_sources"]
+          assert m["training_files"]
+          observed = [json.loads(line) for p in (root / "train" / "fischer").glob("*.jsonl")
+                      for line in p.read_text().splitlines()[:2]]
+          assert observed and all(x["age_bounds"] is not None for x in observed)
+          assert all(x["age_at_game"] is None for x in observed)
+          for player in ("fischer", "tal", "karpov", "kasparov"):
+              for arm in ("train", "validation", "holdout"):
+                  assert m["players"][player]["partition_by_whole_year"][arm]["games"] > 0
+          assert not list(root.rglob("*.pgn"))
+          assert not list(root.rglob("*.sqlite3"))
+          career = json.loads((root.parent / "real-career-training" / "manifest.json").read_text())
+          assert career["partition_policy"] == "career-stratified"
+          assert career["accepted_player_game_entries"] == m["accepted_player_game_entries"]
+          assert career["training_examples_exported"] > 0
+          assert career["cross_arm_conflicting_trajectories"] >= 0
+          for player in career["players"]:
+              years = career["players"][player]["partition_by_whole_year"]
+              assert all(years[arm]["games"] > 0 for arm in ("train", "validation", "holdout"))
+              assert max(years["train"]["years"]) > max(
+                  m["players"][player]["partition_by_whole_year"]["train"]["years"])
+          print("REAL_CAREER_TRAINING_GATE_PASS", career["training_examples_exported"])
+          print("REAL_PGN_TRAINING_GATE_PASS", m["accepted_player_game_entries"],
+                m["globally_distinct_move_trajectories"],
+                m["training_examples_exported"])
+          PY
+      - name: Upload aggregate manifest only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-player-year-training-manifest
+          path: ${{ runner.temp }}/real-year-training/manifest.json
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload career-stratified aggregate manifest only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-career-stratified-manifest
+          path: ${{ runner.temp }}/real-career-training/manifest.json
+          if-no-files-found: warn
+          retention-days: 7
