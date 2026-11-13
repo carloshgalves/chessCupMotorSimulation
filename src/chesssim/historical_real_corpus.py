@@ -15,8 +15,10 @@ from datetime import date
 from hashlib import sha256
 from io import BytesIO, StringIO
 import json
+import os
 from pathlib import Path
 import re
+import tempfile
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 from zipfile import BadZipFile, ZipFile
@@ -167,7 +169,8 @@ def _year_partition_report(rows: list[dict]) -> dict:
     }
 
 
-def analyze_cohort(name: str, archive: bytes, *, min_ply: int = 17) -> dict:
+def analyze_cohort(name: str, archive: bytes, *, min_ply: int = 17,
+                   source_url: str | None = None) -> dict:
     """Index real games, but do not derive or evaluate model predictions."""
     if name not in PLAYER_FILES or type(min_ply) is not int or not 1 <= min_ply <= 500:
         raise ValueError("Unsupported player or invalid ply threshold")
@@ -236,7 +239,7 @@ def analyze_cohort(name: str, archive: bytes, *, min_ply: int = 17) -> dict:
         "pgn_sha256": sha256(raw).hexdigest(),
         "download_bytes": len(archive),
         "pgn_bytes": len(raw),
-        "source_url": archive_url(name),
+        "source_url": source_url or "LOCAL_SUPPLIED_SOURCE_NOT_AUTHENTICATED",
         "source_catalog": SOURCE_PAGE,
         "original_catalog": ORIGINAL_CATALOG,
         "encoding": encoding,
@@ -293,12 +296,17 @@ def _compare_two(a: dict[str, Counter], b: dict[str, Counter]) -> dict:
 
 
 def audit_historical_archives(archives: dict[str, bytes], *,
-                              min_ply: int = 17) -> dict:
+                              min_ply: int = 17,
+                              source_urls: dict[str, str] | None = None) -> dict:
     """Audit four real PGN collections without exporting raw games."""
     if set(archives) != set(PLAYER_FILES):
         raise ValueError("Exactly the four predeclared historical cohorts required")
+    if source_urls is not None and set(source_urls) != set(PLAYER_FILES):
+        raise ValueError("Source URL mapping must cover exactly four cohorts")
     cohorts = {
-        name: analyze_cohort(name, archives[name], min_ply=min_ply)
+        name: analyze_cohort(
+            name, archives[name], min_ply=min_ply,
+            source_url=source_urls[name] if source_urls is not None else None)
         for name in sorted(PLAYER_FILES)
     }
     total = sum(c["unique_games"] for c in cohorts.values())
@@ -360,11 +368,29 @@ def run_real_historical_audit(output: Path, *,
         name: _read_archive(name, archive_dir=archive_dir, fetch=fetch)
         for name in sorted(PLAYER_FILES)
     }
-    report = audit_historical_archives(archives, min_ply=min_ply)
-    # Fail closed before publication. One report, no copied PGN data.
-    with output.open("x", encoding="utf-8") as stream:
-        json.dump(report, stream, sort_keys=True, indent=2, ensure_ascii=False)
-        stream.write("\n")
+    report = audit_historical_archives(
+        archives, min_ply=min_ply,
+        source_urls=({name: archive_url(name) for name in PLAYER_FILES}
+                     if fetch else None))
+    # Complete a private staging file before atomically publishing with a
+    # no-overwrite hard link. Failed writes leave no partial public report.
+    if any(parent.is_symlink() for parent in output.parents):
+        raise ValueError("Output path cannot traverse a symlink")
+    fd, temp_path = tempfile.mkstemp(
+        dir=output.parent, prefix=".chesssim-real-historical-", suffix=".tmp")
+    staged = Path(temp_path)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            fd = None
+            json.dump(report, stream, sort_keys=True, indent=2, ensure_ascii=False)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.link(staged, output)
+    finally:
+        if fd is not None:
+            os.close(fd)
+        staged.unlink(missing_ok=True)
     return report
 
 
