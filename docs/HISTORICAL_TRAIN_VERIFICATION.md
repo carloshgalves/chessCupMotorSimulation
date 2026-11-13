@@ -122,3 +122,8 @@ separados do checkout (por exemplo, registro administrativo aprovado).
 Esta opção não verifica licença, direitos, selagem de dados ou acesso
 externo a conjuntos reservados, e nunca deve ser apresentada como
 autenticação científica do corpus.
+
+Na API de memória, a conferência ocorre antes do **parse** dos bytes PGN já
+fornecidos. No runner de arquivos, ela ocorre **antes de abrir o arquivo PGN**;
+o teste de regressão comprova essa ordem, inclusive diante de índice alterado
+ou cobertura cronológica insuficiente.

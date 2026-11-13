@@ -122,6 +122,8 @@ def _verify_operator_pins(manifest: dict, *,
     for value in values:
         if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
             raise ValueError("Invalid pinned SHA-256 commitment")
+    if manifest["status"] != "INDEXED_NOT_SOURCE_VERIFIED":
+        raise ValueError("Pinned historical index has insufficient period coverage")
     expected = {
         "expected_index_evidence_sha256": manifest["input_evidence_sha256"],
         "expected_train_partition_sha256": (
@@ -134,7 +136,7 @@ def _verify_operator_pins(manifest: dict, *,
         "status": "MATCHED_OPERATOR_SUPPLIED_PINS_NOT_AUTHENTICATED",
         "index_evidence_sha256": values[0],
         "train_partition_sha256": values[1],
-        "verified_before_training_pgn_read": True,
+        "checked_before_training_pgn_parsing": True,
     }
 
 

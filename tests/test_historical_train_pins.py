@@ -35,7 +35,7 @@ def test_pin_pair_matches_and_binds_approved_index(tmp_path):
         "status": "MATCHED_OPERATOR_SUPPLIED_PINS_NOT_AUTHENTICATED",
         "index_evidence_sha256": pins["expected_index_evidence_sha256"],
         "train_partition_sha256": pins["expected_train_partition_sha256"],
-        "verified_before_training_pgn_read": True,
+        "checked_before_training_pgn_parsing": True,
     }
     assert json.loads(out.read_text()) == result
     assert result["source_rights_status"] == (
@@ -171,3 +171,21 @@ def test_pins_never_disclose_individual_reserved_identities(tmp_path):
     raw = json.dumps(result)
     for row in index["games"]:
         assert row["mainline_sha256"] not in raw
+
+
+
+def test_insufficient_period_index_is_rejected_before_train_pgn_read(
+        tmp_path, monkeypatch):
+    index, _, inp, train, out = _fixture(tmp_path)
+    index["games"] = index["games"][:2]
+    pins = _pins(index)
+    inp.write_text(json.dumps(index))
+
+    def forbid_train_read(_):
+        raise AssertionError("Must reject insufficient pinned periods first")
+
+    monkeypatch.setattr(module, "_read_training_pgn", forbid_train_read)
+    with pytest.raises(ValueError, match="insufficient period"):
+        run_historical_train_verification(
+            inp, train, out, ack_train_only=True, **pins)
+    assert not out.exists()
