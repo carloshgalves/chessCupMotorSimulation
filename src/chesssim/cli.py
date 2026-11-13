@@ -678,6 +678,8 @@ def main(argv: list[str] | None = None) -> int:
     shared_fen.add_argument("--input", type=Path, required=True,
                             help="bounded local JSON: positions, predictions, labels and profiles")
     shared_fen.add_argument("--out", type=Path, required=True)
+    shared_fen.add_argument("--opening-catalog-source", type=Path,
+                            help="optionally verify opening exclusion FENs and declared SHA-256 against actual local catalog JSON")
     shared_fen.add_argument("--ack-unsealed", action="store_true", required=True,
                             help="confirm this does not contain sealed final-test data")
 
@@ -913,7 +915,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "shared-fen-controls":
             from .shared_fen_controls import run_shared_fen_file
             report = run_shared_fen_file(
-                args.input, args.out, ack_unsealed=args.ack_unsealed)
+                args.input, args.out, ack_unsealed=args.ack_unsealed,
+                opening_catalog_source=args.opening_catalog_source)
             print(json.dumps({
                 "output": str(args.out),
                 "status": report["status"],
