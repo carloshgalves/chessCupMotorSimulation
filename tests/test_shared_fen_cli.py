@@ -66,7 +66,7 @@ def test_runner_rejects_overwrite_without_touching_existing_content(tmp_path):
 
 
 @pytest.mark.parametrize("mutation", ["extra_field", "missing_field", "bad_predictions",
-                                       "invalid_json", "symlink_input", "symlink_output",
+                                       "invalid_json", "duplicate_json_key", "symlink_input", "symlink_output",
                                        "denied_ack"])
 def test_runner_fails_closed_without_partial_report(tmp_path, mutation):
     inp, out = tmp_path / "input.json", tmp_path / "results.json"
@@ -80,6 +80,9 @@ def test_runner_fails_closed_without_partial_report(tmp_path, mutation):
     inp.write_text(json.dumps(data))
     if mutation == "invalid_json":
         inp.write_text("{not json")
+    if mutation == "duplicate_json_key":
+        raw = inp.read_text()
+        inp.write_text(raw[:-1] + ', "player_a":"Faked name"}')
     if mutation == "symlink_input":
         link = tmp_path / "link.json"
         link.symlink_to(inp)
