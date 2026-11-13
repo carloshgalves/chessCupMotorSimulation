@@ -117,6 +117,81 @@ def _diagnostics(metric: dict, reference: dict | None = None) -> dict:
     return result
 
 
+def paired_holdout_decisions(positions: list[dict], baseline: dict,
+                             candidate: dict) -> dict:
+    """Compare decisions on identical historical positions, grouped by game.
+
+    This is evidence of exact move agreement, not a historical-style
+    identifier, Elo estimate or independent validation of a personality.
+    Raw predictions remain internal; only aggregate counts are published.
+    """
+    if not positions:
+        raise ValueError("Amostra de validação vazia")
+    reference_moves = baseline.get("_predicted_moves")
+    candidate_moves = candidate.get("_predicted_moves")
+    if (not isinstance(reference_moves, list) or
+            not isinstance(candidate_moves, list) or
+            len(reference_moves) != len(positions) or
+            len(candidate_moves) != len(positions)):
+        raise ValueError("Previsões de validação ausentes ou desalinhadas")
+
+    counts = {"both_correct": 0, "baseline_only_correct": 0,
+              "candidate_only_correct": 0, "both_wrong": 0,
+              "different_predictions": 0}
+    games: dict[str, dict[str, int]] = {}
+    for position, reference, challenger in zip(positions, reference_moves, candidate_moves):
+        game = position.get("game")
+        historical_move = position.get("move")
+        if (not isinstance(game, str) or not game or
+                not isinstance(historical_move, str) or not historical_move or
+                not isinstance(reference, str) or not reference or
+                not isinstance(challenger, str) or not challenger):
+            raise ValueError("Registro histórico ou previsão inválidos")
+        per_game = games.setdefault(game, {"positions": 0, "baseline": 0, "candidate": 0})
+        ref_ok = reference == historical_move
+        candidate_ok = challenger == historical_move
+        per_game["positions"] += 1
+        per_game["baseline"] += int(ref_ok)
+        per_game["candidate"] += int(candidate_ok)
+        if reference != challenger:
+            counts["different_predictions"] += 1
+        if ref_ok and candidate_ok:
+            counts["both_correct"] += 1
+        elif ref_ok:
+            counts["baseline_only_correct"] += 1
+        elif candidate_ok:
+            counts["candidate_only_correct"] += 1
+        else:
+            counts["both_wrong"] += 1
+
+    baseline_correct = counts["both_correct"] + counts["baseline_only_correct"]
+    candidate_correct = counts["both_correct"] + counts["candidate_only_correct"]
+    if (type(baseline.get("correct")) is not int or
+            type(candidate.get("correct")) is not int or
+            baseline["correct"] != baseline_correct or
+            candidate["correct"] != candidate_correct):
+        raise ValueError("Contagens do avaliador divergem das previsões")
+    n = len(positions)
+    g = len(games)
+    baseline_macro = sum(row["baseline"] / row["positions"] for row in games.values()) / g
+    candidate_macro = sum(row["candidate"] / row["positions"] for row in games.values()) / g
+    return {
+        "status": "EXPLORATORY_DECISION_AGREEMENT_NOT_STYLE_VALIDATION",
+        "evaluated_positions": n,
+        "sampled_games": g,
+        "baseline_top1": baseline_correct / n,
+        "candidate_top1": candidate_correct / n,
+        "top1_gain": (candidate_correct - baseline_correct) / n,
+        "paired_counts": counts,
+        "macro_top1_by_game": {
+            "baseline": baseline_macro,
+            "candidate": candidate_macro,
+            "gain": candidate_macro - baseline_macro,
+        },
+        "warning": ("Concordância exata em posições compartilhadas não prova "
+                    "fidelidade ao estilo, identidade histórica ou força enxadrística."),
+    }
+
 def _remove_inherited_opening_books(profile_text: str) -> str:
     """Do not ship a new persona that silently inherits Karpov's repertoire."""
     pattern = re.compile(r"(?m)^setoption name (?:GuideBookFile|MainBookFile) value .*\r?\n?")
@@ -135,6 +210,8 @@ def calibrate_personality(root: Path, pgn: Path, output: Path, *, target: str,
         raise ValueError("depth deve estar entre 1 e 20")
     if not (1 <= trials <= 1000):
         raise ValueError("trials deve estar entre 1 e 1000")
+    if type(min_holdout_games) is not int or min_holdout_games < 1:
+        raise ValueError("min_holdout_games deve ser inteiro positivo")
     root = root.resolve()
     if not (root / "rodent-iv-plain.exe").is_file():
         raise FileNotFoundError(root / "rodent-iv-plain.exe")
@@ -149,8 +226,13 @@ def calibrate_personality(root: Path, pgn: Path, output: Path, *, target: str,
                                                  from_year=from_year, to_year=to_year)
     train, val, split = split_positions(decisions, seed=seed,
                                         train_limit=train_positions, val_limit=val_positions)
-    if split["val_games"] < min_holdout_games:
-        raise ValueError(f"Holdout pequeno: {split['val_games']} jogos; esperado >= {min_holdout_games}.")
+    sampled_validation_games = len({d["game"] for d in val})
+    if split["val_games"] < min_holdout_games or sampled_validation_games < min_holdout_games:
+        raise ValueError(
+            f"Holdout insuficiente: {split['val_games']} partidas reservadas, "
+            f"{sampled_validation_games} efetivamente amostradas; "
+            f"mínimo exigido: {min_holdout_games}."
+        )
     source_text = base_path.read_text(encoding="utf-8-sig")
     basis = extract_values(source_text)
     # Candidate baseline Karpov is an initialization, NOT a claim of Mecking fidelity.
@@ -197,6 +279,7 @@ def calibrate_personality(root: Path, pgn: Path, output: Path, *, target: str,
         candidate_raw = evaluate_candidate(root, "custom/" + temp_file.name, val, depth)
         baseline = _diagnostics(baseline_raw)
         candidate = _diagnostics(candidate_raw, baseline_raw)
+        paired = paired_holdout_decisions(val, baseline_raw, candidate_raw)
     finally:
         temp_file.unlink(missing_ok=True)
 
@@ -225,6 +308,7 @@ def calibrate_personality(root: Path, pgn: Path, output: Path, *, target: str,
               "engine_sha256": file_hash(root / "rodent-iv-plain.exe"),
               "pgn_path": str(pgn), "baseline_holdout": baseline,
               "candidate_holdout": candidate,
+              "paired_holdout_decisions": paired,
               "holdout_gain": candidate["top1"] - baseline["top1"],
               "candidate": str(profile), "candidate_sha256": file_hash(profile),
               "warnings": ["Acurácia top-1 NÃO é Elo nem calibração conclusiva de estilo.",
@@ -232,7 +316,8 @@ def calibrate_personality(root: Path, pgn: Path, output: Path, *, target: str,
                            "A calibração não transfere o livro de aberturas de Karpov ao perfil candidato.",
                            "O alvo é um estilo em posições históricas, não força/segurança tática.",
                            "Validar com Stockfish e confrontos independentes antes de promover.",
-                           "A busca de parâmetros pode ter sobreajuste mesmo com holdout por partida."],
+                           "A busca de parâmetros pode ter sobreajuste mesmo com holdout por partida.",
+                           "A comparação pareada é descritiva; não valida identidade ou fidelidade histórica."],
               "history": history}
     (output / "calibration.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return report
