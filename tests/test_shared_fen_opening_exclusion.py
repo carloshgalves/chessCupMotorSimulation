@@ -213,3 +213,25 @@ def test_cli_explicit_null_exclusion_is_rejected(tmp_path):
     with pytest.raises(ValueError, match="opening_exclusion"):
         run_shared_fen_file(source, output, ack_unsealed=True)
     assert not output.exists()
+
+
+
+def test_catalog_order_is_normalized_but_unmatched_membership_is_hashed():
+    rows, choices, fw, fb = _case()
+    for profile in choices.values():
+        del profile[fw]
+    board = chess.Board(fw)
+    board.fullmove_number = 10
+    unmatched = board.fen()
+
+    first = _compare(rows, choices, _opening(fw, unmatched))
+    reordered = _compare(rows, choices, _opening(unmatched, fw))
+    assert first == reordered
+    assert first["opening_exclusion"]["catalog_fens"] == 2
+    assert first["opening_exclusion"]["matched_fens_excluded"] == 1
+
+    smaller = _compare(rows, choices, _opening(fw))
+    assert first["matched_fens"] == smaller["matched_fens"]
+    assert first["declared_assignment_score"] == smaller["declared_assignment_score"]
+    assert first["input_evidence_sha256"] != smaller["input_evidence_sha256"]
+    assert fb not in json.dumps(first)
