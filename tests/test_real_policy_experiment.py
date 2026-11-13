@@ -137,3 +137,15 @@ def test_paired_metrics_do_not_count_moves_as_independent_games():
     assert result["exact_match"] == 2
     with pytest.raises(ValueError, match="unaligned"):
         _metric(rows, ["e2e4"])
+
+
+def test_training_jsonl_mutation_after_fitting_is_rejected(tmp_path):
+    sources, cohorts = _data(tmp_path)
+    fit_policy(cohorts, tmp_path / "model.json", max_per_player=12)
+    training = next((cohorts / "train").rglob("*.jsonl"))
+    training.write_text(training.read_text() + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="Training JSONL changed"):
+        evaluate_policy(
+            cohorts, tmp_path / "model.json", tmp_path / "invalid.json",
+            archive_dir=sources, per_player=5)
+    assert not (tmp_path / "invalid.json").exists()
