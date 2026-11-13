@@ -39,6 +39,10 @@ lacrado, nem o de validação para este comando.
    secundárias, NAGs ou escape lines PGN — esses conteúdos não aparecem
    em `mainline_identity` e poderiam ocultar decisões reservadas.
    Cada partida deve terminar com seu próprio token explícito de resultado.
+   Os cabeçalhos aceitos são Event, Site, Date, Round, White, Black,
+   Result, TimeControl, Variant e, para posição inicial especial, SetUp/FEN.
+   Cabeçalhos extras e valores excessivos são recusados: use um PGN de
+   treino previamente sanitizado, não uma exportação bruta com anotações.
 4. O hash de cada jogo cobre a **posição FEN inicial e a sequência inteira
    de lances UCI**, usando `game_diversity.mainline_identity`.
 5. O número e a identidade das partidas devem corresponder exatamente

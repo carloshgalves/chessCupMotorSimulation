@@ -29,6 +29,23 @@ MAX_TRAIN_PGN_BYTES = 8 * 1024 * 1024
 MAX_TRAIN_GAMES = 10_000
 PGN_DATE = re.compile(r"\d{4}\.\d{2}\.\d{2}\Z")
 FINAL_RESULT = re.compile(r"(?:^|\s)(?:1-0|0-1|1/2-1/2|\*)\s*\Z")
+ALLOWED_TRAIN_HEADERS = frozenset({
+    "Event", "Site", "Date", "Round", "White", "Black", "Result",
+    "TimeControl", "SetUp", "FEN", "Variant",
+})
+MAX_TRAIN_HEADER_VALUE = 512
+
+
+def _require_sanitized_headers(game: chess.pgn.Game) -> None:
+    """Reject uncommitted header channels absent from mainline_identity()."""
+    if any(tag not in ALLOWED_TRAIN_HEADERS for tag in game.headers):
+        raise ValueError("Training PGN contains unsupported header tags")
+    if any(not isinstance(value, str) or len(value) > MAX_TRAIN_HEADER_VALUE
+           or any(ord(ch) < 32 or ord(ch) == 127 for ch in value)
+           for value in game.headers.values()):
+        raise ValueError("Training PGN contains invalid or oversized headers")
+    if ("FEN" in game.headers) != (game.headers.get("SetUp") == "1"):
+        raise ValueError("Training PGN SetUp/FEN declaration inconsistent")
 
 
 def _metadata_quality(game: chess.pgn.Game) -> dict[str, bool]:
@@ -128,6 +145,7 @@ def verify_historical_training_pgn(index: dict, pgn_bytes: bytes) -> dict:
         if game.errors or game.headers.get("Variant", "Standard") not in {
                 "Standard", "Chess"}:
             raise ValueError("Invalid training PGN game or variant")
+        _require_sanitized_headers(game)
         identity, plies = mainline_identity(game)
         if plies < 1 or len(observed) >= MAX_TRAIN_GAMES:
             raise ValueError("Empty or over-budget training PGN game")
