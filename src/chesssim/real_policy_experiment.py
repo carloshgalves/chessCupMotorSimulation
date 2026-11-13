@@ -26,7 +26,7 @@ from .real_training_cohorts import (
     _player_configuration, _scan, _source_bytes,
 )
 
-POLICY_SCHEMA = "chesssim-real-imitation-choice-lift-v1"
+POLICY_SCHEMA = "chesssim-real-imitation-conditional-logit-v2"
 REPORT_SCHEMA = "chesssim-real-policy-comparison-v1"
 HEX = re.compile(r"[0-9a-f]{64}\Z")
 ALLOWED_ARMS = ("validation", "holdout")
@@ -176,38 +176,64 @@ def _validated_training_rows(folder: Path, manifest: dict):
                        "policy_target": target}
 
 
-def _learn_stats(rows: list[dict]):
-    """Opportunity correction: observed features / legal-choice exposure."""
-    selected = Counter()
-    exposed = Counter()
-    for row in rows:
-        board = chess.Board(row["policy_input"]["fen"])
-        if not board.is_valid():
-            raise ValueError("Invalid training board")
-        target = chess.Move.from_uci(row["policy_target"]["move_uci"])
-        if target not in board.legal_moves:
-            raise ValueError("Historic training move is illegal")
-        legal = list(board.legal_moves)
-        denominator = len(legal)
-        for move in legal:
-            for feature in _features(board, move, assumed_legal=True):
-                exposed[feature] += 1 / denominator
-        selected.update(_features(board, target, assumed_legal=True))
-    return selected, exposed
+def _encode_choice(row: dict) -> tuple[list[tuple[str, ...]], int]:
+    """Legal alternatives are the denominator of supervised likelihood."""
+    board = chess.Board(row["policy_input"]["fen"])
+    if not board.is_valid():
+        raise ValueError("Invalid historical training board")
+    target = chess.Move.from_uci(row["policy_target"]["move_uci"])
+    legal = sorted(board.legal_moves, key=lambda move: move.uci())
+    if target not in legal:
+        raise ValueError("Historic move is not legal in the supplied position")
+    return ([_features(board, move, assumed_legal=True) for move in legal],
+            legal.index(target))
 
 
-def _lift(selected: Counter, exposed: Counter, smoothing: float) -> dict:
-    weights = {}
-    for key in sorted(exposed):
-        expected = exposed[key]
-        observed = selected[key]
-        # Shrink unreliable rare features towards no deviation from the
-        # uniform-legal-move opportunity prior.
-        weight = math.log((observed + smoothing) / (expected + smoothing))
-        weight *= expected / (expected + smoothing)
-        if abs(weight) >= 1e-6:
-            weights[key] = round(max(-3.0, min(3.0, weight)), 8)
-    return weights
+def _train_logit(examples: list[tuple[list[tuple[str, ...]], int]], *,
+                 prior: dict | None = None,
+                 epochs: int = 3, rate: float = 0.25,
+                 shrinkage: float = 0.015) -> tuple[dict, list[float]]:
+    """Conditional multinomial logit over all legal alternatives, pure Python.
+
+    AdaGrad and shrinkage to a parent policy prevent sparse player/era
+    profiles from throwing away general move-selection knowledge.
+    """
+    if not examples:
+        raise ValueError("No real training examples")
+    if not 1 <= epochs <= 10 or not 0 < rate <= 1 or not 0 <= shrinkage <= 1:
+        raise ValueError("Unsupported optimizer parameters")
+    parent = prior or {}
+    weights = dict(parent)
+    momentum = defaultdict(float)
+    losses = []
+    for epoch in range(epochs):
+        loss = 0.0
+        # Deterministic forward/reverse passes avoid uncontrolled RNG
+        # while altering temporal correlation across observations.
+        iterator = examples if epoch % 2 == 0 else reversed(examples)
+        for choices, observed_index in iterator:
+            scores = [sum(weights.get(token, 0.0) for token in features)
+                      for features in choices]
+            top = max(scores)
+            exps = [math.exp(value - top) for value in scores]
+            normalizer = sum(exps)
+            probabilities = [value / normalizer for value in exps]
+            loss -= math.log(max(1e-300, probabilities[observed_index]))
+            gradient = defaultdict(float)
+            for index, features in enumerate(choices):
+                delta = (1.0 if index == observed_index else 0.0) - probabilities[index]
+                for token in features:
+                    gradient[token] += delta
+            for token in sorted(gradient):
+                current = weights.get(token, 0.0)
+                updated_gradient = gradient[token] - shrinkage * (
+                    current - parent.get(token, 0.0))
+                momentum[token] += updated_gradient * updated_gradient
+                weights[token] = max(-8.0, min(8.0, current + rate *
+                    updated_gradient / math.sqrt(1.0 + momentum[token])))
+        losses.append(round(loss / len(examples), 8))
+    return ({key: round(val, 8) for key, val in sorted(weights.items())
+             if abs(val) >= 1e-7}, losses)
 
 
 def fit_policy(cohorts: Path, out: Path, *, max_per_player: int = 1200,
@@ -216,8 +242,6 @@ def fit_policy(cohorts: Path, out: Path, *, max_per_player: int = 1200,
         raise ValueError("Invalid training parameters")
     manifest_bytes = (cohorts / "manifest.json").read_bytes()
     manifest = _read_json(cohorts / "manifest.json")
-    # Bind the fitted model to the exact on-disk training JSONL bytes, not
-    # only a manifest that an operator could leave unchanged after mutation.
     training_files_sha256 = {
         rel: sha256((cohorts / rel).read_bytes()).hexdigest()
         for rel in manifest["training_files"]
@@ -228,28 +252,47 @@ def fit_policy(cohorts: Path, out: Path, *, max_per_player: int = 1200,
         grouped[row["player"]].append(row)
     if not grouped or set(grouped) != set(manifest["players"]):
         raise ValueError("Training data must cover each declared player")
+
+    # Every fitted observation is a real FEN + real historic target move.
+    # Enforce game grouping and deterministic minhash before any optimisation.
+    encoded = {}
     for slug in sorted(grouped):
-        chosen[slug] = _bottom_k(grouped[slug], limit=max_per_player,
-                                 per_game=max_per_game, seed=seed)
-        if not chosen[slug]:
+        samples = _bottom_k(grouped[slug], limit=max_per_player,
+                            per_game=max_per_game, seed=seed)
+        if not samples:
             raise ValueError("No genuine training decisions for " + slug)
-    pooled = [row for slug in sorted(chosen) for row in chosen[slug]]
-    generic_observed, generic_exposed = _learn_stats(pooled)
-    generic = _lift(generic_observed, generic_exposed, 24.0)
+        encoded[slug] = [
+            {"band": row["policy_input"]["career_band"],
+             "choice": _encode_choice(row),
+             "game": row["game_sha256"]}
+            for row in samples
+        ]
+
+    pooled = [item["choice"] for slug in sorted(encoded) for item in encoded[slug]]
+    generic, global_losses = _train_logit(pooled, epochs=3, rate=0.23)
     profiles = {}
-    for slug in sorted(chosen):
-        obs, exp = _learn_stats(chosen[slug])
-        stage = {}
-        bands = sorted({row["policy_input"]["career_band"] for row in chosen[slug]})
-        for band in bands:
-            rows = [row for row in chosen[slug] if row["policy_input"]["career_band"] == band]
-            so, se = _learn_stats(rows)
-            stage[band] = _lift(so, se, 20.0)
+    for slug in sorted(encoded):
+        own = [item["choice"] for item in encoded[slug]]
+        personal, personal_losses = _train_logit(
+            own, prior=generic, epochs=3, rate=0.19, shrinkage=0.03)
+        career = {}
+        stage_loss = {}
+        for band in sorted({item["band"] for item in encoded[slug]}):
+            stage_examples = [item["choice"] for item in encoded[slug]
+                              if item["band"] == band]
+            if len(stage_examples) >= 40:
+                stage_weights, history = _train_logit(
+                    stage_examples, prior=personal, epochs=2,
+                    rate=0.14, shrinkage=0.08)
+                career[band] = stage_weights
+                stage_loss[band] = history
         profiles[slug] = {
-            "observations": len(chosen[slug]),
-            "distinct_training_games": len({x["game_sha256"] for x in chosen[slug]}),
-            "weights": _lift(obs, exp, 20.0),
-            "career_weights": stage,
+            "observations": len(own),
+            "distinct_training_games": len({x["game"] for x in encoded[slug]}),
+            "weights": personal,
+            "career_weights": career,
+            "training_loss": personal_losses,
+            "career_training_loss": stage_loss,
         }
     model = {
         "schema": POLICY_SCHEMA,
@@ -261,36 +304,40 @@ def fit_policy(cohorts: Path, out: Path, *, max_per_player: int = 1200,
         "training_examples_in_manifest": manifest["training_examples_exported"],
         "training_observations_used": len(pooled),
         "max_per_player": max_per_player, "max_per_game": max_per_game, "seed": seed,
-        "method": "EMPIRICAL_LOG_CHOICE_OVER_UNIFORM_LEGAL_EXPOSURE_WITH_SHRINKAGE",
+        "method": "L2_ADAGRAD_CONDITIONAL_LOGIT_OVER_LEGAL_MOVES",
         "generic_weights": generic,
+        "generic_training_loss": global_losses,
         "profiles": profiles,
-        "interpretation": "Real human move imitation, not engine strength or historical identity validation",
+        "interpretation": "Real human conditional move choice, not chess strength or validated identity",
     }
     model["model_sha256"] = _digest(model)
     _write_once(out, model)
     return model
 
 
-def predict(model: dict, board: chess.Board, slug: str, band: str,
-            *, generic: bool = False) -> str:
+def _choice_weights(model: dict, slug: str, band: str, *,
+                    generic: bool) -> dict:
     if model.get("schema") != POLICY_SCHEMA:
-        raise ValueError("Unexpected policy model")
+        raise ValueError("Unexpected model schema")
     profile = model["profiles"].get(slug)
     if profile is None:
         raise ValueError("Profile not fitted")
-    weights = model["generic_weights"]
-    personal = profile["weights"] if not generic else {}
-    career = profile["career_weights"].get(band, {}) if not generic else {}
-    candidates = sorted(board.legal_moves, key=lambda m: m.uci())
+    if generic:
+        return model["generic_weights"]
+    return profile["career_weights"].get(band, profile["weights"])
+
+
+def predict(model: dict, board: chess.Board, slug: str, band: str,
+            *, generic: bool = False) -> str:
+    weights = _choice_weights(model, slug, band, generic=generic)
+    candidates = sorted(board.legal_moves, key=lambda move: move.uci())
     if not candidates:
-        raise ValueError("No legal prediction from terminal board")
-    score_move = lambda move: sum(
-        weights.get(f, 0.0) + 2.0 * personal.get(f, 0.0) +
-        1.3 * career.get(f, 0.0) for f in _features(board, move, assumed_legal=True))
-    # Stable lexical tie break, with all profiles evaluating identical legal
-    # move sets. This is a statistical choice policy, not search/evaluation.
-    return max(candidates, key=lambda move: (score_move(move), -int.from_bytes(
-        move.uci().encode(), "big"))).uci()
+        raise ValueError("No legal candidate")
+    def key(move: chess.Move):
+        score = sum(weights.get(feature, 0.0) for feature in
+                    _features(board, move, assumed_legal=True))
+        return score, -int.from_bytes(move.uci().encode(), "big")
+    return max(candidates, key=key).uci()
 
 
 def _read_eval_positions(cohorts: Path, model: dict, *,
