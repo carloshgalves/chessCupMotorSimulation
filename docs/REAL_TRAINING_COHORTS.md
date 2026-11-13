@@ -109,3 +109,14 @@ inventada: age_at_game permanece null, e age_bounds guarda os anos de
 idade mínima e máxima possíveis. Caso o mês conste no PGN, o intervalo
 pode se estreitar. Indicadores de Elo, evento e TimeControl são
 preservados **somente quando existem no cabeçalho real**.
+
+## Contrato explícito de imitação supervisionada
+
+Cada JSONL possui policy_input (contexto anterior à decisão, como FEN,
+jogador e idade disponível) e policy_target (move_uci realmente escolhido).
+**Somente essas duas estruturas** devem ser passadas ao ajuste supervisionado
+de uma política comportamental. Os campos adicionais no registro, como
+result_for_player, ECO, Elo, evento, hashes e adversário, têm papel de
+auditoria, estratificação e análise; não são atributos do policy_input.
+Em especial, resultado final e ECO anotado após a partida são informação
+futura e nunca devem ser utilizados como entradas para predizer aquele lance.
