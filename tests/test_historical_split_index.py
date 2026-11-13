@@ -135,6 +135,7 @@ def test_insufficient_year_groups_do_not_create_false_ready_status(years, per_ye
     "bad_date", "bad_date_format", "bad_game_sha", "unknown_extra_field",
     "noncanonical_ordered_source_ids", "missing_required_metadata",
     "bad_target_slug", "source_extra_field",
+    "empty_license_host", "license_control_character",
 ])
 def test_invalid_or_ambiguous_game_index_fails_closed(mutation):
     data = _index()
@@ -178,6 +179,10 @@ def test_invalid_or_ambiguous_game_index_fails_closed(mutation):
         data["target_slug"] = "../unsafe"
     elif mutation == "source_extra_field":
         data["sources"][0]["secret"] = "unverified"
+    elif mutation == "empty_license_host":
+        data["sources"][0]["license_evidence_uri"] = "https://"
+    elif mutation == "license_control_character":
+        data["sources"][0]["license_evidence_uri"] = "https://example.org/\nforged"
     with pytest.raises(ValueError):
         build_historical_split_manifest(data)
 
