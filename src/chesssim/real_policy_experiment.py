@@ -21,7 +21,6 @@ import chess
 import chess.engine
 
 from .catalog import find_player
-from .game_diversity import mainline_identity
 from .real_training_cohorts import (
     _assign, _focal_decisions, _iter_verified_games,
     _player_configuration, _scan, _source_bytes,
