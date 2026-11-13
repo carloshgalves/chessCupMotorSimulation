@@ -24,7 +24,7 @@ from zipfile import BadZipFile, ZipFile
 import chess.pgn
 
 from .game_diversity import mainline_identity
-from .historical_split_index import _partition_report, _split_by_year
+from .historical_split_index import _split_by_year
 
 SCHEMA = "chesssim-real-historical-cohort-audit-v1"
 PLAYER_FILES = {
@@ -42,7 +42,7 @@ MAX_GAMES_PER_COHORT = 12_000
 MIN_TOTAL_GAMES = 6_500
 MAX_PLIES = 500
 MAX_FENS_PER_COHORT = 250_000
-DATE = re.compile(r"(\d{4})\.(\d{2})\.(\d{2})\Z")
+DATE = re.compile(r"(\d{4})\.(\d{2}|\?\?)\.(\d{2}|\?\?)\Z")
 
 
 def archive_url(name: str) -> str:
@@ -127,14 +127,44 @@ def _target_color(game: chess.pgn.Game, surname: str) -> bool | None:
     return white if white != black else None
 
 
-def _played_date(raw: str) -> str | None:
+def _played_year(raw: str) -> tuple[str | None, str]:
+    """Never synthesize a calendar day for historical year-only PGN headers."""
     match = DATE.fullmatch(raw)
     if not match:
-        return None
+        return None, "unknown"
+    year_text, month, day = match.groups()
+    year = int(year_text)
+    if not 1500 <= year <= 2100:
+        return None, "unknown"
+    if month == "??" or day == "??":
+        # A known year remains usable for whole-calendar-year partitioning.
+        # A known month must still be within 1..12.
+        if month != "??" and not 1 <= int(month) <= 12:
+            return None, "unknown"
+        if day != "??" and not 1 <= int(day) <= 31:
+            return None, "unknown"
+        return year_text, "year_only"
     try:
-        return date(*map(int, match.groups())).isoformat()
+        date(year, int(month), int(day))
     except ValueError:
-        return None
+        return None, "unknown"
+    return year_text, "day_known"
+
+
+def _year_partition_report(rows: list[dict]) -> dict:
+    """Aggregate only years + trajectory digests; no fabricated day/month."""
+    ordered = sorted(({"year": row["date"], "mainline_sha256": row["mainline_sha256"]}
+                      for row in rows), key=lambda r: (r["year"], r["mainline_sha256"]))
+    packed = json.dumps(ordered, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    years = sorted({int(row["year"]) for row in ordered})
+    return {
+        "games": len(rows),
+        "years": years,
+        "first_year": years[0] if years else None,
+        "last_year": years[-1] if years else None,
+        "game_commitment_sha256": sha256(packed).hexdigest(),
+        "date_precision": "YEAR_ONLY_FOR_PARTITIONING",
+    }
 
 
 def analyze_cohort(name: str, archive: bytes, *, min_ply: int = 17) -> dict:
@@ -169,9 +199,13 @@ def analyze_cohort(name: str, archive: bytes, *, min_ply: int = 17) -> dict:
             counts["duplicate_mainline"] += 1
             continue
         dedup.add(digest)
-        played = _played_date(game.headers.get("Date", ""))
-        if played is None:
+        played, precision = _played_year(game.headers.get("Date", ""))
+        if precision != "day_known":
             counts["missing_or_invalid_full_date"] += 1
+        if precision == "year_only":
+            counts["year_only_date"] += 1
+        if played is None:
+            counts["unknown_year"] += 1
         positions = []
         board = game.board()
         for ply, move in enumerate(game.mainline_moves(), start=1):
@@ -191,7 +225,7 @@ def analyze_cohort(name: str, archive: bytes, *, min_ply: int = 17) -> dict:
         raise ValueError("No dated historical games")
     split = _split_by_year(eligible)
     partitions = {
-        label: _partition_report(rows)
+        label: _year_partition_report(rows)
         for label, rows in split.items()
     }
     if not all(partitions[label]["games"] for label in ("train", "validation", "holdout")):
@@ -210,7 +244,7 @@ def analyze_cohort(name: str, archive: bytes, *, min_ply: int = 17) -> dict:
             key: counts[key] for key in (
                 "pgn_records", "parse_errors", "target_not_identifiable",
                 "invalid_ply_count", "duplicate_mainline",
-                "missing_or_invalid_full_date")
+                "missing_or_invalid_full_date", "year_only_date", "unknown_year")
         },
         "unique_games": len(entries),
         "dated_unique_games": len(eligible),
@@ -302,7 +336,8 @@ def audit_historical_archives(archives: dict[str, bytes], *,
         "cross_cohort_duplicate_trajectories": overlapping,
         "limitations": [
             "Real published PGNs were parsed, but attribution and completeness are not independently certified.",
-            "The ZIP sources were fully read, including games later assigned to reserved dates; NO sealed-test guarantee.",
+            "All public PGNs were read to inventory trajectories; no physically sealed holdout is claimed.",
+            "Year-only historical dates are used as years, never converted into invented month/day.",
             "Only training-year positions contribute to the shared-FEN descriptive counts.",
             "Distinct trajectories and names do not guarantee independent games or exclude confounding.",
             "Exact full FEN includes halfmove clock and fullmove number; overlap may be sparse.",
