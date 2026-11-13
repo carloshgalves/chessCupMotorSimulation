@@ -41,7 +41,7 @@ SOURCE_EXCEPTIONS = {
     "ding-liren": "Ding",
     "vachier-lagrave": "VachierLagrave",
     "wesley-so": "So",
-    "judit-polgar": "Polgar",
+    "judit-polgar": "PolgarJ",
     "hou-yifan": "Hou",
     "mequinho": "Mecking",
 }
