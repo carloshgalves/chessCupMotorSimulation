@@ -12,10 +12,14 @@ from __future__ import annotations
 from collections import defaultdict
 from hashlib import sha256
 import json
+import os
+from pathlib import Path
+import stat
 
 SCHEMA = "chesssim-shared-fen-negative-control-v1"
 MAX_ROWS = 50_000
 MAX_SHARED_FENS = 4_000
+MAX_JSON_BYTES = 8 * 1024 * 1024
 
 
 def _required_str(value, field: str) -> str:
@@ -138,6 +142,8 @@ def compare_shared_fen_assignments(
         "rows": canonical,
         "predictions": normalized_predictions,
         "min_ply": min_ply,
+        "roles": {"player_a": player_a, "player_b": player_b,
+                  "profile_a": profile_a, "profile_b": profile_b},
     }, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     digest = sha256(encoded.encode("utf-8")).hexdigest()
 
@@ -155,7 +161,7 @@ def compare_shared_fen_assignments(
         "schema": SCHEMA,
         "status": "NO_EXACT_SHARED_FENS" if not shared
                   else "DESCRIPTIVE_ONLY_NOT_HISTORICALLY_VALIDATED",
-        "source_sha256": digest,
+        "input_evidence_sha256": digest,
         "matched_fens": len(shared),
         "early_rows_excluded": excluded,
         "unmatched_fens_excluded": len(grouped) - len(shared),
@@ -197,3 +203,57 @@ def compare_shared_fen_assignments(
     result["swapped_assignment_score"] = swapped
     result["contrast"] = assigned - swapped
     return result
+
+
+def run_shared_fen_file(input_path: Path, output_path: Path, *,
+                        ack_unsealed: bool = False) -> dict:
+    """Load a bounded local JSON, compare decisions, and create a new JSON.
+
+    Explicit acknowledgement is required because this function cannot know
+    whether an external caller is providing development data or a final
+    reserved research cohort. It cannot independently verify corpus rights,
+    provenance, data splits, or that historical decisions were not used to
+    tune the supplied profiles.
+    """
+    if ack_unsealed is not True:
+        raise ValueError("Explicit nonsealed research input acknowledgement required")
+    source = Path(input_path)
+    output = Path(output_path)
+    if output.exists() or output.is_symlink():
+        raise FileExistsError("Refusing to overwrite existing report")
+    if source.is_symlink():
+        raise ValueError("Symlinked input is not permitted")
+    try:
+        fd = os.open(source, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    except OSError as exc:
+        raise ValueError("Cannot safely read input JSON") from exc
+    with os.fdopen(fd, "rb") as stream:
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_JSON_BYTES:
+            raise ValueError("Input must be a regular JSON file within size limit")
+        payload = stream.read(MAX_JSON_BYTES + 1)
+    if len(payload) > MAX_JSON_BYTES:
+        raise ValueError("JSON input exceeds size limit")
+    try:
+        document = json.loads(payload)
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise ValueError("Invalid JSON input") from exc
+    required = {"positions", "predictions", "player_a", "player_b",
+                "profile_a", "profile_b"}
+    accepted = required | {"min_ply"}
+    if (not isinstance(document, dict) or
+            not required.issubset(document) or
+            not set(document).issubset(accepted)):
+        raise ValueError("Input JSON has missing or unexpected fields")
+    report = compare_shared_fen_assignments(
+        document["positions"], document["predictions"],
+        player_a=document["player_a"], player_b=document["player_b"],
+        profile_a=document["profile_a"], profile_b=document["profile_b"],
+        min_ply=document.get("min_ply", 17))
+    report["input_file_sha256"] = sha256(payload).hexdigest()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    # Exclusive create protects any preexisting report, even across processes.
+    with output.open("x", encoding="utf-8") as handle:
+        json.dump(report, handle, indent=2, ensure_ascii=False, allow_nan=False)
+        handle.write("\n")
+    return report
