@@ -177,7 +177,7 @@ def test_validates_player_selection_and_source_names():
         _player_configuration(["nonexistent"], None, None)
     with pytest.raises(ValueError, match="filename"):
         _player_configuration(["tal"], None, {"tal": "../Tal"})
-    with pytest.raises(ValueError, match="Birthdate"):
+    with pytest.raises(ValueError, match="birthdate"):
         _player_configuration(["tal"], {"tal": "1960-99-01"}, None)
     with pytest.raises(ValueError, match="only selected"):
         _player_configuration(["tal"], {"fischer": "1943-03-09"}, None)
