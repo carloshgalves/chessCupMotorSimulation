@@ -89,3 +89,52 @@ sem utilizar conjuntos finais lacrados.
 A comparação não mede Elo, força independentemente, nem identidade
 ou fidelidade histórica. Não substitui validação cega ou controles
 negativos com dados experimentais reais.
+
+## Fatia da issue #11: excluir FENs catalogados no repertório
+
+Este filtro opcional **exclui somente posições presentes em um catálogo declarado**.
+Ele não certifica que todas as outras posições estejam fora de repertório.
+Escolha, catalogue e congele o conjunto antes de examinar os resultados,
+sem recorrer a partidas do teste final lacrado ou decisões do motor avaliado.
+
+Acrescente ao JSON de entrada um objeto com este formato:
+
+```json
+{
+  "opening_exclusion": {
+    "fens": ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 9"],
+    "declared_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}
+```
+
+O SHA-256 é fictício neste exemplo. Informe o hash real da fonte declarada.
+A ferramenta verifica o formato do hash, **não os bytes da fonte externa**;
+a proveniência permanece DECLARED_NOT_VERIFIED.
+
+Somente os FENs compartilhados que **não** constam no catálogo são
+utilizados no contraste. Os perfis devem fornecer previsões **apenas**
+para esses FENs restantes. Previsões para FENs excluídos, ausentes ou
+não compartilhados causam rejeição. O relatório preserva hashes e contagens
+agregadas, mas não expõe os FENs ou os lances individuais.
+
+Campos adicionais:
+
+- opening_exclusion.method = EXACT_FULL_FEN_CATALOG.
+- opening_exclusion.declared_source_sha256 = hash de fonte declarado, não verificado.
+- opening_exclusion.matched_fens_before_exclusion = número original compartilhado.
+- opening_exclusion.matched_fens_excluded = posições compartilhadas excluídas.
+- opening_exclusion.remaining_unlisted_fens = FENs compartilhados avaliados.
+- limitations.opening_exclusion = UNLISTED_IS_NOT_PROOF_OF_OUT_OF_REPERTOIRE.
+
+Se todas as posições compartilhadas forem excluídas, a situação será
+NO_SHARED_FENS_AFTER_OPENING_EXCLUSION e os escores continuarão nulos.
+Se o catálogo não combinar com nenhuma posição, a saída indicará zero
+exclusões; **não** se deve concluir que o estudo esteja fora do repertório.
+
+Importante: o catálogo usa **FEN completo**, com relógios e número de lance.
+Posições visualmente idênticas com contadores diferentes não são iguais
+neste filtro. É um controle experimental exploratório, não um classificador
+de abertura nem uma verificação de embargo de treino/validação/teste.
+A elaboração de um catálogo proveniente de fontes licenciadas e o controle
+das partições continuam na issue #10; a validação cega, na #12.
