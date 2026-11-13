@@ -30,7 +30,7 @@ jobs:
         run: python -m pip install -e '.[dev]'
       - name: Run regression tests for real-corpus parser
         run: python -m pytest tests/test_historical_real_corpus.py -q -ra
-      - name: Download and process four actual historical PGN ZIP collections
+      - name: Download and process four actual historical PGN collections
         env:
           AUDIT_PATH: ${{ runner.temp }}/real-historical-audit.json
         run: |

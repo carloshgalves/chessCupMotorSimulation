@@ -1,6 +1,7 @@
 # Issue #11 — lote piloto de partidas históricas reais
 
-Este pipeline **baixa e lê os PGNs reais** de quatro jogadores históricos.
+Este pipeline **baixa e lê os PGNs reais** de quatro jogadores históricos,
+utilizando um espelho público fixado por commit SHA.
 Não depende de dados sintéticos para produzir seu resultado de pesquisa.
 Os testes unitários sintéticos servem apenas para cobrir falhas do parser;
 o workflow `real-historical-corpus.yml` é um **gate adicional com download
@@ -8,8 +9,12 @@ real e pelo menos 6.500 jogos distintos**, não substituído por fixtures.
 
 ## Fontes, volumes e cadeia de custódia
 
-Fonte: [PGN Mentor, Players](https://www.pgnmentor.com/files.html),
-coleções publicadas com atualização indicada em julho de 2026.
+Fonte original: [PGN Mentor, Players](https://www.pgnmentor.com/files.html),
+com catálogo atualizado em julho de 2026. O download automatizado utiliza
+cópias **PGN reais sem compactação ZIP** de [rozim/ChessData](https://github.com/rozim/ChessData),
+fixadas no commit imutável `aaadf90e11862bc6f207fed407a70e7017df26bd`.
+As contagens do espelho podem diferir das do catálogo atualizado; os bytes
+foram processados na CI, e os SHA-256 constam do relatório.
 
 | Arquivo | Jogador histórico | Jogos anunciados no catálogo |
 | --- | --- | ---: |
@@ -19,7 +24,8 @@ coleções publicadas com atualização indicada em julho de 2026.
 | Kasparov.zip / Kasparov.pgn | Garry Kasparov | 2.128 |
 | **Total publicado (não verificado ainda)** | | **8.915** |
 
-O comando calcula SHA-256 dos ZIPs e dos PGNs efetivamente lidos, registra
+O comando calcula SHA-256 dos arquivos efetivamente lidos (PGN direto no
+espelho ou ZIP original no modo local), registra
 contagem recebida, erros de parse, identidade focal no cabeçalho, trajetórias
 duplicadas, jogos sem data completa e divisão por **anos civis inteiros**.
 A contagem real pode ser menor que a anunciada após rejeições/deduplicação.
@@ -43,8 +49,8 @@ python -m chesssim.historical_real_corpus \
   --out "$HOME/chesssim-homologacao/historico-real/relatorio-02.json"
 ```
 
-Os arquivos devem ter os nomes exatos Fischer.zip, Tal.zip,
-Karpov.zip e Kasparov.zip. Não use o mesmo nome de arquivo de relatório
+Os arquivos locais podem ser `Fischer.pgn`/`Tal.pgn`/`Karpov.pgn`/
+`Kasparov.pgn` (modo PGN) ou os respectivos `.zip` (modo ZIP). Não use o mesmo nome de arquivo de relatório
 duas vezes: a ferramenta recusa sobregravação.
 
 ### Análises efetivamente executadas
@@ -92,3 +98,16 @@ configuração/profundidade fixas, alternância dos rótulos e análise cega.
 Se o número de FENs idênticos for insuficiente, isso é **resultado
 metodológico**: aumentar a amostra ou revisar o desenho *antes* de
 abrir qualquer teste final, sem inventar evidências.
+
+## Evidência da primeira execução real (runner Python 3.13)
+
+No snapshot fixado de `rozim/ChessData`, a CI processou **8.914 partidas
+únicas por coleção** (Fischer 827; Tal 2.431; Karpov 3.528; Kasparov 2.128),
+das quais **5.413** ficaram nos grupos cronológicos de treino.
+Sobreposição de FENs completos após o meio-lance 16: Fischer × Tal **138**
+(34 com lances modais diferentes); Karpov × Kasparov **380** (96 diferentes).
+São **observações históricas reais, não previsões de Rodent**. A contagem
+Karpov do espelho é uma menor que o catálogo atual; sem diagnóstico de causa.
+
+O arquivo agregado está disponível no artefato do job real da PR #135,
+sem redistribuir os PGNs originais.

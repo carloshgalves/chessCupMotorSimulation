@@ -271,3 +271,12 @@ def test_atomic_report_publication_preserves_concurrent_owner(
         real.run_real_historical_audit(output, archive_dir=tmp_path)
     assert output.read_text() == "owned by another process"
     assert list(tmp_path.glob(".chesssim-real-historical-*.tmp")) == []
+
+
+
+def test_source_urls_are_pinned_to_immutable_mirror_snapshot():
+    assert len(real.MIRROR_COMMIT) == 40
+    assert "master" not in real.SOURCE_BASE
+    assert real.MIRROR_COMMIT in real.SOURCE_BASE
+    assert real.archive_url("Fischer") == (
+        real.SOURCE_BASE + "Fischer.pgn")
