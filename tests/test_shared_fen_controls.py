@@ -53,7 +53,7 @@ def test_positive_and_swapped_profile_assignment_are_measured_on_same_fens():
     assert result["schema"] == "chesssim-shared-fen-negative-control-v1"
     assert result["status"] == "DESCRIPTIVE_ONLY_NOT_HISTORICALLY_VALIDATED"
     assert result["matched_fens"] == 2
-    assert result["distinct_games_by_player"] == {"A": 2, "B": 2}
+    assert result["distinct_game_ids_by_player"] == {"A": 2, "B": 2}
     assert result["observations_by_player"] == {"A": 2, "B": 2}
     assert result["correct_assignment_score"] == 1.0
     assert result["swapped_assignment_score"] == 0.0
@@ -99,7 +99,7 @@ def test_distinct_games_with_different_choices_are_not_collapsed():
     white = _fen_white()
     rows.append(_row("A", "A3", white, "d2d4"))
     result = _compare(rows, choices)
-    assert result["distinct_games_by_player"] == {"A": 3, "B": 2}
+    assert result["distinct_game_ids_by_player"] == {"A": 3, "B": 2}
     assert result["matched_fens"] == 2
     assert result["accuracy_by_profile_and_player"]["profile_A"]["A"] == 0.75
     assert result["accuracy_by_profile_and_player"]["profile_B"]["A"] == 0.25
