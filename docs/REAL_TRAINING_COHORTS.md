@@ -71,3 +71,25 @@ genérico e controles negativos de #11, com avaliação cega em #12.
 Fonte: https://www.pgnmentor.com/files.html.
 Snapshot: rozim/ChessData no commit
 aaadf90e11862bc6f207fed407a70e7017df26bd.
+
+## Duas políticas distintas de separação temporal
+
+O padrão --split-policy chronological reserva os anos mais recentes para
+validação/holdout: testa generalização para o futuro do histórico observado,
+mas o treino fica concentrado nos primeiros períodos de carreira.
+
+Para **aprender preferências ao longo de toda a carreira observada**, usar
+--split-policy career-stratified, por exemplo:
+
+    python -m chesssim.real_training_cohorts --fetch \
+      --players fischer tal karpov kasparov \
+      --split-policy career-stratified \
+      --out "$HOME/chesssim-homologacao/coortes-carreira-01"
+
+Esse modo divide os **anos observados** em três faixas consecutivas e
+mantém anos distintos de treino, validação e holdout **dentro de cada faixa**.
+Nunca mistura posições da mesma trajetória entre braços e continua
+embargando todas as FENs completas reservadas. Uma faixa com menos de
+três anos distintos é colocada integralmente em quarentena, e o manifesto
+registra a insuficiência. A avaliação desse modo mede interpolação dentro
+da trajetória observada, e **não** desempenho em anos futuros.
