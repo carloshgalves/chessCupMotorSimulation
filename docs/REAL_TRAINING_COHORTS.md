@@ -93,3 +93,19 @@ embargando todas as FENs completas reservadas. Uma faixa com menos de
 três anos distintos é colocada integralmente em quarentena, e o manifesto
 registra a insuficiência. A avaliação desse modo mede interpolação dentro
 da trajetória observada, e **não** desempenho em anos futuros.
+
+## Datas históricas e faixas etárias verificáveis
+
+O workflow real carrega docs/REAL_BIRTHDATES_4.json, cuja origem é o
+catálogo biográfico Chess.com dos quatro grandes mestres:
+
+- Bobby Fischer (1943-03-09): https://www.chess.com/players/bobby-fischer
+- Mikhail Tal (1936-11-09): https://www.chess.com/players/mikhail-tal
+- Anatoly Karpov (1951-05-23): https://www.chess.com/players/anatoly-karpov
+- Garry Kasparov (1963-04-13): https://www.chess.com/players/garry-kasparov
+
+As partidas que possuem só o ano histórico não recebem uma idade exata
+inventada: age_at_game permanece null, e age_bounds guarda os anos de
+idade mínima e máxima possíveis. Caso o mês conste no PGN, o intervalo
+pode se estreitar. Indicadores de Elo, evento e TimeControl são
+preservados **somente quando existem no cabeçalho real**.
