@@ -369,12 +369,17 @@ def run_shared_fen_file(input_path: Path, output_path: Path, *,
                 | getattr(os, "O_NONBLOCK", 0))
         except OSError as exc:
             raise ValueError("Cannot securely open opening catalog source") from exc
-        with os.fdopen(fd_catalog, "rb") as catalog_stream:
-            catalog_info = os.fstat(catalog_stream.fileno())
+        try:
+            catalog_info = os.fstat(fd_catalog)
             if (not stat.S_ISREG(catalog_info.st_mode) or
                     catalog_info.st_size > MAX_JSON_BYTES):
                 raise ValueError("Opening catalog must be a bounded regular file")
-            catalog_bytes = catalog_stream.read(MAX_JSON_BYTES + 1)
+            with os.fdopen(fd_catalog, "rb") as catalog_stream:
+                fd_catalog = None  # fd ownership transferred to the stream
+                catalog_bytes = catalog_stream.read(MAX_JSON_BYTES + 1)
+        finally:
+            if fd_catalog is not None:
+                os.close(fd_catalog)
         if len(catalog_bytes) > MAX_JSON_BYTES:
             raise ValueError("Opening catalog exceeds size limit")
         verified_catalog_sha = sha256(catalog_bytes).hexdigest()
