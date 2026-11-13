@@ -44,6 +44,22 @@ def _metadata_quality(game: chess.pgn.Game) -> dict[str, bool]:
     }
 
 
+def _result_terminates_game(segment: str) -> bool:
+    """Check the result token in *each* PGN game, never just in its header.
+
+    python-chess accepts a game with a Result header but no movetext
+    terminator. Header lines and comments may contain result-like strings:
+    strip them before checking the final movetext token.
+    """
+    lines = [line for line in segment.splitlines()
+             if not line.lstrip().startswith("[")]
+    text = "\n".join(lines)
+    text = re.sub(r"(?m)^\s*%[^\n]*", " ", text)
+    text = re.sub(r";[^\n]*", " ", text)
+    text = re.sub(r"\{[^{}]*\}", " ", text, flags=re.S)
+    return FINAL_RESULT.search(text) is not None
+
+
 def _training_index(index: dict) -> tuple[dict, dict[str, dict]]:
     # Validate full *index metadata*, not raw reserved moves or FENs.
     manifest = build_historical_split_manifest(index)
@@ -81,6 +97,7 @@ def verify_historical_training_pgn(index: dict, pgn_bytes: bytes) -> dict:
     stream = StringIO(decoded)
     observed: set[str] = set()
     while True:
+        starting_offset = stream.tell()
         try:
             game = chess.pgn.read_game(
                 stream, Visitor=_ResultConsistentGameBuilder)
@@ -88,6 +105,9 @@ def verify_historical_training_pgn(index: dict, pgn_bytes: bytes) -> dict:
             raise ValueError("Invalid or unsupported training PGN") from exc
         if game is None:
             break
+        if not _result_terminates_game(
+                decoded[starting_offset:stream.tell()]):
+            raise ValueError("Training PGN game has no explicit result token")
         if game.errors or game.headers.get("Variant", "Standard") not in {
                 "Standard", "Chess"}:
             raise ValueError("Invalid training PGN game or variant")
