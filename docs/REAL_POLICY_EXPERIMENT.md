@@ -103,3 +103,23 @@ e exige respostas UCI efetivas; seus artefatos são agregados, não PGNs.
 Referências: PGN Mentor, https://www.pgnmentor.com/files.html;
 Rodent IV, https://github.com/nescitus/rodent-iv;
 UCI python-chess, https://python-chess.readthedocs.io/en/stable/engine.html.
+
+
+## Auditoria do primeiro piloto UCI real
+
+A execução inicial com 250 exemplos reais de treino por jogador e apenas
+10 posições históricas por alvo revelou subajuste e falta de
+distinguibilidade: as políticas aprendidas concordaram em 4/40
+jogadas humanas; o Rodent de personalidade correspondente, 15/40.
+O controle genérico de dados também foi 4/40. Não se conclui
+superioridade ou fidelidade por amostra tão pequena.
+
+A segunda rodada aumenta a amostra real para 1.200 exemplos por
+jogador, 24 posições de validação por alvo e reforça o condicionamento
+por personalidade e período de carreira, mantendo o protocolo de
+seleção pré-declarado. Adicionalmente, o baseline UCI agora
+ativa explicitamente a personalidade oficial **Simple** do Rodent IV
+e registra seu SHA-256; não depende de personalidade padrão incerta.
+
+O modelo é vinculado ao SHA-256 de **cada arquivo JSONL de treino**,
+além do manifesto. Alteração posterior dos dados invalida a avaliação.
