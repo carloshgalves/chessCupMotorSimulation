@@ -8,6 +8,8 @@ from __future__ import annotations
 from copy import deepcopy
 from io import BytesIO
 import json
+import os
+import re
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import chess
@@ -84,8 +86,22 @@ def test_valid_four_player_cohort_audit_is_deterministic_and_private(monkeypatch
     serialized = json.dumps(result)
     for name in NAMES:
         assert NAMES[name] not in serialized
-    assert "e2e4" not in serialized
-    assert "rnbqkbnr/pppp" not in serialized
+    # A full SHA-256 can randomly contain four hex digits spelling "e2e4":
+    # exclude complete hashes from token-level leaked-move checks.
+    def strings(obj):
+        if isinstance(obj, dict):
+            for value in obj.values():
+                yield from strings(value)
+        elif isinstance(obj, list):
+            for value in obj:
+                yield from strings(value)
+        elif isinstance(obj, str):
+            yield obj
+    for token in strings(result):
+        if re.fullmatch(r"[0-9a-f]{64}", token):
+            continue
+        assert "e2e4" not in token
+        assert "rnbqkbnr/pppp" not in token
     for section in result["sources"].values():
         assert section["partitions"]["train"]["games"] > 0
         assert section["partitions"]["validation"]["games"] > 0
@@ -207,3 +223,51 @@ def test_year_only_games_are_eligible_for_whole_year_partitions(monkeypatch):
     assert cohort["partitions"]["train"]["first_year"] == 1950
     assert cohort["partitions"]["train"]["last_year"] == 1952
     assert "first_date" not in cohort["partitions"]["train"]
+
+
+
+def test_offline_input_never_claims_download_from_public_mirror(tmp_path, monkeypatch):
+    _lower_limits(monkeypatch)
+    for name, blob in _cohorts().items():
+        (tmp_path / (name + ".zip")).write_bytes(blob)
+    report = real.run_real_historical_audit(
+        tmp_path / "local-report.json", archive_dir=tmp_path)
+    assert all(item["source_url"] == "LOCAL_SUPPLIED_SOURCE_NOT_AUTHENTICATED"
+               for item in report["sources"].values())
+
+
+def test_atomic_report_publication_removes_staging_after_link_failure(
+        tmp_path, monkeypatch):
+    _lower_limits(monkeypatch)
+    for name, blob in _cohorts().items():
+        (tmp_path / (name + ".zip")).write_bytes(blob)
+    output = tmp_path / "report.json"
+
+    def fail_link(*args):
+        raise OSError("simulated atomic publish failure")
+
+    monkeypatch.setattr(os, "link", fail_link)
+    with pytest.raises(OSError, match="simulated atomic publish failure"):
+        real.run_real_historical_audit(output, archive_dir=tmp_path)
+    assert not output.exists()
+    assert list(tmp_path.glob(".chesssim-real-historical-*.tmp")) == []
+
+
+def test_atomic_report_publication_preserves_concurrent_owner(
+        tmp_path, monkeypatch):
+    _lower_limits(monkeypatch)
+    for name, blob in _cohorts().items():
+        (tmp_path / (name + ".zip")).write_bytes(blob)
+    output = tmp_path / "report.json"
+    real_link = os.link
+
+    def competing_link(source, destination):
+        with open(destination, "x", encoding="utf-8") as stream:
+            stream.write("owned by another process")
+        return real_link(source, destination)
+
+    monkeypatch.setattr(os, "link", competing_link)
+    with pytest.raises(FileExistsError):
+        real.run_real_historical_audit(output, archive_dir=tmp_path)
+    assert output.read_text() == "owned by another process"
+    assert list(tmp_path.glob(".chesssim-real-historical-*.tmp")) == []
