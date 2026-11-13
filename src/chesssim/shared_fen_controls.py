@@ -179,7 +179,7 @@ def compare_shared_fen_assignments(
             profile: {player: None for player in (player_a, player_b)}
             for profile in (profile_a, profile_b)
         },
-        "correct_assignment_score": None,
+        "declared_assignment_score": None,
         "swapped_assignment_score": None,
         "contrast": None,
         "limitations": limits,
@@ -199,7 +199,7 @@ def compare_shared_fen_assignments(
 
     assigned = (scores[profile_a][player_a] + scores[profile_b][player_b]) / 2
     swapped = (scores[profile_a][player_b] + scores[profile_b][player_a]) / 2
-    result["correct_assignment_score"] = assigned
+    result["declared_assignment_score"] = assigned
     result["swapped_assignment_score"] = swapped
     result["contrast"] = assigned - swapped
     return result
