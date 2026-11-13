@@ -234,8 +234,16 @@ def run_shared_fen_file(input_path: Path, output_path: Path, *,
         payload = stream.read(MAX_JSON_BYTES + 1)
     if len(payload) > MAX_JSON_BYTES:
         raise ValueError("JSON input exceeds size limit")
+    def unique_json_fields(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("Duplicate JSON field")
+            result[key] = value
+        return result
+
     try:
-        document = json.loads(payload)
+        document = json.loads(payload, object_pairs_hook=unique_json_fields)
     except (ValueError, UnicodeDecodeError) as exc:
         raise ValueError("Invalid JSON input") from exc
     required = {"positions", "predictions", "player_a", "player_b",
