@@ -42,14 +42,14 @@ jobs:
         run: |
           python -m chesssim.real_policy_experiment train \
             --cohorts "$RUNNER_TEMP/real-cohorts" \
-            --max-per-player 250 --max-per-game 3 --seed 2026 \
+            --max-per-player 1200 --max-per-game 3 --seed 2026 \
             --out "$RUNNER_TEMP/real-policy-model.json"
       - name: Evaluate models on real validation-year human decisions
         run: |
           python -m chesssim.real_policy_experiment evaluate \
             --cohorts "$RUNNER_TEMP/real-cohorts" \
             --model "$RUNNER_TEMP/real-policy-model.json" \
-            --fetch --arm validation --per-player 10 --per-game 2 \
+            --fetch --arm validation --per-player 24 --per-game 2 \
             --out "$RUNNER_TEMP/real-policy-baseline.json"
       - name: Checkout PINNED original Rodent IV sources for real engine comparison
         uses: actions/checkout@v5
@@ -74,7 +74,7 @@ jobs:
           python -m chesssim.real_policy_experiment evaluate \
             --cohorts "$RUNNER_TEMP/real-cohorts" \
             --model "$RUNNER_TEMP/real-policy-model.json" \
-            --fetch --arm validation --per-player 10 --per-game 2 \
+            --fetch --arm validation --per-player 24 --per-game 2 \
             --rodent-root "$RUNNER_TEMP/rodent" \
             --rodent-depth 2 --rodent-seconds 0.12 \
             --out "$RUNNER_TEMP/real-policy-rodent.json"
@@ -88,10 +88,12 @@ jobs:
           r = json.loads((p / "real-policy-rodent.json").read_text())
           baseline = json.loads((p / "real-policy-baseline.json").read_text())
           assert m["status"] == "REAL_PGN_TRAINED_EXPERIMENTAL_NOT_STYLE_VALIDATED"
-          assert m["training_observations_used"] >= 400
+          assert m["training_observations_used"] >= 3200
           assert r["arm"] == "validation"
           assert r["rodent"]["status"] == "ACTUAL_UCI_MOVES_MEASURED"
           assert r["rodent"]["binary_sha256"]
+          assert r["rodent"]["generic_personality"] == "Simple"
+          assert r["rodent"]["generic_profile_sha256"]
           assert set(r["evaluation"]) == {"fischer", "tal", "karpov", "kasparov"}
           assert r["source_sha256"] == baseline["source_sha256"]
           for player in r["evaluation"]:
