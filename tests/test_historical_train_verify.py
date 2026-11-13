@@ -364,3 +364,37 @@ def test_training_pgn_rejects_nonmainline_material_even_if_hashes_match(
     with pytest.raises(ValueError):
         run_historical_train_verification(inp, train, out, ack_train_only=True)
     assert not out.exists()
+
+
+
+@pytest.mark.parametrize("mutation", ["unknown_header", "oversize_header"])
+def test_unhashed_extra_header_data_cannot_hide_in_verified_training_pgn(
+        tmp_path, mutation):
+    _, games, inp, train, out = _fixture(tmp_path)
+    modified = _game(0)
+    if mutation == "unknown_header":
+        modified.headers["ReservedMoveLine"] = "synthetic hidden PGN move list"
+    else:
+        modified.headers["Event"] = "Event-" + "x" * 550
+    train.write_bytes(_export([modified, *games[1:6]]))
+    with pytest.raises(ValueError):
+        run_historical_train_verification(inp, train, out, ack_train_only=True)
+    assert not out.exists()
+
+
+def test_valid_setup_fen_with_matching_index_hash_is_accepted(tmp_path):
+    index, games, inp, train, out = _fixture(tmp_path)
+    special = _game(0)
+    initial = special.board()
+    initial.halfmove_clock = 5
+    special.setup(initial)
+    # setup() rewrites a few headers; keep all audited headers equivalent.
+    for header in ("Date", "White", "Black", "Event", "TimeControl", "Result"):
+        special.headers[header] = games[0].headers[header]
+    index["games"][0]["mainline_sha256"] = mainline_identity(special)[0]
+    inp.write_text(json.dumps(index), encoding="utf-8")
+    train.write_bytes(_export([special, *games[1:6]]))
+    result = run_historical_train_verification(
+        inp, train, out, ack_train_only=True)
+    assert result["training_games_verified"] == 6
+    assert result["status"] == "TRAIN_PARTITION_MATCHED_SOURCE_NOT_VERIFIED"
