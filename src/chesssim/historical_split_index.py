@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import re
 import stat
+import tempfile
 
 INDEX_SCHEMA = "chesssim-historical-game-index-v1"
 REPORT_SCHEMA = "chesssim-historical-split-preflight-v1"
@@ -294,6 +295,22 @@ def run_historical_split_preflight(input_path: Path, output_path: Path, *,
     report["input_file_sha256"] = sha256(payload).hexdigest()
     rendered = json.dumps(
         report, sort_keys=True, ensure_ascii=False, indent=2) + "\n"
-    with destination.open("x", encoding="utf-8") as stream:
-        stream.write(rendered)
+    # Stage private, complete bytes in the same directory before publishing.
+    # os.link creates the visible name atomically and refuses to overwrite a
+    # concurrently created destination. The stage is always cleaned up.
+    fd_temp, temp_name = tempfile.mkstemp(
+        prefix=".chesssim-historical-split-", suffix=".tmp",
+        dir=destination.parent)
+    staged = Path(temp_name)
+    try:
+        with os.fdopen(fd_temp, "w", encoding="utf-8") as stream:
+            fd_temp = None
+            stream.write(rendered)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.link(staged, destination)
+    finally:
+        if fd_temp is not None:
+            os.close(fd_temp)
+        staged.unlink(missing_ok=True)
     return report
