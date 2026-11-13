@@ -183,6 +183,43 @@ def test_validates_player_selection_and_source_names():
         _player_configuration(["tal"], {"fischer": "1943-03-09"}, None)
     assert source_file_for_slug("vachier-lagrave") == "VachierLagrave"
     assert source_file_for_slug("ding-liren") == "Ding"
+    assert source_file_for_slug("judit-polgar") == "PolgarJ"
     assert _exact_age("1943-03-09", "1972.07.11") == 29
     assert _exact_age("1943-03-09", "1972.??.??") is None
     assert _career_band(2000, [2000, 2001]) == "insufficient_year_coverage"
+
+
+
+def test_career_stratified_years_cover_observed_career_without_year_leakage(tmp_path):
+    source = _prepare(tmp_path)
+    options = {"players": ["fischer", "tal"], "archive_dir": source, "min_ply": 17}
+    chronological = build_real_training_cohorts(tmp_path / "chrono", **options)
+    balanced = build_real_training_cohorts(
+        tmp_path / "career", split_policy="career-stratified", **options)
+    assert balanced["partition_policy"] == "career-stratified"
+    assert chronological["partition_policy"] == "chronological"
+    for player, details in balanced["players"].items():
+        arms = details["partition_by_whole_year"]
+        years_by_arm = {key: set(value["years"]) for key, value in arms.items()}
+        assert all(years_by_arm.values())
+        assert not (years_by_arm["train"] & years_by_arm["validation"])
+        assert not (years_by_arm["train"] & years_by_arm["holdout"])
+        assert not (years_by_arm["validation"] & years_by_arm["holdout"])
+        assert max(years_by_arm["train"]) > max(
+            chronological["players"][player]["partition_by_whole_year"]["train"]["years"])
+        assert len(years_by_arm["train"]) >= 3
+    assert balanced["training_examples_exported"] > 0
+    assert balanced["holdout_moves_exported"] is False
+
+
+def test_sparsely_observed_career_band_is_quarantined_not_falsely_validated():
+    from chesssim.real_training_cohorts import _assign
+    rows = [
+        {"date": "1900", "mainline_sha256": "a" * 64},
+        {"date": "1901", "mainline_sha256": "b" * 64},
+    ]
+    partitions, sparse = _assign(rows, "career-stratified")
+    assert all(partitions[arm]["games"] == 0 for arm in
+               ("train", "validation", "holdout"))
+    assert sparse == ["insufficient_year_coverage"]
+    assert all(row["arm"] == "quarantine" for row in rows)
