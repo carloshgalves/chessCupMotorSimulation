@@ -33,9 +33,9 @@ PLAYER_FILES = {
     "Karpov": {"surname": "karpov", "published_games": 3529, "min_usable": 2300},
     "Kasparov": {"surname": "kasparov", "published_games": 2128, "min_usable": 1300},
 }
-SOURCE_PAGE = "https://github.com/rozim/ChessData/tree/main/PgnMentor"
+SOURCE_PAGE = "https://github.com/rozim/ChessData/tree/master/PgnMentor"
 ORIGINAL_CATALOG = "https://www.pgnmentor.com/files.html"
-SOURCE_BASE = "https://raw.githubusercontent.com/rozim/ChessData/main/PgnMentor/"
+SOURCE_BASE = "https://raw.githubusercontent.com/rozim/ChessData/master/PgnMentor/"
 MAX_ARCHIVE_BYTES = 24 * 1024 * 1024
 MAX_PGN_BYTES = 80 * 1024 * 1024
 MAX_GAMES_PER_COHORT = 12_000
@@ -74,7 +74,7 @@ def _read_archive(name: str, *, archive_dir: Path | None,
             final = urlsplit(response.url)
             if (final.scheme != "https"
                     or final.hostname != "raw.githubusercontent.com"
-                    or final.path != "/rozim/ChessData/main/PgnMentor/" + name + ".pgn"
+                    or final.path != "/rozim/ChessData/master/PgnMentor/" + name + ".pgn"
                     or final.username or final.password or final.query):
                 raise ValueError("Unexpected source archive redirect")
             blob = response.read(MAX_ARCHIVE_BYTES + 1)
