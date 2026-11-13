@@ -672,6 +672,15 @@ def main(argv: list[str] | None = None) -> int:
     paired.add_argument('--bootstrap', type=int, default=1000)
     paired.add_argument('--seed', type=int, default=2026)
 
+    train_verify = sub.add_parser(
+        "historical-train-verify",
+        help="verify only a local training PGN against a declared historical split index")
+    train_verify.add_argument("--index", type=Path, required=True)
+    train_verify.add_argument("--train-pgn", type=Path, required=True)
+    train_verify.add_argument("--out", type=Path, required=True)
+    train_verify.add_argument("--ack-train-only", action="store_true", required=True,
+                              help="confirm input PGN contains training games only, never reserved sets")
+
     historical_split = sub.add_parser(
         "historical-split-preflight",
         help="offline year-grouped corpus index commitments, without exposing reserved games")
@@ -921,6 +930,18 @@ def main(argv: list[str] | None = None) -> int:
                     'mean_cp_loss_difference': item['strength_paired_by_game']['mean'],
                     'exact_fen_positions': item['same_position_choices']['exact_fen_positions']
                 } for item in result['pairwise']]
+            }, ensure_ascii=False, indent=2))
+        elif args.command == "historical-train-verify":
+            from .historical_train_verify import run_historical_train_verification
+            report = run_historical_train_verification(
+                args.index, args.train_pgn, args.out,
+                ack_train_only=args.ack_train_only)
+            print(json.dumps({
+                "output": str(args.out),
+                "status": report["status"],
+                "training_games_verified": report["training_games_verified"],
+                "validated_partitions": report["validated_partitions"],
+                "embargo_status": report["embargo_status"],
             }, ensure_ascii=False, indent=2))
         elif args.command == "historical-split-preflight":
             from .historical_split_index import run_historical_split_preflight
