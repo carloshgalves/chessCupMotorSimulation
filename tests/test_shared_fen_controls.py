@@ -55,7 +55,7 @@ def test_positive_and_swapped_profile_assignment_are_measured_on_same_fens():
     assert result["matched_fens"] == 2
     assert result["distinct_game_ids_by_player"] == {"A": 2, "B": 2}
     assert result["observations_by_player"] == {"A": 2, "B": 2}
-    assert result["correct_assignment_score"] == 1.0
+    assert result["declared_assignment_score"] == 1.0
     assert result["swapped_assignment_score"] == 0.0
     assert result["contrast"] == 1.0
     assert result["accuracy_by_profile_and_player"] == {
@@ -69,7 +69,7 @@ def test_positive_and_swapped_profile_assignment_are_measured_on_same_fens():
     inverted = compare_shared_fen_assignments(
         rows, choices, player_a="A", player_b="B",
         profile_a="profile_B", profile_b="profile_A")
-    assert inverted["correct_assignment_score"] == 0.0
+    assert inverted["declared_assignment_score"] == 0.0
     assert inverted["swapped_assignment_score"] == 1.0
     assert inverted["contrast"] == -1.0
 
@@ -78,7 +78,7 @@ def test_identical_profiles_cannot_show_discriminative_signal():
     rows, choices = _case()
     choices["profile_B"] = dict(choices["profile_A"])
     result = _compare(rows, choices)
-    assert result["correct_assignment_score"] == 0.5
+    assert result["declared_assignment_score"] == 0.5
     assert result["swapped_assignment_score"] == 0.5
     assert result["contrast"] == 0.0
 
@@ -88,7 +88,7 @@ def test_duplicate_records_do_not_inflate_independent_games_or_score():
     expected = _compare(rows, choices)
     result = _compare(rows + [dict(rows[0]), dict(rows[0])], choices)
     assert result["duplicate_records_ignored"] == 2
-    for key in ("matched_fens", "correct_assignment_score",
+    for key in ("matched_fens", "declared_assignment_score",
                 "swapped_assignment_score", "contrast", "observations_by_player"):
         assert result[key] == expected[key]
     assert result["input_evidence_sha256"] == expected["input_evidence_sha256"]
@@ -103,7 +103,7 @@ def test_distinct_games_with_different_choices_are_not_collapsed():
     assert result["matched_fens"] == 2
     assert result["accuracy_by_profile_and_player"]["profile_A"]["A"] == 0.75
     assert result["accuracy_by_profile_and_player"]["profile_B"]["A"] == 0.25
-    assert result["correct_assignment_score"] == 0.875
+    assert result["declared_assignment_score"] == 0.875
     assert result["swapped_assignment_score"] == 0.125
 
 
@@ -125,7 +125,7 @@ def test_no_shared_fens_fails_closed_without_claiming_discrimination():
     result = _compare(rows, choices)
     assert result["status"] == "NO_EXACT_SHARED_FENS"
     assert result["matched_fens"] == 0
-    assert result["correct_assignment_score"] is None
+    assert result["declared_assignment_score"] is None
     assert result["swapped_assignment_score"] is None
     assert result["contrast"] is None
 
