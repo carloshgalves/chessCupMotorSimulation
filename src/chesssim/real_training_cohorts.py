@@ -178,6 +178,10 @@ def _scan(pgn: bytes, slug: str, surname: str) -> tuple[list[dict], dict]:
             "result": game.headers.get("Result", "*"),
             "eco": game.headers.get("ECO", ""),
             "opponent": game.headers.get("Black" if color else "White", "?"),
+            "focal_elo": game.headers.get("WhiteElo" if color else "BlackElo", ""),
+            "opponent_elo": game.headers.get("BlackElo" if color else "WhiteElo", ""),
+            "event": game.headers.get("Event", ""),
+            "time_control": game.headers.get("TimeControl", ""),
             "slug": slug,
         })
     return rows, {"encoding": encoding, **dict(counters)}
@@ -301,6 +305,49 @@ def _exact_age(birth: str | None, raw_date: str) -> int | None:
         return None
     return played.year - born.year - ((played.month, played.day) <
                                      (born.month, born.day))
+
+
+def _age_bounds(birth: str | None, raw_date: str) -> list[int] | None:
+    """Age range from authentic date precision; never invent day or month."""
+    if birth is None:
+        return None
+    year, _ = _played_year(raw_date)
+    if year is None:
+        return None
+    born = date.fromisoformat(birth)
+    if int(year) < born.year:
+        return None
+    exact = _exact_age(birth, raw_date)
+    if exact is not None:
+        return [exact, exact]
+    if int(year) == born.year:
+        # Without game date we cannot establish whether play preceded birth.
+        return None
+    low = int(year) - born.year - 1
+    high = int(year) - born.year
+    parts = raw_date.split(".")
+    if len(parts) == 3 and parts[1].isdigit():
+        month = int(parts[1])
+        if month < born.month:
+            return [low, low]
+        if month > born.month:
+            return [high, high]
+        if parts[2].isdigit():
+            day = int(parts[2])
+            return [high if day >= born.day else low] * 2
+    return [low, high]
+
+
+def _header_elo(raw: str) -> int | None:
+    return int(raw) if re.fullmatch(r"[1-3][0-9]{3}", raw) else None
+
+
+def _bounded_header(raw: str, limit: int = 120) -> str | None:
+    if not isinstance(raw, str) or not raw or raw in ("?", "*"):
+        return None
+    if len(raw) > limit or any(ord(char) < 32 for char in raw):
+        return None
+    return raw
 
 
 def _focus_result(result: str, color: str) -> str:
@@ -441,7 +488,12 @@ def build_real_training_cohorts(out: Path, *, players: list[str] | None = None,
                             "game_sha256": row["mainline_sha256"],
                             "year": year, "career_band": _career_band(year, dated_years),
                             "age_at_game": _exact_age(cfg["birth_date"], row["raw_date"]),
+                            "age_bounds": _age_bounds(cfg["birth_date"], row["raw_date"]),
                             "color": row["color"], "opponent": row["opponent"],
+                            "player_elo": _header_elo(row["focal_elo"]),
+                            "opponent_elo": _header_elo(row["opponent_elo"]),
+                            "event": _bounded_header(row["event"]),
+                            "time_control_pgn": _bounded_header(row["time_control"], 40),
                             "result_for_player": _focus_result(row["result"], row["color"]),
                             "eco": eco, "ply": ply, "phase_proxy": _phase(ply),
                             "fen": fen, "move_uci": move,
@@ -501,7 +553,8 @@ def build_real_training_cohorts(out: Path, *, players: list[str] | None = None,
                 "Phase labels are ply-number proxies, not Stockfish positional classifications.",
                 "Only exact full FEN equality is embargoed; tactical/semantic analogues can remain.",
                 "Same-trajectory digests may be different historical games with identical moves.",
-                "DOB is optional declared metadata; age remains null without a complete game date.",
+                "DOB is sourced separately: age is exact only with full date, otherwise age_bounds provides a conservative interval.",
+                "Elo and time control remain null unless explicitly provided in PGN headers.",
                 "The output fits training inputs; fitting, engine predictions and scientific validation are separate.",
             ],
         }
