@@ -123,3 +123,22 @@ e registra seu SHA-256; não depende de personalidade padrão incerta.
 
 O modelo é vinculado ao SHA-256 de **cada arquivo JSONL de treino**,
 além do manifesto. Alteração posterior dos dados invalida a avaliação.
+
+
+## Terceiro estimador, substituição do método inicialmente subajustado
+
+Depois de verificar que o estimador de log-razão de frequência não era
+discriminativo, o ajuste principal foi substituído por **regressão
+logística condicional**: o denominador contém todos os lances legais da
+FEN. O objetivo é maximizar a probabilidade do lance humano observado,
+sem modelar o resultado final da partida como atributo de entrada.
+
+O treinamento utiliza AdaGrad com regularização L2: primeiro aprende
+o controle genérico com todos os exemplos reais; depois cada jogador
+é ajustado a partir desse controle e cada período observado de carreira
+é ajustado a partir do jogador. Bandas com pouca amostra retornam
+explicitamente ao perfil do jogador. Não há rede neural, nem análise
+de engine durante o treinamento. O manifesto indica
+L2_ADAGRAD_CONDITIONAL_LOGIT_OVER_LEGAL_MOVES e conserva as perdas de treino
+por época. Mantém-se exatamente o mesmo protocolo de validação por anos
+e o controle Rodent IV real.
