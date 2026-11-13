@@ -50,6 +50,8 @@ def _compare(rows, predictions, opening=None, *, generic=True):
 def test_declared_opening_fen_exclusion_uses_same_remaining_fens_for_all_profiles():
     rows, choices, fw, _ = _case()
     original = _compare(rows, choices)
+    for profile in choices.values():
+        del profile[fw]
     result = _compare(rows, choices, _opening(fw))
     assert original["matched_fens"] == 2
     assert original["declared_assignment_score"] == 0.75
