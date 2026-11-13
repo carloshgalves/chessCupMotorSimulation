@@ -223,3 +223,21 @@ def test_sparsely_observed_career_band_is_quarantined_not_falsely_validated():
                ("train", "validation", "holdout"))
     assert sparse == ["insufficient_year_coverage"]
     assert all(row["arm"] == "quarantine" for row in rows)
+
+
+
+def test_conservative_age_bounds_and_unreported_confounders():
+    from chesssim.real_training_cohorts import (
+        _age_bounds, _header_elo, _bounded_header,
+    )
+    assert _age_bounds("1943-03-09", "1972.??.??") == [28, 29]
+    assert _age_bounds("1943-03-09", "1972.02.??") == [28, 28]
+    assert _age_bounds("1943-03-09", "1972.04.??") == [29, 29]
+    assert _age_bounds("1943-03-09", "1972.03.??") == [28, 29]
+    assert _age_bounds("1943-03-09", "1972.03.09") == [29, 29]
+    assert _age_bounds("1943-03-09", "????.??.??") is None
+    assert _age_bounds(None, "1972.03.09") is None
+    assert _header_elo("2780") == 2780
+    assert _header_elo("?") is None
+    assert _bounded_header("?") is None
+    assert _bounded_header("Classical event") == "Classical event"
