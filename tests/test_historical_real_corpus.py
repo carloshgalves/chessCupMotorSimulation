@@ -8,7 +8,6 @@ from __future__ import annotations
 from copy import deepcopy
 from io import BytesIO
 import json
-from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import chess
