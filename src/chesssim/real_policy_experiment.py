@@ -215,6 +215,12 @@ def fit_policy(cohorts: Path, out: Path, *, max_per_player: int = 1200,
         raise ValueError("Invalid training parameters")
     manifest_bytes = (cohorts / "manifest.json").read_bytes()
     manifest = _read_json(cohorts / "manifest.json")
+    # Bind the fitted model to the exact on-disk training JSONL bytes, not
+    # only a manifest that an operator could leave unchanged after mutation.
+    training_files_sha256 = {
+        rel: sha256((cohorts / rel).read_bytes()).hexdigest()
+        for rel in manifest["training_files"]
+    }
     chosen = {}
     grouped = defaultdict(list)
     for row in _validated_training_rows(cohorts, manifest):
@@ -249,6 +255,7 @@ def fit_policy(cohorts: Path, out: Path, *, max_per_player: int = 1200,
         "status": "REAL_PGN_TRAINED_EXPERIMENTAL_NOT_STYLE_VALIDATED",
         "train_manifest_sha256": sha256(manifest_bytes).hexdigest(),
         "source_pgn_sha256": {k: v["pgn_sha256"] for k, v in manifest["sources"].items()},
+        "training_files_sha256": training_files_sha256,
         "split_policy": manifest["partition_policy"],
         "training_examples_in_manifest": manifest["training_examples_exported"],
         "training_observations_used": len(pooled),
@@ -277,8 +284,8 @@ def predict(model: dict, board: chess.Board, slug: str, band: str,
     if not candidates:
         raise ValueError("No legal prediction from terminal board")
     score_move = lambda move: sum(
-        weights.get(f, 0.0) + 0.9 * personal.get(f, 0.0) +
-        0.7 * career.get(f, 0.0) for f in _features(board, move))
+        weights.get(f, 0.0) + 2.0 * personal.get(f, 0.0) +
+        1.3 * career.get(f, 0.0) for f in _features(board, move))
     # Stable lexical tie break, with all profiles evaluating identical legal
     # move sets. This is a statistical choice policy, not search/evaluation.
     return max(candidates, key=lambda move: (score_move(move), -int.from_bytes(
@@ -294,6 +301,17 @@ def _read_eval_positions(cohorts: Path, model: dict, *,
     if (sha256((cohorts / "manifest.json").read_bytes()).hexdigest() !=
             model.get("train_manifest_sha256")):
         raise ValueError("Model and historical split manifest do not match")
+    expected_files = model.get("training_files_sha256")
+    if (not isinstance(expected_files, dict) or
+            set(expected_files) != set(manifest["training_files"])):
+        raise ValueError("Missing training JSONL commitments")
+    for relative, expected in expected_files.items():
+        if (not isinstance(relative, str) or not re.fullmatch(
+                r"train/[a-z0-9-]+/[0-9]{4}\\.jsonl", relative)):
+            raise ValueError("Invalid training file path commitment")
+        if (not isinstance(expected, str) or HEX.fullmatch(expected) is None or
+                sha256((cohorts / relative).read_bytes()).hexdigest() != expected):
+            raise ValueError("Training JSONL changed after model fit")
     config = _player_configuration(
         sorted(model["profiles"]), None,
         {slug: data["source"].removesuffix(".pgn")
@@ -387,6 +405,18 @@ def _rodent_predictions(root: Path, rows: list[dict], slugs: list[str], *,
         generic = chess.engine.SimpleEngine.popen_uci(
             str(executable), cwd=str(root), timeout=15)
         engines["generic_rodent"] = generic
+        # A reproducible generic UCI control: select the official nonhistorical
+        # "Simple" personality explicitly, never assume the engine default.
+        option = generic.options.get("Personality")
+        if option is None or (option.var and "Simple" not in option.var):
+            raise RuntimeError("Real Rodent does not offer declared Simple control")
+        generic.configure({"Personality": "Simple"})
+        from .registry import registered_aliases
+        aliases = registered_aliases(root / "personalities" / "basic.ini")
+        filename = aliases.get("Simple")
+        if not filename:
+            raise RuntimeError("Simple UCI control is not registered")
+        hashes["simple_profile"] = file_hash(root / "personalities" / filename)
         settings = {key: val for key, val in
                     (("UseBook", False), ("Threads", 1), ("Hash", 16),
                      ("UCI_LimitStrength", False))
@@ -457,6 +487,8 @@ def evaluate_policy(cohorts: Path, model_path: Path, out: Path, *,
             "status": "ACTUAL_UCI_MOVES_MEASURED",
             "binary_sha256": hashes["exe"],
             "personality_sha256": {s: hashes[s] for s in slugs},
+            "generic_personality": "Simple",
+            "generic_profile_sha256": hashes["simple_profile"],
             "depth": rodent_depth, "seconds_per_position": rodent_seconds,
             "books": "OFF", "predictors": ["rodent_" + s for s in predictions],
         }
