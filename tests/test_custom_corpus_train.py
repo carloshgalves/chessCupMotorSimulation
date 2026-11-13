@@ -5,6 +5,7 @@ from datetime import date
 from hashlib import sha256
 from io import StringIO
 import json
+import re
 import socket
 import subprocess
 
@@ -480,5 +481,45 @@ def test_embargo_cli_opt_in_publishes_manifest_and_no_reserved_pgn(
     assert response["position_embargo"]["status"] == "AUDITED_DISJOINT"
     assert sorted(p.name for p in out.iterdir()) == ["split.json", "train.pgn"]
     assert json.loads((out / "split.json").read_text()) == response
-    assert all(name not in json.dumps(response) for name in (
-        "g1f3", "e2e4", "rnbqkbnr/pppp"))
+    _assert_no_raw_chess_decisions(response)
+
+
+
+def _assert_no_raw_chess_decisions(value):
+    """Exclude raw chess evidence without misclassifying digest substrings.
+
+    Random profile IDs and SHA-256 values may contain e2e4 as four hex
+    characters by coincidence. A complete valid SHA-256 is provenance, not
+    an exposed move. Standalone decisions elsewhere remain prohibited.
+    """
+    def strings(node):
+        if isinstance(node, dict):
+            for key, child in node.items():
+                yield key
+                yield from strings(child)
+        elif isinstance(node, list):
+            for child in node:
+                yield from strings(child)
+        elif isinstance(node, str):
+            yield node
+
+    for token in strings(value):
+        if re.fullmatch(r"[0-9a-f]{64}", token):
+            continue
+        for forbidden in ("g1f3", "e2e4", "rnbqkbnr/pppp"):
+            assert forbidden not in token, "Raw chess evidence leaked into report"
+
+
+def test_reserved_decision_guard_distinguishes_move_data_from_sha256_fragments():
+    _assert_no_raw_chess_decisions({
+        "source_sha256": "a" * 20 + "e2e4" + "b" * 40,
+        "metadata": "No raw move data exposed",
+    })
+    with pytest.raises(AssertionError, match="Raw chess evidence"):
+        _assert_no_raw_chess_decisions({
+            "unexpected_move_list": ["e2e4", "g1f3"],
+        })
+    with pytest.raises(AssertionError, match="Raw chess evidence"):
+        _assert_no_raw_chess_decisions({
+            "unexpected_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR",
+        })
