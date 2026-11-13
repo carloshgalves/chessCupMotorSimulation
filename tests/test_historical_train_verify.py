@@ -398,3 +398,24 @@ def test_valid_setup_fen_with_matching_index_hash_is_accepted(tmp_path):
         inp, train, out, ack_train_only=True)
     assert result["training_games_verified"] == 6
     assert result["status"] == "TRAIN_PARTITION_MATCHED_SOURCE_NOT_VERIFIED"
+
+
+
+def test_invalid_setup_header_without_fen_does_not_pass_by_default(tmp_path):
+    _, games, inp, train, out = _fixture(tmp_path)
+    forged = _game(0)
+    forged.headers["SetUp"] = "unexpected"
+    train.write_bytes(_export([forged, *games[1:6]]))
+    with pytest.raises(ValueError):
+        run_historical_train_verification(inp, train, out, ack_train_only=True)
+    assert not out.exists()
+
+
+def test_result_header_conflicting_with_movetext_is_rejected(tmp_path):
+    _, _, inp, train, out = _fixture(tmp_path)
+    raw = train.read_text(encoding="utf-8")
+    assert '[Result "1-0"]' in raw
+    train.write_text(raw.replace('[Result "1-0"]', '[Result "0-1"]', 1))
+    with pytest.raises(ValueError):
+        run_historical_train_verification(inp, train, out, ack_train_only=True)
+    assert not out.exists()
