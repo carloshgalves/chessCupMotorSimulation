@@ -42,7 +42,7 @@ lances ilegais, previsões incompletas e sobrescrita de relatórios existentes.
 - matched_fens: FENs completos presentes nos dois conjuntos históricos.
 - accuracy_by_profile_and_player: concordância média nos mesmos FENs, peso uniforme por FEN,
   e proporção de decisões por jogador/FEN entre os identificadores de partidas distintos.
-- correct_assignment_score e swapped_assignment_score: médias com perfis associados originalmente
+- declared_assignment_score e swapped_assignment_score: médias com perfis associados originalmente
   e após inverter as atribuições, respectivamente.
 - contrast: diferença das duas médias; valor positivo **não comprova** identidade histórica.
 - distinct_game_ids_by_player: quantidade de IDs distintos; não valida a independência real dos jogos.
