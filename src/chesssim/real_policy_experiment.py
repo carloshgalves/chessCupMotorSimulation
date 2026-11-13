@@ -307,7 +307,7 @@ def _read_eval_positions(cohorts: Path, model: dict, *,
         raise ValueError("Missing training JSONL commitments")
     for relative, expected in expected_files.items():
         if (not isinstance(relative, str) or not re.fullmatch(
-                r"train/[a-z0-9-]+/[0-9]{4}\\.jsonl", relative)):
+                r"train/[a-z0-9-]+/[0-9]{4}\.jsonl", relative)):
             raise ValueError("Invalid training file path commitment")
         if (not isinstance(expected, str) or HEX.fullmatch(expected) is None or
                 sha256((cohorts / relative).read_bytes()).hexdigest() != expected):
