@@ -300,7 +300,8 @@ def compare_shared_fen_assignments(
 
 
 def run_shared_fen_file(input_path: Path, output_path: Path, *,
-                        ack_unsealed: bool = False) -> dict:
+                        ack_unsealed: bool = False,
+                        opening_catalog_source: Path | None = None) -> dict:
     """Load a bounded local JSON, compare decisions, and create a new JSON.
 
     Explicit acknowledgement is required because this function cannot know
@@ -351,6 +352,47 @@ def run_shared_fen_file(input_path: Path, output_path: Path, *,
         raise ValueError("generic_profile cannot be null when declared")
     if "opening_exclusion" in document and document["opening_exclusion"] is None:
         raise ValueError("opening_exclusion cannot be null when declared")
+    verified_catalog_sha = None
+    if opening_catalog_source is not None:
+        if "opening_exclusion" not in document:
+            raise ValueError("opening_catalog_source requires opening_exclusion")
+        embedded = _validate_opening_exclusion(document["opening_exclusion"])
+        if embedded is None:
+            raise ValueError("opening_exclusion is required for source verification")
+
+        catalog_path = Path(opening_catalog_source)
+        if catalog_path.is_symlink():
+            raise ValueError("Opening catalog source must not be a symlink")
+        try:
+            fd_catalog = os.open(
+                catalog_path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        except OSError as exc:
+            raise ValueError("Cannot securely open opening catalog source") from exc
+        with os.fdopen(fd_catalog, "rb") as catalog_stream:
+            catalog_info = os.fstat(catalog_stream.fileno())
+            if (not stat.S_ISREG(catalog_info.st_mode) or
+                    catalog_info.st_size > MAX_JSON_BYTES):
+                raise ValueError("Opening catalog must be a bounded regular file")
+            catalog_bytes = catalog_stream.read(MAX_JSON_BYTES + 1)
+        if len(catalog_bytes) > MAX_JSON_BYTES:
+            raise ValueError("Opening catalog exceeds size limit")
+        verified_catalog_sha = sha256(catalog_bytes).hexdigest()
+        if verified_catalog_sha != embedded["declared_source_sha256"]:
+            raise ValueError("Opening catalog SHA-256 does not match actual bytes")
+        try:
+            raw_catalog = json.loads(
+                catalog_bytes, object_pairs_hook=unique_json_fields)
+        except (ValueError, UnicodeDecodeError) as exc:
+            raise ValueError("Invalid opening catalog JSON") from exc
+        if not isinstance(raw_catalog, dict) or set(raw_catalog) != {"fens"}:
+            raise ValueError("Opening catalog JSON must contain only fens")
+        actual_catalog = _validate_opening_exclusion({
+            "fens": raw_catalog["fens"],
+            "declared_source_sha256": verified_catalog_sha,
+        })
+        if actual_catalog != embedded:
+            raise ValueError("Opening catalog FENs differ from inline declaration")
+
     report = compare_shared_fen_assignments(
         document["positions"], document["predictions"],
         player_a=document["player_a"], player_b=document["player_b"],
@@ -359,6 +401,10 @@ def run_shared_fen_file(input_path: Path, output_path: Path, *,
         generic_profile=document.get("generic_profile"),
         opening_exclusion=document.get("opening_exclusion"))
     report["input_file_sha256"] = sha256(payload).hexdigest()
+    if verified_catalog_sha is not None:
+        report["opening_exclusion"]["provenance"] = "LOCAL_BYTES_AND_FENS_VERIFIED"
+        report["limitations"]["opening_catalog_source"] = (
+            "LOCAL_INTEGRITY_ONLY_LICENSE_COHORT_AND_PREREGISTRATION_NOT_VERIFIED")
     output.parent.mkdir(parents=True, exist_ok=True)
     # Exclusive create protects any preexisting report, even across processes.
     with output.open("x", encoding="utf-8") as handle:
