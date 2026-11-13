@@ -71,7 +71,7 @@ def _require_mainline_only(pgn_text: str) -> None:
     movetext = "\n".join(
         line for line in pgn_text.splitlines()
         if not line.lstrip().startswith("["))
-    if any(marker in movetext for marker in "{}();$%"):
+    if any(marker in movetext for marker in "{}();$%!?"):
         raise ValueError("Training PGN must contain mainline moves only")
 
 
