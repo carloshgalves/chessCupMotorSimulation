@@ -16,6 +16,7 @@ from io import BytesIO, StringIO
 import json
 from pathlib import Path
 import re
+from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 from zipfile import BadZipFile, ZipFile
 
@@ -36,6 +37,7 @@ SOURCE_BASE = "https://www.pgnmentor.com/players/"
 MAX_ARCHIVE_BYTES = 24 * 1024 * 1024
 MAX_PGN_BYTES = 80 * 1024 * 1024
 MAX_GAMES_PER_COHORT = 12_000
+MIN_TOTAL_GAMES = 6_500
 MAX_PLIES = 500
 MAX_FENS_PER_COHORT = 250_000
 DATE = re.compile(r"(\d{4})\.(\d{2})\.(\d{2})\Z")
@@ -65,8 +67,12 @@ def _read_archive(name: str, *, archive_dir: Path | None,
         request = Request(archive_url(name), headers={
             "User-Agent": "ChessCupResearchAudit/1.0 (+offline-reproducible)"})
         with urlopen(request, timeout=timeout) as response:
-            if response.url != archive_url(name):
-                raise ValueError("Unexpected redirect for source archive")
+            final = urlsplit(response.url)
+            if (final.scheme != "https"
+                    or final.hostname not in {"www.pgnmentor.com", "pgnmentor.com"}
+                    or final.path != "/players/" + name + ".zip"
+                    or final.username or final.password or final.query):
+                raise ValueError("Unexpected source archive redirect")
             blob = response.read(MAX_ARCHIVE_BYTES + 1)
     else:
         raise ValueError("Use --fetch or --archive-dir with existing ZIPs")
@@ -249,8 +255,8 @@ def audit_historical_archives(archives: dict[str, bytes], *,
         for name in sorted(PLAYER_FILES)
     }
     total = sum(c["unique_games"] for c in cohorts.values())
-    if total < 6_500:
-        raise ValueError("Real historical game evidence below 6500 unique cohort games")
+    if total < MIN_TOTAL_GAMES:
+        raise ValueError("Real historical game evidence below required unique cohort games")
     votes = {}
     observations = {}
     for name in sorted(cohorts):
