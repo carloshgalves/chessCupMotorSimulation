@@ -12,6 +12,7 @@ import os
 import pytest
 
 from chesssim.cli import main
+from chesssim import historical_split_index as preflight
 from chesssim.historical_split_index import (
     build_historical_split_manifest,
     run_historical_split_preflight,
@@ -261,3 +262,37 @@ def test_no_read_or_file_creation_when_unsealed_ack_is_absent(tmp_path):
     with pytest.raises(ValueError, match="acknowledgement"):
         run_historical_split_preflight(inp, out, ack_unsealed=False)
     assert not out.exists()
+
+
+
+def test_failed_publication_does_not_leave_partial_manifest(tmp_path, monkeypatch):
+    inp = _write(tmp_path, _index())
+    out = tmp_path / "manifest.json"
+    before = inp.read_bytes()
+
+    def reject_atomic_link(*args, **kwargs):
+        raise OSError("simulated destination failure")
+
+    monkeypatch.setattr(preflight.os, "link", reject_atomic_link)
+    with pytest.raises(OSError, match="simulated destination failure"):
+        run_historical_split_preflight(inp, out, ack_unsealed=True)
+    assert not out.exists()
+    assert list(tmp_path.glob(".chesssim-historical-split-*.tmp")) == []
+    assert inp.read_bytes() == before
+
+
+def test_concurrent_destination_creation_preserved_during_publish(tmp_path, monkeypatch):
+    inp = _write(tmp_path, _index())
+    out = tmp_path / "manifest.json"
+    actual_link = preflight.os.link
+
+    def competing_writer(source, destination):
+        destination = type(out)(destination)
+        destination.write_text("another writer owns this")
+        return actual_link(source, destination)
+
+    monkeypatch.setattr(preflight.os, "link", competing_writer)
+    with pytest.raises(FileExistsError):
+        run_historical_split_preflight(inp, out, ack_unsealed=True)
+    assert out.read_text() == "another writer owns this"
+    assert list(tmp_path.glob(".chesssim-historical-split-*.tmp")) == []
