@@ -91,7 +91,7 @@ def test_duplicate_records_do_not_inflate_independent_games_or_score():
     for key in ("matched_fens", "correct_assignment_score",
                 "swapped_assignment_score", "contrast", "observations_by_player"):
         assert result[key] == expected[key]
-    assert result["source_sha256"] == expected["source_sha256"]
+    assert result["input_evidence_sha256"] == expected["input_evidence_sha256"]
 
 
 def test_distinct_games_with_different_choices_are_not_collapsed():
