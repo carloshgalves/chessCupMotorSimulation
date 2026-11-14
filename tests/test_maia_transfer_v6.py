@@ -13,6 +13,15 @@ from chesssim.maia_transfer_v6 import (
 
 def _record(i, human="e2e4", chosen="e2e4"):
     board = chess.Board()
+    # Distinct genuine-looking board states to test game AND canonical
+    # position separation, without inventing scientific observations.
+    white_openings = ("a2a3", "a2a4", "b2b3", "b2b4", "c2c3",
+                      "c2c4", "g2g3", "g2g4", "h2h3", "h2h4")
+    black_replies = ("a7a6", "a7a5", "b7b6", "b7b5")
+    board.push_uci(white_openings[i % len(white_openings)])
+    board.push_uci(black_replies[(i // len(white_openings)) % len(black_replies)])
+    assert all(chess.Move.from_uci(m) in board.legal_moves
+               for m in ("e2e4", "d2d4", "g1f3"))
     return {
         "fen": board.fen(),
         "move": human,
@@ -59,6 +68,18 @@ def test_calibration_audits_different_games_and_can_accept_genuine_gain():
     assert decision["max_tactical_loss_cp"] in (35, 80, 150)
     assert decision["audit_paired_statistic"]["bootstrap_95_ci"][0] > 0
     assert _calibrate(rows, 2036, "fischer") == decision
+
+
+def test_calibration_rejects_canonical_fen_leak_between_distinct_games():
+    rows = [_record(i) for i in range(40)]
+    for row in rows:
+        row["fen"] = chess.STARTING_FEN
+    denied = _calibrate(rows, 2036, "fischer")
+    assert denied["decision"] == "DENY_INSUFFICIENT_CANONICAL_INDEPENDENT_AUDIT"
+    assert denied["audit_paired_statistic"] is None
+    assert denied["audit_games"] == 0
+    assert denied["audit_canonical_positions_excluded"] > 0
+    assert denied["configured_maia_elo"] is None
 
 
 def test_calibration_fails_closed_when_maia_hurts_real_move_agreement():
