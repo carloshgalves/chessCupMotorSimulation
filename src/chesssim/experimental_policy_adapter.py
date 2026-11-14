@@ -110,6 +110,8 @@ class ExperimentalPolicyAdapter:
             raise ValueError("Missing generic policy baseline")
         gate = None
         if gate_file is not None:
+            if any(era != "overall" for era in bindings.values()):
+                raise ValueError("V4 gate was calibrated for overall V3 weights, not era-specific weights")
             if model["schema"] != CONTEXTUAL_SCHEMA:
                 raise ValueError("Calibrated Rodent gate requires a contextual V3 model")
             from .real_gate_v4 import load_gate
