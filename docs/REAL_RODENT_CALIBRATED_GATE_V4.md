@@ -178,3 +178,39 @@ Essa salvaguarda reduz uma fonte evitável de inconsistência.
 Resultados ainda podem variar entre máquinas por diferenças
 de hardware e escolhas internas do motor, mesmo com profundidade
 igual.
+
+
+## Primeira avaliação real: resultado negativo útil (revisão da PR #140)
+
+A primeira execução do experimento V4 processou decisões históricas
+reais (quatro jogadores, 400/800/1600 decisões de treino por jogador)
+e comparou 480 escolhas de anos de validação separados do treino.
+
+| Treino (decisões por jogador) | Acertos top-1 nas mesmas 480 posições |
+| --- | ---: |
+| 400 | 92/480 (19,2%) |
+| 800 | 95/480 (19,8%) |
+| 1600 | 104/480 (21,7%) |
+
+Diferenças macro por jogo com bootstrap 95%:
+- 800 versus 400: +0,0063, IC [-0,0266; +0,0393], sem ganho robusto.
+- 1600 versus 800: +0,0165, IC [-0,0127; +0,0495], sem ganho robusto.
+
+Embora a melhora pontual seja positiva, **não se comprovou que mais dados
+resolvam o problema**. Esses valores são exploratórios, não testes
+confirmatórios em amostra totalmente inédita.
+
+O gate não liberou substituições para nenhum dos quatro jogadores:
+Fischer 56 decisões de calibração distribuídas em 28 jogos, Karpov
+128/118, Kasparov 128/104 e Tal 128/117. O baixo número de jogos de
+Fischer, decorrente do embargo global de partidas já usadas na V3,
+não é defeito dos PGNs; é uma limitação real de cobertura.
+
+A auditoria adversarial corrigiu o limiar de dados: exigimos ao
+menos 20 jogos para PRODUZIR o relatório, mas um gate automático
+precisa de **40 jogos de calibração distintos**, além da auditoria
+por jogos independentes e IC positivo. Com cobertura inferior, o
+resultado é DENY_INSUFFICIENT_CALIBRATION_GAMES, sem impedir
+treino, avaliação ou relato transparente. O workflow inicial
+falhou porque exigia 40 jogos para todos até mesmo para relatar
+um resultado negativo; esse gate administrativo foi corrigido.
