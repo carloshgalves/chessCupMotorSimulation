@@ -43,13 +43,13 @@ jobs:
         run: |
           python -m chesssim.real_policy_experiment train \
             --cohorts "$RUNNER_TEMP/real-cohorts" \
-            --max-per-player 1200 --max-per-game 3 --seed 2026 \
+            --max-per-player 1600 --max-per-game 3 --seed 2026 \
             --out "$RUNNER_TEMP/v2-real-policy.json"
       - name: Fit CONTEXTUAL V3 conditional logit on identical REAL training samples
         run: |
           python -m chesssim.contextual_policy_v3 train \
             --cohorts "$RUNNER_TEMP/real-cohorts" \
-            --max-per-player 1200 --max-per-game 3 --seed 2026 \
+            --max-per-player 1600 --max-per-game 3 --seed 2026 \
             --out "$RUNNER_TEMP/v3-real-policy.json"
       - name: Checkout immutable official Rodent IV sources
         uses: actions/checkout@v5
@@ -74,7 +74,7 @@ jobs:
             --cohorts "$RUNNER_TEMP/real-cohorts" \
             --model "$RUNNER_TEMP/v3-real-policy.json" \
             --legacy-model "$RUNNER_TEMP/v2-real-policy.json" \
-            --fetch --seed 2027 --per-player 80 --per-game 2 \
+            --fetch --seed 2027 --per-player 120 --per-game 2 \
             --repetitions 1500 \
             --rodent-root "$RUNNER_TEMP/rodent" \
             --rodent-depth 2 --rodent-seconds 0.12 \
@@ -89,19 +89,22 @@ jobs:
           v2 = json.loads((p / "v2-real-policy.json").read_text())
           r = json.loads((p / "real-contextual-paired-report.json").read_text())
           assert v3["status"] == "TRAINED_ON_REAL_HUMAN_PGNS_NOT_STYLE_VALIDATED"
-          assert v3["training_observations_used"] == v2["training_observations_used"] >= 4000
+          assert v3["training_observations_used"] == v2["training_observations_used"] >= 5800
           assert v3["source_pgn_sha256"] == v2["source_pgn_sha256"]
           assert v3["training_files_sha256"] == v2["training_files_sha256"]
           assert r["validation_arm"] == "validation"
           assert r["final_holdout_opened"] is False
           assert r["promotion"].startswith("DENIED")
-          assert r["evaluation_decisions"] >= 200
+          assert r["evaluation_decisions"] >= 400
           assert r["rodent_engine"]["status"] == "ACTUAL_RODENT_UCI"
           assert r["rodent_engine"]["exe_sha256"]
           assert r["rodent_engine"]["generic_personality"] == "Simple"
           assert set(r["by_historical_player"]) == {"fischer","tal","karpov","kasparov"}
           for player, item in r["by_historical_player"].items():
-              assert item["sample"]["distinct_games"] >= 10, player
+              assert item["sample"]["distinct_games"] >= 30, player
+              assert sum(v["positions"] for v in item["sample"]["by_band"].values()) == item["sample"]["decisions"]
+              assert sum(v["positions"] for v in item["sample"]["by_year"].values()) == item["sample"]["decisions"]
+              assert "contextual_named_vs_fixed_rotation" in item["paired_game_statistics"]
               assert item["historical_style_validated"] is False
               metrics = item["models"]
               assert {"contextual_named", "contextual_generic", "legacy_named",
