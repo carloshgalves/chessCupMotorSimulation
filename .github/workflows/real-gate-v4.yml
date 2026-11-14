@@ -1,0 +1,192 @@
+name: Real Rodent V4 game-disjoint calibrated scientific gate
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/real_gate_v4.py'
+      - 'src/chesssim/experimental_policy_adapter.py'
+      - 'src/chesssim/matches.py'
+      - 'src/chesssim/cli.py'
+      - 'tests/test_real_gate_v4.py'
+      - 'docs/REAL_RODENT_CALIBRATED_GATE_V4.md'
+      - '.github/workflows/real-gate-v4.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chesssim-v4-game-disjoint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-pgn-calibrate-and-evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install
+        run: python -m pip install -e '.[dev]'
+      - name: Engineering fixtures and regression safety; never called scientific data
+        run: |
+          python -m pytest tests/test_real_gate_v4.py tests/test_contextual_policy_v3.py tests/test_experimental_policy_adapter.py -q -ra
+      - name: Rebuild actual historical player/year cohorts from PINNED public PGNs
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov \
+            --birthdates-json docs/REAL_BIRTHDATES_4.json \
+            --split-policy career-stratified --min-ply 17 \
+            --out "$RUNNER_TEMP/actual-pgn-cohorts"
+      - name: Train v3 with 400 REAL human decisions per player
+        run: |
+          python -m chesssim.contextual_policy_v3 train \
+            --cohorts "$RUNNER_TEMP/actual-pgn-cohorts" \
+            --max-per-player 400 --max-per-game 3 --seed 2026 \
+            --out "$RUNNER_TEMP/real-v3-400.json"
+      - name: Train v3 with 800 REAL human decisions per player
+        run: |
+          python -m chesssim.contextual_policy_v3 train \
+            --cohorts "$RUNNER_TEMP/actual-pgn-cohorts" \
+            --max-per-player 800 --max-per-game 3 --seed 2026 \
+            --out "$RUNNER_TEMP/real-v3-800.json"
+      - name: Train v3 with 1600 REAL human decisions per player
+        run: |
+          python -m chesssim.contextual_policy_v3 train \
+            --cohorts "$RUNNER_TEMP/actual-pgn-cohorts" \
+            --max-per-player 1600 --max-per-game 3 --seed 2026 \
+            --out "$RUNNER_TEMP/real-v3-1600.json"
+      - name: Checkout immutable historical Rodent IV UCI source
+        uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Build ACTUAL Rodent IV source binary
+        run: |
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac
+          make -C rodent-source/sources build
+          mkdir -p "$RUNNER_TEMP/rodent"
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          test -s "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          test -s "$RUNNER_TEMP/rodent/personalities/basic.ini"
+      - name: Fit V4 gate on never-fitted REAL training-year games plus distinct audit games
+        run: |
+          python -m chesssim.real_gate_v4 fit \
+            --cohorts "$RUNNER_TEMP/actual-pgn-cohorts" \
+            --model "$RUNNER_TEMP/real-v3-1600.json" \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --per-player 128 --per-game 2 --seed 2028 \
+            --rodent-depth 2 --rodent-seconds 0.12 \
+            --out "$RUNNER_TEMP/real-calibrated-gate-v4.json"
+      - name: Evaluate matched REAL validation games and curve 400/800/1600
+        run: |
+          python -m chesssim.real_gate_v4 evaluate \
+            --cohorts "$RUNNER_TEMP/actual-pgn-cohorts" \
+            --model "$RUNNER_TEMP/real-v3-1600.json" \
+            --gate "$RUNNER_TEMP/real-calibrated-gate-v4.json" \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --fetch --per-player 120 --per-game 2 --seed 2027 \
+            --rodent-depth 2 --rodent-seconds 0.12 \
+            --repetitions 1500 \
+            --curve "400:$RUNNER_TEMP/real-v3-400.json" \
+            --curve "800:$RUNNER_TEMP/real-v3-800.json" \
+            --out "$RUNNER_TEMP/real-gate-v4-evaluation.json"
+      - name: Real UCI game with calibrated V4 and no hidden override
+        run: |
+          python -m chesssim.cli play fischer tal \
+            --rodent "$RUNNER_TEMP/rodent" --no-books --depth 2 \
+            --max-plies 20 \
+            --policy-model "$RUNNER_TEMP/real-v3-1600.json" \
+            --policy-gate "$RUNNER_TEMP/real-calibrated-gate-v4.json" \
+            --policy-white-era overall --policy-black-era overall \
+            --policy-override-percent 100 --policy-min-ply 1 \
+            --out "$RUNNER_TEMP/real-gated-match"
+      - name: Verify REAL evidence, game-disjoint calibration and no promotion
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          import chess.pgn
+          p = Path(os.environ["RUNNER_TEMP"])
+          files = {size: json.loads((p / f"real-v3-{size}.json").read_text())
+                   for size in (400, 800, 1600)}
+          gate = json.loads((p / "real-calibrated-gate-v4.json").read_text())
+          report = json.loads((p / "real-gate-v4-evaluation.json").read_text())
+          assert all(model["status"] == "TRAINED_ON_REAL_HUMAN_PGNS_NOT_STYLE_VALIDATED"
+                     for model in files.values())
+          assert [files[i]["training_observations_used"] for i in (400, 800, 1600)] == [1600, 3200, 6400]
+          assert len({model["train_manifest_sha256"] for model in files.values()}) == 1
+          assert len({json.dumps(model["training_files_sha256"], sort_keys=True) for model in files.values()}) == 1
+          assert gate["schema"] == "chesssim-real-rodent-external-decision-gate-v4"
+          assert gate["base_model_sha256"] == files[1600]["model_sha256"]
+          assert gate["training_arm"] == "train_only_out_of_fit_games"
+          assert gate["default_action"] == "RODENT_BESTMOVE"
+          assert gate["final_holdout_opened"] is False
+          assert gate["calibration"]["fitted_games_globally_embargoed"] > 0
+          assert len(gate["players"]) == 4
+          for slug, candidate in gate["players"].items():
+              assert candidate["calibration_games"] >= 40, slug
+              assert candidate["audit_games"] >= 8
+              assert candidate["threshold"] is None or (
+                  candidate["decision_rule"] == "ACCEPT_AUDIT_LOWER_BOUND_POSITIVE" and
+                  candidate["audit_game_cluster_statistics"]["bootstrap_95_ci"][0] > 0)
+          assert report["status"] == "REAL_HISTORIC_GAME_DISJOINT_GATE_EXPLORATORY"
+          assert report["final_holdout_opened"] is False
+          assert report["actual_rodent_uci"] is True
+          assert report["training_decisions"] == 6400
+          assert report["total_validation_decisions"] == 480
+          assert report["promotion"].startswith("DENIED")
+          assert report["gate_sha256"] == gate["gate_sha256"]
+          assert set(report["learning_curve"]) == {"400","800","1600"}
+          assert all(v["total"] == 480 for v in report["learning_curve"].values())
+          assert set(report["by_player"]) == {"fischer","tal","karpov","kasparov"}
+          for slug, evaluation in report["by_player"].items():
+              assert evaluation["validation_decisions"] == 120
+              assert evaluation["validation_games"] >= 20
+              assert evaluation["gate_threshold"] == gate["players"][slug]["threshold"]
+              assert evaluation["paired_game_statistics"]["gate_vs_rodent"]["games"] == evaluation["validation_games"]
+              assert evaluation["identity_validated"] is False
+          path = next((p / "real-gated-match/fischer-vs-tal").glob("*/summary.json"))
+          summary = json.loads(path.read_text())
+          assert summary["experimental_learned_policy"]["gate_sha256"] == gate["gate_sha256"]
+          assert summary["experimental_learned_policy"]["engine_internal_parameters_changed"] is False
+          game = summary["games"][0]
+          with (path.parent / "jogo_1.pgn").open() as stream:
+              pgn = chess.pgn.read_game(stream)
+          assert pgn and not pgn.errors
+          assert pgn.headers["PolicyGateSHA256"] == gate["gate_sha256"]
+          moves = [m.uci() for m in pgn.mainline_moves()]
+          assert len(moves) == 20
+          assert [event["played_move"] for event in game["policy_trace"]] == moves
+          assert all(event["gate_sha256"] == gate["gate_sha256"]
+                     for event in game["policy_trace"])
+          assert game["status"] == "INCOMPLETE"
+          print("REAL_V4_GAME_DISJOINT_CALIBRATION_AND_RODENT_UCI_GATE_PASSED",
+                "thresholds", {s: v["threshold"] for s,v in gate["players"].items()},
+                "curve", report["learning_curve"],
+                "game_overrides", game["policy_counts"])
+          PY
+      - name: Archive trained REAL models, calibrated gate and aggregate evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chesssim-real-v4-calibrated-gate-science
+          path: |
+            ${{ runner.temp }}/real-v3-400.json
+            ${{ runner.temp }}/real-v3-800.json
+            ${{ runner.temp }}/real-v3-1600.json
+            ${{ runner.temp }}/real-calibrated-gate-v4.json
+            ${{ runner.temp }}/real-gate-v4-evaluation.json
+            ${{ runner.temp }}/real-gated-match/fischer-vs-tal/*/summary.json
+            ${{ runner.temp }}/real-gated-match/fischer-vs-tal/*/jogo_1.pgn
+          if-no-files-found: warn
+          retention-days: 7
