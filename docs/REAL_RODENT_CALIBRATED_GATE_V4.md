@@ -28,14 +28,19 @@ públicas genuínas.
    **Proíbe globalmente** que esses jogos ou posições FEN participem da
    calibração do novo gate. Amostra 128 novas decisões por jogador de
    partidas reais do braço TRAIN que não participaram da V3.
-4. Divide por JOGO as decisões disponíveis em duas amostras não sobrepostas:
+4. A primeira V4 calibra exclusivamente os pesos V3 de carreira TOTAL
+   (overall); períodos específicos não compartilham automaticamente esse
+   limiar. As comparações por período são subgrupos descritivos da
+   política total. O CLI rejeita pedir uma política early/middle/late
+   junto com o gate overall, para impedir extrapolação sem validação.
+5. Divide por JOGO as decisões disponíveis em duas amostras não sobrepostas:
    ajuste do limiar e auditoria. Limiares predefinidos: 0, 0.25, 0.5,
    1.0, 2.0, 4.0, 8.0. Treina maximizando média de ganho top-1 por
    jogo menos penalidade 0.01 pela fração de intervenções. A seguir,
    aceita a intervenção somente se, em jogos diferentes, a banda
    bootstrap de 95% para vantagem sobre o Rodent for inteiramente positiva.
    **Caso contrário, threshold=null: nunca substituir o Rodent**.
-5. Valida o gate na partição de ANOS de validação (não holdout), nas
+6. Valida o gate na partição de ANOS de validação (não holdout), nas
    mesmas 120 posições por jogador, com testes pareados por jogo.
    Também registra a curva de aprendizagem sobre essas mesmas FENs.
    O treino do gate não consulta a validação. Teste final permanece lacrado.
@@ -123,3 +128,16 @@ A curva é um diagnóstico para decidir se mais PGNs estão agregando
 informação. Se o aprendizado estabilizar ou o gate não for aceito,
 a próxima hipótese científica será uma representação mais adequada
 à avaliação enxadrística, e NÃO maior assertividade retórica.
+
+
+### Revisão adversarial inicial
+
+Um fixture de engenharia reutilizava um mesmo StringExporter entre partidas
+e acumulava partidas anteriores, podendo ultrapassar o limite de segurança
+do parser. Corrigido para construir novo exportador por partida: os PGNs
+reais não foram afetados. A revisão também identificou um risco de
+extrapolação: a calibração originalmente misturava períodos observados,
+mas o comando de duelos usava pesos overall. Agora o treino, a validação
+e o jogo V4 utilizam os mesmos pesos overall; argumentos de períodos
+específicos são recusados com o gate. Esse recorte inicial é honesto
+e extensível por era numa hipótese posterior.
