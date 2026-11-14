@@ -137,7 +137,10 @@ jobs:
           assert gate["calibration"]["fitted_canonical_positions_globally_embargoed"] > 0
           assert len(gate["players"]) == 4
           for slug, candidate in gate["players"].items():
-              assert candidate["calibration_games"] >= 40, slug
+              assert candidate["calibration_games"] >= 20, slug
+              if candidate["calibration_games"] < 40:
+                  assert candidate["threshold"] is None
+                  assert candidate["decision_rule"] == "DENY_INSUFFICIENT_CALIBRATION_GAMES"
               assert candidate["audit_games"] >= 8
               assert candidate["threshold"] is None or (
                   candidate["decision_rule"] == "ACCEPT_AUDIT_LOWER_BOUND_POSITIVE" and
