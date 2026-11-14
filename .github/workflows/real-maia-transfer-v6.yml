@@ -127,8 +127,14 @@ jobs:
           for slug, p in r["players"].items():
               assert p["validation_positions"] == 24
               assert p["validation_games"] >= 10
-              assert p["gate"]["audit_games"] >= 8
               assert p["gate"]["tuning_games"] >= 12
+              if p["gate"]["audit_games"] < 8:
+                  assert p["gate"]["decision"] == "DENY_INSUFFICIENT_CANONICAL_INDEPENDENT_AUDIT"
+                  assert p["gate"]["configured_maia_elo"] is None
+                  assert p["gate"]["audit_paired_statistic"] is None
+              else:
+                  assert p["gate"]["audit_paired_statistic"]["games"] == p["gate"]["audit_games"]
+              assert p["gate"]["audit_canonical_positions_excluded"] >= 0
               if p["gate"]["configured_maia_elo"] is not None:
                   assert p["gate"]["audit_changed_lances"] >= 3
                   assert p["gate"]["audit_paired_statistic"]["bootstrap_95_ci"][0] > 0
@@ -138,6 +144,12 @@ jobs:
                   assert stat["games"] == p["validation_games"]
           for name, metric in r["overall"].items():
               assert metric["positions"] == 96
+          assert set(r["overall_game_paired_vs_rodent"]) == {
+              "maia3_1800","maia3_2400","calibrated_maia_safety_gate","v3_named"}
+          for stat in r["overall_game_paired_vs_rodent"].values():
+              assert stat["positions"] == 96
+              assert stat["games"] >= 50
+              assert stat["bootstrap_95_ci"][0] <= stat["bootstrap_95_ci"][1]
           print("MAIA3_REAL_OTB_CPU_HISTORY_V6_PASSED")
           print("overall", r["overall"])
           print("gates", {slug:p["gate"]["decision"] for slug,p in r["players"].items()})
