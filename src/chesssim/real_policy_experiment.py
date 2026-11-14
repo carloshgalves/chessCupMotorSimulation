@@ -14,6 +14,7 @@ import argparse
 import heapq
 import json
 import math
+import os
 from pathlib import Path
 import re
 
@@ -449,8 +450,12 @@ def _rodent_predictions(root: Path, rows: list[dict], slugs: list[str], *,
             engines[slug] = _open_engine(root, executable, p, book=False)
         executable = root / "rodent-iv-plain.exe"
         hashes["exe"] = file_hash(executable)
+        # The generic control must use the same pinned Rodent home as
+        # the named profiles. Never permit an ambient RODENT4HOME to redirect
+        # to a different installed set of personalities.
         generic = chess.engine.SimpleEngine.popen_uci(
-            str(executable), cwd=str(root), timeout=15)
+            str(executable), cwd=str(root), timeout=15,
+            env={**os.environ, "RODENT4HOME": str(root)})
         engines["generic_rodent"] = generic
         # A reproducible generic UCI control: select the official nonhistorical
         # "Simple" personality explicitly, never assume the engine default.
