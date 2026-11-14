@@ -7,7 +7,8 @@ import pytest
 
 from chesssim.maia_transfer_v6 import (
     ELOS, MAX_CP_LOSS, _calibrate, _choose, _position_key,
-    _restore_real_histories, _split_by_game, main, run_experiment,
+    _restore_real_histories, _split_by_game, _verify_maia_source_code,
+    main, run_experiment,
 )
 
 
@@ -147,7 +148,34 @@ def test_requires_exact_maia_commit_and_no_holdout_option(tmp_path):
     with pytest.raises(ValueError, match="pinned"):
         run_experiment(tmp_path, tmp_path / "v3", tmp_path, tmp_path / "out",
                        maia_revision="main")
+    with pytest.raises(ValueError, match="pinned"):
+        run_experiment(tmp_path, tmp_path / "v3", tmp_path, tmp_path / "out",
+                       maia_revision="0" * 40)
     with pytest.raises(SystemExit):
         main(["--cohorts", "c", "--v3-model", "v3", "--rodent-root", "r",
               "--out", "o", "--maia-revision", "0" * 40,
               "--arm", "holdout", "--fetch"])
+
+
+def test_exact_original_maia3_installation_attestation(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    from chesssim import maia_transfer_v6 as m
+    import importlib.util
+    source = tmp_path / "maia3"
+    source.mkdir()
+    init = source / "__init__.py"
+    init.write_text('"""test-only original-like source"""\n')
+    monkeypatch.setattr(importlib.util, "find_spec",
+                        lambda name: SimpleNamespace(origin=str(init)))
+    observed = []
+    def git_ok(command, *, capture_output, text, timeout, check):
+        observed.append(command)
+        return SimpleNamespace(stdout=m.MAIA_CODE_COMMIT + "\n")
+    monkeypatch.setattr(m.subprocess, "run", git_ok)
+    assert _verify_maia_source_code() == m.MAIA_CODE_COMMIT
+    assert observed[0][:3] == ["git", "-C", str(tmp_path)]
+    monkeypatch.setattr(
+        m.subprocess, "run",
+        lambda *args, **kwargs: SimpleNamespace(stdout="f" * 40 + "\n"))
+    with pytest.raises(ValueError, match="differs from pinned"):
+        _verify_maia_source_code()
