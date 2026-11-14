@@ -439,6 +439,8 @@ def evaluate_gate(cohorts: Path, v3_path: Path, gate_path: Path,
         extra_models[sample_size] = item
     result_players = {}
     all_curve = defaultdict(lambda: Counter())
+    all_curve_predictions = defaultdict(list)
+    curve_order = []
     offset = 0
     for index, slug in enumerate(slugs):
         rows = samples[slug]
@@ -466,6 +468,9 @@ def evaluate_gate(cohorts: Path, v3_path: Path, gate_path: Path,
                                    slug, "overall")
                 for row in rows]
             curves[str(size)] = _metric(rows, preds)
+            all_curve_predictions[str(size)].extend(preds)
+            if str(size) not in curve_order:
+                curve_order.append(str(size))
             all_curve[str(size)]["right"] += curves[str(size)]["exact_match"]
             all_curve[str(size)]["total"] += len(rows)
         paired = {
@@ -532,6 +537,14 @@ def evaluate_gate(cohorts: Path, v3_path: Path, gate_path: Path,
             "correct": v["right"], "total": v["total"],
             "top1": v["right"] / v["total"]}
             for k, v in sorted(all_curve.items(), key=lambda x: int(x[0]))},
+        "learning_curve_game_paired_deltas": {
+            f"{new}_vs_{old}": paired_game_inference(
+                all_rows, all_curve_predictions[new], all_curve_predictions[old],
+                seed=seed + 5000 + i, repetitions=repetitions)
+            for i, (old, new) in enumerate(zip(
+                sorted(curve_order, key=int),
+                sorted(curve_order, key=int)[1:]))
+        },
         "promotion": "DENIED_NO_INDEPENDENT_STYLE_AND_SAFETY_EVIDENCE",
         "caveats": [
             "Validation has been inspected in prior PRs: curves are descriptive and exploratory.",
