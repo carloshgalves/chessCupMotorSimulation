@@ -1,0 +1,123 @@
+name: Real human move-policy vs Rodent IV
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/real_policy_experiment.py'
+      - 'tests/test_real_policy_experiment.py'
+      - '.github/workflows/real-policy-rodent.yml'
+      - 'docs/REAL_POLICY_EXPERIMENT.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real-policy-rodent-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-human-policy-and-uci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install research package
+        run: python -m pip install -e '.[dev]'
+      - name: Regression tests for fit, legal predictions and holdout
+        run: python -m pytest tests/test_real_policy_experiment.py -q -ra
+      - name: Build real train-only cohorts from pinned public historical PGNs
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov \
+            --birthdates-json docs/REAL_BIRTHDATES_4.json \
+            --split-policy career-stratified --min-ply 17 \
+            --out "$RUNNER_TEMP/real-cohorts"
+      - name: Fit player/era policies on real human observations
+        run: |
+          python -m chesssim.real_policy_experiment train \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --max-per-player 1200 --max-per-game 3 --seed 2026 \
+            --out "$RUNNER_TEMP/real-policy-model.json"
+      - name: Evaluate models on real validation-year human decisions
+        run: |
+          python -m chesssim.real_policy_experiment evaluate \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --model "$RUNNER_TEMP/real-policy-model.json" \
+            --fetch --arm validation --per-player 24 --per-game 2 \
+            --out "$RUNNER_TEMP/real-policy-baseline.json"
+      - name: Checkout PINNED original Rodent IV sources for real engine comparison
+        uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Build real Rodent IV executable in an isolated working directory
+        run: |
+          test "$(git -C rodent-source rev-parse HEAD)" = "e8d84c8c8c189a1cf4eb27c578fc573af3b916d2"
+          mkdir -p rodent-source/mac
+          make -C rodent-source/sources build
+          mkdir -p "$RUNNER_TEMP/rodent"
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          test -s "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          test -s "$RUNNER_TEMP/rodent/personalities/basic.ini"
+      - name: Compare real trained policies, generic and actual Rodent IV personalities
+        run: |
+          python -m chesssim.real_policy_experiment evaluate \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --model "$RUNNER_TEMP/real-policy-model.json" \
+            --fetch --arm validation --per-player 24 --per-game 2 \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --rodent-depth 2 --rodent-seconds 0.12 \
+            --out "$RUNNER_TEMP/real-policy-rodent.json"
+      - name: Fail closed if the real historical UCI comparison did not run
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path(os.environ["RUNNER_TEMP"])
+          m = json.loads((p / "real-policy-model.json").read_text())
+          r = json.loads((p / "real-policy-rodent.json").read_text())
+          baseline = json.loads((p / "real-policy-baseline.json").read_text())
+          assert m["status"] == "REAL_PGN_TRAINED_EXPERIMENTAL_NOT_STYLE_VALIDATED"
+          assert m["training_observations_used"] >= 3200
+          assert m["method"] == "L2_ADAGRAD_CONDITIONAL_LOGIT_OVER_LEGAL_MOVES"
+          assert all(len(v["training_loss"]) == 3 for v in m["profiles"].values())
+          assert r["arm"] == "validation"
+          assert r["model_promotion"] == "DENIED_NO_INDEPENDENT_STYLE_ACCEPTANCE"
+          assert set(r["style_diagnostics"]) == set(r["evaluation"])
+          assert r["rodent"]["status"] == "ACTUAL_UCI_MOVES_MEASURED"
+          assert r["rodent"]["binary_sha256"]
+          assert r["rodent"]["generic_personality"] == "Simple"
+          assert r["rodent"]["generic_profile_sha256"]
+          assert set(r["evaluation"]) == {"fischer", "tal", "karpov", "kasparov"}
+          assert r["source_sha256"] == baseline["source_sha256"]
+          for player in r["evaluation"]:
+              full = r["evaluation"][player]
+              control = baseline["evaluation"][player]
+              for key in control:
+                  assert full[key] == control[key], "Unpaired evaluation conditions"
+              assert "rodent_" + player in full
+              assert "rodent_generic_rodent" in full
+              assert full["rodent_" + player]["positions"] > 0
+          print("REAL_HISTORIC_MOVE_AND_REAL_RODENT_UCI_GATE_PASS")
+          PY
+      - name: Upload aggregated research evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-human-policy-vs-rodent-aggregates
+          path: |
+            ${{ runner.temp }}/real-policy-model.json
+            ${{ runner.temp }}/real-policy-baseline.json
+            ${{ runner.temp }}/real-policy-rodent.json
+          if-no-files-found: warn
+          retention-days: 7
