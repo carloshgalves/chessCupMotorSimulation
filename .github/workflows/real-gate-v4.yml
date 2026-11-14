@@ -108,7 +108,7 @@ jobs:
             --policy-model "$RUNNER_TEMP/real-v3-1600.json" \
             --policy-gate "$RUNNER_TEMP/real-calibrated-gate-v4.json" \
             --policy-white-era overall --policy-black-era overall \
-            --policy-override-percent 100 --policy-min-ply 1 \
+            --policy-override-percent 100 --policy-min-ply 17 \
             --out "$RUNNER_TEMP/real-gated-match"
       - name: Verify REAL evidence, game-disjoint calibration and no promotion
         run: |
