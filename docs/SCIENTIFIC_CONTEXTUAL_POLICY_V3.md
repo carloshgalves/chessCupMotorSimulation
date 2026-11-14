@@ -42,11 +42,11 @@ código de inferência preservados.
     mkdir -p "$HOME/chesssim-homologacao/contextual"
     python -m chesssim.real_policy_experiment train \
       --cohorts "$HOME/chesssim-homologacao/coortes-carreira-01" \
-      --max-per-player 1200 --max-per-game 3 --seed 2026 \
+      --max-per-player 1600 --max-per-game 3 --seed 2026 \
       --out "$HOME/chesssim-homologacao/contextual/v2.json"
     python -m chesssim.contextual_policy_v3 train \
       --cohorts "$HOME/chesssim-homologacao/coortes-carreira-01" \
-      --max-per-player 1200 --max-per-game 3 --seed 2026 \
+      --max-per-player 1600 --max-per-game 3 --seed 2026 \
       --out "$HOME/chesssim-homologacao/contextual/v3.json"
 
 A v3 pode ser usada com o mesmo adaptador da PR #138, sem mudança dos
@@ -74,7 +74,7 @@ validação**, não expõe a opção holdout, que permanece sem consulta.
       --cohorts "$HOME/chesssim-homologacao/coortes-carreira-01" \
       --model "$HOME/chesssim-homologacao/contextual/v3.json" \
       --legacy-model "$HOME/chesssim-homologacao/contextual/v2.json" \
-      --fetch --per-player 80 --per-game 2 --seed 2027 \
+      --fetch --per-player 120 --per-game 2 --seed 2027 \
       --repetitions 1500 \
       --rodent-root "$RODENT_IV_HOME" \
       --rodent-depth 2 --rodent-seconds 0.12 \
@@ -105,3 +105,34 @@ compila o Rodent IV **original** pinado, aplica ambos aos mesmos
 jogos reservados e publica modelo/relatório agregados (sem PGNs
 históricos brutos). O teste final continua reservado para
 pré-registro, validação independente e gate humano.
+
+
+## Auditoria da primeira execução real e extensão
+
+A primeira execução da PR #139 gerou 4.800 decisões de treino
+igualmente amostradas entre quatro jogadores e 320 decisões
+históricas de validação, com resultados reais:
+
+| Política / motor | Acertos top-1 agregados |
+| --- | ---: |
+| Contextual v3 jogador certo | 66/320 (20,6%) |
+| Contextual v3 genérico | 68/320 (21,3%) |
+| Legado v2 jogador certo | 44/320 (13,8%) |
+| Rodent IV personalidade correspondente | 131/320 (40,9%) |
+| Rodent IV Simple | 130/320 (40,6%) |
+
+A v3 superou o legado, mas NÃO superou seu próprio controle
+genérico. Os intervalos de confiança macro por jogo nos quatro
+confrontos `v3_named vs v3_generic` incluíram zero, sem evidência
+de identidade específica. A diferença v3–v2 não implica ganho
+de Elo ou fidelidade. O pipeline não promoveu nenhum perfil.
+
+A segunda rodada aumenta para 1.600 decisões de treino por
+jogador (quando há cobertura), 120 decisões de validação por
+jogador, total pretendido de 480 posições. O relatório final
+também discrimina contagens por ano e período, e introduz um
+controle de rótulo **cíclico fixo** (ordenação alfabética), sem
+escolher o melhor adversário a posteriori. Isso não desfaz
+a natureza exploratória de sucessivas consultas à validação.
+
+O teste final continua reservado e não entra em nenhum workflow.
