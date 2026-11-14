@@ -5,6 +5,9 @@ on:
     paths:
       - 'src/chesssim/contextual_policy_v3.py'
       - 'src/chesssim/experimental_policy_adapter.py'
+      - 'src/chesssim/real_policy_experiment.py'
+      - 'src/chesssim/matches.py'
+      - 'tests/test_rodent_home_binding.py'
       - 'tests/test_contextual_policy_v3.py'
       - 'docs/SCIENTIFIC_CONTEXTUAL_POLICY_V3.md'
       - '.github/workflows/real-contextual-v3.yml'
@@ -31,7 +34,7 @@ jobs:
       - name: Install existing package without new heavy dependencies
         run: python -m pip install -e '.[dev]'
       - name: Regression controls, matched legal alternatives, legacy compatibility
-        run: python -m pytest tests/test_contextual_policy_v3.py tests/test_experimental_policy_adapter.py -q -ra
+        run: python -m pytest tests/test_contextual_policy_v3.py tests/test_experimental_policy_adapter.py tests/test_rodent_home_binding.py -q -ra
       - name: Rebuild REAL held-year cohorts from pinned public historical PGNs
         run: |
           python -m chesssim.real_training_cohorts --fetch \
