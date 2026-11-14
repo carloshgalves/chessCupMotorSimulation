@@ -153,6 +153,11 @@ jobs:
           assert report["gate_sha256"] == gate["gate_sha256"]
           assert set(report["learning_curve"]) == {"400","800","1600"}
           assert all(v["total"] == 480 for v in report["learning_curve"].values())
+          assert set(report["learning_curve_game_paired_deltas"]) == {"800_vs_400", "1600_vs_800"}
+          for item in report["learning_curve_game_paired_deltas"].values():
+              assert item["positions"] == 480
+              assert item["games"] >= 50
+              assert item["bootstrap_95_ci"][0] <= item["bootstrap_95_ci"][1]
           assert set(report["by_player"]) == {"fischer","tal","karpov","kasparov"}
           for slug, evaluation in report["by_player"].items():
               assert evaluation["validation_decisions"] == 120
