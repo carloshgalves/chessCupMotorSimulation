@@ -133,6 +133,10 @@ def test_gate_v3_play_adapter_fail_closed_and_shadow(synthetic_harness, tmp_path
         override_percent=100, min_ply=1, gate_file=gate_file)
     assert adapter.manifest()["gate_sha256"]
     assert adapter.manifest()["mechanism"] == "GAME_DISJOINT_CALIBRATED_RODENT_V3_GATE"
+    with pytest.raises(ValueError, match="overall"):
+        ExperimentalPolicyAdapter.load(
+            model_path, bindings={"fischer": "early_observed", "tal": "overall"},
+            override_percent=100, min_ply=1, gate_file=gate_file)
     board = chess.Board()
     result = adapter.select(board, slug="fischer",
                             engine_move=chess.Move.from_uci("g1f3"),
