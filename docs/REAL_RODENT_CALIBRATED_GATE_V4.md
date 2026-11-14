@@ -166,3 +166,15 @@ de 95% reamostrado por partida e teste bicaudal de sinais por partida.
 Mesmo um ganho positivo pontual pode ser inconclusivo quando o
 intervalo inclui zero. Esses testes são exploratórios, pois o
 conjunto de validação já foi usado em etapas anteriores.
+
+
+### Busca UCI vinculada à calibração
+
+Além do hash do executável e dos perfis, partidas com gate V4
+requerem a mesma profundidade UCI que foi usada na calibração;
+movetime alternativo é recusado. O experimento de avaliação
+também verifica o teto de tempo por posição usado no treinamento.
+Essa salvaguarda reduz uma fonte evitável de inconsistência.
+Resultados ainda podem variar entre máquinas por diferenças
+de hardware e escolhas internas do motor, mesmo com profundidade
+igual.
