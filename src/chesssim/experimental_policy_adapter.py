@@ -48,11 +48,13 @@ class ExperimentalPolicyAdapter:
     seed: int
     min_ply: int
     file_sha256: str
+    gate: dict | None = None
 
     @classmethod
     def load(cls, model_file: Path, *, bindings: dict[str, str],
              override_percent: int, seed: int = 2026,
-             min_ply: int = 17) -> "ExperimentalPolicyAdapter":
+             min_ply: int = 17,
+             gate_file: Path | None = None) -> "ExperimentalPolicyAdapter":
         if (type(override_percent) is not int or
                 not 0 <= override_percent <= 100):
             raise ValueError("Override percent must be an integer from 0 to 100")
@@ -106,20 +108,36 @@ class ExperimentalPolicyAdapter:
         generic = model.get("generic_weights")
         if not isinstance(generic, dict):
             raise ValueError("Missing generic policy baseline")
+        gate = None
+        if gate_file is not None:
+            if model["schema"] != CONTEXTUAL_SCHEMA:
+                raise ValueError("Calibrated Rodent gate requires a contextual V3 model")
+            from .real_gate_v4 import load_gate
+            gate = load_gate(Path(gate_file).expanduser(), model)
+            if not set(bindings) <= set(gate["players"]):
+                raise ValueError("Calibrated gate does not contain both players")
         return cls(
             model=model, bindings=dict(bindings), override_percent=override_percent,
-            seed=seed, min_ply=min_ply, file_sha256=sha256(raw).hexdigest())
+            seed=seed, min_ply=min_ply, file_sha256=sha256(raw).hexdigest(),
+            gate=gate)
 
     def manifest(self) -> dict:
         return {
             "status": RESEARCH_STATUS,
-            "mechanism": "EXTERNAL_MOVE_OVERRIDE_AFTER_REAL_RODENT_UCI_BESTMOVE",
+            "mechanism": (
+                "GAME_DISJOINT_CALIBRATED_RODENT_V3_GATE"
+                if self.gate is not None
+                else "EXTERNAL_MOVE_OVERRIDE_AFTER_REAL_RODENT_UCI_BESTMOVE"),
             "model_sha256": self.model["model_sha256"],
             "model_file_sha256": self.file_sha256,
             "source_pgn_sha256": self.model.get("source_pgn_sha256"),
             "train_manifest_sha256": self.model.get("train_manifest_sha256"),
             "trained_method": self.model.get("method"),
             "model_schema": self.model.get("schema"),
+            "gate_sha256": self.gate["gate_sha256"] if self.gate else None,
+            "gate_active_thresholds": (
+                {p: self.gate["players"][p]["threshold"] for p in sorted(self.bindings)}
+                if self.gate else None),
             "players_and_eras": dict(sorted(self.bindings.items())),
             "override_percent": self.override_percent,
             "seed": self.seed,
@@ -164,9 +182,21 @@ class ExperimentalPolicyAdapter:
             return PolicyDecision(move=engine_move, audit=audit)
         inference = (predict_contextual if self.model["schema"] == CONTEXTUAL_SCHEMA
                      else predict)
-        proposed = chess.Move.from_uci(inference(
-            self.model, board, slug, self.bindings[slug]))
-        if proposed not in board.legal_moves:
+        if self.gate is not None:
+            from .real_gate_v4 import gate_move
+            gated_uci, calibrated = gate_move(
+                self.gate, self.model, board, slug,
+                self.bindings[slug], engine_move.uci())
+            proposed = chess.Move.from_uci(calibrated["proposal"])
+            allowed = chess.Move.from_uci(gated_uci)
+            audit["gate_sha256"] = self.gate["gate_sha256"]
+            audit["gate_threshold"] = calibrated["gate_threshold"]
+            audit["style_lift"] = calibrated["style_lift"]
+        else:
+            proposed = chess.Move.from_uci(inference(
+                self.model, board, slug, self.bindings[slug]))
+            allowed = proposed
+        if proposed not in board.legal_moves or allowed not in board.legal_moves:
             raise ValueError("Trained policy returned illegal move")
         audit["policy_move"] = proposed.uci()
         selection = sha256(
@@ -185,9 +215,12 @@ class ExperimentalPolicyAdapter:
         if proposed == engine_move:
             audit["outcome"] = "POLICY_RODENT_AGREEMENT"
             return PolicyDecision(move=engine_move, audit=audit)
+        if self.gate is not None and allowed == engine_move:
+            audit["outcome"] = "GATE_RETAINED_RODENT"
+            return PolicyDecision(move=engine_move, audit=audit)
         audit["outcome"] = "EXTERNAL_POLICY_OVERRIDE"
-        audit["played_move"] = proposed.uci()
-        return PolicyDecision(move=proposed, audit=audit)
+        audit["played_move"] = allowed.uci()
+        return PolicyDecision(move=allowed, audit=audit)
 
 
 def trace_summary(events: list[dict]) -> dict:
