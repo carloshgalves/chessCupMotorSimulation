@@ -110,7 +110,6 @@ def _restore_real_histories(cohorts: Path, base: dict, samples: dict,
         all_index, _ = _scan(raw, slug, config[slug]["surname"])
         by_game = defaultdict(dict)
         for row in samples[slug]:
-            identity = (row["game_sha256"], row["ply"])
             if row["ply"] < 21 or row["ply"] in by_game[row["game_sha256"]]:
                 raise ValueError("Invalid/duplicate sample or Maia opening eligibility")
             by_game[row["game_sha256"]][row["ply"]] = row
@@ -177,6 +176,23 @@ def _macro_penalized_gain(rows: list[dict], proposed: list[str],
 
 def _calibrate(rows: list[dict], seed: int, slug: str) -> dict:
     tune, audit = _split_by_game(rows, seed, slug)
+    # A distinct historical game is not necessarily an unseen board.
+    # Drop every audit position canonically equal to any tuning position.
+    fit_positions = {_position_key(rows[i]["fen"]) for i in tune}
+    before_embargo = len(audit)
+    audit = [i for i in audit
+             if _position_key(rows[i]["fen"]) not in fit_positions]
+    audit_games = len({rows[i]["game_sha256"] for i in audit})
+    if audit_games < 8:
+        return {
+            "configured_maia_elo": None, "max_tactical_loss_cp": None,
+            "selected_in_tuning": None,
+            "tuning_games": len({rows[i]["game_sha256"] for i in tune}),
+            "audit_games": audit_games, "audit_changed_lances": 0,
+            "audit_canonical_positions_excluded": before_embargo - len(audit),
+            "audit_paired_statistic": None,
+            "decision": "DENY_INSUFFICIENT_CANONICAL_INDEPENDENT_AUDIT",
+        }
     choices = []
     for elo in ELOS:
         for threshold in MAX_CP_LOSS:
@@ -213,6 +229,7 @@ def _calibrate(rows: list[dict], seed: int, slug: str) -> dict:
         "tuning_games": len({rows[i]["game_sha256"] for i in tune}),
         "audit_games": len({rows[i]["game_sha256"] for i in audit}),
         "audit_changed_lances": changed,
+        "audit_canonical_positions_excluded": before_embargo - len(audit),
         "audit_paired_statistic": proof,
         "decision": ("PERMIT_LIMITED_MAIA_CHOICE" if approved
                      else "DENY_NO_GAME_DISJOINT_POSITIVE_REPLICATION"),
@@ -343,6 +360,8 @@ def run_experiment(cohorts: Path, v3_model: Path, rodent_root: Path,
         raise ValueError("Engine binary/checkpoint/personality changed between arms")
     results = {}
     total = defaultdict(lambda: Counter())
+    all_held_rows = []
+    all_predictions = defaultdict(list)
     for index, slug in enumerate(sorted(validation_results)):
         rows = validation_results[slug]
         base = [r["rodent"] for r in rows]
@@ -363,9 +382,11 @@ def run_experiment(cohorts: Path, v3_model: Path, rodent_root: Path,
                 repetitions=1000)
             for j, (name, moves) in enumerate(preds.items()) if name != "rodent_multipv_top1"
         }
+        all_held_rows.extend(rows)
         for name, item in metrics.items():
             total[name]["correct"] += item["exact_match"]
             total[name]["positions"] += len(rows)
+            all_predictions[name].extend(preds[name])
         results[slug] = {
             "validation_games": len({r["game_sha256"] for r in rows}),
             "validation_positions": len(rows),
@@ -394,6 +415,14 @@ def run_experiment(cohorts: Path, v3_model: Path, rodent_root: Path,
                             "positions": v["positions"],
                             "top1": v["correct"] / v["positions"]}
                     for name, v in sorted(total.items())},
+        "overall_game_paired_vs_rodent": {
+            name: paired_game_inference(
+                all_held_rows, predictions,
+                all_predictions["rodent_multipv_top1"],
+                seed=seed + 1000 + idx, repetitions=2000)
+            for idx, (name, predictions) in enumerate(sorted(all_predictions.items()))
+            if name != "rodent_multipv_top1"
+        },
         "total_calibration_positions": sum(len(x) for x in training.values()),
         "total_validation_positions": sum(len(x) for x in held.values()),
         "maia_2020_published_accuracy_is_NOT_comparable": True,
@@ -411,7 +440,7 @@ def run_experiment(cohorts: Path, v3_model: Path, rodent_root: Path,
             "Maia-3 is third-party pretrained; overlap with its released training was not independently proven absent.",
             "Rodent MultiPV depth-3 centipawn gaps are not tactical safety certificates.",
             "This validation has been inspected in previous PRs: all inference is exploratory.",
-            "Gate audit is game-disjoint but within TRAIN, not a final test set.",
+            "Gate audit embargoes canonical positions from fitting games, but remains within TRAIN.",
             "Lack of significance is not evidence of equivalence or an intrinsic performance ceiling.",
         ],
     }
