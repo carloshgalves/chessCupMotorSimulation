@@ -134,6 +134,7 @@ jobs:
           assert gate["default_action"] == "RODENT_BESTMOVE"
           assert gate["final_holdout_opened"] is False
           assert gate["calibration"]["fitted_games_globally_embargoed"] > 0
+          assert gate["calibration"]["fitted_canonical_positions_globally_embargoed"] > 0
           assert len(gate["players"]) == 4
           for slug, candidate in gate["players"].items():
               assert candidate["calibration_games"] >= 40, slug
@@ -146,6 +147,8 @@ jobs:
           assert report["actual_rodent_uci"] is True
           assert report["training_decisions"] == 6400
           assert report["total_validation_decisions"] == 480
+          assert report["all_train_canonical_board_states_embargoed"] > 0
+          assert len(report["validation_canonical_overlap_excluded"]) == 4
           assert report["promotion"].startswith("DENIED")
           assert report["gate_sha256"] == gate["gate_sha256"]
           assert set(report["learning_curve"]) == {"400","800","1600"}
