@@ -212,6 +212,9 @@ def fit_gate(cohorts: Path, v3_path: Path, rodent_root: Path,
     model = _read_model(v3_path, V3_SCHEMA)
     sampled, split_info = _calibration_samples(
         cohorts, model, per_player=per_player, per_game=per_game, seed=seed)
+    min_ply = _read_json(cohorts / "manifest.json")["min_ply"]
+    if type(min_ply) is not int or not 1 <= min_ply <= 500:
+        raise ValueError("Real cohort has invalid minimum training ply")
     slugs = sorted(sampled)
     flat = [row for slug in slugs for row in sampled[slug]]
     engines, hashes = _rodent_predictions(
@@ -296,6 +299,7 @@ def fit_gate(cohorts: Path, v3_path: Path, rodent_root: Path,
         "engine_profile_sha256": {slug: hashes[slug] for slug in slugs},
         "rodent_generic_profile_sha256": hashes["simple_profile"],
         "engine_depth": depth, "engine_seconds_per_position": seconds,
+        "min_training_ply": min_ply,
         "calibrated_policy_era": "overall",
         "rodent_opening_books": False,
         "seed": seed, "per_player": per_player, "per_game": per_game,
@@ -350,7 +354,9 @@ def load_gate(path: Path, model: dict, *,
         raise ValueError("Unsupported gate selection contract")
     depth = gate.get("engine_depth")
     seconds = gate.get("engine_seconds_per_position")
-    if (type(depth) is not int or not 1 <= depth <= 99 or
+    training_ply = gate.get("min_training_ply")
+    if (type(training_ply) is not int or not 1 <= training_ply <= 500 or
+            type(depth) is not int or not 1 <= depth <= 99 or
             type(seconds) not in (int, float) or
             not math.isfinite(seconds) or not 0 < seconds <= 60 or
             gate.get("rodent_opening_books") is not False):
