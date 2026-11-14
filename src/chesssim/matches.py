@@ -186,6 +186,10 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             raise ValueError("Learned policy control is development-only: no clocks or books")
         if set(experimental_policy.bindings) != {white.slug, black.slug}:
             raise ValueError("Policy bindings disagree with current players")
+        if experimental_policy.gate is not None and (
+                depth != experimental_policy.gate["engine_depth"] or
+                movetime is not None):
+            raise ValueError("Real calibrated gate requires the same UCI search depth and no movetime")
     engines = []
     failed_engine_ids: set[int] = set()
     try:
@@ -491,6 +495,8 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
         if set(experimental_policy.bindings) != {white.slug, black.slug}:
             raise ValueError("Experimental policy must be bound to the two duel players")
         if experimental_policy.gate is not None:
+            if depth != experimental_policy.gate["engine_depth"] or movetime is not None:
+                raise ValueError("Calibrated gate requires its exact UCI depth and no movetime")
             # Bound to the exact UCI build/personality files used during
             # real-data calibration. Fail BEFORE creating any result files.
             calibrated = experimental_policy.gate
