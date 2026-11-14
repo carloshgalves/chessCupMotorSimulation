@@ -398,15 +398,37 @@ def evaluate_contextual(cohorts: Path, model_path: Path, legacy_path: Path,
                           key.startswith("contextual_swapped_")]
         best_other = max(other_profiles, key=lambda k: (
             scored[k]["macro_by_game"], k)) if other_profiles else None
+        # Fixed cyclic label rotation avoids selecting the best of the other
+        # identities from the validation data for this inferential contrast.
+        rotated_slug = slugs[(slugs.index(slug) + 1) % len(slugs)]
+        rotated_name = "contextual_swapped_" + rotated_slug
+        if rotated_name in predictions:
+            contrasts["contextual_named_vs_fixed_rotation"] = paired_game_inference(
+                rows, predictions["contextual_named"], predictions[rotated_name],
+                seed=seed + 9990 + slugs.index(slug), repetitions=repetitions)
         by_band = defaultdict(Counter)
-        for row, move in zip(rows, predictions["contextual_named"]):
-            by_band[row["career_band"]]["positions"] += 1
-            by_band[row["career_band"]]["correct"] += int(move == row["move"])
+        by_year = defaultdict(Counter)
+        for i, row in enumerate(rows):
+            target = row["move"]
+            band, year = row["career_band"], str(row["year"])
+            for grouped in (by_band[band], by_year[year]):
+                grouped["positions"] += 1
+                grouped["v3_named_correct"] += int(
+                    predictions["contextual_named"][i] == target)
+                grouped["v3_generic_correct"] += int(
+                    predictions["contextual_generic"][i] == target)
+                grouped["v2_named_correct"] += int(
+                    predictions["legacy_named"][i] == target)
+                if rodent:
+                    grouped["rodent_named_correct"] += int(
+                        predictions["rodent_" + slug][i] == target)
         summaries[slug] = {
             "sample": {"decisions": len(rows),
                        "distinct_games": len({r["game_sha256"] for r in rows}),
                        "years": sorted({r["year"] for r in rows}),
-                       "by_band": {key: dict(val) for key, val in sorted(by_band.items())}},
+                       "by_band": {key: dict(val) for key, val in sorted(by_band.items())},
+                       "by_year": {key: dict(val) for key, val in sorted(by_year.items())}},
+            "fixed_rotation_negative_control": rotated_slug,
             "models": scored,
             "paired_game_statistics": contrasts,
             "negative_control_best_swapped_profile": best_other,
@@ -444,7 +466,9 @@ def evaluate_contextual(cohorts: Path, model_path: Path, legacy_path: Path,
             "Exact full FEN overlap is embargoed. Similar openings and semantically equal positions may remain.",
             "Paired sign-flips presume game-level exchangeability; same era/opponent effects may remain.",
             "P-values are not adjusted for multiple testing and do not prove historical identity.",
-            "Best swapped profile chosen on this evaluation set is a descriptive negative control, not a calibrated null.",
+            "Fixed cyclic label rotation is an exploratory negative control chosen by name ordering.",
+            "Best swapped profile chosen on this evaluation set is descriptive, not a calibrated null.",
+            "Year and career-band breakdowns can be sparse and must not be read as standalone tests.",
             "Top1 and game-macro agreement measure human choice matching, not engine strength.",
         ],
     }
