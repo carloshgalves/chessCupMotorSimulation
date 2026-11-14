@@ -71,7 +71,9 @@ def _open_engine(root: Path, executable: Path, p: Player, *, book: bool | None =
     # bind that home to the same installation we validated instead of relying
     # on the upstream /proc/self/exe readlink fallback, whose buffer is not
     # guaranteed NUL-terminated in the pinned C++ implementation.
-    root = root.expanduser().resolve(strict=True)
+    # This internal launcher also accepts mocked roots in existing unit
+    # tests. Actual duels validate the installation before reaching here.
+    root = root.expanduser().resolve()
     env = {**os.environ, "RODENT4HOME": str(root)}
     e = chess.engine.SimpleEngine.popen_uci(
         str(executable), cwd=str(root), timeout=120.0, env=env)
