@@ -185,6 +185,12 @@ class ExperimentalPolicyAdapter:
             "sampled": False,
             "outcome": "WARMUP_UNMODIFIED",
         }
+        # Every ply, including warmup, must attest which calibrated gate
+        # governed the decision to retain the real Rodent bestmove.
+        if self.gate is not None:
+            audit["gate_sha256"] = self.gate["gate_sha256"]
+            audit["gate_threshold"] = self.gate["players"][slug]["threshold"]
+            audit["style_lift"] = None
         if ply < self.min_ply:
             return PolicyDecision(move=engine_move, audit=audit)
         inference = (predict_contextual if self.model["schema"] == CONTEXTUAL_SCHEMA
