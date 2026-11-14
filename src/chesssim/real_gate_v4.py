@@ -40,6 +40,17 @@ THRESHOLDS = (0.0, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0)
 INTERVENTION_PENALTY = 0.01  # game-macro regularizer for any external override
 
 
+def _position_key(fen: str) -> str:
+    """Normalize the 4 board-state FEN fields, ignoring move counters.
+
+    Two occurrences of the same board with different halfmove/fullmove
+    clocks are the same supervised context for our move-choice features.
+    """
+    if not isinstance(fen, str) or len(fen.split()) != 6:
+        raise ValueError("Invalid predecision FEN for canonical embargo")
+    return " ".join(fen.split()[:4])
+
+
 def _render_train_row(row: dict) -> dict:
     policy, target = row["policy_input"], row["policy_target"]
     return {"player": row["player"], "fen": policy["fen"],
@@ -69,7 +80,7 @@ def _calibration_samples(cohorts: Path, model: dict, *,
         grouped[row["player"]].append(row)
     if set(grouped) != set(model["profiles"]):
         raise ValueError("Real training players disagree with fitted V3 model")
-    fitted_games, fitted_fens = set(), set()
+    fitted_games, fitted_fens, fitted_position_keys = set(), set(), set()
     actual_counts = {}
     # Replay deterministic minhash *exactly* as original V3 fit.
     for slug in sorted(grouped):
@@ -82,6 +93,7 @@ def _calibration_samples(cohorts: Path, model: dict, *,
         for row in selected:
             fitted_games.add(row["game_sha256"])
             fitted_fens.add(row["policy_input"]["fen"])
+            fitted_position_keys.add(_position_key(row["policy_input"]["fen"]))
     unfit = {}
     excluded = Counter()
     for slug in sorted(grouped):
@@ -89,8 +101,8 @@ def _calibration_samples(cohorts: Path, model: dict, *,
         for row in grouped[slug]:
             if row["game_sha256"] in fitted_games:
                 excluded["fitted_trajectory"] += 1
-            elif row["policy_input"]["fen"] in fitted_fens:
-                excluded["fitted_fen"] += 1
+            elif _position_key(row["policy_input"]["fen"]) in fitted_position_keys:
+                excluded["fitted_canonical_position"] += 1
             else:
                 spare.append(row)
         sampled = _bottom_k(spare, limit=per_player, per_game=per_game, seed=seed)
@@ -101,6 +113,7 @@ def _calibration_samples(cohorts: Path, model: dict, *,
         "fitted_observations_reconstructed": actual_counts,
         "fitted_games_globally_embargoed": len(fitted_games),
         "fitted_fens_globally_embargoed": len(fitted_fens),
+        "fitted_canonical_positions_globally_embargoed": len(fitted_position_keys),
         "rejected": dict(excluded),
         "min_calibration_games": min(len({x["game_sha256"] for x in v})
                                      for v in unfit.values()),
@@ -382,9 +395,29 @@ def evaluate_gate(cohorts: Path, v3_path: Path, gate_path: Path,
     _assert_training_manifest(cohorts, model)
     if depth != gate["engine_depth"] or seconds != gate["engine_seconds_per_position"]:
         raise ValueError("UCI search settings differ from calibrated gate")
-    samples, excluded, hashes = _read_eval_positions(
+    # The shared V3 reader excludes full FEN collisions. Strengthen the V4
+    # evidence by embargoing *all* train-only canonical board states, not
+    # merely training-sampled full FENs: halfmove/fullmove counters cannot
+    # make the same chess position an independent validation observation.
+    candidates, excluded, hashes = _read_eval_positions(
         cohorts, model, arm="validation", archive_dir=archive_dir,
-        seed=seed, per_player=per_player, per_game=per_game)
+        seed=seed, per_player=per_player * 5, per_game=per_game)
+    manifest = _read_json(cohorts / "manifest.json")
+    training_positions = {
+        _position_key(row["policy_input"]["fen"])
+        for row in _validated_training_rows(cohorts, manifest)
+    }
+    samples = {}
+    canonical_overlap = Counter()
+    for slug, rows in sorted(candidates.items()):
+        usable = [row for row in rows
+                  if _position_key(row["fen"]) not in training_positions]
+        canonical_overlap[slug] = len(rows) - len(usable)
+        picked = _bottom_k(usable, limit=per_player,
+                           per_game=per_game, seed=seed)
+        if len(picked) != per_player:
+            raise ValueError("Insufficient embargoed independent validation positions for " + slug)
+        samples[slug] = picked
     slugs = sorted(samples)
     all_rows = [row for slug in slugs for row in samples[slug]]
     engine, digests = _rodent_predictions(
@@ -492,6 +525,8 @@ def evaluate_gate(cohorts: Path, v3_path: Path, gate_path: Path,
         "calibrated_policy_era": "overall",
         "total_validation_decisions": len(all_rows),
         "excluded_validation": dict(excluded),
+        "validation_canonical_overlap_excluded": dict(canonical_overlap),
+        "all_train_canonical_board_states_embargoed": len(training_positions),
         "by_player": result_players,
         "learning_curve": {k: {
             "correct": v["right"], "total": v["total"],
