@@ -193,6 +193,7 @@ def _real_uci_records(root: Path, samples: dict, *, multipv: int, depth: int,
                     "fen": entry["fen"],
                     "year": entry["year"],
                     "real_human_move": expected,
+                    "move": expected,
                     "candidates": alternatives,
                 })
                 details["principal_variations"] += len(alternatives)
