@@ -253,7 +253,12 @@ def fit_gate(cohorts: Path, v3_path: Path, rodent_root: Path,
         audit_rows, audit_moves, audit_rodent = scoped(audit_ids, suggested)
         audit = _paired_counts(audit_rows, audit_moves, audit_rodent)
         audit_interventions = sum(a != b for a, b in zip(audit_moves, audit_rodent))
-        accepted = bool(suggested is not None and audit_interventions > 0 and
+        # Sparse historical sources are not automatically "bad"; they
+        # simply cannot authorize automatic tactical interventions.
+        calibration_games = len({r["game_sha256"] for r in rows})
+        enough_games = calibration_games >= 40
+        accepted = bool(enough_games and suggested is not None and
+                        audit_interventions > 0 and
                         audit["bootstrap_95_ci"][0] > 0.0)
         selected = suggested if accepted else None
         full = [_choose(b, p, lift, selected)
@@ -269,6 +274,7 @@ def fit_gate(cohorts: Path, v3_path: Path, rodent_root: Path,
             "audit_overrides_for_proposal": audit_interventions,
             "decision_rule": (
                 "ACCEPT_AUDIT_LOWER_BOUND_POSITIVE" if accepted
+                else "DENY_INSUFFICIENT_CALIBRATION_GAMES" if not enough_games
                 else "DENY_NOT_REPLICATED_ON_GAME_DISJOINT_AUDIT"),
             "calibration_positions": len(rows),
             "calibration_games": len({r["game_sha256"] for r in rows}),
@@ -354,8 +360,15 @@ def load_gate(path: Path, model: dict, *,
                                       "ACCEPT_AUDIT_LOWER_BOUND_POSITIVE" or
                                       p["audit_game_cluster_statistics"]["bootstrap_95_ci"][0] <= 0):
             raise ValueError("Gate has an unjustified active threshold: " + slug)
-        if threshold is None and p.get("decision_rule") != "DENY_NOT_REPLICATED_ON_GAME_DISJOINT_AUDIT":
+        if threshold is None and p.get("decision_rule") not in {
+                "DENY_NOT_REPLICATED_ON_GAME_DISJOINT_AUDIT",
+                "DENY_INSUFFICIENT_CALIBRATION_GAMES",
+        }:
             raise ValueError("Gate denies without expected reason")
+        if p.get("calibration_games", 0) < 40 and (
+                threshold is not None or
+                p.get("decision_rule") != "DENY_INSUFFICIENT_CALIBRATION_GAMES"):
+            raise ValueError("Sparse real-player samples cannot activate a gate")
     if engine_binary_sha256 is not None and gate["engine_binary_sha256"] != engine_binary_sha256:
         raise ValueError("Rodent binary differs from the calibrated gate")
     if profile_sha256 is not None:
