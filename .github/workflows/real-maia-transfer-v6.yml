@@ -1,0 +1,154 @@
+name: Scientific Maia3 5M real historical transfer (CPU)
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/maia_transfer_v6.py'
+      - 'tests/test_maia_transfer_v6.py'
+      - 'docs/MAIA_TRANSFER_V6.md'
+      - '.github/workflows/real-maia-transfer-v6.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real-maia3-cpu-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  maia3-original-model-and-real-otb-pgn:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+      TORCH_NUM_THREADS: "2"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install project quality dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Verify engineering fixtures, no mock claims as evidence
+        run: python -m pytest tests/test_maia_transfer_v6.py tests/test_engine_pv_policy_v5.py -q -ra
+      - name: Install CPU-ONLY PyTorch (no paid GPU)
+        run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Checkout precisely pinned CSSLab Maia3 implementation
+        uses: actions/checkout@v5
+        with:
+          repository: CSSLab/maia3
+          ref: 1e13597c42d4858b7cfd7cfdae01e297263364b2
+          path: maia3-source
+          persist-credentials: false
+      - name: Install original Maia3 and pin released 5M checkpoint SHA
+        run: |
+          test "$(git -C maia3-source rev-parse HEAD)" = 1e13597c42d4858b7cfd7cfdae01e297263364b2
+          python -m pip install -e ./maia3-source
+          python - <<'PY'
+          from huggingface_hub import HfApi
+          import os, re
+          revision = HfApi().model_info("UofTCSSLab/Maia3-5M").sha
+          if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision):
+              raise RuntimeError("Unable to pin actual Maia3 model revision")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as out:
+              out.write("MAIA_HF_SHA=" + revision + "\n")
+          print("Maia3 model revision pinned", revision)
+          PY
+      - name: Rebuild actual historical OTB PGNs with year-disjoint arms
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov \
+            --birthdates-json docs/REAL_BIRTHDATES_4.json \
+            --split-policy career-stratified --min-ply 17 \
+            --out "$RUNNER_TEMP/real-cohorts"
+      - name: Train reference V3 in same source/year split (no validation access)
+        run: |
+          python -m chesssim.contextual_policy_v3 train \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --max-per-player 1600 --max-per-game 3 --seed 2026 \
+            --out "$RUNNER_TEMP/real-v3.json"
+      - name: Compile ACTUAL pinned Rodent IV original engine
+        uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Build actual UCI Rodent and named personality installation
+        run: |
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac
+          make -C rodent-source/sources build
+          mkdir -p "$RUNNER_TEMP/rodent"
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          test -s "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+      - name: Maia3-5M REAL CPU inference with actual PGN move histories, matched Rodent, train-only gate
+        run: |
+          python -m chesssim.maia_transfer_v6 \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --v3-model "$RUNNER_TEMP/real-v3.json" \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --maia-revision "$MAIA_HF_SHA" --fetch \
+            --train-per-player 48 --val-per-player 24 \
+            --rodent-depth 3 --seed 2036 \
+            --out "$RUNNER_TEMP/maia3-rodent-transfer-real.json"
+      - name: Enforce reproducible actual evidence and ban fake rating equivalence/promotions
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          path = Path(os.environ["RUNNER_TEMP"]) / "maia3-rodent-transfer-real.json"
+          r = json.loads(path.read_text())
+          assert r["schema"] == "chesssim-real-maia3-5m-historical-transfer-v6"
+          assert r["status"] == "REAL_MAIA3_5M_PRETRAINED_CPU_TRANSFER_EXPLORATORY"
+          assert r["maia_hf_revision"] == os.environ["MAIA_HF_SHA"]
+          assert len(r["maia_genuine_checkpoint_sha256"]) == 64
+          assert len(r["engine"]["rodent_binary"]) == 64
+          assert r["engine"]["maia_code_commit"] == "1e13597c42d4858b7cfd7cfdae01e297263364b2"
+          assert r["engine"]["history"] == "RECONSTRUCTED_FROM_REAL_PGN_MOVE_STACK"
+          assert r["total_calibration_positions"] == 192
+          assert r["total_validation_positions"] == 96
+          assert r["elo_scenarios_not_actual_elo"] == [1800,2400]
+          assert r["train_arm_only_gate"] is True
+          assert r["validation_arm"] == "validation"
+          assert r["maia_2020_published_accuracy_is_NOT_comparable"] is True
+          assert r["historical_FIDE_ratings_NOT_converted_to_Lichess"] is True
+          assert r["no_clock_annotations_in_historical_pgn"] is True
+          assert r["third_party_pretraining_not_game_disjoint_audited"] is True
+          assert r["holdout_opened"] is False
+          assert r["official_personality_promotion"] == "DENIED"
+          assert set(r["players"]) == {"fischer","karpov","kasparov","tal"}
+          for slug, p in r["players"].items():
+              assert p["validation_positions"] == 24
+              assert p["validation_games"] >= 10
+              assert p["gate"]["audit_games"] >= 8
+              assert p["gate"]["tuning_games"] >= 12
+              if p["gate"]["configured_maia_elo"] is not None:
+                  assert p["gate"]["audit_changed_lances"] >= 3
+                  assert p["gate"]["audit_paired_statistic"]["bootstrap_95_ci"][0] > 0
+              for metric in p["metrics"].values():
+                  assert metric["positions"] == 24
+              for stat in p["paired_game_statistics"].values():
+                  assert stat["games"] == p["validation_games"]
+          for name, metric in r["overall"].items():
+              assert metric["positions"] == 96
+          print("MAIA3_REAL_OTB_CPU_HISTORY_V6_PASSED")
+          print("overall", r["overall"])
+          print("gates", {slug:p["gate"]["decision"] for slug,p in r["players"].items()})
+          PY
+      - name: Publish aggregate report, reference V3; no historical raw PGN or holdout
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chesssim-v6-maia3-5m-real-otb-transfer
+          path: |
+            ${{ runner.temp }}/maia3-rodent-transfer-real.json
+            ${{ runner.temp }}/real-v3.json
+          if-no-files-found: warn
+          retention-days: 7
