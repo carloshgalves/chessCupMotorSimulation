@@ -111,7 +111,8 @@ python -m pip install -e ./maia3-source
 Gerar a revisão correta do checkpoint:
 
 ```bash
-MAIA_HF_SHA="$(python -c 'from huggingface_hub import HfApi; print(HfApi().model_info("UofTCSSLab/Maia3-5M").sha)')"
+# Revisão verificada no experimento V6; NÃO substituir por 'main' dinâmica.
+MAIA_HF_SHA="b6559de2398d7140b985f28fd2c19fb5e47ddabe"
 ```
 
 No repositório ChessCup, após construir as coortes reais e a V3 de
@@ -225,3 +226,41 @@ não de um patamar definitivo para os 64 perfis.
 o modelo original Maia continua apenas como baseline de
 transferência; não altera a execução oficial, os livros,
 os pesos do Rodent ou a classificação dos jogadores.
+
+
+### Contrastes agregados, embargo de posições e proveniência final
+
+Na segunda execução real (workflow 43648458017), os resultados
+absolutos de 50/96 vs 32/96 foram reproduzidos. O efeito Maia-3 2400
+menos Rodent, calculado como ganho MACRO por **95 partidas históricas
+distintas**, foi de +0,1895, IC95 bootstrap [0,0737; 0,3158],
+teste exploratório de sinais p=0,0050; cenário Maia-3 1800,
++0,1579, IC95 [0,0211; 0,2737], p=0,0245.
+
+Estes p-values são exploratórios e NÃO ajustados para multiplicidade
+ou escolhas reiteradas na validação; não autorizam afirmar 95% de
+probabilidade de que o Maia seja superior universalmente.
+
+Os 4 seletores continuaram negados. A auditoria após o ajuste
+trata separadamente jogos e posições canônicas; na segunda execução,
+17 partidas de auditoria por jogador sobreviveram, sem colisões
+canônicas nesse recorte. A retenção do Rodent não é uma vitória
+do gate: decorre da ausência de vantagem replicável para a política
+com veto.
+
+A revisão final congelou o checkpoint V6:
+- Maia3 código pinado ao commit GitHub
+  `1e13597c42d4858b7cfd7cfdae01e297263364b2`;
+  código carregado via pacote instalado é verificado por `git rev-parse HEAD`.
+- Checkpoint Hugging Face pinado ao commit
+  `b6559de2398d7140b985f28fd2c19fb5e47ddabe`, sem consulta
+  dinâmica à versão mais recente a cada runner.
+- Pesos originais conferidos byte a byte por SHA-256
+  `ba14208b2992d85502f5fb501934abf6aaaeb355e9f3fdf90e326911f562524f`.
+- Pesos não são redistribuídos na PR, que distribui somente
+  código de integração, modelo V3 treinado e dados agregados
+  obtidos dos modelos originais.
+
+Quando disponibilizarmos uma nova versão do Maia, ela deverá
+ser outro experimento versionado, com fonte, revisão e pesos
+explicitamente identificados, não um silencioso upgrade da V6.
