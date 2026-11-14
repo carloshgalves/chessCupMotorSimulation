@@ -79,6 +79,44 @@ jobs:
             --rodent-root "$RUNNER_TEMP/rodent" \
             --rodent-depth 2 --rodent-seconds 0.12 \
             --out "$RUNNER_TEMP/real-contextual-paired-report.json"
+      - name: Experimental REAL Rodent IV UCI game with fitted V3 as move adapter
+        run: |
+          python -m chesssim.cli play fischer tal \
+            --rodent "$RUNNER_TEMP/rodent" --no-books --depth 2 \
+            --max-plies 20 --policy-min-ply 1 \
+            --policy-model "$RUNNER_TEMP/v3-real-policy.json" \
+            --policy-white-era overall --policy-black-era overall \
+            --policy-override-percent 100 --policy-seed 2026 \
+            --out "$RUNNER_TEMP/experimental-v3"
+      - name: Verify real-game V3 external overrides, legality and unchanged Rodent profiles
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          import chess.pgn
+          p = Path(os.environ["RUNNER_TEMP"])
+          model = json.loads((p / "v3-real-policy.json").read_text())
+          report_paths = list((p / "experimental-v3/fischer-vs-tal").glob("*/summary.json"))
+          assert len(report_paths) == 1
+          summary = json.loads(report_paths[0].read_text())
+          assert summary["experimental_learned_policy"]["model_schema"] == model["schema"]
+          assert summary["experimental_learned_policy"]["model_sha256"] == model["model_sha256"]
+          assert summary["experimental_learned_policy"]["engine_internal_parameters_changed"] is False
+          assert len(summary["games"]) == 1
+          game = summary["games"][0]
+          with (report_paths[0].parent / "jogo_1.pgn").open() as stream:
+              pgn = chess.pgn.read_game(stream)
+          assert pgn and not pgn.errors
+          assert pgn.headers["PolicyOfficial"] == "false"
+          moves = [m.uci() for m in pgn.mainline_moves()]
+          assert len(moves) == 20
+          assert [row["played_move"] for row in game["policy_trace"]] == moves
+          overrides = sum(row["outcome"] == "EXTERNAL_POLICY_OVERRIDE"
+                          for row in game["policy_trace"])
+          assert overrides > 0, "External contextual policy did not affect any real UCI move"
+          assert game["status"] == "INCOMPLETE", "20 plies is not a fabricated game result"
+          print("REAL_RODENT_V3_EXTERNAL_ADAPTER_GATE_PASS", "overrides", overrides)
+          PY
       - name: Fail closed if evidence is synthetic, unpaired or holdout opened
         run: |
           python - <<'PY'
@@ -126,5 +164,7 @@ jobs:
             ${{ runner.temp }}/v3-real-policy.json
             ${{ runner.temp }}/v2-real-policy.json
             ${{ runner.temp }}/real-contextual-paired-report.json
+            ${{ runner.temp }}/experimental-v3/fischer-vs-tal/*/summary.json
+            ${{ runner.temp }}/experimental-v3/fischer-vs-tal/*/jogo_1.pgn
           if-no-files-found: warn
           retention-days: 7
