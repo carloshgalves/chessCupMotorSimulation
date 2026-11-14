@@ -10,7 +10,7 @@ import pytest
 
 from chesssim.engine_pv_policy_v5 import (
     FEATURES, SCHEMA, _analyse, _fit, _predict, _record_candidate,
-    _target_index, _read_trained,
+    _target_index, _read_trained, _predict_style_residual,
 )
 from chesssim.real_policy_experiment import _digest
 
@@ -114,6 +114,10 @@ def test_hierarchical_logit_changes_weights_using_real_choice_targets_shape():
     assert len(loss) == 14
     assert loss[-1] < loss[0]
     assert _predict(fitted, examples[0]) == "c2c4"
+    # An ablation that removes the pooled engine prior must be able to
+    # expose genuine player-relative ranking differences.
+    assert _predict_style_residual(fitted, initial, examples[0]) == "c2c4"
+    assert _predict_style_residual(initial, initial, examples[0]) == "e2e4"
     assert fitted == _fit(examples, initial, epochs=14,
                           learning_rate=0.17, regularization=0.02, seed=5)[0]
     missing = _training_example("b1c3", 1)
