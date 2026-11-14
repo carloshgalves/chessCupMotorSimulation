@@ -107,7 +107,10 @@ jobs:
           assert ev["all_train_canonical_positions_embargoed"] > 0
           assert ev["engine_binary_sha256"] == model["engine_analysis"]["engine_sha256"]
           assert ev["engine_profile_sha256"] == model["engine_analysis"]["profile_sha256"]
-          assert set(ev["aggregate"]) == {"multipv_engine_top1","trained_named","trained_generic","trained_fixed_swapped","v3_named","v3_generic"}
+          assert set(ev["aggregate"]) == {"multipv_engine_top1","trained_named","trained_generic","trained_fixed_swapped","trained_residual_named","trained_residual_fixed_swapped","v3_named","v3_generic"}
+          assert ev["residual_ablation"].startswith("POST_HOC_DIAGNOSTIC")
+          assert all(set(row["changed_moves_from_engine"]) == set(ev["aggregate"])
+                     for row in ev["by_player"].values())
           assert set(ev["by_player"]) == {"fischer","tal","karpov","kasparov"}
           for slug, data in ev["by_player"].items():
               assert data["evaluation_positions"] == 48
