@@ -257,6 +257,8 @@ def test_matched_validation_and_learning_curves_use_same_positions(
     assert set(report["validation_canonical_overlap_excluded"]) == {"fischer", "tal"}
     assert report["total_validation_decisions"] > 0
     assert set(report["learning_curve"]) == {"20", "36"}
+    assert "36_vs_20" in report["learning_curve_game_paired_deltas"]
+    assert report["learning_curve_game_paired_deltas"]["36_vs_20"]["games"] >= 2
     assert all(entry["total"] == report["total_validation_decisions"]
                for entry in report["learning_curve"].values())
     for slug, row in report["by_player"].items():
