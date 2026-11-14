@@ -162,3 +162,66 @@ que deixaram de agregar informação. Por jogador, propomos:
 Assim, o projeto pode incorporar o máximo viável em cada jogador,
 com diferenças reais de qualidade documental, sem fabricar
 consistência matemática ou prometer ultrapassar o estado da arte.
+
+
+## Primeira execução reproduzida em CPU — 14/11/2026
+
+O [workflow real #43647773211](https://github.com/carloshgalves/chessCupMotorSimulation/actions/runs/43647773211)
+passou, executando realmente o **Maia-3 5M** e **Rodent IV**
+sobre 192 decisões de calibração (48 por jogador) e 96 decisões
+históricas de validação (24 por jogador). A origem do checkpoint
+é o repositório oficial Maia3-5M, revisão HF
+`b6559de2398d7140b985f28fd2c19fb5e47ddabe`; SHA-256 dos
+pesos `ba14208b2992d85502f5fb501934abf6aaaeb355e9f3fdf90e326911f562524f`.
+
+| Método, sobre as MESMAS 96 posições | Lances corretos |
+| --- | ---: |
+| Maia-3 cenário 1800 | 47/96 (49,0%) |
+| Maia-3 cenário 2400 | **50/96 (52,1%)** |
+| Rodent IV MultiPV top-1 | 32/96 (33,3%) |
+| Seletor Maia–Rodent calibrado | 32/96 (33,3%) |
+| V3 contextual histórico | 20/96 (20,8%) |
+
+**Separação por jogador no cenário Maia-3 2400 / Rodent IV:**
+Fischer 15/24 vs 7/24; Karpov 11/24 vs 8/24; Kasparov
+12/24 vs 7/24; Tal 12/24 vs 10/24.
+
+Nenhum dos quatro gates recebeu autorização de substituir o
+Rodent: quando o limiar escolhido não demonstrou vantagem
+suficiente no audit de partidas independentes, o resultado foi
+o bestmove normal do Rodent. Isso não significa que Maia
+tenha menos concordância global (teve MAIS), mas sim que a
+restrição de segurança por MultiPV e os critérios de admissão
+não encontraram benefício suficientemente robusto para liberar
+uma alteração. A precisão de shallow MultiPV não demonstra
+que um lance é seguro em profundidade tática real.
+
+A observação de 52,1% numa amostra de 96 lances NÃO prova
+convergência ao resultado publicado de 55,4%; populações,
+relógios e tamanhos são incomparáveis. O número final deve
+vir acompanhado de IC por partida e variações entre épocas.
+Trata-se de uma **validação preliminar de transferência**,
+não de um patamar definitivo para os 64 perfis.
+
+### Achados da revisão adversarial
+
+1. O teste estático revelou um identificador local criado e
+   não utilizado na reconstrução do histórico; removido.
+2. O gate separava jogos, mas partidas diferentes poderiam
+   reproduzir a mesma posição canônica. A segunda revisão
+   acrescentou **embargo de posição canônica entre ajuste
+   e auditoria**; se a cobertura independente restante for
+   menor que 8 jogos, ele **nega a intervenção**, sem falsear
+   evidência nem apagar o jogador pouco documentado.
+3. O relatório inicialmente trazia IC95 por partida só
+   para cada jogador; agora inclui também **contrastes
+   agregados pareados por jogo** sobre as mesmas 96 FENs.
+4. Verificação de hash do checkpoint, pin do código do Maia,
+   histórico completo verdadeiro, ausência de rótulo futuro,
+   rejeição do holdout e da equivalência artificial de
+   Elo histórico versus Lichess são critérios de CI.
+
+**A segurança científica vem antes da promoção do motor**:
+o modelo original Maia continua apenas como baseline de
+transferência; não altera a execução oficial, os livros,
+os pesos do Rodent ou a classificação dos jogadores.
