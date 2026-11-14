@@ -105,6 +105,10 @@ def test_contextual_real_contract_and_legacy_comparison(artifacts, tmp_path):
         assert "legacy_named" in row["models"]
         assert "contextual_generic" in row["models"]
         assert "contextual_named_vs_legacy_named" in row["paired_game_statistics"]
+        assert "contextual_named_vs_fixed_rotation" in row["paired_game_statistics"]
+        assert row["fixed_rotation_negative_control"] != target
+        assert sum(v["positions"] for v in row["sample"]["by_year"].values()) == row["sample"]["decisions"]
+        assert sum(v["positions"] for v in row["sample"]["by_band"].values()) == row["sample"]["decisions"]
         assert row["historical_style_validated"] is False
 
 
