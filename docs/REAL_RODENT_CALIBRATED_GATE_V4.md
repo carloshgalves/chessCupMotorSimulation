@@ -141,3 +141,17 @@ mas o comando de duelos usava pesos overall. Agora o treino, a validação
 e o jogo V4 utilizam os mesmos pesos overall; argumentos de períodos
 específicos são recusados com o gate. Esse recorte inicial é honesto
 e extensível por era numa hipótese posterior.
+
+
+### Embargo canônico reforçado na revisão
+
+O filtro existente da V3 excluía FENs completos iguais, mas um mesmo
+tabuleiro poderia reaparecer com contadores de meio-lance e número do
+lance diferentes. A V4 agora cria uma chave de posição com os quatro
+primeiros campos da FEN (tabuleiro, lado, roque, en passant), e embarga
+as posições correspondentes globalmente. Na calibração compara com
+todas as posições ajustadas na V3; na validação, compara com todas
+as posições do braço TRAIN. O filtro é executado ANTES da amostragem
+final (120 por jogador) e falha se não houver exemplos independentes
+suficientes. Assim, jogos diferentes não são automaticamente
+considerados posições novas só por mudarem os contadores da FEN.
