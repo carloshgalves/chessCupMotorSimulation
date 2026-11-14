@@ -129,6 +129,8 @@ jobs:
           assert gate["schema"] == "chesssim-real-rodent-external-decision-gate-v4"
           assert gate["base_model_sha256"] == files[1600]["model_sha256"]
           assert gate["training_arm"] == "train_only_out_of_fit_games"
+          assert gate["calibrated_policy_era"] == "overall"
+          assert report["calibrated_policy_era"] == "overall"
           assert gate["default_action"] == "RODENT_BESTMOVE"
           assert gate["final_holdout_opened"] is False
           assert gate["calibration"]["fitted_games_globally_embargoed"] > 0
