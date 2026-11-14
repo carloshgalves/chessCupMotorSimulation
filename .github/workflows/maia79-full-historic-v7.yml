@@ -51,13 +51,15 @@ jobs:
           import os
           from hashlib import sha256
           from pathlib import Path
-          from huggingface_hub import HfApi, hf_hub_download
-          sha79 = HfApi().model_info("UofTCSSLab/Maia3-79M").sha
-          assert isinstance(sha79, str) and len(sha79) == 40
+          from huggingface_hub import hf_hub_download
+          sha79 = "a107d6ceb7b298cb04ae1da4edffe2939858b894"
+          digest_expected = "3fc6181d5db789b45a15305732148757ae74efa3e0028e81ba335b462dac45c2"
           path = Path(hf_hub_download(
               "UofTCSSLab/Maia3-79M", filename="maia3-79m.pt", revision=sha79))
-          print("Maia3-79M original HF revision", sha79)
-          print("Maia3-79M original checkpoint SHA256", sha256(path.read_bytes()).hexdigest())
+          actual = sha256(path.read_bytes()).hexdigest()
+          if actual != digest_expected:
+              raise ValueError("Original Maia-3 79M checkpoint bytes changed")
+          print("Verified immutable Maia3 79M HF revision", sha79, actual)
           with open(os.environ["GITHUB_ENV"], "a") as out:
               out.write("MAIA79_HF_SHA=" + sha79 + "\n")
           PY
