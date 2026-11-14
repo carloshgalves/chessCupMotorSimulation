@@ -1,0 +1,173 @@
+name: Real contextual v3 training and paired historical inference
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/contextual_policy_v3.py'
+      - 'src/chesssim/experimental_policy_adapter.py'
+      - 'src/chesssim/real_policy_experiment.py'
+      - 'src/chesssim/matches.py'
+      - 'tests/test_rodent_home_binding.py'
+      - 'tests/test_contextual_policy_v3.py'
+      - 'docs/SCIENTIFIC_CONTEXTUAL_POLICY_V3.md'
+      - '.github/workflows/real-contextual-v3.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: contextual-v3-real-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-historical-contextual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install existing package without new heavy dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Regression controls, matched legal alternatives, legacy compatibility
+        run: python -m pytest tests/test_contextual_policy_v3.py tests/test_experimental_policy_adapter.py tests/test_rodent_home_binding.py -q -ra
+      - name: Rebuild REAL held-year cohorts from pinned public historical PGNs
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov \
+            --birthdates-json docs/REAL_BIRTHDATES_4.json \
+            --split-policy career-stratified --min-ply 17 \
+            --out "$RUNNER_TEMP/real-cohorts"
+      - name: Fit LEGACY V2 conditional logit on actual human moves
+        run: |
+          python -m chesssim.real_policy_experiment train \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --max-per-player 1600 --max-per-game 3 --seed 2026 \
+            --out "$RUNNER_TEMP/v2-real-policy.json"
+      - name: Fit CONTEXTUAL V3 conditional logit on identical REAL training samples
+        run: |
+          python -m chesssim.contextual_policy_v3 train \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --max-per-player 1600 --max-per-game 3 --seed 2026 \
+            --out "$RUNNER_TEMP/v3-real-policy.json"
+      - name: Checkout immutable official Rodent IV sources
+        uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Compile real Rodent IV engine on runner
+        run: |
+          test "$(git -C rodent-source rev-parse HEAD)" = "e8d84c8c8c189a1cf4eb27c578fc573af3b916d2"
+          mkdir -p rodent-source/mac
+          make -C rodent-source/sources build
+          mkdir -p "$RUNNER_TEMP/rodent"
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          test -s "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+      - name: Real held-year decisions plus actual Rodent UCI and game bootstrap
+        run: |
+          python -m chesssim.contextual_policy_v3 evaluate \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --model "$RUNNER_TEMP/v3-real-policy.json" \
+            --legacy-model "$RUNNER_TEMP/v2-real-policy.json" \
+            --fetch --seed 2027 --per-player 120 --per-game 2 \
+            --repetitions 1500 \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --rodent-depth 2 --rodent-seconds 0.12 \
+            --out "$RUNNER_TEMP/real-contextual-paired-report.json"
+      - name: Experimental REAL Rodent IV UCI game with fitted V3 as move adapter
+        run: |
+          python -m chesssim.cli play fischer tal \
+            --rodent "$RUNNER_TEMP/rodent" --no-books --depth 2 \
+            --max-plies 20 --policy-min-ply 1 \
+            --policy-model "$RUNNER_TEMP/v3-real-policy.json" \
+            --policy-white-era overall --policy-black-era overall \
+            --policy-override-percent 100 --policy-seed 2026 \
+            --out "$RUNNER_TEMP/experimental-v3"
+      - name: Verify real-game V3 external overrides, legality and unchanged Rodent profiles
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          import chess.pgn
+          p = Path(os.environ["RUNNER_TEMP"])
+          model = json.loads((p / "v3-real-policy.json").read_text())
+          report_paths = list((p / "experimental-v3/fischer-vs-tal").glob("*/summary.json"))
+          assert len(report_paths) == 1
+          summary = json.loads(report_paths[0].read_text())
+          assert summary["experimental_learned_policy"]["model_schema"] == model["schema"]
+          assert summary["experimental_learned_policy"]["model_sha256"] == model["model_sha256"]
+          assert summary["experimental_learned_policy"]["engine_internal_parameters_changed"] is False
+          assert len(summary["games"]) == 1
+          game = summary["games"][0]
+          with (report_paths[0].parent / "jogo_1.pgn").open() as stream:
+              pgn = chess.pgn.read_game(stream)
+          assert pgn and not pgn.errors
+          assert pgn.headers["PolicyOfficial"] == "false"
+          moves = [m.uci() for m in pgn.mainline_moves()]
+          assert len(moves) == 20
+          assert [row["played_move"] for row in game["policy_trace"]] == moves
+          overrides = sum(row["outcome"] == "EXTERNAL_POLICY_OVERRIDE"
+                          for row in game["policy_trace"])
+          assert overrides > 0, "External contextual policy did not affect any real UCI move"
+          assert game["status"] == "INCOMPLETE", "20 plies is not a fabricated game result"
+          print("REAL_RODENT_V3_EXTERNAL_ADAPTER_GATE_PASS", "overrides", overrides)
+          PY
+      - name: Fail closed if evidence is synthetic, unpaired or holdout opened
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path(os.environ["RUNNER_TEMP"])
+          v3 = json.loads((p / "v3-real-policy.json").read_text())
+          v2 = json.loads((p / "v2-real-policy.json").read_text())
+          r = json.loads((p / "real-contextual-paired-report.json").read_text())
+          assert v3["status"] == "TRAINED_ON_REAL_HUMAN_PGNS_NOT_STYLE_VALIDATED"
+          assert v3["training_observations_used"] == v2["training_observations_used"] >= 5800
+          assert v3["source_pgn_sha256"] == v2["source_pgn_sha256"]
+          assert v3["training_files_sha256"] == v2["training_files_sha256"]
+          assert r["validation_arm"] == "validation"
+          assert r["final_holdout_opened"] is False
+          assert r["promotion"].startswith("DENIED")
+          assert r["evaluation_decisions"] >= 400
+          assert r["rodent_engine"]["status"] == "ACTUAL_RODENT_UCI"
+          assert r["rodent_engine"]["exe_sha256"]
+          assert r["rodent_engine"]["generic_personality"] == "Simple"
+          assert set(r["by_historical_player"]) == {"fischer","tal","karpov","kasparov"}
+          for player, item in r["by_historical_player"].items():
+              assert item["sample"]["distinct_games"] >= 30, player
+              assert sum(v["positions"] for v in item["sample"]["by_band"].values()) == item["sample"]["decisions"]
+              assert sum(v["positions"] for v in item["sample"]["by_year"].values()) == item["sample"]["decisions"]
+              assert "contextual_named_vs_fixed_rotation" in item["paired_game_statistics"]
+              assert item["historical_style_validated"] is False
+              metrics = item["models"]
+              assert {"contextual_named", "contextual_generic", "legacy_named",
+                      "rodent_" + player, "rodent_generic_rodent"} <= set(metrics)
+              for metric in metrics.values():
+                  assert metric["positions"] == item["sample"]["decisions"]
+              for contrast in item["paired_game_statistics"].values():
+                  assert contrast["games"] == item["sample"]["distinct_games"]
+                  assert contrast["bootstrap_95_ci"][0] <= contrast["bootstrap_95_ci"][1]
+                  assert 0 < contrast["paired_sign_flip_two_sided_p"] <= 1
+          print("REAL_PGN_V3_CONTEXTUAL_PAIRED_RODENT_STATISTICS_GATE_PASSED")
+          PY
+      - name: Publish aggregated model/report only (never raw source PGNs or holdout)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-contextual-v3-paired-statistics
+          path: |
+            ${{ runner.temp }}/v3-real-policy.json
+            ${{ runner.temp }}/v2-real-policy.json
+            ${{ runner.temp }}/real-contextual-paired-report.json
+            ${{ runner.temp }}/experimental-v3/fischer-vs-tal/*/summary.json
+            ${{ runner.temp }}/experimental-v3/fischer-vs-tal/*/jogo_1.pgn
+          if-no-files-found: warn
+          retention-days: 7

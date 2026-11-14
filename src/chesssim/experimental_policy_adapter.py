@@ -16,6 +16,10 @@ from pathlib import Path
 import chess
 
 from .real_policy_experiment import POLICY_SCHEMA, _digest, _read_json, predict
+from .contextual_policy_v3 import (
+    SCHEMA as CONTEXTUAL_SCHEMA, STATUS as CONTEXTUAL_STATUS,
+    predict_contextual,
+)
 
 ERAS = frozenset({"overall", "early_observed", "middle_observed", "late_observed"})
 RESEARCH_STATUS = "EXPERIMENTAL_EXTERNAL_POLICY_NOT_HISTORICALLY_VALIDATED"
@@ -69,8 +73,12 @@ class ExperimentalPolicyAdapter:
         raw = model_file.read_bytes()
         model = _read_json(model_file, 8_000_000)
         signature = model.get("model_sha256")
-        if (model.get("schema") != POLICY_SCHEMA or
-                model.get("status") != "REAL_PGN_TRAINED_EXPERIMENTAL_NOT_STYLE_VALIDATED" or
+        statuses = {
+            POLICY_SCHEMA: "REAL_PGN_TRAINED_EXPERIMENTAL_NOT_STYLE_VALIDATED",
+            CONTEXTUAL_SCHEMA: CONTEXTUAL_STATUS,
+        }
+        if (model.get("schema") not in statuses or
+                model.get("status") != statuses[model["schema"]] or
                 not isinstance(signature, str) or len(signature) != 64):
             raise ValueError("Expected experimental trained historical-policy model")
         unsigned = {key: value for key, value in model.items()
@@ -111,6 +119,7 @@ class ExperimentalPolicyAdapter:
             "source_pgn_sha256": self.model.get("source_pgn_sha256"),
             "train_manifest_sha256": self.model.get("train_manifest_sha256"),
             "trained_method": self.model.get("method"),
+            "model_schema": self.model.get("schema"),
             "players_and_eras": dict(sorted(self.bindings.items())),
             "override_percent": self.override_percent,
             "seed": self.seed,
@@ -153,7 +162,9 @@ class ExperimentalPolicyAdapter:
         }
         if ply < self.min_ply:
             return PolicyDecision(move=engine_move, audit=audit)
-        proposed = chess.Move.from_uci(predict(
+        inference = (predict_contextual if self.model["schema"] == CONTEXTUAL_SCHEMA
+                     else predict)
+        proposed = chess.Move.from_uci(inference(
             self.model, board, slug, self.bindings[slug]))
         if proposed not in board.legal_moves:
             raise ValueError("Trained policy returned illegal move")
