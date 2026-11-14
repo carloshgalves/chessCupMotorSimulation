@@ -232,6 +232,8 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             game.headers["PolicyBlackEra"] = experimental_policy.bindings[black.slug]
             game.headers["PolicyOfficial"] = "false"
             if experimental_policy.gate is not None:
+                game.headers["SearchLimit"] = (
+                    f"depth={depth};time={experimental_policy.gate['engine_seconds_per_position']}s")
                 game.headers["PolicyGateSHA256"] = experimental_policy.gate["gate_sha256"]
                 game.headers["PolicyGateMechanism"] = "GAME_DISJOINT_CALIBRATED_EXTERNAL_OVERRIDE"
         if historical_openings:
@@ -240,7 +242,14 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
         opening_trace = []
         policy_trace: list[dict] = []
         node = game
-        limit = (chess.engine.Limit(depth=depth) if depth is not None
+        # Calibration calls Rodent with BOTH depth and a wall-clock search
+        # budget. A gate-backed game must use the same UCI Limit tuple,
+        # otherwise its measured style-lift is based on a different baseline.
+        limit = (chess.engine.Limit(
+                     depth=depth,
+                     time=experimental_policy.gate["engine_seconds_per_position"])
+                 if experimental_policy is not None and experimental_policy.gate is not None
+                 else chess.engine.Limit(depth=depth) if depth is not None
                  else chess.engine.Limit(time=movetime) if movetime is not None
                  else None)
         clocks = [float(clock[0]), float(clock[0])] if clock else None
