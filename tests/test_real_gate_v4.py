@@ -183,6 +183,17 @@ def test_gate_v3_play_adapter_fail_closed_and_shadow(
                              round_number=1, ply=17)
     assert observed.move == engine_move
     assert observed.audit["outcome"] == "SHADOW_ONLY"
+    # Warmup moves stay on Rodent but still attest the gate artifact.
+    opening = chess.Board()
+    early = adapter.select(opening, slug="fischer",
+                           engine_move=chess.Move.from_uci("e2e4"),
+                           round_number=1, ply=1)
+    assert early.move.uci() == "e2e4"
+    assert early.audit["outcome"] == "WARMUP_UNMODIFIED"
+    assert early.audit["policy_move"] is None
+    assert early.audit["gate_sha256"] == adapter.gate["gate_sha256"]
+    assert early.audit["gate_threshold"] == adapter.gate["players"]["fischer"]["threshold"]
+    assert early.audit["style_lift"] is None
 
     # A calibrated duel must use the same two-dimensional python-chess
     # search limit as the real UCI calibration: depth AND seconds.
