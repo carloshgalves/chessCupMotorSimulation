@@ -189,8 +189,12 @@ def test_exact_rodent_binary_and_personality_guard(synthetic_harness, tmp_path,
         path.write_text("synthetic unit profile")
         profiles[p.slug] = path
     monkeypatch.setattr(matches, "validate", lambda *_: (exe, profiles))
-    with pytest.raises(ValueError, match="binary differs"):
+    with pytest.raises(ValueError, match="depth"):
         matches.play_duel(tmp_path, tmp_path / "out", a, b, depth=1,
+                          use_books=False, reverse=False, max_plies=4,
+                          experimental_policy=adapter)
+    with pytest.raises(ValueError, match="binary differs"):
+        matches.play_duel(tmp_path, tmp_path / "out", a, b, depth=2,
                           use_books=False, reverse=False, max_plies=4,
                           experimental_policy=adapter)
     assert not (tmp_path / "out").exists()
