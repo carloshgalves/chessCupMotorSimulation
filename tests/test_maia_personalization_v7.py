@@ -76,8 +76,14 @@ def _row(i, target):
     board = chess.Board()
     # All real benchmarks reconstruct PGN histories; these are toy
     # positions only to prove the train-tune-audit gate's software behavior.
-    board.push_uci(("a2a3","b2b3","c2c3","d2d3")[i % 4])
-    board.push_uci(("a7a6","b7b6","c7c6","d7d6")[(i // 4) % 4])
+    # The synthetic fixture must leave ALL three listed Maia moves legal.
+    whites = ("a2a3","a2a4","b2b3","b2b4",
+              "g2g3","g2g4","h2h3","h2h4")
+    blacks = ("a7a6","a7a5","b7b6","b7b5")
+    board.push_uci(whites[i % len(whites)])
+    board.push_uci(blacks[(i // len(whites)) % len(blacks)])
+    assert all(chess.Move.from_uci(x) in board.legal_moves
+               for x in ("e2e4", "g1f3", "b1c3"))
     return {"player": "fischer", "game_sha256": f"{i:064x}",
             "ply": 21, "fen": board.fen(), "move": target,
             "year": 1972, "maia79_candidates": ["e2e4", "g1f3", "b1c3"]}
