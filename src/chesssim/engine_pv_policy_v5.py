@@ -9,7 +9,6 @@ Validation is separated by whole years and canonical chess positions.
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from hashlib import sha256
 import argparse
 import json
 import math
@@ -223,6 +222,17 @@ def _predict(weights: list[float], row: dict) -> str:
     )["move"]
 
 
+def _predict_style_residual(personal: list[float], generic: list[float],
+                            row: dict) -> str:
+    """Pure learned player-vs-pooled preference, NO implicit engine-score prior.
+
+    Exploratory representation ablation, never enabled for game overrides.
+    """
+    if len(personal) != len(FEATURES) or len(generic) != len(FEATURES):
+        raise ValueError("Incompatible engine-feature coefficient arrays")
+    return _predict([p - g for p, g in zip(personal, generic)], row)
+
+
 def _fit(records: list[dict], initial: list[float], *,
          epochs: int, learning_rate: float, regularization: float,
          seed: int) -> tuple[list[float], list[float]]:
@@ -403,9 +413,21 @@ def evaluate_multipv(cohorts: Path, v3_path: Path, learned_path: Path,
         rotation = sorted(observed)[(index + 1) % len(observed)]
         swapped = [_predict(learned["players"][rotation]["weights"], row)
                    for row in rows]
+        residual_named = [
+            _predict_style_residual(
+                learned["players"][slug]["weights"], learned["generic_weights"], row)
+            for row in rows
+        ]
+        residual_swapped = [
+            _predict_style_residual(
+                learned["players"][rotation]["weights"], learned["generic_weights"], row)
+            for row in rows
+        ]
         comparisons = {
             "multipv_engine_top1": engine,
             "trained_named": named,
+            "trained_residual_named": residual_named,
+            "trained_residual_fixed_swapped": residual_swapped,
             "trained_generic": generic,
             "trained_fixed_swapped": swapped,
             "v3_named": legacy,
@@ -428,12 +450,22 @@ def evaluate_multipv(cohorts: Path, v3_path: Path, learned_path: Path,
         statistics["named_vs_fixed_swapped"] = paired_game_inference(
             rows, named, swapped, seed=seed + 200 + index,
             repetitions=repetitions)
+        statistics["residual_named_vs_engine"] = paired_game_inference(
+            rows, residual_named, engine, seed=seed + 300 + index,
+            repetitions=repetitions)
+        statistics["residual_named_vs_fixed_swapped"] = paired_game_inference(
+            rows, residual_named, residual_swapped, seed=seed + 400 + index,
+            repetitions=repetitions)
         report_players[slug] = {
             "evaluation_positions": len(rows),
             "distinct_historical_games": len({row["game_sha256"] for row in rows}),
             "real_human_move_in_multipv": coverage,
             "real_human_move_coverage": coverage / len(rows),
             "negative_control_rotated_player": rotation,
+            "changed_moves_from_engine": {
+                name: sum(p != reference for p, reference in zip(preds, engine))
+                for name, preds in comparisons.items()
+            },
             "metrics": metrics,
             "paired_by_real_game": statistics,
             "identity_validated": False,
@@ -469,6 +501,9 @@ def evaluate_multipv(cohorts: Path, v3_path: Path, learned_path: Path,
         "by_player": report_players,
         "aggregate": aggregate,
         "candidate_policy": learned["candidate_policy"],
+        "residual_ablation": (
+            "POST_HOC_DIAGNOSTIC_FROM_SAME_TRAINED_WEIGHTS_"
+            "NOT_CALIBRATED_FOR_ENGINE_OVERRIDE"),
         "promotion": "DENIED_UNTIL_INDEPENDENT_STYLE_AND_CHESS_SAFETY_TEST",
         "limitations": [
             "All model decisions are restricted to actual target-blind engine MultiPV lines.",
@@ -477,6 +512,7 @@ def evaluate_multipv(cohorts: Path, v3_path: Path, learned_path: Path,
             "Held-year data has been inspected in prior research; tests are exploratory.",
             "Game-cluster CI does not by itself correct repeated model development/multiple tests.",
             "No claim of improved Elo or faithful historical player identity.",
+            "Residual-only score ablation is post-hoc exploration, not an independently validated policy.",
         ],
     }
     _write_once(output, report)
