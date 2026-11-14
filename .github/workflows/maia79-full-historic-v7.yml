@@ -1,0 +1,149 @@
+name: Maia3 79M historical full-corpus player personalization (CPU)
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/maia_personalization_v7.py'
+      - 'tests/test_maia_personalization_v7.py'
+      - 'docs/MAIA79_FULL_CORPUS_V7.md'
+      - '.github/workflows/maia79-full-historic-v7.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maia79-full-corpus-v7-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  genuine-maia79-pinned-real-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    env:
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+      TORCH_NUM_THREADS: "2"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install project and engineering tests
+        run: python -m pip install -e '.[dev]'
+      - name: Run full-corpus algorithm regression fixtures
+        run: python -m pytest tests/test_maia_personalization_v7.py tests/test_maia_transfer_v6.py -q -ra
+      - name: Install PyTorch CPU-only (no GPU quota)
+        run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - uses: actions/checkout@v5
+        with:
+          repository: CSSLab/maia3
+          ref: 1e13597c42d4858b7cfd7cfdae01e297263364b2
+          path: maia3-source
+          persist-credentials: false
+      - name: Install original Maia3 and pin model 79M plus original 5M bytes
+        run: |
+          test "$(git -C maia3-source rev-parse HEAD)" = 1e13597c42d4858b7cfd7cfdae01e297263364b2
+          python -m pip install -e ./maia3-source
+          python - <<'PY'
+          import os
+          from hashlib import sha256
+          from pathlib import Path
+          from huggingface_hub import HfApi, hf_hub_download
+          sha79 = HfApi().model_info("UofTCSSLab/Maia3-79M").sha
+          assert isinstance(sha79, str) and len(sha79) == 40
+          path = Path(hf_hub_download(
+              "UofTCSSLab/Maia3-79M", filename="maia3-79m.pt", revision=sha79))
+          print("Maia3-79M original HF revision", sha79)
+          print("Maia3-79M original checkpoint SHA256", sha256(path.read_bytes()).hexdigest())
+          with open(os.environ["GITHUB_ENV"], "a") as out:
+              out.write("MAIA79_HF_SHA=" + sha79 + "\n")
+          PY
+      - name: Download only real historical PGN snapshot and reconstruct year-disjoint corpus
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov \
+            --birthdates-json docs/REAL_BIRTHDATES_4.json \
+            --split-policy career-stratified --min-ply 17 \
+            --out "$RUNNER_TEMP/real-cohorts"
+      - name: Train reference V3 for manifest binding, using only TRAIN source years
+        run: |
+          python -m chesssim.contextual_policy_v3 train \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --max-per-player 1600 --max-per-game 3 --seed 2026 \
+            --out "$RUNNER_TEMP/v3-source-binding.json"
+      - name: TRAIN PERSONAL ADAPTER USING ALL ELIGIBLE HISTORICAL FIT POSITIONS
+        run: |
+          python -m chesssim.maia_personalization_v7 fit \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --v3-model "$RUNNER_TEMP/v3-source-binding.json" \
+            --out "$RUNNER_TEMP/all-real-player-adapters.json"
+      - name: Compare actual frozen pretrained Maia3-5M, 79M and trained individual on identical real histories
+        run: |
+          python -m chesssim.maia_personalization_v7 benchmark \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --v3-model "$RUNNER_TEMP/v3-source-binding.json" \
+            --adapter "$RUNNER_TEMP/all-real-player-adapters.json" \
+            --maia79-revision "$MAIA79_HF_SHA" --fetch \
+            --validation-per-player 64 --tune-per-player 32 --seed 2038 \
+            --out "$RUNNER_TEMP/maia79-historical-benchmark.json"
+      - name: Require all real historical training and impartial paired evaluation, not invented results
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          home = Path(os.environ["RUNNER_TEMP"])
+          model = json.loads((home/"all-real-player-adapters.json").read_text())
+          report = json.loads((home/"maia79-historical-benchmark.json").read_text())
+          manifest = json.loads((home/"real-cohorts"/"manifest.json").read_text())
+          assert model["schema"] == "chesssim-historical-all-train-maia79-personal-adapter-v7"
+          assert model["training_policy"] == "ALL_ELIGIBLE_FIT_DECISIONS_NO_PER_GAME_OR_MOVE_CAP"
+          assert model["sum_fitted_decisions"] > 6400
+          assert report["adapter_sha256"] == model["model_sha256"]
+          assert report["validation_positions"] == 256
+          assert report["validation_arm"] == "validation"
+          assert report["test_final_holdout_opened"] is False
+          assert report["maia79_hf_revision"] == os.environ["MAIA79_HF_SHA"]
+          assert report["maia79_backbone_frozen"] is True
+          assert report["maia_elo_is_scenario_not_FIDE_rating"] is True
+          assert report["official_personality_promotion"] == "DENIED"
+          assert len(report["maia_checkpoints_sha256"]["maia3-79m"]) == 64
+          assert report["maia_checkpoints_sha256"]["maia3-5m"] == "ba14208b2992d85502f5fb501934abf6aaaeb355e9f3fdf90e326911f562524f"
+          assert set(report["per_player"]) == {"fischer","karpov","kasparov","tal"}
+          for slug, p in report["per_player"].items():
+              assert p["source_games"] == manifest["sources"][slug]["accepted_games"]
+              assert p["fitted_real_decisions"] > 100
+              assert p["fitted_distinct_games"] > 25
+              assert p["validation_decisions"] == 64
+              assert p["validation_games"] >= 25
+              assert p["tune_audit"]["activated_strength"] in (0.0,0.5,1.0,2.0,4.0)
+              if p["tune_audit"]["activated_strength"] > 0:
+                  assert p["tune_audit"]["decision"] == "ACCEPT_GAME_DISJOINT_GAIN"
+                  assert p["tune_audit"]["audit"]["bootstrap_95_ci"][0] > 0
+              for metric in p["metrics"].values():
+                  assert metric["positions"] == 64
+              for metric in p["game_paired_vs_frozen_79m"].values():
+                  assert metric["games"] == p["validation_games"]
+          assert set(report["aggregate"]) == {
+              "maia3_5m","maia3_79m","maia3_79m_style_probe","maia3_79m_game_audited"}
+          assert all(m["positions"] == 256 for m in report["aggregate"].values())
+          assert all(x["positions"] == 256 for x in report["aggregate_paired_game_vs_79m"].values())
+          print("ALL_REAL_TRAIN_GAMES_PERSONALIZED_MAIA79_V7_VALID")
+          print("fitted_decisions", model["sum_fitted_decisions"])
+          print("fitted_games", {s:p["distinct_games"] for s,p in model["profiles"].items()})
+          print("aggregate", report["aggregate"])
+          print("gates", {s:p["tune_audit"]["decision"] for s,p in report["per_player"].items()})
+          PY
+      - name: Upload auditable aggregate evidence only; exclude model weights of Maia and PGN raw sources
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chesssim-v7-all-real-games-maia79-personalization
+          path: |
+            ${{ runner.temp }}/all-real-player-adapters.json
+            ${{ runner.temp }}/maia79-historical-benchmark.json
+            ${{ runner.temp }}/v3-source-binding.json
+          if-no-files-found: warn
+          retention-days: 7
