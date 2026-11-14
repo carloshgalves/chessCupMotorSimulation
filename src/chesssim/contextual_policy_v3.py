@@ -456,7 +456,8 @@ def evaluate_contextual(cohorts: Path, model_path: Path, legacy_path: Path,
              "generic_personality": "Simple",
              "simple_sha256": engine_hashes["simple_profile"],
              "depth": rodent_depth, "seconds_per_position": rodent_seconds,
-             "opening_book": False}
+             "opening_book": False,
+             "rodent_home": "EXPLICIT_RODENT4HOME_BOUND_TO_VERIFIED_ROOT"}
             if rodent else {"status": "NOT_REQUESTED"}),
         "by_historical_player": summaries,
         "promotion": "DENIED_UNTIL_HOLDOUT_AND_INDEPENDENT_STYLE_REPLICATION",
