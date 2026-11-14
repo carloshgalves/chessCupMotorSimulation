@@ -274,6 +274,21 @@ def main(argv: list[str] | None = None) -> int:
     play.add_argument("--preset", choices=["official", "classical", "rapid", "blitz", "bullet"], help="Relógios fixos: official legado 10+2; outros são presets v0.6 (não força histórica)")
     play.add_argument("--max-plies", type=int, default=None)
     play.add_argument("--out", type=Path, default=Path("partidas_chesssim"))
+    # Research-only opt-in; never changes the engine's internal personality.
+    play.add_argument("--policy-model", type=Path,
+                      help="Modelo JSON treinado pela real_policy_experiment (experimental)")
+    play.add_argument("--policy-white-era",
+                      choices=("overall", "early_observed", "middle_observed", "late_observed"),
+                      help="Período do jogador inicialmente de brancas; obrigatório com --policy-model")
+    play.add_argument("--policy-black-era",
+                      choices=("overall", "early_observed", "middle_observed", "late_observed"),
+                      help="Período do jogador inicialmente de pretas; obrigatório com --policy-model")
+    play.add_argument("--policy-override-percent", type=int,
+                      help="0=somente observar; 1..100=percentual de decisões elegíveis substituídas")
+    play.add_argument("--policy-seed", type=int,
+                      help="Semente determinística do controle externo (padrão 2026)")
+    play.add_argument("--policy-min-ply", type=int,
+                      help="Primeiro meio-lance elegível para a política (padrão 17)")
 
 
     sub.add_parser("protocol", help="Exibe o protocolo congelado da Copa e da calibração")
@@ -1354,6 +1369,26 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("Não misture --preset official e limites de desenvolvimento")
             if args.preset and not args.reverse:
                 raise ValueError("Confronto de preset requer --reverse (ambas as cores)")
+            policy_adapter = None
+            supplied_policy_options = any(option is not None for option in (
+                args.policy_white_era, args.policy_black_era,
+                args.policy_override_percent, args.policy_seed, args.policy_min_ply))
+            if args.policy_model is None and supplied_policy_options:
+                raise ValueError("Opções --policy-* exigem --policy-model")
+            if args.policy_model is not None:
+                if args.preset is not None or not args.no_books:
+                    raise ValueError("Política aprendida requer --no-books e proíbe --preset")
+                if (args.policy_white_era is None or args.policy_black_era is None or
+                        args.policy_override_percent is None):
+                    raise ValueError("Exija --policy-white-era, --policy-black-era e --policy-override-percent")
+                from .experimental_policy_adapter import ExperimentalPolicyAdapter
+                policy_adapter = ExperimentalPolicyAdapter.load(
+                    args.policy_model,
+                    bindings={a.slug: args.policy_white_era,
+                              b.slug: args.policy_black_era},
+                    override_percent=args.policy_override_percent,
+                    seed=2026 if args.policy_seed is None else args.policy_seed,
+                    min_ply=17 if args.policy_min_ply is None else args.policy_min_ply)
             from .peak_windows import CLOCK_PRESETS
             clock = (600, 2) if args.preset == "official" else CLOCK_PRESETS.get(args.preset)
             depth = None if args.preset or args.movetime is not None else (args.depth if args.depth is not None else 6)
@@ -1361,7 +1396,8 @@ def main(argv: list[str] | None = None) -> int:
                       movetime=args.movetime, reverse=args.reverse, max_plies=args.max_plies or (600 if args.preset else 400),
                       clock=clock, use_books=(False if args.no_books else
                                              True if args.preset == "official" else
-                                             False if args.preset else None))
+                                             False if args.preset else None),
+                       experimental_policy=policy_adapter)
         return 0
     except (ValueError, FileNotFoundError, FileExistsError, RuntimeError, OSError) as exc:
         print(f"ERRO: {exc}", file=sys.stderr)

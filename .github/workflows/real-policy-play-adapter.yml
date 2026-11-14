@@ -1,0 +1,150 @@
+name: Real Rodent IV trained-policy move adapter
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/experimental_policy_adapter.py'
+      - 'src/chesssim/matches.py'
+      - 'src/chesssim/cli.py'
+      - 'tests/test_experimental_policy_adapter.py'
+      - 'docs/TRAINED_POLICY_PLAY_ADAPTER.md'
+      - '.github/workflows/real-policy-play-adapter.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chesssim-policy-move-adapter-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-uci-policy-game:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install
+        run: python -m pip install -e '.[dev]'
+      - name: Unit controls (fixtures never used as historical evidence)
+        run: python -m pytest tests/test_experimental_policy_adapter.py -q -ra
+      - name: Build REAL train-only player-year PGN cohorts (four historical players)
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov \
+            --split-policy career-stratified \
+            --birthdates-json docs/REAL_BIRTHDATES_4.json --min-ply 17 \
+            --out "$RUNNER_TEMP/real-cohorts"
+      - name: Fit a policy from the REAL historical decisions
+        run: |
+          python -m chesssim.real_policy_experiment train \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --max-per-player 80 --max-per-game 2 --seed 2026 \
+            --out "$RUNNER_TEMP/real-policy.json"
+      - name: Checkout pinned original Rodent IV source
+        uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Build actual Rodent IV UCI engine
+        run: |
+          test "$(git -C rodent-source rev-parse HEAD)" = "e8d84c8c8c189a1cf4eb27c578fc573af3b916d2"
+          mkdir -p rodent-source/mac
+          make -C rodent-source/sources build
+          mkdir -p "$RUNNER_TEMP/rodent"
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          test -s "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+      - name: Real Rodent SHADOW match (0 percent external influence)
+        run: |
+          python -m chesssim.cli play fischer tal \
+            --rodent "$RUNNER_TEMP/rodent" --no-books \
+            --depth 2 --max-plies 20 \
+            --policy-model "$RUNNER_TEMP/real-policy.json" \
+            --policy-white-era overall --policy-black-era overall \
+            --policy-override-percent 0 --policy-min-ply 1 \
+            --out "$RUNNER_TEMP/shadow"
+      - name: Real Rodent ACTIVE match (100 percent external moves, both color orders)
+        run: |
+          python -m chesssim.cli play fischer tal \
+            --rodent "$RUNNER_TEMP/rodent" --no-books \
+            --depth 2 --max-plies 20 --reverse \
+            --policy-model "$RUNNER_TEMP/real-policy.json" \
+            --policy-white-era overall --policy-black-era overall \
+            --policy-override-percent 100 --policy-min-ply 1 \
+            --out "$RUNNER_TEMP/active"
+      - name: Real Rodent unmodified-control match without a policy
+        run: |
+          python -m chesssim.cli play fischer tal \
+            --rodent "$RUNNER_TEMP/rodent" --no-books \
+            --depth 2 --max-plies 8 \
+            --out "$RUNNER_TEMP/control"
+      - name: Verify actual UCI and policy interventions; no official contamination
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          import chess.pgn
+          temp = Path(os.environ["RUNNER_TEMP"])
+          model = json.loads((temp / "real-policy.json").read_text())
+          assert model["status"] == "REAL_PGN_TRAINED_EXPERIMENTAL_NOT_STYLE_VALIDATED"
+          def read(arm):
+              folders = list((temp / arm / "fischer-vs-tal").glob("*/summary.json"))
+              assert len(folders) == 1, (arm, folders)
+              return json.loads(folders[0].read_text()), folders[0].parent
+          active, active_dir = read("active")
+          shadow, shadow_dir = read("shadow")
+          original, original_dir = read("control")
+          assert active["experimental_learned_policy"]["model_sha256"] == model["model_sha256"]
+          assert active["experimental_learned_policy"]["official_tournament_allowed"] is False
+          assert active["experimental_learned_policy"]["override_percent"] == 100
+          assert shadow["experimental_learned_policy"]["override_percent"] == 0
+          assert original["experimental_learned_policy"]["status"] == "DISABLED"
+          assert len(active["games"]) == 2 and len(shadow["games"]) == 1
+          actual_interventions = 0
+          for report, folder in ((active, active_dir), (shadow, shadow_dir)):
+              for number, game in enumerate(report["games"], 1):
+                  with (folder / f"jogo_{number}.pgn").open() as handle:
+                      pgn = chess.pgn.read_game(handle)
+                  assert pgn is not None and not pgn.errors
+                  assert pgn.headers["PolicyModelSHA256"] == model["model_sha256"]
+                  assert pgn.headers["PolicyOfficial"] == "false"
+                  trace = game["policy_trace"]
+                  moves = [move.uci() for move in pgn.mainline_moves()]
+                  assert len(trace) == len(moves) == game["plies"] == 20
+                  assert [record["played_move"] for record in trace] == moves
+                  assert all(record["rodent_move"] and record["policy_move"] for record in trace)
+                  if report is active:
+                      actual_interventions += sum(
+                          record["outcome"] == "EXTERNAL_POLICY_OVERRIDE"
+                          for record in trace)
+                      assert sum(x["actual_overrides"] for x in game["policy_counts"].values()) > 0
+                  else:
+                      assert all(record["outcome"] == "SHADOW_ONLY" for record in trace)
+                      assert all(record["rodent_move"] == record["played_move"] for record in trace)
+          assert actual_interventions > 0, "No external policy intervention was demonstrated"
+          assert not original["games"][0].get("policy_trace")
+          print("REAL_RODENT_UCI_POLICY_ADAPTER_GATE_PASS",
+                "active_interventions", actual_interventions,
+                "model_sha256", model["model_sha256"])
+          PY
+      - name: Upload only trained model and generated match evidence (never historical PGNs)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-trained-policy-rodent-match-evidence
+          path: |
+            ${{ runner.temp }}/real-policy.json
+            ${{ runner.temp }}/active/fischer-vs-tal/*/summary.json
+            ${{ runner.temp }}/active/fischer-vs-tal/*/jogo_*.pgn
+            ${{ runner.temp }}/shadow/fischer-vs-tal/*/summary.json
+          if-no-files-found: warn
+          retention-days: 7
