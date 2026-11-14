@@ -155,3 +155,14 @@ as posições do braço TRAIN. O filtro é executado ANTES da amostragem
 final (120 por jogador) e falha se não houver exemplos independentes
 suficientes. Assim, jogos diferentes não são automaticamente
 considerados posições novas só por mudarem os contadores da FEN.
+
+
+### Inferência estatística da curva de aprendizagem
+
+A comparação entre 400, 800 e 1.600 exemplos não se resume a percentuais
+isolados. A V4 registra ainda os contrastes pareados 800−400 e 1600−800
+nos **mesmos tabuleiros**: ganho macro por partida, intervalo bootstrap
+de 95% reamostrado por partida e teste bicaudal de sinais por partida.
+Mesmo um ganho positivo pontual pode ser inconclusivo quando o
+intervalo inclui zero. Esses testes são exploratórios, pois o
+conjunto de validação já foi usado em etapas anteriores.
