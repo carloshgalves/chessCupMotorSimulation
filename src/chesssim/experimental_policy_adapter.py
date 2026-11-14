@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from hashlib import sha256
-import json
 import math
 from pathlib import Path
 
@@ -63,7 +62,10 @@ class ExperimentalPolicyAdapter:
             raise ValueError("Explicit player-to-era bindings required for two distinct players")
 
         # _read_json validates symlink/size and duplicate JSON keys.
-        model_file = Path(model_file).expanduser().resolve(strict=True)
+        model_file = Path(model_file).expanduser()
+        if model_file.is_symlink() or any(parent.is_symlink() for parent in model_file.parents):
+            raise ValueError("Symbolic model files or model directories are not allowed")
+        model_file = model_file.resolve(strict=True)
         raw = model_file.read_bytes()
         model = _read_json(model_file, 8_000_000)
         signature = model.get("model_sha256")
