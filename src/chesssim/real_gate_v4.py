@@ -213,7 +213,7 @@ def fit_gate(cohorts: Path, v3_path: Path, rodent_root: Path,
         for row, engine_move in zip(rows, rodent_moves):
             move, lift = _style_lift_and_proposal(
                 model, chess.Board(row["fen"]), slug,
-                row["career_band"], engine_move)
+                "overall", engine_move)
             proposals.append(move)
             lifts.append(lift)
         tune_ids, audit_ids = _split_games(rows, seed=seed, slug=slug)
@@ -277,6 +277,7 @@ def fit_gate(cohorts: Path, v3_path: Path, rodent_root: Path,
         "engine_profile_sha256": {slug: hashes[slug] for slug in slugs},
         "rodent_generic_profile_sha256": hashes["simple_profile"],
         "engine_depth": depth, "engine_seconds_per_position": seconds,
+        "calibrated_policy_era": "overall",
         "rodent_opening_books": False,
         "seed": seed, "per_player": per_player, "per_game": per_game,
         "threshold_grid": list(THRESHOLDS),
@@ -318,7 +319,8 @@ def load_gate(path: Path, model: dict, *,
             model.get("train_manifest_sha256") != gate["train_manifest_sha256"] or
             model.get("source_pgn_sha256") != gate["source_pgn_sha256"]):
         raise ValueError("Gate must be attached to its exact real V3 model")
-    if (gate.get("training_arm") != "train_only_out_of_fit_games" or
+    if (gate.get("calibrated_policy_era") != "overall" or
+            gate.get("training_arm") != "train_only_out_of_fit_games" or
             gate.get("final_holdout_opened") is not False or
             gate.get("engine_weights_changed") is not False or
             gate.get("style_identity_validated") is not False):
@@ -413,18 +415,18 @@ def evaluate_gate(cohorts: Path, v3_path: Path, gate_path: Path,
         for row, original in zip(rows, base):
             board = chess.Board(row["fen"])
             custom, audit = gate_move(
-                gate, model, board, slug, row["career_band"], original)
+                gate, model, board, slug, "overall", original)
             gate_moves.append(custom)
             proposals.append(audit)
             names.append(audit["proposal"])
             generic_v3.append(predict_contextual(
-                model, board, slug, row["career_band"], generic=True))
+                model, board, slug, "overall", generic=True))
         curves = {}
         for size, curve in [*sorted(extra_models.items()),
                             (model["max_per_player"], model)]:
             preds = [
                 predict_contextual(curve, chess.Board(row["fen"]),
-                                   slug, row["career_band"])
+                                   slug, "overall")
                 for row in rows]
             curves[str(size)] = _metric(rows, preds)
             all_curve[str(size)]["right"] += curves[str(size)]["exact_match"]
@@ -483,6 +485,7 @@ def evaluate_gate(cohorts: Path, v3_path: Path, gate_path: Path,
         "sample_seed": seed, "per_player_limit": per_player,
         "per_game_limit": per_game, "rodent_depth": depth,
         "rodent_seconds_per_position": seconds,
+        "calibrated_policy_era": "overall",
         "total_validation_decisions": len(all_rows),
         "excluded_validation": dict(excluded),
         "by_player": result_players,
