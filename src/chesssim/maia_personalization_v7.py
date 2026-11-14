@@ -43,6 +43,8 @@ SCHEMA = "chesssim-historical-all-train-maia79-personal-adapter-v7"
 REPORT_SCHEMA = "chesssim-historical-maia79-personal-benchmark-v7"
 MAIA79_REPO = "UofTCSSLab/Maia3-79M"
 MAIA79_FILE = "maia3-79m.pt"
+MAIA79_HF_REVISION = "a107d6ceb7b298cb04ae1da4edffe2939858b894"
+MAIA79_CHECKPOINT_SHA256 = "3fc6181d5db789b45a15305732148757ae74efa3e0028e81ba335b462dac45c2"
 MIN_PLY = 21
 SPLIT_MOD = 10
 FIT_BUCKETS = frozenset(range(8))  # 80% train-year games, rest reserved for gate fitting/auditing
@@ -276,7 +278,8 @@ def _calibration_samples(cohorts: Path, v3: dict, model: dict,
         sample = {
             "player": row["player"], "fen": row["policy_input"]["fen"],
             "move": row["policy_target"]["move_uci"],
-            "year": row["year"], "game_sha256": row["game_sha256"],
+            "year": row["policy_input"]["year"],
+            "game_sha256": row["game_sha256"],
             "ply": row["ply"],
         }
         (tune if arm == TUNE_BUCKET else audit)[row["player"]].append(sample)
@@ -421,8 +424,9 @@ def benchmark(cohorts: Path, v3_path: Path, adapter_path: Path, output: Path,
               *, maia79_revision: str, archive_dir: Path | None,
               validation_per_player: int, tune_per_player: int,
               seed: int = 2038) -> dict:
-    if not re.fullmatch(r"[0-9a-f]{40}", maia79_revision):
-        raise ValueError("Maia79 checkpoint requires frozen 40-char HF revision")
+    if (not re.fullmatch(r"[0-9a-f]{40}", maia79_revision) or
+            maia79_revision != MAIA79_HF_REVISION):
+        raise ValueError("Maia79 checkpoint revision must match the frozen original release")
     if not 10 <= validation_per_player <= 10000 or not 10 <= tune_per_player <= 500:
         raise ValueError("Invalid historical sample; full-corpus training has no cap")
     v3 = _read_model(v3_path, V3_SCHEMA)
@@ -437,7 +441,8 @@ def benchmark(cohorts: Path, v3_path: Path, adapter_path: Path, output: Path,
         revision=MAIA_HF_REVISION))
     digests = {
         "maia3-5m": _verify_checkpoint(ckpt5, known_digest=MAIA_CHECKPOINT_SHA256),
-        "maia3-79m": _verify_checkpoint(ckpt79, known_digest=None),
+        "maia3-79m": _verify_checkpoint(
+            ckpt79, known_digest=MAIA79_CHECKPOINT_SHA256),
     }
     tune, audit = _calibration_samples(
         cohorts, v3, model, tune_per_player, seed)
