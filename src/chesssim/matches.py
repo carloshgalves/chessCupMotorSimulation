@@ -22,6 +22,7 @@ import chess.pgn
 from .catalog import Player
 from .game_diversity import audit_mainlines, mainline_identity
 from .registry import registered_aliases
+from .experimental_policy_adapter import ExperimentalPolicyAdapter, trace_summary
 
 
 def file_hash(path: Path) -> str:
@@ -169,7 +170,13 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
               opening_min_count: int = 1,
               stop_check: Callable[[], bool] | None = None,
               on_progress: Callable[[chess.pgn.Game], None] | None = None,
-              max_wall_seconds: float | None = None) -> tuple[chess.pgn.Game, dict]:
+              max_wall_seconds: float | None = None,
+              experimental_policy: ExperimentalPolicyAdapter | None = None) -> tuple[chess.pgn.Game, dict]:
+    if experimental_policy is not None:
+        if clock is not None or use_books is not False or historical_openings:
+            raise ValueError("Learned policy control is development-only: no clocks or books")
+        if set(experimental_policy.bindings) != {white.slug, black.slug}:
+            raise ValueError("Policy bindings disagree with current players")
     engines = []
     failed_engine_ids: set[int] = set()
     try:
@@ -202,10 +209,20 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             "TimeControl": f"{clock[0]}+{clock[1]}" if clock else "-",
             "BookMode": "historical-v09-exploratory" if historical_openings else "historical" if use_books else "disabled" if use_books is not None else "legacy",
         })
+        if experimental_policy is not None:
+            game.headers["Event"] = "ChessSim - Experimental Learned Policy vs Rodent IV"
+            game.headers["PolicyMechanism"] = "EXTERNAL_MOVE_OVERRIDE_NOT_ENGINE_TRAINING"
+            game.headers["PolicyModelSHA256"] = experimental_policy.model["model_sha256"]
+            game.headers["PolicyOverridePercent"] = str(experimental_policy.override_percent)
+            game.headers["PolicyMinPly"] = str(experimental_policy.min_ply)
+            game.headers["PolicyWhiteEra"] = experimental_policy.bindings[white.slug]
+            game.headers["PolicyBlackEra"] = experimental_policy.bindings[black.slug]
+            game.headers["PolicyOfficial"] = "false"
         if historical_openings:
             game.headers["OpeningSeed"] = str(opening_seed)
             game.headers["OpeningMinCount"] = str(opening_min_count)
         opening_trace = []
+        policy_trace: list[dict] = []
         node = game
         limit = (chess.engine.Limit(depth=depth) if depth is not None
                  else chess.engine.Limit(time=movetime) if movetime is not None
@@ -309,6 +326,14 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                     if original_timeout is not None and id(actor) not in failed_engine_ids:
                         actor.timeout = original_timeout
                 actual_move = result.move
+            policy_event = None
+            if experimental_policy is not None:
+                current_slug = white.slug if board.turn == chess.WHITE else black.slug
+                applied = experimental_policy.select(
+                    board, slug=current_slug, engine_move=actual_move,
+                    round_number=round_number, ply=board.ply() + 1)
+                actual_move = applied.move
+                policy_event = applied.audit
             spent = time.monotonic() - start
             elapsed[idx] += spent
             if max_wall_seconds is not None and time.monotonic() - started >= max_wall_seconds:
@@ -331,6 +356,8 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                             "result": res, "status": "COMPLETED", "termination": "TimeForfeit",
                             "plies": board.ply(), "elapsed_seconds": elapsed, "clock_left": clocks,
                             "opening_moves": opening_moves, "opening_trace": opening_trace,
+                             "policy_trace": policy_trace,
+                             "policy_counts": trace_summary(policy_trace),
                             "opening_seed": opening_seed if historical_openings else None,
                             "opening_mode": game.headers["BookMode"],
                             "color_order": f"{white.slug}|{black.slug}"}
@@ -342,6 +369,15 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             prefix = f"{board.fullmove_number}." if board.turn else f"{board.fullmove_number}..."
             print(f"{prefix} {san}", flush=True)
             node = node.add_variation(actual_move)
+            if policy_event is not None:
+                policy_trace.append(policy_event)
+                if policy_event["outcome"] == "EXTERNAL_POLICY_OVERRIDE":
+                    node.comment = (
+                        "Experimental external policy override; Rodent UCI bestmove="
+                        + policy_event["rodent_move"] + "; policy="
+                        + policy_event["played_move"]
+                        + "; Rodent personality is unchanged."
+                    )
             if opening_source is not None:
                 node.comment = 'ChessSimulation64 historical opening policy (exploratory)'
                 opening_moves['white' if board.turn == chess.WHITE else 'black'] += 1
@@ -378,6 +414,8 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                 "result": res, "status": status, "termination": term, "plies": board.ply(),
                 "elapsed_seconds": elapsed, "clock_left": clocks, "opening_moves": opening_moves,
                 "opening_trace": opening_trace,
+                             "policy_trace": policy_trace,
+                             "policy_counts": trace_summary(policy_trace),
                 "opening_seed": opening_seed if historical_openings else None,
                 "opening_mode": game.headers["BookMode"],
                 "color_order": f"{white.slug}|{black.slug}"}
@@ -410,7 +448,8 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
               historical_openings: dict | None = None, opening_seed: int = 2029,
               opening_min_count: int = 1,
               stop_check: Callable[[], bool] | None = None,
-              max_wall_seconds: float | None = None) -> Path:
+              max_wall_seconds: float | None = None,
+              experimental_policy: ExperimentalPolicyAdapter | None = None) -> Path:
     root = root.expanduser().resolve()
     exe, profile_paths = validate(root, white, black)
     if (movetime is not None and (depth is not None or clock is not None)) or (
@@ -434,6 +473,11 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
         raise ValueError('Aberturas condicionadas não integram protocolo oficial; execute como desenvolvimento')
     if historical_openings and not all(k in (white.slug, black.slug) for k in historical_openings):
         raise ValueError('Opening book is not bound to a participating player')
+    if experimental_policy is not None:
+        if clock is not None or use_books is not False or historical_openings:
+            raise ValueError("Experimental policy requires books disabled and a development-only duel")
+        if set(experimental_policy.bindings) != {white.slug, black.slug}:
+            raise ValueError("Experimental policy must be bound to the two duel players")
 
     attempt = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
     folder = output_dir.expanduser().resolve() / f"{white.slug}-vs-{black.slug}" / attempt
@@ -450,6 +494,9 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
                "book_hashes": book_hashes,
                "historical_opening_policy": ("EXPLORATORY_POSITION_CONDITIONED" if historical_openings else "DISABLED"),
                "opening_seed": opening_seed if historical_openings else None,
+               "experimental_learned_policy": (
+                    experimental_policy.manifest() if experimental_policy is not None
+                    else {"status": "DISABLED"}),
                "variation_control": {
                    "historical_opening_seed_effective": bool(historical_openings),
                    "internal_uci_book": use_books,
@@ -477,7 +524,8 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
                                    historical_openings=historical_openings,
                                    opening_seed=opening_seed, opening_min_count=opening_min_count,
                                    stop_check=stop_check, on_progress=checkpoint,
-                                   max_wall_seconds=max_wall_seconds)
+                                   max_wall_seconds=max_wall_seconds,
+                                   experimental_policy=experimental_policy)
             digest, plies = mainline_identity(game)
             if plies != meta["plies"]:
                 raise RuntimeError("PGN/mainline ply count disagrees with engine record")
