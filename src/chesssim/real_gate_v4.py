@@ -334,8 +334,10 @@ def load_gate(path: Path, model: dict, *,
         raise ValueError("Gate roster differs from fitted V3")
     for slug, p in gate["players"].items():
         threshold = p.get("threshold")
-        if threshold is not None and (threshold not in THRESHOLDS or
-                                      p.get("decision_rule") !=
+        if threshold is not None and (
+                type(threshold) not in (float, int) or
+                threshold not in THRESHOLDS or
+                p.get("decision_rule") !=
                                       "ACCEPT_AUDIT_LOWER_BOUND_POSITIVE" or
                                       p["audit_game_cluster_statistics"]["bootstrap_95_ci"][0] <= 0):
             raise ValueError("Gate has an unjustified active threshold: " + slug)
@@ -355,6 +357,8 @@ def gate_move(gate: dict, v3: dict, board: chess.Board, slug: str,
     """Pure inference, no mutations and no online adjustment."""
     if slug not in gate["players"]:
         raise ValueError("Gate does not cover current player")
+    if era != "overall" or gate["calibrated_policy_era"] != "overall":
+        raise ValueError("V4 threshold was calibrated only for the V3 overall policy")
     move, lift = _style_lift_and_proposal(v3, board, slug, era, rodent_uci)
     threshold = gate["players"][slug]["threshold"]
     played = _choose(rodent_uci, move, lift, threshold)
