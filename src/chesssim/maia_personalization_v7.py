@@ -65,10 +65,11 @@ def _arm(slug: str, game_id: str) -> int:
                           "big") % SPLIT_MOD
 
 
-def _features(board: chess.Board, move: chess.Move) -> tuple[str, ...]:
+def _features(board: chess.Board, move: chess.Move, *,
+              assumed_legal: bool = False) -> tuple[str, ...]:
     """Small chess-semantic style dictionary; no outcome or future labels."""
     piece = board.piece_at(move.from_square)
-    if piece is None or move not in board.legal_moves:
+    if piece is None or (not assumed_legal and move not in board.legal_moves):
         raise ValueError("Illegal game or candidate move")
     symbol = piece.symbol().upper()
     target_file = chess.square_file(move.to_square)
@@ -157,9 +158,9 @@ def train_full_corpus(cohorts: Path, v3_path: Path, output: Path) -> dict:
         legal = list(board.legal_moves)
         per_opportunity = 1.0 / len(legal)
         for move in legal:
-            for feature in _features(board, move):
+            for feature in _features(board, move, assumed_legal=True):
                 opportunities[slug][feature] += per_opportunity
-        for feature in _features(board, actual):
+        for feature in _features(board, actual, assumed_legal=True):
             choices[slug][feature] += 1
         counters[slug]["fitted_decisions"] += 1
         games[slug].add(game)
@@ -236,7 +237,8 @@ def _load_adapter(path: Path, v3: dict) -> dict:
 
 
 def _style_score(board: chess.Board, move: chess.Move, weights: dict) -> float:
-    return sum(weights.get(feature, 0) for feature in _features(board, move))
+    return sum(weights.get(feature, 0) for feature in _features(
+        board, move, assumed_legal=True))
 
 
 def _rerank(board: chess.Board, candidates: list[str], weights: dict,
