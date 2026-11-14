@@ -277,6 +277,8 @@ def main(argv: list[str] | None = None) -> int:
     # Research-only opt-in; never changes the engine's internal personality.
     play.add_argument("--policy-model", type=Path,
                       help="Modelo JSON treinado pela real_policy_experiment (experimental)")
+    play.add_argument("--policy-gate", type=Path,
+                      help="Gate V4 real calibrado no mesmo binário/perfil Rodent; opt-in e fail-closed")
     play.add_argument("--policy-white-era",
                       choices=("overall", "early_observed", "middle_observed", "late_observed"),
                       help="Período do jogador inicialmente de brancas; obrigatório com --policy-model")
@@ -1372,7 +1374,8 @@ def main(argv: list[str] | None = None) -> int:
             policy_adapter = None
             supplied_policy_options = any(option is not None for option in (
                 args.policy_white_era, args.policy_black_era,
-                args.policy_override_percent, args.policy_seed, args.policy_min_ply))
+                args.policy_override_percent, args.policy_seed, args.policy_min_ply,
+                args.policy_gate))
             if args.policy_model is None and supplied_policy_options:
                 raise ValueError("Opções --policy-* exigem --policy-model")
             if args.policy_model is not None:
@@ -1388,7 +1391,8 @@ def main(argv: list[str] | None = None) -> int:
                               b.slug: args.policy_black_era},
                     override_percent=args.policy_override_percent,
                     seed=2026 if args.policy_seed is None else args.policy_seed,
-                    min_ply=17 if args.policy_min_ply is None else args.policy_min_ply)
+                    min_ply=17 if args.policy_min_ply is None else args.policy_min_ply,
+                    gate_file=args.policy_gate)
             from .peak_windows import CLOCK_PRESETS
             clock = (600, 2) if args.preset == "official" else CLOCK_PRESETS.get(args.preset)
             depth = None if args.preset or args.movetime is not None else (args.depth if args.depth is not None else 6)

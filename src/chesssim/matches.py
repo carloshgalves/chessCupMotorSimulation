@@ -186,6 +186,10 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             raise ValueError("Learned policy control is development-only: no clocks or books")
         if set(experimental_policy.bindings) != {white.slug, black.slug}:
             raise ValueError("Policy bindings disagree with current players")
+        if experimental_policy.gate is not None and (
+                depth != experimental_policy.gate["engine_depth"] or
+                movetime is not None):
+            raise ValueError("Real calibrated gate requires the same UCI search depth and no movetime")
     engines = []
     failed_engine_ids: set[int] = set()
     try:
@@ -227,13 +231,25 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             game.headers["PolicyWhiteEra"] = experimental_policy.bindings[white.slug]
             game.headers["PolicyBlackEra"] = experimental_policy.bindings[black.slug]
             game.headers["PolicyOfficial"] = "false"
+            if experimental_policy.gate is not None:
+                game.headers["SearchLimit"] = (
+                    f"depth={depth};time={experimental_policy.gate['engine_seconds_per_position']}s")
+                game.headers["PolicyGateSHA256"] = experimental_policy.gate["gate_sha256"]
+                game.headers["PolicyGateMechanism"] = "GAME_DISJOINT_CALIBRATED_EXTERNAL_OVERRIDE"
         if historical_openings:
             game.headers["OpeningSeed"] = str(opening_seed)
             game.headers["OpeningMinCount"] = str(opening_min_count)
         opening_trace = []
         policy_trace: list[dict] = []
         node = game
-        limit = (chess.engine.Limit(depth=depth) if depth is not None
+        # Calibration calls Rodent with BOTH depth and a wall-clock search
+        # budget. A gate-backed game must use the same UCI Limit tuple,
+        # otherwise its measured style-lift is based on a different baseline.
+        limit = (chess.engine.Limit(
+                     depth=depth,
+                     time=experimental_policy.gate["engine_seconds_per_position"])
+                 if experimental_policy is not None and experimental_policy.gate is not None
+                 else chess.engine.Limit(depth=depth) if depth is not None
                  else chess.engine.Limit(time=movetime) if movetime is not None
                  else None)
         clocks = [float(clock[0]), float(clock[0])] if clock else None
@@ -487,6 +503,17 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
             raise ValueError("Experimental policy requires books disabled and a development-only duel")
         if set(experimental_policy.bindings) != {white.slug, black.slug}:
             raise ValueError("Experimental policy must be bound to the two duel players")
+        if experimental_policy.gate is not None:
+            if depth != experimental_policy.gate["engine_depth"] or movetime is not None:
+                raise ValueError("Calibrated gate requires its exact UCI depth and no movetime")
+            # Bound to the exact UCI build/personality files used during
+            # real-data calibration. Fail BEFORE creating any result files.
+            calibrated = experimental_policy.gate
+            if calibrated["engine_binary_sha256"] != file_hash(exe):
+                raise ValueError("Real Rodent binary differs from calibrated gate")
+            for slug, profile in profile_paths.items():
+                if calibrated["engine_profile_sha256"].get(slug) != file_hash(profile):
+                    raise ValueError("Real Rodent profile differs from calibrated gate: " + slug)
 
     attempt = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
     folder = output_dir.expanduser().resolve() / f"{white.slug}-vs-{black.slug}" / attempt
