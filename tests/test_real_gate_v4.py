@@ -117,6 +117,9 @@ def test_fit_gate_from_unused_train_games_audits_before_activating(
         assert row["audit_games"] >= 8
         assert row["audit_positions"] >= row["audit_games"]
         assert row["threshold"] is None or row["threshold"] in THRESHOLDS
+        if row["calibration_games"] < 40:
+            assert row["threshold"] is None
+            assert row["decision_rule"] == "DENY_INSUFFICIENT_CALIBRATION_GAMES"
         if row["threshold"] is not None:
             assert row["decision_rule"] == "ACCEPT_AUDIT_LOWER_BOUND_POSITIVE"
             assert row["audit_game_cluster_statistics"]["bootstrap_95_ci"][0] > 0
