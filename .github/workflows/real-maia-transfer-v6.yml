@@ -44,19 +44,25 @@ jobs:
           ref: 1e13597c42d4858b7cfd7cfdae01e297263364b2
           path: maia3-source
           persist-credentials: false
-      - name: Install original Maia3 and pin released 5M checkpoint SHA
+      - name: Install Maia3 and verify UNCHANGED release bytes from frozen 5M checkpoint revision
         run: |
           test "$(git -C maia3-source rev-parse HEAD)" = 1e13597c42d4858b7cfd7cfdae01e297263364b2
           python -m pip install -e ./maia3-source
           python - <<'PY'
-          from huggingface_hub import HfApi
-          import os, re
-          revision = HfApi().model_info("UofTCSSLab/Maia3-5M").sha
-          if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision):
-              raise RuntimeError("Unable to pin actual Maia3 model revision")
+          from huggingface_hub import hf_hub_download
+          from hashlib import sha256
+          import os
+          from pathlib import Path
+          revision = "b6559de2398d7140b985f28fd2c19fb5e47ddabe"
+          expected = "ba14208b2992d85502f5fb501934abf6aaaeb355e9f3fdf90e326911f562524f"
+          model = Path(hf_hub_download(
+              "UofTCSSLab/Maia3-5M", filename="maia3-5m.pt", revision=revision))
+          actual = sha256(model.read_bytes()).hexdigest()
+          if actual != expected:
+              raise ValueError("Original pretrained Maia3 5M checkpoint hash changed")
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as out:
               out.write("MAIA_HF_SHA=" + revision + "\n")
-          print("Maia3 model revision pinned", revision)
+          print("Verified immutable Maia3 5M checkout and checkpoint", revision, actual)
           PY
       - name: Rebuild actual historical OTB PGNs with year-disjoint arms
         run: |
