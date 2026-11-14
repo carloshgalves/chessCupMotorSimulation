@@ -134,3 +134,50 @@ def test_signature_and_pinned_checkpoints_reject_tampering(tmp_path):
     assert _verify_checkpoint(ckpt, known_digest=true_sha) == true_sha
     with pytest.raises(ValueError, match="changed"):
         _verify_checkpoint(ckpt, known_digest="0"*64)
+
+
+def test_normalized_training_year_contract_and_game_role_embargo(monkeypatch, tmp_path):
+    # The real parser returns a *normalized* object WITHOUT a top-level 'year'.
+    from chesssim import maia_personalization_v7 as v7
+    chosen = {}
+    for i in range(1000):
+        game = f"{i:064x}"
+        bucket = v7._arm("fischer", game)
+        if bucket not in chosen:
+            chosen[bucket] = game
+        if len(chosen) == 10:
+            break
+    assert {0, 8, 9} <= set(chosen)
+    def row(bucket, first, second):
+        board = chess.Board()
+        board.push_uci(first)
+        board.push_uci(second)
+        return {
+            "player": "fischer",
+            "ply": 21,
+            "game_sha256": chosen[bucket],
+            "policy_input": {"fen": board.fen(), "year": 1972},
+            "policy_target": {"move_uci": "g1f3"},
+        }
+    records = [row(0, "e2e4", "e7e5"), row(8, "d2d4", "d7d5"),
+               row(9, "c2c4", "e7e5")]
+    monkeypatch.setattr(v7, "_read_json", lambda *_: {})
+    monkeypatch.setattr(v7, "_validated_training_rows",
+                        lambda *_: iter(records))
+    tune, audit = v7._calibration_samples(
+        tmp_path, {}, {"profiles": {"fischer": {}}}, 2, 2038)
+    assert len(tune["fischer"]) == 1
+    assert len(audit["fischer"]) == 1
+    assert tune["fischer"][0]["year"] == 1972
+    assert audit["fischer"][0]["year"] == 1972
+    assert tune["fischer"][0]["game_sha256"] != audit["fischer"][0]["game_sha256"]
+
+
+def test_79m_original_checkpoint_revision_is_strictly_pinned():
+    from chesssim.maia_personalization_v7 import (
+        MAIA79_CHECKPOINT_SHA256, MAIA79_HF_REVISION,
+    )
+    assert MAIA79_HF_REVISION == "a107d6ceb7b298cb04ae1da4edffe2939858b894"
+    assert MAIA79_CHECKPOINT_SHA256 == (
+        "3fc6181d5db789b45a15305732148757ae74efa3e0028e81ba335b462dac45c2"
+    )
