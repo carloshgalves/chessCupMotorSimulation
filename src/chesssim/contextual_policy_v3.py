@@ -68,13 +68,14 @@ def _board_context(board: chess.Board) -> dict:
 
 
 def contextual_features(board: chess.Board, move: chess.Move,
-                        *, context: dict | None = None) -> tuple[str, ...]:
+                        *, context: dict | None = None,
+                        assumed_legal: bool = False) -> tuple[str, ...]:
     """Position-move interactions available strictly at decision time.
 
     The candidate post-move position is legal to compute: it is a hypothetical
     consequence of each possible action, not future moves or game outcomes.
     """
-    if move not in board.legal_moves:
+    if not assumed_legal and move not in board.legal_moves:
         raise ValueError("Illegal candidate move")
     ctx = context or _board_context(board)
     original = _features(board, move, assumed_legal=True)
@@ -137,7 +138,7 @@ def _encoded(row: dict):
         raise ValueError("Invalid real training UCI target") from exc
     if target not in legal:
         raise ValueError("Historic move is not legal in the supplied FEN")
-    features = [contextual_features(board, move, context=ctx) for move in legal]
+    features = [contextual_features(board, move, context=ctx, assumed_legal=True) for move in legal]
     return features, legal.index(target)
 
 
@@ -260,7 +261,7 @@ def predict_contextual(model: dict, board: chess.Board, slug: str, band: str,
     best_move = None
     for move in moves:
         score = sum(weights.get(key, 0.0) for key in
-                    contextual_features(board, move, context=ctx))
+                    contextual_features(board, move, context=ctx, assumed_legal=True))
         if score > best_score:
             best_score, best_move = score, move
     return best_move.uci()
@@ -360,8 +361,6 @@ def evaluate_contextual(cohorts: Path, model_path: Path, legacy_path: Path,
             rodent_root, flattened, slugs,
             depth=rodent_depth, time_per_position=rodent_seconds)
     summaries = {}
-    observed = defaultdict(list)
-    all_counts = Counter()
     offset = 0
     for slug in slugs:
         rows = samples[slug]
@@ -383,10 +382,6 @@ def evaluate_contextual(cohorts: Path, model_path: Path, legacy_path: Path,
             for engine_name, choices in rodent.items():
                 predictions["rodent_" + engine_name] = choices[offset:offset + len(rows)]
         offset += len(rows)
-        for name, choices in predictions.items():
-            match = [int(p == row["move"]) for row, p in zip(rows, choices)]
-            observed[name].extend(match if name.startswith("rodent_") else [])
-            all_counts[name] += sum(match)
         from .real_policy_experiment import _metric
         scored = {name: _metric(rows, moves) for name, moves in predictions.items()}
         contrasts = {}
