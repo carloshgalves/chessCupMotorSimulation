@@ -2,20 +2,19 @@
 from __future__ import annotations
 
 import copy
-from hashlib import sha256
 import json
 
 import chess
 import chess.pgn
 import pytest
 
-from chesssim.contextual_policy_v3 import fit_contextual, _read_model, SCHEMA as V3_SCHEMA
+from chesssim.contextual_policy_v3 import fit_contextual
 from chesssim.real_gate_v4 import (
     GATE_SCHEMA, GATE_STATUS, _calibration_samples, _choose,
     _split_games, _style_lift_and_proposal, evaluate_gate, fit_gate,
-    gate_move, load_gate, THRESHOLDS,
+    load_gate, THRESHOLDS,
 )
-from chesssim.real_policy_experiment import _bottom_k, _digest, _read_json, _validated_training_rows
+from chesssim.real_policy_experiment import _bottom_k, _read_json, _validated_training_rows
 from chesssim.real_training_cohorts import build_real_training_cohorts
 from chesssim.experimental_policy_adapter import ExperimentalPolicyAdapter
 from chesssim.catalog import find_player
@@ -26,7 +25,6 @@ def synthetic_harness(tmp_path, monkeypatch):
     """Fake PGNs make ONLY assertions about program behavior, not science."""
     root = tmp_path / "historical-fixtures-not-evidence"
     root.mkdir()
-    exporter = chess.pgn.StringExporter(headers=True, variations=False, comments=False)
     for slug, filename, player in [
         ("fischer", "Fischer", "Robert Fischer"),
         ("tal", "Tal", "Mikhail Tal"),
@@ -49,7 +47,8 @@ def synthetic_harness(tmp_path, monkeypatch):
                     next_move = moves[(year + marker * 31 + ply * 13) % len(moves)]
                     node = node.add_variation(next_move)
                     board.push(next_move)
-                games.append(game.accept(exporter))
+                games.append(game.accept(chess.pgn.StringExporter(
+                    headers=True, variations=False, comments=False)))
         (root / f"{filename}.pgn").write_text("\n\n".join(games) + "\n", encoding="utf-8")
     cohorts = tmp_path / "cohorts"
     build_real_training_cohorts(
