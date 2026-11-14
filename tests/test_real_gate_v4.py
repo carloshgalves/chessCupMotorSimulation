@@ -136,19 +136,30 @@ def test_gate_v3_play_adapter_fail_closed_and_shadow(
     gate_file = tmp_path / "gate.json"
     fit_gate(cohorts, model_path, tmp_path / "unit-only", gate_file,
              per_player=40, per_game=2)
+    with pytest.raises(ValueError, match="cannot act before"):
+        ExperimentalPolicyAdapter.load(
+            model_path, bindings={"fischer": "overall", "tal": "overall"},
+            override_percent=100, min_ply=1, gate_file=gate_file)
     adapter = ExperimentalPolicyAdapter.load(
         model_path, bindings={"fischer": "overall", "tal": "overall"},
-        override_percent=100, min_ply=1, gate_file=gate_file)
+        override_percent=100, min_ply=17, gate_file=gate_file)
     assert adapter.manifest()["gate_sha256"]
     assert adapter.manifest()["mechanism"] == "GAME_DISJOINT_CALIBRATED_RODENT_V3_GATE"
     with pytest.raises(ValueError, match="overall"):
         ExperimentalPolicyAdapter.load(
             model_path, bindings={"fischer": "early_observed", "tal": "overall"},
-            override_percent=100, min_ply=1, gate_file=gate_file)
+            override_percent=100, min_ply=17, gate_file=gate_file)
     board = chess.Board()
+    # Use a valid midgame from the real training domain; the initial board
+    # must not be an eligible v4 intervention.
+    for _ in range(16):
+        move = sorted(board.legal_moves, key=lambda m: m.uci())[0]
+        board.push(move)
+    fen_before = board.fen()
+    engine_move = sorted(board.legal_moves, key=lambda m: m.uci())[0]
     result = adapter.select(board, slug="fischer",
-                            engine_move=chess.Move.from_uci("g1f3"),
-                            round_number=1, ply=1)
+                            engine_move=engine_move,
+                            round_number=1, ply=17)
     assert result.move in board.legal_moves
     assert result.audit["gate_sha256"]
     assert result.audit["gate_threshold"] == adapter.gate["players"]["fischer"]["threshold"]
@@ -156,14 +167,14 @@ def test_gate_v3_play_adapter_fail_closed_and_shadow(
         "GATE_RETAINED_RODENT", "EXTERNAL_POLICY_OVERRIDE",
         "POLICY_RODENT_AGREEMENT",
     }
-    assert board.fen() == chess.STARTING_FEN
+    assert board.fen() == fen_before
     shadow = ExperimentalPolicyAdapter.load(
         model_path, bindings={"fischer": "overall", "tal": "overall"},
-        override_percent=0, min_ply=1, gate_file=gate_file)
+        override_percent=0, min_ply=17, gate_file=gate_file)
     observed = shadow.select(board, slug="fischer",
-                             engine_move=chess.Move.from_uci("g1f3"),
-                             round_number=1, ply=1)
-    assert observed.move.uci() == "g1f3"
+                             engine_move=engine_move,
+                             round_number=1, ply=17)
+    assert observed.move == engine_move
     assert observed.audit["outcome"] == "SHADOW_ONLY"
 
     # A calibrated duel must use the same two-dimensional python-chess
@@ -209,7 +220,7 @@ def test_exact_rodent_binary_and_personality_guard(synthetic_harness, tmp_path,
              per_player=40, per_game=2)
     adapter = ExperimentalPolicyAdapter.load(
         model_path, bindings={"fischer": "overall", "tal": "overall"},
-        override_percent=100, min_ply=1, gate_file=gate_file)
+        override_percent=100, min_ply=17, gate_file=gate_file)
     a, b = find_player("fischer"), find_player("tal")
     exe = tmp_path / "rodent-iv-plain.exe"
     exe.write_bytes(b"fake binary unit only")
