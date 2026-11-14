@@ -152,9 +152,16 @@ def test_gate_v3_play_adapter_fail_closed_and_shadow(
     board = chess.Board()
     # Use a valid midgame from the real training domain; the initial board
     # must not be an eligible v4 intervention.
-    for _ in range(16):
-        move = sorted(board.legal_moves, key=lambda m: m.uci())[0]
-        board.push(move)
+    # Non-repeating, legal opening: Italian Game with both kings castled.
+    for uci in (
+        "e2e4", "e7e5", "g1f3", "b8c6",
+        "f1c4", "f8c5", "d2d3", "g8f6",
+        "e1g1", "e8g8", "c2c3", "d7d6",
+        "f1e1", "a7a6", "c4b3", "c5a7",
+    ):
+        board.push_uci(uci)
+    assert board.ply() == 16
+    assert not board.is_game_over(claim_draw=True)
     fen_before = board.fen()
     engine_move = sorted(board.legal_moves, key=lambda m: m.uci())[0]
     result = adapter.select(board, slug="fischer",
