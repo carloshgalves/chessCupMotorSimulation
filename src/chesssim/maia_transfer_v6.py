@@ -11,8 +11,10 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from hashlib import sha256
 import argparse
+import importlib.util
 import json
 import os
+import subprocess
 from pathlib import Path
 import re
 import sys
@@ -39,6 +41,8 @@ SCHEMA = "chesssim-real-maia3-5m-historical-transfer-v6"
 MAIA_CODE_COMMIT = "1e13597c42d4858b7cfd7cfdae01e297263364b2"
 MAIA_REPO = "UofTCSSLab/Maia3-5M"
 MODEL_FILE = "maia3-5m.pt"
+MAIA_HF_REVISION = "b6559de2398d7140b985f28fd2c19fb5e47ddabe"
+MAIA_CHECKPOINT_SHA256 = "ba14208b2992d85502f5fb501934abf6aaaeb355e9f3fdf90e326911f562524f"
 # Prespecified: alternatives are Lichess *scenarios*, NOT inferred OTB FIDE Elos.
 ELOS = (1800, 2400)
 MAX_CP_LOSS = (0, 35, 80, 150)
@@ -236,6 +240,23 @@ def _calibrate(rows: list[dict], seed: int, slug: str) -> dict:
     }
 
 
+def _verify_maia_source_code() -> str:
+    """Refuse Maia binaries/packages whose actual checkout is not our pin."""
+    spec = importlib.util.find_spec("maia3")
+    if spec is None or spec.origin is None:
+        raise ValueError("Pin the original Maia-3 git checkout; PyPI alone is insufficient")
+    root = Path(spec.origin).resolve(strict=True).parent.parent
+    try:
+        actual = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=10, check=True).stdout.strip()
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ValueError("Cannot attest installed Maia-3 Git source checkout") from exc
+    if actual != MAIA_CODE_COMMIT:
+        raise ValueError("Installed Maia-3 source differs from pinned scientific commit")
+    return actual
+
+
 def _real_predictions(samples: dict, boards: dict, *, rodent_root: Path,
                       checkpoint: Path, scenario_elos: tuple[int, ...],
                       depth: int) -> tuple[dict, dict]:
@@ -247,6 +268,10 @@ def _real_predictions(samples: dict, boards: dict, *, rodent_root: Path,
     checkpoint = checkpoint.resolve(strict=True)
     if not checkpoint.is_file():
         raise ValueError("Missing Maia-3 checkpoint")
+    actual_model_hash = sha256(checkpoint.read_bytes()).hexdigest()
+    if actual_model_hash != MAIA_CHECKPOINT_SHA256:
+        raise ValueError("Maia-3 5M checkpoint bytes differ from pinned baseline")
+    installed_commit = _verify_maia_source_code()
     cmd = [
         sys.executable, "-m", "maia3.uci",
         "--model", "maia3-5m", "--checkpoint-path", str(checkpoint),
@@ -313,8 +338,8 @@ def _real_predictions(samples: dict, boards: dict, *, rodent_root: Path,
             maia_engine.close()
     return all_records, {"rodent_binary": next(iter(binaries.values())),
                          "profiles": profiles,
-                         "maia_checkpoint_sha256": sha256(checkpoint.read_bytes()).hexdigest(),
-                         "maia_code_commit": MAIA_CODE_COMMIT,
+                         "maia_checkpoint_sha256": actual_model_hash,
+                         "maia_code_commit": installed_commit,
                          "maia_model_repo": MAIA_REPO,
                          "history": "RECONSTRUCTED_FROM_REAL_PGN_MOVE_STACK",
                          "maia_inference": "CPU_5M_ZERO_TEMPERATURE_NO_SEARCH",
@@ -326,8 +351,9 @@ def run_experiment(cohorts: Path, v3_model: Path, rodent_root: Path,
                    archive_dir: Path | None = None,
                    train_per_player: int = 48, val_per_player: int = 24,
                    seed: int = 2036, rodent_depth: int = 3) -> dict:
-    if not re.fullmatch(r"[0-9a-f]{40}", maia_revision):
-        raise ValueError("Maia checkpoint must be pinned to a 40-character HF commit SHA")
+    if (not re.fullmatch(r"[0-9a-f]{40}", maia_revision) or
+            maia_revision != MAIA_HF_REVISION):
+        raise ValueError("Maia checkpoint must be pinned to the verified 5M release revision")
     if (not 24 <= train_per_player <= 300 or
             not 16 <= val_per_player <= 100 or
             not 2 <= rodent_depth <= 5):
