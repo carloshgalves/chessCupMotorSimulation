@@ -12,7 +12,6 @@ from collections import Counter, defaultdict
 from hashlib import sha256
 import argparse
 import json
-import math
 import os
 from pathlib import Path
 import re
@@ -225,8 +224,12 @@ def _real_predictions(samples: dict, boards: dict, *, rodent_root: Path,
                       depth: int) -> tuple[dict, dict]:
     """Use Maia-3 5M and Rodent IV real executables. No emulated engine."""
     from .matches import _open_engine, file_hash, validate
-    if not checkpoint.is_file() or checkpoint.is_symlink():
-        raise ValueError("Missing or symbolic Maia-3 checkpoint")
+    # huggingface_hub snapshot paths are normally symlinks into verified
+    # content-addressed blob storage; resolve them instead of rejecting
+    # official cache layout.
+    checkpoint = checkpoint.resolve(strict=True)
+    if not checkpoint.is_file():
+        raise ValueError("Missing Maia-3 checkpoint")
     cmd = [
         sys.executable, "-m", "maia3.uci",
         "--model", "maia3-5m", "--checkpoint-path", str(checkpoint),
