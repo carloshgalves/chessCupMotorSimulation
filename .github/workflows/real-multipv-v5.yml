@@ -1,0 +1,138 @@
+name: Scientific V5 REAL historic PGN and Rodent IV MultiPV
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/engine_pv_policy_v5.py'
+      - 'tests/test_engine_pv_policy_v5.py'
+      - 'docs/REAL_MULTIPV_POLICY_V5.md'
+      - '.github/workflows/real-multipv-v5.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real-pgn-multipv-v5-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-multipv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install
+        run: python -m pip install -e '.[dev]'
+      - name: Unit and adversarial regression fixtures (not scientific data)
+        run: python -m pytest tests/test_engine_pv_policy_v5.py tests/test_real_gate_v4.py -q -ra
+      - name: Fetch only pinned public REAL historical PGNs and separate whole years
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov \
+            --birthdates-json docs/REAL_BIRTHDATES_4.json \
+            --split-policy career-stratified --min-ply 17 \
+            --out "$RUNNER_TEMP/real-cohorts"
+      - name: Train V3 control on REAL training-arm human moves
+        run: |
+          python -m chesssim.contextual_policy_v3 train \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --max-per-player 1600 --max-per-game 3 --seed 2026 \
+            --out "$RUNNER_TEMP/v3-control.json"
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Compile ACTUAL pinned Rodent IV UCI engine with named personalities
+        run: |
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac
+          make -C rodent-source/sources build
+          mkdir -p "$RUNNER_TEMP/rodent"
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          test -s "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          test -s "$RUNNER_TEMP/rodent/personalities/basic.ini"
+      - name: Fit V5 from actual Rodent MultiPV scores/PVs and REAL train PGN targets
+        run: |
+          python -m chesssim.engine_pv_policy_v5 train \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --v3-model "$RUNNER_TEMP/v3-control.json" \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --per-player 128 --per-game 2 --seed 2031 \
+            --multipv 4 --depth 3 \
+            --out "$RUNNER_TEMP/real-v5-model.json"
+      - name: Evaluate only held-year VALIDATION PGNs using real UCI MultiPV
+        run: |
+          python -m chesssim.engine_pv_policy_v5 evaluate \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --v3-model "$RUNNER_TEMP/v3-control.json" \
+            --model "$RUNNER_TEMP/real-v5-model.json" \
+            --rodent-root "$RUNNER_TEMP/rodent" --fetch \
+            --per-player 48 --per-game 2 --seed 2032 \
+            --repetitions 1200 \
+            --out "$RUNNER_TEMP/real-v5-evaluation.json"
+      - name: Verify source provenance, target-blind candidate coverage and statistics
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"])
+          model = json.loads((root / "real-v5-model.json").read_text())
+          v3 = json.loads((root / "v3-control.json").read_text())
+          ev = json.loads((root / "real-v5-evaluation.json").read_text())
+          assert model["schema"] == "chesssim-real-uci-multipv-supervised-ranker-v5"
+          assert model["status"] == "REAL_PGN_MULTIPV_TRAINED_NOT_IDENTITY_OR_STRENGTH_VALIDATED"
+          assert model["v3_model_sha256"] == v3["model_sha256"]
+          assert model["total_real_train_positions"] == 512
+          assert model["covered_real_train_positions"] >= 48
+          assert model["candidate_policy"] == "TARGET_BLIND_TOP_K_FROM_NAMED_RODENT_MULTIPV"
+          assert model["engine_analysis"]["engine_sha256"]
+          assert model["engine_analysis"]["principal_variations"] >= 1000
+          assert set(model["players"]) == {"fischer","tal","karpov","kasparov"}
+          assert all(p["historical_move_in_multipv"] >= 12 for p in model["players"].values())
+          assert ev["actual_rodent_uci"] is True
+          assert ev["model_sha256"] == model["model_sha256"]
+          assert ev["held_year_arm"] == "validation"
+          assert ev["final_holdout_opened"] is False
+          assert ev["total_real_validation_positions"] == 192
+          assert ev["all_train_canonical_positions_embargoed"] > 0
+          assert ev["engine_binary_sha256"] == model["engine_analysis"]["engine_sha256"]
+          assert ev["engine_profile_sha256"] == model["engine_analysis"]["profile_sha256"]
+          assert set(ev["aggregate"]) == {"multipv_engine_top1","trained_named","trained_generic","trained_fixed_swapped","v3_named","v3_generic"}
+          assert set(ev["by_player"]) == {"fischer","tal","karpov","kasparov"}
+          for slug, data in ev["by_player"].items():
+              assert data["evaluation_positions"] == 48
+              assert data["distinct_historical_games"] >= 10
+              assert data["identity_validated"] is False
+              for metric in data["metrics"].values():
+                  assert metric["positions"] == 48
+              for stats in data["paired_by_real_game"].values():
+                  assert stats["games"] == data["distinct_historical_games"]
+                  assert stats["bootstrap_95_ci"][0] <= stats["bootstrap_95_ci"][1]
+          assert all(row["positions"] == 192 for row in ev["aggregate"].values())
+          assert ev["promotion"].startswith("DENIED")
+          print("REAL_HISTORY_MULTIPV_RANKER_V5_GATE_PASSED")
+          print("real top4 coverage", ev["historical_move_coverage"])
+          print("ranker top1", ev["aggregate"]["trained_named"]["top1"])
+          print("Rodent top1", ev["aggregate"]["multipv_engine_top1"]["top1"])
+          PY
+      - name: Publish immutable trained model and aggregate evidence, never holdout PGNs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chesssim-v5-real-pgn-rodent-multipv
+          path: |
+            ${{ runner.temp }}/v3-control.json
+            ${{ runner.temp }}/real-v5-model.json
+            ${{ runner.temp }}/real-v5-evaluation.json
+          if-no-files-found: warn
+          retention-days: 7
