@@ -136,3 +136,26 @@ escolher o melhor adversário a posteriori. Isso não desfaz
 a natureza exploratória de sucessivas consultas à validação.
 
 O teste final continua reservado e não entra em nenhum workflow.
+
+
+## Robustez da inicialização UCI do Rodent IV no Linux
+
+Durante as execuções paralelas da PR #139, o workflow de duelos
+apontou intermitentemente `Motor não anunciou opção UCI 'Personality'`.
+Essa falha não deve ser silenciosamente substituída por um perfil genérico.
+
+A inspeção do código-fonte oficial do Rodent IV pinado, arquivo
+`sources/src/rodenthome.cpp`, encontrou que `SetRodentHomeDir()`
+aceita a variável **RODENT4HOME** e, se estiver ausente, recorre a
+`readlink("/proc/self/exe", ...)` sem assegurar explicitamente
+terminação NUL do buffer antes de procurar a última barra.
+Isso é um risco real de inicialização/portabilidade, embora a
+relação causal com cada falha observada não esteja comprovada.
+
+O conector UCI agora inicia o Rodent com **RODENT4HOME igual à
+instalação validada**, tanto para personalidades nomeadas quanto
+para o controle Simple. O valor ambiental preexistente do operador
+não pode apontar o motor para outro conjunto de personalidades.
+Os testes verificam o ambiente efetivo do subprocesso e preservam
+a recusa explícita caso `Personality` não seja anunciada.
+Não foram inseridos retries não controlados nem fallback silencioso.
