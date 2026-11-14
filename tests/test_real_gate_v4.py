@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import json
+from types import SimpleNamespace
 
 import chess
 import chess.pgn
@@ -129,7 +130,8 @@ def test_fit_gate_from_unused_train_games_audits_before_activating(
                  per_player=40, per_game=2, seed=2028)
 
 
-def test_gate_v3_play_adapter_fail_closed_and_shadow(synthetic_harness, tmp_path):
+def test_gate_v3_play_adapter_fail_closed_and_shadow(
+        synthetic_harness, tmp_path, monkeypatch):
     _, cohorts, model_path, model = synthetic_harness
     gate_file = tmp_path / "gate.json"
     fit_gate(cohorts, model_path, tmp_path / "unit-only", gate_file,
@@ -163,6 +165,31 @@ def test_gate_v3_play_adapter_fail_closed_and_shadow(synthetic_harness, tmp_path
                              round_number=1, ply=1)
     assert observed.move.uci() == "g1f3"
     assert observed.audit["outcome"] == "SHADOW_ONLY"
+
+    # A calibrated duel must use the same two-dimensional python-chess
+    # search limit as the real UCI calibration: depth AND seconds.
+    from chesssim import matches
+    seen_limits = []
+    class StubEngine:
+        def play(self, board, limit, **kwargs):
+            seen_limits.append((limit.depth, limit.time))
+            return SimpleNamespace(
+                move=min(board.legal_moves, key=lambda move: move.uci()))
+        def quit(self):
+            pass
+        def close(self):
+            pass
+    monkeypatch.setattr(matches, "_open_engine", lambda *args, **kwargs: StubEngine())
+    fischer, tal = find_player("fischer"), find_player("tal")
+    game, metadata = matches._play_one(
+        tmp_path, tmp_path / "mock-uci", fischer, tal,
+        depth=2, movetime=None, max_plies=4, round_number=1,
+        hashes={"exe": "unit-engine",
+                "fischer": "unit-fischer", "tal": "unit-tal"},
+        use_books=False, experimental_policy=adapter)
+    assert seen_limits == [(2, 0.12)] * 4
+    assert game.headers["SearchLimit"] == "depth=2;time=0.12s"
+    assert metadata["plies"] == 4
 
     raw = _read_json(gate_file)
     raw["players"]["fischer"]["threshold"] = 100.0
