@@ -51,3 +51,35 @@ A V5 exige hashes idênticos do modelo V3, manifesto de partição, arquivos de 
 O artefato V5 é uma política supervisionada **aprendida** de variantes reais; não muda pesos internos do Rodent IV nem arquivos TXT. Enquanto os controles de cobertura, individualidade e segurança tática não aprovarem intervenções, não existe promoção automática para partidas oficiais. O fato de estar limitado às 4 linhas MultiPV é registrado como restrição científica, e um ganho apenas condicional não pode ser apresentado como melhoria incondicional.
 
 O workflow de GitHub Actions recompila o motor real, lê novamente os PGNs públicos, ajusta a V3, treina a V5, calcula indicadores e publica apenas modelos/relatórios agregados. Fixtures sintéticas são usadas somente em testes de implementação.
+
+
+## Primeira execução real e revisão adversarial — 14/11/2026
+
+A primeira CI real completou treinamento, análise UCI MultiPV, validação
+histórica e inferência estatística (run 43612021556): 512 posições de
+TRAIN de 4 jogadores; lance humano presente no top-4 em 376/512.
+Na validação de 192 decisões históricas, o lance humano esteve no top-4
+em 128/192 (**66,7%**). O melhor lance do Rodent em modo MultiPV acertou
+76/192 (**39,6%**).
+
+**Finding científico, não ocultado:** os pesos gerais e individuais
+aprendidos inicialmente não mudaram nenhum dos 192 movimentos escolhidos
+pelo Rodent (76/192 em todos os perfis), mesmo com perda de treino em
+queda. Portanto, a V5 vinda apenas de scores/variantes **ainda não
+demonstrou estilo individual**, e não deve ser apresentada como uma
+melhoria do motor.
+
+O resultado motivou uma **ablação diagnóstica pós-hoc** que pontua cada
+linha pela diferença entre os pesos pessoais e genéricos, retirando a
+preferência direta pelo score do Rodent. A ablação é publicada como
+`trained_residual_named` e `trained_residual_fixed_swapped`, com
+diferenças de decisões frente ao engine e estatísticas por jogo. Isso
+NÃO equivale a treinar ou validar mais uma política autoritativa:
+não ajusta hiperparâmetros em função dos anos de validação e não
+libera nenhum override. Se as preferências residuais perderem acurácia,
+isso é igualmente evidência para a seleção da próxima estratégia.
+
+A primeira revisão estática encontrou um import de SHA-256 não usado,
+que foi retirado. O teste científico real foi aprovado na primeira
+execução; os novos testes e o workflow v5 são reexecutados no
+HEAD final após a ablação.
