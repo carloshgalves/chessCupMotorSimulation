@@ -158,8 +158,9 @@ def _assert_training_manifest(cohorts: Path, model: dict) -> None:
                 re.fullmatch(r"[0-9a-f]{64}", digest) is None):
             raise ValueError("Unsafe training commitment")
         path = cohorts / rel
-        if path.is_symlink() or not path.is_file():
-            raise ValueError("Missing training data")
+        if (path.is_symlink() or any(p.is_symlink() for p in path.parents)
+                or not path.is_file()):
+            raise ValueError("Missing or symbolic training data")
         if sha256(path.read_bytes()).hexdigest() != digest:
             raise ValueError("Training data mutated after fitting")
 
