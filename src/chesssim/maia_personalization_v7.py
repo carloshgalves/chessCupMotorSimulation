@@ -154,7 +154,7 @@ def train_full_corpus(cohorts: Path, v3_path: Path, output: Path) -> dict:
         actual = chess.Move.from_uci(row["policy_target"]["move_uci"])
         if actual not in board.legal_moves:
             raise ValueError("Historical target is not legal at source FEN")
-        if board.is_game_over(claim_draw=True):
+        if board.is_game_over(claim_draw=False):
             counters[slug]["terminal_positions_skipped"] += 1
             continue
         legal = list(board.legal_moves)
@@ -327,7 +327,7 @@ def _open_maia(label: str, checkpoint: Path) -> chess.engine.SimpleEngine:
 
 def _original_maia_candidates(engine: chess.engine.SimpleEngine,
                               board: chess.Board) -> list[str]:
-    if not board.is_valid() or board.is_game_over(claim_draw=True):
+    if not board.is_valid() or board.is_game_over(claim_draw=False):
         raise ValueError("Invalid/terminal human historical position")
     count = min(MULTIPV, board.legal_moves.count())
     rows = engine.analyse(
