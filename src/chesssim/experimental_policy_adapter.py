@@ -116,6 +116,10 @@ class ExperimentalPolicyAdapter:
                 raise ValueError("Calibrated Rodent gate requires a contextual V3 model")
             from .real_gate_v4 import load_gate
             gate = load_gate(Path(gate_file).expanduser(), model)
+            if min_ply < gate["min_training_ply"]:
+                raise ValueError(
+                    f"Calibrated V4 gate cannot act before its real training ply "
+                    f"{gate['min_training_ply']}")
             if not set(bindings) <= set(gate["players"]):
                 raise ValueError("Calibrated gate does not contain both players")
         return cls(
@@ -137,6 +141,7 @@ class ExperimentalPolicyAdapter:
             "trained_method": self.model.get("method"),
             "model_schema": self.model.get("schema"),
             "gate_sha256": self.gate["gate_sha256"] if self.gate else None,
+            "min_training_ply": self.gate["min_training_ply"] if self.gate else None,
             "gate_active_thresholds": (
                 {p: self.gate["players"][p]["threshold"] for p in sorted(self.bindings)}
                 if self.gate else None),
