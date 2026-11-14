@@ -227,6 +227,9 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             game.headers["PolicyWhiteEra"] = experimental_policy.bindings[white.slug]
             game.headers["PolicyBlackEra"] = experimental_policy.bindings[black.slug]
             game.headers["PolicyOfficial"] = "false"
+            if experimental_policy.gate is not None:
+                game.headers["PolicyGateSHA256"] = experimental_policy.gate["gate_sha256"]
+                game.headers["PolicyGateMechanism"] = "GAME_DISJOINT_CALIBRATED_EXTERNAL_OVERRIDE"
         if historical_openings:
             game.headers["OpeningSeed"] = str(opening_seed)
             game.headers["OpeningMinCount"] = str(opening_min_count)
@@ -487,6 +490,15 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
             raise ValueError("Experimental policy requires books disabled and a development-only duel")
         if set(experimental_policy.bindings) != {white.slug, black.slug}:
             raise ValueError("Experimental policy must be bound to the two duel players")
+        if experimental_policy.gate is not None:
+            # Bound to the exact UCI build/personality files used during
+            # real-data calibration. Fail BEFORE creating any result files.
+            calibrated = experimental_policy.gate
+            if calibrated["engine_binary_sha256"] != file_hash(exe):
+                raise ValueError("Real Rodent binary differs from calibrated gate")
+            for slug, profile in profile_paths.items():
+                if calibrated["engine_profile_sha256"].get(slug) != file_hash(profile):
+                    raise ValueError("Real Rodent profile differs from calibrated gate: " + slug)
 
     attempt = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
     folder = output_dir.expanduser().resolve() / f"{white.slug}-vs-{black.slug}" / attempt
