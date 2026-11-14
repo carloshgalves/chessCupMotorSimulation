@@ -10,7 +10,7 @@ import pytest
 
 from chesssim.contextual_policy_v3 import fit_contextual
 from chesssim.real_gate_v4 import (
-    GATE_SCHEMA, GATE_STATUS, _calibration_samples, _choose,
+    GATE_SCHEMA, GATE_STATUS, _calibration_samples, _choose, _position_key,
     _split_games, _style_lift_and_proposal, evaluate_gate, fit_gate,
     load_gate, THRESHOLDS,
 )
@@ -81,18 +81,21 @@ def test_reconstructed_fitted_games_never_enter_calibration(synthetic_harness):
     grouped = {}
     for row in _validated_training_rows(cohorts, manifest):
         grouped.setdefault(row["player"], []).append(row)
-    seen_games, seen_fens = set(), set()
+    seen_games, seen_fens, seen_states = set(), set(), set()
     for slug, rows in grouped.items():
         picked = _bottom_k(rows, limit=model["max_per_player"],
                            per_game=model["max_per_game"], seed=model["seed"])
         seen_games.update(row["game_sha256"] for row in picked)
         seen_fens.update(row["policy_input"]["fen"] for row in picked)
+        seen_states.update(_position_key(row["policy_input"]["fen"]) for row in picked)
     assert metadata["fitted_games_globally_embargoed"] == len(seen_games)
+    assert metadata["fitted_canonical_positions_globally_embargoed"] == len(seen_states)
     for slug, rows in samples.items():
         assert len(rows) == 40
         assert len({row["game_sha256"] for row in rows}) >= 20
         assert all(row["game_sha256"] not in seen_games for row in rows)
         assert all(row["fen"] not in seen_fens for row in rows)
+        assert all(_position_key(row["fen"]) not in seen_states for row in rows)
         assert all(row["player"] == slug for row in rows)
 
 
@@ -250,6 +253,8 @@ def test_matched_validation_and_learning_curves_use_same_positions(
     assert report["final_holdout_opened"] is False
     assert report["actual_rodent_uci"] is True
     assert report["validation_arm"] == "validation"
+    assert report["all_train_canonical_board_states_embargoed"] > 0
+    assert set(report["validation_canonical_overlap_excluded"]) == {"fischer", "tal"}
     assert report["total_validation_decisions"] > 0
     assert set(report["learning_curve"]) == {"20", "36"}
     assert all(entry["total"] == report["total_validation_decisions"]
@@ -269,3 +274,11 @@ def test_holdout_option_does_not_exist():
         main(["evaluate", "--cohorts", "c", "--model", "m",
               "--gate", "g", "--rodent-root", "r", "--out", "o",
               "--arm", "holdout", "--fetch"])
+
+
+def test_canonical_embargo_ignores_fen_move_counters():
+    a = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    b = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 37 19"
+    assert _position_key(a) == _position_key(b)
+    with pytest.raises(ValueError, match="FEN"):
+        _position_key("not a fen")
