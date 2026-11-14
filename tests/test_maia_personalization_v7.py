@@ -12,7 +12,7 @@ import pytest
 
 from chesssim.maia_personalization_v7 import (
     SCHEMA, STRENGTHS, _arm, _build_profile, _calibrate, _features,
-    _load_adapter, _rerank, _verify_checkpoint,
+    _load_adapter, _rerank, _verify_checkpoint, _original_maia_candidates,
     MAIA_ELO, MAX_ABS_WEIGHT,
 )
 from chesssim.real_policy_experiment import _digest
@@ -181,3 +181,20 @@ def test_79m_original_checkpoint_revision_is_strictly_pinned():
     assert MAIA79_CHECKPOINT_SHA256 == (
         "3fc6181d5db789b45a15305732148757ae74efa3e0028e81ba335b462dac45c2"
     )
+
+
+def test_claimable_repetition_is_not_automatic_terminal_and_stays_evaluable():
+    board = chess.Board()
+    for uci in ("g1f3", "g8f6", "f3g1", "f6g8") * 2:
+        board.push_uci(uci)
+    assert board.can_claim_threefold_repetition()
+    assert board.is_game_over(claim_draw=True)
+    assert not board.is_game_over(claim_draw=False)
+    class MinimalOriginalMaiaUci:
+        def analyse(self, actual_board, limit, *, multipv, info):
+            assert actual_board.fen() == board.fen()
+            legal = sorted(actual_board.legal_moves, key=lambda x:x.uci())
+            return [{"pv":[move]} for move in legal[:multipv]]
+    moves = _original_maia_candidates(MinimalOriginalMaiaUci(), board)
+    assert len(moves) == min(20, board.legal_moves.count())
+    assert all(chess.Move.from_uci(m) in board.legal_moves for m in moves)
