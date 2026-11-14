@@ -348,6 +348,13 @@ def load_gate(path: Path, model: dict, *,
             gate.get("threshold_grid") != list(THRESHOLDS) or
             gate.get("override_penalty") != INTERVENTION_PENALTY):
         raise ValueError("Unsupported gate selection contract")
+    depth = gate.get("engine_depth")
+    seconds = gate.get("engine_seconds_per_position")
+    if (type(depth) is not int or not 1 <= depth <= 99 or
+            type(seconds) not in (int, float) or
+            not math.isfinite(seconds) or not 0 < seconds <= 60 or
+            gate.get("rodent_opening_books") is not False):
+        raise ValueError("Invalid calibrated Rodent search parameters")
     if (not isinstance(gate.get("players"), dict) or
             set(gate["players"]) != set(model["profiles"])):
         raise ValueError("Gate roster differs from fitted V3")
