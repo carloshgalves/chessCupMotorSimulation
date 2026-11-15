@@ -13,7 +13,7 @@ import pytest
 from chesssim.maia_personalization_v7 import (
     SCHEMA, STRENGTHS, _arm, _build_profile, _calibrate, _features,
     _load_adapter, _rerank, _verify_checkpoint, _original_maia_candidates,
-    MAIA_ELO, MAX_ABS_WEIGHT,
+    MAIA_ELO, MAX_ABS_WEIGHT, _identity_predictions,
 )
 from chesssim.real_policy_experiment import _digest
 
@@ -198,3 +198,20 @@ def test_claimable_repetition_is_not_automatic_terminal_and_stays_evaluable():
     moves = _original_maia_candidates(MinimalOriginalMaiaUci(), board)
     assert len(moves) == min(20, board.legal_moves.count())
     assert all(chess.Move.from_uci(m) in board.legal_moves for m in moves)
+
+
+def test_identity_control_is_genuinely_player_specific_with_fixed_swap():
+    board = chess.Board()
+    example = {"fen": board.fen(), "maia79_candidates": ["e2e4", "g1f3"]}
+    profiles = {
+        "fischer": {"weights": {"piece=N": 2.0, "piece=P": -2.0}},
+        "tal": {"weights": {"piece=N": -2.0, "piece=P": 2.0}},
+    }
+    result = _identity_predictions([example], profiles, "fischer")
+    assert result["swapped_source"] == "tal"
+    assert result["correct"] == ["g1f3"]
+    assert result["generic"] == ["e2e4"]
+    assert result["swapped"] == ["e2e4"]
+    assert set(result["by_player"]) == set(profiles)
+    with pytest.raises(ValueError, match="at least two"):
+        _identity_predictions([example], {"fischer": profiles["fischer"]}, "fischer")

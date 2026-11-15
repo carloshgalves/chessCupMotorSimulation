@@ -156,3 +156,19 @@ auditamos sobreposição com seus dados prévios; a validação
 do projeto já foi consultada várias vezes, de modo que os
 p-values são exploratórios. Nenhum resultado negativo
 representa teto matemático absoluto.
+
+
+## V7 — controle de identidade individual (incremento)
+
+Para cada uma das mesmas FENs históricas da validação, a inferência calcula
+o rank adaptado com pesos do jogador correto, média **não ponderada**
+dos perfis como controle genérico e pesos de outro jogador selecionado
+pela rotação circular dos slugs em ordem alfabética (controle de nome trocado).
+Uma matriz de todos os perfis contra cada alvo permite encontrar
+confusão cruzada, sem escolher o melhor nome com base na validação.
+O relatório registra métricas top-1, macro por jogo e IC95 pareado
+**por partida histórica**, inclusive correto menos genérico/trocado.
+Todos os braços usam exatamente os mesmos candidatos Maia79 e o mesmo
+histórico original. A força da adaptação no diagnóstico é fixa em 1,0.
+Nenhum resultado desse diagnóstico autoriza promoção sem protocolo
+independente e pré-registrado; se o ajuste não melhorar, permanece desligado.

@@ -6,6 +6,7 @@ on:
       - 'src/chesssim/maia_personalization_v7.py'
       - 'tests/test_maia_personalization_v7.py'
       - 'docs/MAIA79_FULL_CORPUS_V7.md'
+      - 'docs/MAIA79_RESULTS_V7.md'
       - '.github/workflows/maia79-full-historic-v7.yml'
   workflow_dispatch:
 
@@ -128,6 +129,15 @@ jobs:
                   assert metric["positions"] == 64
               for metric in p["game_paired_vs_frozen_79m"].values():
                   assert metric["games"] == p["validation_games"]
+          assert set(report["identity_aggregate"]) == {"correct", "generic", "swapped"}
+          assert all(x["positions"] == 256 for x in report["identity_aggregate"].values())
+          assert report["identity_paired"]["correct_vs_generic"]["games"] == 234
+          for player, row in report["per_player"].items():
+              controls = row["identity_controls"]
+              assert set(controls["metrics"]) == {"correct", "generic", "swapped"}
+              assert set(controls["cross_player_matrix"]) == set(report["per_player"])
+              assert all(v["positions"] == 64 for v in controls["metrics"].values())
+              assert controls["swapped_source"] != player
           assert set(report["aggregate"]) == {
               "maia3_5m","maia3_79m","maia3_79m_style_probe","maia3_79m_game_audited"}
           assert all(m["positions"] == 256 for m in report["aggregate"].values())

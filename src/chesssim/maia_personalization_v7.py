@@ -420,6 +420,44 @@ def _calibrate(rows_tune: list[dict], rows_audit: list[dict],
     }
 
 
+def _identity_predictions(rows: list[dict], profiles: dict,
+                          slug: str) -> dict:
+    """Predeclared identity controls on the SAME held-year positions.
+
+    Equal-weight mean of independent player adapters is the generic control;
+    sorted cyclic rotation is a deterministic swapped-label negative control.
+    All comparisons are descriptive. Do not tune on validation outcomes.
+    """
+    names = sorted(profiles)
+    if slug not in profiles or len(names) < 2:
+        raise ValueError("Identity controls require at least two fitted players")
+    shared_keys = sorted({key for p in profiles.values() for key in p["weights"]})
+    generic = {
+        k: sum(profiles[name]["weights"].get(k, 0.0) for name in names) / len(names)
+        for k in shared_keys
+    }
+    swapped = names[(names.index(slug) + 1) % len(names)]
+    candidates = [chess.Board(row["fen"]) for row in rows]
+    prediction_by_player = {
+        name: [
+            _rerank(board, row["maia79_candidates"], profiles[name]["weights"], 1.0)
+            for board, row in zip(candidates, rows)
+        ]
+        for name in names
+    }
+    generic_predictions = [
+        _rerank(board, row["maia79_candidates"], generic, 1.0)
+        for board, row in zip(candidates, rows)
+    ]
+    return {
+        "swapped_source": swapped,
+        "correct": prediction_by_player[slug],
+        "generic": generic_predictions,
+        "swapped": prediction_by_player[swapped],
+        "by_player": prediction_by_player,
+    }
+
+
 def benchmark(cohorts: Path, v3_path: Path, adapter_path: Path, output: Path,
               *, maia79_revision: str, archive_dir: Path | None,
               validation_per_player: int, tune_per_player: int,
@@ -466,6 +504,7 @@ def benchmark(cohorts: Path, v3_path: Path, adapter_path: Path, output: Path,
     results = {}
     combined_rows = []
     total_predictions = defaultdict(list)
+    identity_predictions = defaultdict(list)
     for i, slug in enumerate(sorted(model["profiles"])):
         observed = fit_observations[slug]
         tune_ids = {(x["game_sha256"], x["ply"]) for x in tune[slug]}
@@ -474,6 +513,27 @@ def benchmark(cohorts: Path, v3_path: Path, adapter_path: Path, output: Path,
         personal = model["profiles"][slug]
         gate = _calibrate(tune_rows, audit_rows, personal["weights"], seed+i)
         rows = val_observations[slug]
+        identity = _identity_predictions(rows, model["profiles"], slug)
+        identity_result = {
+            "protocol": "EXPLORATORY_EQUAL_PLAYER_MEAN_AND_CYCLIC_SWAP",
+            "swapped_source": identity["swapped_source"],
+            "metrics": {
+                name: _metric(rows, identity[name])
+                for name in ("correct", "generic", "swapped")
+            },
+            "cross_player_matrix": {
+                name: _metric(rows, pred)
+                for name, pred in identity["by_player"].items()
+            },
+            "paired_correct_vs_generic": paired_game_inference(
+                rows, identity["correct"], identity["generic"],
+                seed=seed+i*11+100, repetitions=1000),
+            "paired_correct_vs_swapped": paired_game_inference(
+                rows, identity["correct"], identity["swapped"],
+                seed=seed+i*11+101, repetitions=1000),
+        }
+        for name in ("correct", "generic", "swapped"):
+            identity_predictions[name].extend(identity[name])
         p5 = [r["maia5_candidates"][0] for r in rows]
         p79 = [r["maia79_candidates"][0] for r in rows]
         unapproved = [
@@ -486,6 +546,7 @@ def benchmark(cohorts: Path, v3_path: Path, adapter_path: Path, output: Path,
                        "maia3_79m_style_probe": unapproved,
                        "maia3_79m_game_audited": approved}
         results[slug] = {
+            "identity_controls": identity_result,
             "source_games": personal["all_source_accepted_games"],
             "train_year_games": personal["train_year_games_manifest"],
             "fitted_distinct_games": personal["distinct_games"],
@@ -517,6 +578,18 @@ def benchmark(cohorts: Path, v3_path: Path, adapter_path: Path, output: Path,
         for j, (name, pred) in enumerate(sorted(total_predictions.items()))
         if name != "maia3_79m"
     }
+    identity_aggregate = {
+        name: _metric(combined_rows, predictions)
+        for name, predictions in sorted(identity_predictions.items())
+    }
+    identity_paired = {
+        "correct_vs_generic": paired_game_inference(
+            combined_rows, identity_predictions["correct"],
+            identity_predictions["generic"], seed=seed+710, repetitions=2000),
+        "correct_vs_swapped": paired_game_inference(
+            combined_rows, identity_predictions["correct"],
+            identity_predictions["swapped"], seed=seed+711, repetitions=2000),
+    }
     report = {
         "schema": REPORT_SCHEMA,
         "status": "REAL_FROZEN_79M_PERSONALIZATION_CANDIDATE_NOT_STYLE_VALIDATED",
@@ -532,6 +605,8 @@ def benchmark(cohorts: Path, v3_path: Path, adapter_path: Path, output: Path,
         "validation_real_games": len({r["game_sha256"] for r in combined_rows}),
         "sample_exclusions": excluded,
         "per_player": results, "aggregate": aggregate,
+        "identity_aggregate": identity_aggregate,
+        "identity_paired": identity_paired,
         "aggregate_paired_game_vs_79m": aggregate_stats,
         "maia_elo_is_scenario_not_FIDE_rating": True,
         "test_final_holdout_opened": False,
@@ -542,6 +617,7 @@ def benchmark(cohorts: Path, v3_path: Path, adapter_path: Path, output: Path,
             "Reranking is restricted to top-20 legal Maia suggestions without injecting human targets.",
             "Non-approved style probe is descriptive only; gated model must pass game-independent audit.",
             "Published Maia3 online figures cannot be directly compared to this OTB historical corpus.",
+            "Identity correct/generic/swapped controls are retrospective probes, never a promotion gate.",
             "External Maia pretraining has not been independently decontaminated against historic games.",
             "These validation years were already inspected; inference remains exploratory.",
         ],
