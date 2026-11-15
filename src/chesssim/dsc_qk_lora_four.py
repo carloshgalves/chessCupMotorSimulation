@@ -17,15 +17,13 @@ import random
 import resource
 import time
 
-import chess
-
 from .contextual_policy_v3 import (
     SCHEMA as V3_SCHEMA, _assert_training_manifest, _read_model,
     paired_game_inference,
 )
 from .dsc_four_player_identity import PLAYERS
 from .dsc_qk_lora_core import (
-    RANKS, QKLoRA, load_state, log_loss, model_state, predict, restore,
+    RANKS, QKLoRA, log_loss, model_state, predict, restore,
     snapshot, train_epoch,
 )
 from .maia_transfer_v6 import _restore_real_histories
@@ -421,6 +419,7 @@ def run(cohorts: Path, v3_path: Path, model_out: Path, report_out: Path, *,
         generic_choices.append(((rank, best_epoch), generic_by_rank[rank]))
     generic_label, generic, _ = _best_tune(generic_choices, all_tune, promo, scale)
     named = {}
+    raw_candidates = {}  # Rejected heads retained for post-hoc diagnostic only.
     choices = {}
     for index, slug in enumerate(PLAYERS):
         selections = []
@@ -441,6 +440,7 @@ def run(cohorts: Path, v3_path: Path, model_out: Path, report_out: Path, *,
         selected_loss, selected_rank, selected_epoch, selected_model = min(
             selections, key=lambda z: (z[0], z[1], z[2]))
         enabled = selected_loss <= ref_loss - TUNE_NLL_MINIMUM
+        raw_candidates[slug] = selected_model
         named[slug] = selected_model if enabled else generic
         choices[slug] = {
             "fit_decisions": len(cache[slug]["fit"]),
@@ -451,16 +451,27 @@ def run(cohorts: Path, v3_path: Path, model_out: Path, report_out: Path, *,
             "tune_nll_candidate": selected_loss,
             "tune_activation_threshold_nats": TUNE_NLL_MINIMUM,
             "personal_head_activated_on_tune_only": enabled,
+            "best_diagnostic_rank_even_if_rejected": selected_rank,
+            "best_diagnostic_epoch_even_if_rejected": selected_epoch,
         }
     training_time = round(time.monotonic() - start, 3)
     output_models = {"generic": {"rank": generic.rank, "epoch": generic_label[1],
                                  "parameters": model_state(generic)}}
     for slug in PLAYERS:
-        output_models[slug] = (
-            {"rank": named[slug].rank, "parameters": model_state(named[slug])}
-            if choices[slug]["personal_head_activated_on_tune_only"] else
-            {"rank": None, "parameters": None, "uses_generic": True}
-        )
+        activated = choices[slug]["personal_head_activated_on_tune_only"]
+        output_models[slug] = {
+            "rank": named[slug].rank if activated else None,
+            "parameters": model_state(named[slug]) if activated else None,
+            "uses_generic": not activated,
+            # Preserve TUNE-selected PERSONAL research parameters even when
+            # the pre-registered activation threshold was not met. Do not
+            # mistake these diagnostic matrices for a usable chess engine.
+            "rejected_or_exploratory_candidate": {
+                "rank": raw_candidates[slug].rank,
+                "parameters": model_state(raw_candidates[slug]),
+                "status": "NEVER_PROMOTE_FROM_DIAGNOSTIC",
+            },
+        }
     checkpoint = {
         "schema": CHECKPOINT_SCHEMA,
         "status": "RESEARCH_ONLY_NOT_APPROVED",
@@ -497,6 +508,16 @@ def run(cohorts: Path, v3_path: Path, model_out: Path, report_out: Path, *,
         for slug in PLAYERS
     }
     blind = _blind(flat_rows, identity_predictions, flat_games, SEED+1000)
+    # Explicitly POST-HOC after first AUDIT was seen: diagnostic scoring of
+    # the same fixed TUNE-selected heads that failed the strict activation.
+    # The pre-registered primary result, blind above, is NOT changed.
+    diagnostic_predictions = {
+        slug: predict(flat_cache, raw_candidates[slug], promo, scale)
+        for slug in PLAYERS
+    }
+    diagnostic_blind = _blind(
+        flat_rows, diagnostic_predictions, flat_games, SEED+1001)
+    diagnostic_players = {}
     by_player = {}
     for index, slug in enumerate(sorted(PLAYERS)):
         positions = [i for i, row in enumerate(flat_rows) if row["player"] == slug]
@@ -515,6 +536,13 @@ def run(cohorts: Path, v3_path: Path, model_out: Path, report_out: Path, *,
         wrong_moves = [pred["moves"][max(range(len(pred["moves"])),
                                      key=lambda j: pred["probs"][j])]
                        for pred in swapped]
+        probe = [diagnostic_predictions[slug][i] for i in positions]
+        diagnostic_players[slug] = {
+            "tune_selected_rank": raw_candidates[slug].rank,
+            "no_activation": not choices[slug]["personal_head_activated_on_tune_only"],
+            "diagnostic_correct": _metrics(rows, probe),
+            "generic": _metrics(rows, common),
+        }
         by_player[slug] = {
             **choices[slug], "audit_games": len(set(row["game_sha256"] for row in rows)),
             "audit_decisions": len(rows),
@@ -547,6 +575,12 @@ def run(cohorts: Path, v3_path: Path, model_out: Path, report_out: Path, *,
         "status": "TRAIN_YEAR_DEVELOPMENT_NOT_FINAL_CONFIRMATION",
         "players": by_player,
         "blind_sequence": blind,
+        "posthoc_rejected_head_probe": {
+            "status": "POST_HOC_EXPLORATORY_SAME_AUDIT_NOT_CONFIRMATORY",
+            "blind_sequence": diagnostic_blind,
+            "players": diagnostic_players,
+            "never_use_for_promotion_or_protocol_changes": True,
+        },
         "overall_original": _metrics(flat_rows, baseline),
         "overall_generic": _metrics(flat_rows, generic_pred),
         "overall_correct": _metrics(
@@ -570,6 +604,7 @@ def run(cohorts: Path, v3_path: Path, model_out: Path, report_out: Path, *,
             "External DSC pretraining may include historical PGNs",
             "The DSC input uses fixed 2400 FIDE/classical scenarios, not actual recorded ratings",
             "The low-rank Q/K adapter is a style hypothesis, not a certified human chess personality",
+            "The rejected-head posthoc diagnostic reused already-seen AUDIT and is exploratory only",
             "No independent Stockfish safety acceptance or tournament integration was performed",
         ],
     }

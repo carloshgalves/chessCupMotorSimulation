@@ -1,8 +1,6 @@
 """Engineering-only fixtures. They never claim historical style fidelity."""
 from __future__ import annotations
 
-import math
-
 import chess
 import pytest
 
@@ -165,3 +163,40 @@ def test_blind_rejects_cross_player_game_reuse():
             } for _ in range(WINDOW)])
     with pytest.raises(ValueError, match="Repeated original game"):
         _blind(rows,predictions,groups,44)
+
+
+
+def test_historic_target_label_never_changes_frozen_policy_logits():
+    example = _example()
+    batch = pack([example])
+    head = QKLoRA(6, 4, 2)
+    with torch.no_grad():
+        head.bq.fill_(0.2)
+        head.bk.fill_(0.05)
+    promo = torch.randn(3, 4)
+    first = logits(batch, head, promo, 0.3).detach().clone()
+    # Simulate a different human move and game metadata. The prediction
+    # is made without any label/identity data.
+    changed = {**example, "target": 1, "game_sha256": "d"*64}
+    after = logits(pack([changed]), head, promo, 0.3)
+    assert torch.allclose(first, after, atol=0, rtol=0)
+    assert changed["target"] != example["target"]
+
+
+def test_original_projection_and_promotion_weights_remain_frozen():
+    torch.manual_seed(78)
+    q = torch.nn.Linear(6,4)
+    k = torch.nn.Linear(6,4)
+    promo = torch.nn.Linear(4,3)
+    for layer in (q,k,promo):
+        for p in layer.parameters():
+            p.requires_grad_(False)
+    example = _example()
+    example["q0"] = q(example["latent"].float()).detach().half()
+    example["k0"] = k(example["latent"].float()).detach().half()
+    head = QKLoRA(6,4,2)
+    objective = loss(pack([example]),head,promo.weight.detach(),0.25)
+    objective.backward()
+    assert all(p.grad is None for layer in (q,k,promo)
+               for p in layer.parameters())
+    assert any(p.grad is not None for p in head.parameters())
