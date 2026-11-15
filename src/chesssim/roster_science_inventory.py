@@ -1,7 +1,7 @@
 """Auditable, real 64-player PGN provenance inventory, never a style claim."""
 from __future__ import annotations
 import argparse
-from collections import Counter, defaultdict
+from collections import Counter
 from hashlib import sha256
 import json
 from pathlib import Path
