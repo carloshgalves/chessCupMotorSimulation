@@ -1,12 +1,10 @@
 """No synthetic claims of real player fidelity: only regression fixtures."""
-from collections import Counter
-
 import chess
 import pytest
 
 from chesssim.dsc_conditional_residual_v2 import (
     ALPHAS, EPOCHS, FIT_PER_PLAYER, SEED, _arm,
-    _encode, _prediction, _fit, _blind, _scores,
+    _encode, _prediction, _fit, _blind, _scores, _quality,
 )
 
 
@@ -25,6 +23,7 @@ def test_split_by_global_game_is_identical_across_player_aliases():
     with pytest.raises(ValueError,match="trajectory"):
         _arm("not-a-digest")
     assert EPOCHS==12 and SEED==4261 and FIT_PER_PLAYER==512
+    assert ALPHAS==(0.0,0.25,0.5,1.0,2.0)
 
 
 def test_true_softmax_legal_and_head_without_target_leakage():
@@ -65,3 +64,24 @@ def test_blind_identity_does_not_claim_success_from_tie_break():
     assert data["balanced_accuracy"]==pytest.approx(.25)
     assert data["balanced_game_bootstrap_95_ci"]==pytest.approx([.25,.25])
     assert sum(data["confusion_matrix"]["fischer"].values())==30
+
+
+
+def test_human_target_does_not_change_policy_input_features():
+    a,example=_example("e2e4")
+    b,changed=_example("g1f3")
+    assert a["fen"]==b["fen"]
+    assert example["features"]==changed["features"]
+    assert example["offsets"]==changed["offsets"]
+    assert example["target"]!=changed["target"]
+    assert _scores(example,[0.0]*256)==_scores(changed,[0.0]*256)
+
+
+def test_proper_log_loss_and_top3_keep_historical_denominators():
+    row,e=_example("e2e4")
+    quality=_quality([row],[e],[0.0]*256,[0.0]*256,0.0)
+    assert quality["positions"]==1
+    assert quality["historical_games"]==1
+    assert quality["mean_log_loss_nats"]==pytest.approx(
+        __import__("math").log(20),abs=1e-7)
+    assert 0 <= quality["top3_correct"] <= 1

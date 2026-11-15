@@ -41,3 +41,44 @@ single-use holdout, Stockfish tactical assessment, rights and source
 provenance audit, and independent approval. Never silently change
 original Rodent IV personalities. Original DSC upstream training may
 include these PGNs and the complete historical holdout remains sealed.
+
+
+## Adversarial review of first genuine run
+
+First genuine four-player run: GitHub Actions
+\`43671011004\`, artifact \`four-real-dsc-conditional-residual-heads\`
+ID **14144800789**, ZIP SHA256
+\`daaf4e6e73e95b13e9dc624ccae47ec62dd0e9c2f3842d06ad5b18f35a2f5a81\`.
+The model artifact hash was
+\`9919649fcd318359aa52f51073e7061d3f37cafa9d8860fb63a6e4935d3177df\`.
+The report hash was
+\`cd2acd8ba6ac08064a4e6a0aa876b67116f63d5f2e524107f3903d2db19ec8ba\`.
+
+2,048 genuine FIT decisions (512 per player), 192 TUNE and
+192 AUDIT decisions in 192 independent audit games.
+506 canonical position keys embargoed globally across FIT/TUNE/AUDIT.
+Top1 on AUDIT: original DSC 114/192, trained generic head 113/192,
+four personal heads 111/192. Personal minus generic macro difference
+−1.0417 pp, game bootstrap 95% [−3.125,+1.0417] pp,
+paired p=0.6102. Blind 4-way identity 40/192 (20.83%),
+balanced game bootstrap 95% [15.43%,26.61%]. 0/4 gates passed.
+TUNE alphas Fischer 0; Karpov 0; Kasparov .25; Tal 2.
+The Tal personal head fell from generic 29/48 to personal 27/48.
+**Evidence is negative, not hidden or edited away.**
+
+Two findings from final code review were addressed after the first
+run: (i) top-1 alone could hide harmful changes to the correct
+move probability; add proper mean log-loss and top-3 for each
+arm/personality; (ii) unadjusted per-player pairwise comparisons
+could overstate candidate acceptance; require an additional
+predeclared conservative two-sided Bonferroni p<=.0125 for
+both individual-vs-generic and correct-vs-swapped comparisons
+over four historical players. Also correct a misleading comment
+calling the unsigned hash encoding "signed" and remove unused
+test imports flagged by Python quality CI. Re-run the genuine
+original-model inference and complete independent re-review
+at the updated HEAD before moving this PR from DRAFT.
+
+The first run's statistical findings are NOT changed by these
+software corrections. No model may be promoted based on this
+train-year developmental audit.

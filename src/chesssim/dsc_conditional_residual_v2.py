@@ -131,7 +131,7 @@ def _histogram(cohorts: Path) -> tuple[dict, dict]:
 
 
 def _indices(board: chess.Board, move: chess.Move) -> tuple[int, ...]:
-    """Sparse deterministic hashed chess semantics; only pre-target state."""
+    """Deterministically hashed chess semantics; only pre-target state."""
     piece = board.piece_at(move.from_square)
     if piece is None or move not in board.legal_moves:
         raise ValueError("Invalid conditional-logit legal candidate")
@@ -150,7 +150,7 @@ def _indices(board: chess.Board, move: chess.Move) -> tuple[int, ...]:
         "file_displacement:" + str(abs(chess.square_file(move.from_square)-file)),
         "rank_displacement:" + str(abs(chess.square_rank(move.from_square)-rank)),
     ]
-    # Signed feature hashing keeps model size fixed independent of corpus.
+    # Fixed-width positive count hashing keeps the model independent of vocabulary size.
     result = []
     for token in semantic:
         digest = sha256(token.encode("utf-8")).digest()
@@ -207,7 +207,30 @@ def _prediction(example: dict, weights: list[float],
     return example["moves"][idx]
 
 
-def _fit(examples: list[dict], seed: int, *,
+def _quality(rows: list[dict], examples: list[dict],
+             weights: list[float], generic: list[float],
+             alpha: float) -> dict:
+    """Proper scoring as well as top-1: prevents silent probability regressions."""
+    if not rows or len(rows) != len(examples):
+        raise ValueError("Unaligned original DSC audit position labels")
+    first = []
+    top3 = 0
+    total_nll = 0.0
+    for row, example in zip(rows, examples):
+        probabilities = _distribution(example, weights, generic=generic, alpha=alpha)
+        ordered = sorted(range(len(probabilities)),
+                         key=lambda i: (-probabilities[i],i))
+        first.append(example["moves"][ordered[0]])
+        top3 += row["move"] in [example["moves"][i] for i in ordered[:3]]
+        total_nll -= math.log(max(probabilities[example["target"]],1e-40))
+    out = _metric(rows,first)
+    out["top3_correct"] = top3
+    out["top3"] = top3 / len(rows)
+    out["mean_log_loss_nats"] = round(total_nll / len(rows),8)
+    return out
+
+
+def _fit(examples: list[dict], seed: int, *
          generic: list[float] | None = None) -> list[float]:
     """Bounded SGD on actual human labels with original DSC log-prob offset.
 
@@ -406,11 +429,13 @@ def run(cohorts:Path,v3_path:Path,model_out:Path,report_out:Path, *,
             "tune_games":len({r["game_sha256"] for r in portions[slug]["tune"]}),
             "audit_games":len({r["game_sha256"] for r in rows}),
             "chosen_tune_alpha":tune,
-            "dsc_original":_metric(rows,original),
-            "trained_generic":_metric(rows,pooled_pred),
-            "individual":_metric(rows,personal),
-            "swapped_fixed_alpha":_metric(rows,swapped),
-            "fixed_correct":_metric(rows,fixed),
+            "dsc_original":_quality(rows,examples,[0.0]*WIDTH,[0.0]*WIDTH,0.0),
+            "trained_generic":_quality(rows,examples,generic,generic,0.0),
+            "individual":_quality(rows,examples,individual[slug],generic,tune),
+            "swapped_fixed_alpha":_quality(
+                rows,examples,individual[wrong],generic,BLIND_ALPHA),
+            "fixed_correct":_quality(
+                rows,examples,individual[slug],generic,BLIND_ALPHA),
             "paired_individual_vs_generic":vs_generic,
             "fixed_correct_vs_swapped":vs_wrong,
             "personalization_gate": "DENIED",
@@ -427,7 +452,9 @@ def run(cohorts:Path,v3_path:Path,model_out:Path,report_out:Path, *,
         g=result[slug]
         passed=(passed_blind and g["chosen_tune_alpha"] > 0
                 and g["paired_individual_vs_generic"]["bootstrap_95_ci"][0] > 0
-                and g["fixed_correct_vs_swapped"]["bootstrap_95_ci"][0] > 0)
+                and g["fixed_correct_vs_swapped"]["bootstrap_95_ci"][0] > 0
+                and g["paired_individual_vs_generic"]["paired_sign_flip_two_sided_p"] <= 0.0125
+                and g["fixed_correct_vs_swapped"]["paired_sign_flip_two_sided_p"] <= 0.0125)
         g["personalization_gate"]="RESEARCH_CANDIDATE_ONLY" if passed else "DENIED"
     report={
         "schema":SCHEMA,"status":"DEVELOPMENT_TRAIN_YEAR_AUDIT_NOT_FINAL",
@@ -437,6 +464,7 @@ def run(cohorts:Path,v3_path:Path,model_out:Path,report_out:Path, *,
         "trained_generic":_metric(all_rows,all_generic),
         "trained_personal":_metric(all_rows,all_personal),
         "real_split":embargo,
+        "research_gate_multiplicity": "Bonferroni two-sided p<=0.05/4=0.0125 per profile/endpoint",
         "original_dsc_sha256":DSC150_WEIGHTS_SHA256,
         "trained_weights_sha256":checkpoint["checkpoint_sha256"],
         "train_manifest_sha256":v3["train_manifest_sha256"],

@@ -74,6 +74,10 @@ jobs:
           assert all(p["fit_decisions"]==512 for p in r["players"].values())
           assert all(p["audit_games"]==48 for p in r["players"].values())
           assert r["trained_weights_sha256"]==m["checkpoint_sha256"]
+          assert all(p["individual"]["top3"]>=p["individual"]["top1"]
+                     and p["individual"]["mean_log_loss_nats"]>0
+                     for p in r["players"].values())
+          assert "Bonferroni" in r["research_gate_multiplicity"]
           print("TRAINED_RESIDUAL_REAL_FIT_AND_DISJOINT_AUDIT",r["report_sha256"])
           PY
       - uses: actions/upload-artifact@v4
