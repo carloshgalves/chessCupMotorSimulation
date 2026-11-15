@@ -1,0 +1,86 @@
+name: Four real historical styles on frozen DSC150 TRAIN/TUNE/AUDIT
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/dsc_four_player_identity.py'
+      - 'tests/test_dsc_four_player_identity.py'
+      - 'docs/FOUR_PLAYER_DSC_IDENTITY.md'
+      - '.github/workflows/science-dsc-four-identities.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: four-style-fit-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-four-player-fit-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m pytest -q tests/test_dsc_four_player_identity.py
+      - run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - uses: actions/checkout@v5
+        with:
+          repository: ChessDS/chessds-dsc
+          ref: 229ef4291c38c088a9fd3a410e4c0e926a20cea1
+          path: dsc-source
+          persist-credentials: false
+      - run: |
+          python -m pip install -e ./dsc-source
+          test "$(git -C dsc-source rev-parse HEAD)" = 229ef4291c38c088a9fd3a410e4c0e926a20cea1
+      - name: Recreate immutable genuine four-player FIT corpus and frozen style weights
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov \
+            --birthdates-json docs/REAL_BIRTHDATES_4.json \
+            --split-policy career-stratified --min-ply 17 \
+            --out "$RUNNER_TEMP/cohorts"
+          python -m chesssim.contextual_policy_v3 train \
+            --cohorts "$RUNNER_TEMP/cohorts" \
+            --max-per-player 1600 --max-per-game 3 --seed 2026 \
+            --out "$RUNNER_TEMP/v3-binding.json"
+          python -m chesssim.maia_personalization_v7 fit \
+            --cohorts "$RUNNER_TEMP/cohorts" \
+            --v3-model "$RUNNER_TEMP/v3-binding.json" \
+            --out "$RUNNER_TEMP/fit-weights.json"
+      - name: TUNE/AUDIT actual disjoint historical games using DSC original
+        run: |
+          python -m chesssim.dsc_four_player_identity \
+            --cohorts "$RUNNER_TEMP/cohorts" \
+            --v3-model "$RUNNER_TEMP/v3-binding.json" \
+            --adapter "$RUNNER_TEMP/fit-weights.json" \
+            --fetch --out "$RUNNER_TEMP/four-style-audit.json"
+      - name: Require explicit real results and deny any official promotion
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          report=json.loads((Path(os.environ["RUNNER_TEMP"])/"four-style-audit.json").read_text())
+          assert report["holdout_opened"] is False
+          assert report["validation_opened"] is False
+          assert report["official_promotion"] == "DENIED"
+          assert report["sum_fitted_decisions"] > 100000
+          assert report["DSC_model_code_commit"] == "229ef4291c38c088a9fd3a410e4c0e926a20cea1"
+          assert set(report["players"]) == {"fischer","karpov","kasparov","tal"}
+          assert sum(x["audit_decisions"] for x in report["players"].values()) >= 120
+          print("FOUR_HISTORICAL_IDENTITIES_TRAIN_AUDIT_REAL",report["blind_identity"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: four-historical-dsc-style-train-audit
+          path: ${{ runner.temp }}/four-style-audit.json
+          if-no-files-found: warn
+          retention-days: 14
