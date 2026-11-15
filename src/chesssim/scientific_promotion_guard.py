@@ -15,7 +15,9 @@ from .real_policy_experiment import _digest
 SCHEMA = "chesssim-reviewed-scientific-personality-promotion-v1"
 # Empty BY DESIGN: currently no Maia3/DSC historical identity has passed
 # an independent final blind-style and tactical-safety review.
-TRUSTED_FINAL_REPORT_SHA256: frozenset[str] = frozenset()
+# Reviewed mappings are added only by a code-reviewed change: report digest -> 
+# (player slug, model digest, training-manifest digest, final-protocol digest).
+TRUSTED_FINAL_REPORTS: dict[str, tuple[str, str, str, str]] = {}
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 
 
@@ -49,8 +51,13 @@ def verify_promotion(manifest: dict) -> dict:
                 "blind_identity_passed", "tactical_safety_passed",
                 "baseline_comparison_passed", "final_holdout_opened_once"))):
         raise PermissionError("Scientific promotion requirements not met")
-    if manifest["independent_final_report_sha256"] not in TRUSTED_FINAL_REPORT_SHA256:
+    trusted = TRUSTED_FINAL_REPORTS.get(manifest["independent_final_report_sha256"])
+    if trusted is None:
         raise PermissionError("Final independent report is not explicitly reviewed and trusted")
+    declared = (manifest["player"], manifest["candidate_model_sha256"],
+                manifest["training_manifest_sha256"], manifest["final_protocol_sha256"])
+    if declared != trusted:
+        raise PermissionError("Approved final report does not authorize this model/source/protocol")
     return {"state": "APPROVED_FOR_EXPERIMENTAL_PLAY",
             "player": manifest["player"],
             "model_sha256": manifest["candidate_model_sha256"],
