@@ -208,3 +208,28 @@ o candidato rejeitado com o modelo genérico e todos os nomes
 trocados na mesma amostra, com pares por partida e status
 explicitamente exploratório, bem como alinhar os quatro
 vetores de probabilidades e garantir paridade de serialização.
+
+
+## Limite de reprodutibilidade numérica (diagnóstico entre runs)
+
+Os dois primeiros runs científicos, feitos em commits sucessivos
+com o mesmo corpus e seleção de amostras, produziram métricas de
+acurácia idênticas. Entretanto, a cabeça genérica salva tinha
+deltas numéricos de até `3,9e-5` em alguns coeficientes.
+**Isso não comprova que a mesma versão de código seja não
+determinística**, pois os commits e runners diferiam; mas
+tampouco comprova identidade binária de pesos em computadores
+distintos. As evidências de primeira e segunda CI usaram
+PyTorch **2.15.0+cpu** segundo os respectivos logs.
+
+Por rastreabilidade, o pipeline passa a fixar no runner Python
+3.13, PyTorch **2.15.0+cpu**, chess **1.11.2**, NumPy **2.5.4**,
+safetensors **0.8.0**, e reportar `torch_version`,
+arquitetura/modelo de CPU, thread=1 e determinismo Torch.
+Uma nova CI científica real deve validar essas versões.
+Mesmo com pinagem, diferentes ISA/instruções CPU podem
+produzir variações inferiores a um epsilon; uma eventual
+versão homologável exigiria reprodução de checkpoint
+no mesmo ambiente controlado, teste cruzado numérico e
+critério de equivalência pré-fixado. **Nenhuma versão
+de heads desta PR é candidata aprovada para produção.**

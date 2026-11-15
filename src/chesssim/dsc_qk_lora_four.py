@@ -13,8 +13,10 @@ from hashlib import sha256
 import json
 import math
 from pathlib import Path
+import platform
 import random
 import resource
+import sys
 import time
 
 from .contextual_policy_v3 import (
@@ -627,6 +629,20 @@ def run(cohorts: Path, v3_path: Path, model_out: Path, report_out: Path, *,
         "original_inference_seconds": frozen["original_inference_seconds"],
         "peak_python_process_rss_kib_linux": resource.getrusage(
             resource.RUSAGE_SELF).ru_maxrss,
+        "numerical_environment": {
+            "python_version": sys.version.split()[0],
+            "torch_version": str(torch.__version__),
+            "cpu_arch": platform.machine(),
+            "cpu_model": next(
+                (line.split(":", 1)[1].strip()
+                 for line in Path("/proc/cpuinfo").read_text(
+                     encoding="utf-8").splitlines()
+                 if line.startswith("model name")),
+                platform.processor() or "unknown"),
+            "torch_intraop_threads": torch.get_num_threads(),
+            "torch_deterministic_algorithms": torch.are_deterministic_algorithms_enabled(),
+            "cross_runner_bitwise_consistency": "NOT_PROVEN",
+        },
         "research_identity_evidence": "CANDIDATE_ONLY" if evidence else "DENIED",
         "official_promotion": "DENIED",
         "holdout_opened": False, "validation_opened": False,

@@ -34,7 +34,8 @@ jobs:
       - name: Install ChessCup, CPU PyTorch and scientific test tools
         run: |
           python -m pip install -e '.[dev]'
-          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'torch==2.15.0+cpu' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'chess==1.11.2'
       - name: Synthetic ENGINEERING tests only
         run: python -m pytest -q tests/test_dsc_qk_lora_four.py
       - uses: actions/checkout@v5
@@ -46,6 +47,7 @@ jobs:
       - name: Verify immutable original DSC code and install
         run: |
           python -m pip install -e ./dsc-source
+          python -m pip install 'numpy==2.5.4' 'safetensors==0.8.0' 'chess==1.11.2'
           test "$(git -C dsc-source rev-parse HEAD)" = 229ef4291c38c088a9fd3a410e4c0e926a20cea1
       - name: Recreate authorized four-player historical TRAIN cohort
         run: |
@@ -77,6 +79,9 @@ jobs:
           assert not model["holdout_opened"] and model["official_promotion"]=="DENIED"
           assert not r["holdout_opened"] and not r["validation_opened"]
           assert r["official_promotion"]=="DENIED"
+          assert r["numerical_environment"]["torch_version"]=="2.15.0+cpu"
+          assert r["numerical_environment"]["torch_intraop_threads"]==1
+          assert r["numerical_environment"]["torch_deterministic_algorithms"] is True
           assert r["head_checkpoint_sha256"]==model["checkpoint_sha256"]
           assert r["source_split"]["total_unique_source_games"]==288
           assert r["blind_sequence"]["games"]==48
