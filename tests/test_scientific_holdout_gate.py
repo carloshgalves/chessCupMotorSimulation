@@ -49,7 +49,7 @@ def test_tampering_and_parameter_drift_refused(tmp_path, monkeypatch):
     p.write_text(json.dumps({**document, "per_player": 66}))
     with pytest.raises(ValueError, match="modified"):
         _verify(p)
-    p.write_text(json.dumps(_protocol(model_sha256="7"*64)))
+    p.write_text(json.dumps(_protocol(candidate_model_sha256="7"*64)))
     with pytest.raises(PermissionError, match="does not match"):
         _verify(p)
     p.write_text(json.dumps(_protocol()).replace('"seed": 2027', '"seed": 2026, "seed": 2027'))
