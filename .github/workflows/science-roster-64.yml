@@ -1,0 +1,59 @@
+name: Real 64-player scientific roster inventory
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/roster_science_inventory.py'
+      - 'tests/test_roster_science_inventory.py'
+      - '.github/workflows/science-roster-64.yml'
+      - 'docs/ROSTER64_SCIENCE_INVENTORY.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scientific-roster-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit-64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m pytest -q tests/test_roster_science_inventory.py
+      - name: Audit all 64 pinned sources and TRAIN-only FEN repetition
+        run: |
+          python -m chesssim.roster_science_inventory --fetch --all-roster \
+            --position-audit --out "$RUNNER_TEMP/roster64.json"
+      - name: Require complete source classification
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = json.loads((Path(os.environ["RUNNER_TEMP"])/"roster64.json").read_text())
+          assert report["player_count"] == 64
+          assert len(report["players"]) == 64
+          assert report["holdout_predictions_scored"] is False
+          assert report["model_promotion"] == "DENIED"
+          assert report["position_audit_train_only"] is True
+          assert report["source_present"] >= 4
+          assert all(report["players"][slug]["status"] == "SOURCE_PRESENT"
+                     for slug in ("fischer", "karpov", "kasparov", "tal"))
+          assert all(p["status"] in ("SOURCE_PRESENT", "SOURCE_MISSING_HTTP_404")
+                     for p in report["players"].values())
+          print("REAL_SOURCE_64_CATALOGUE", report["source_present"],
+                report["missing_404"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chesssim-roster-64-aggregates
+          path: ${{ runner.temp }}/roster64.json
+          retention-days: 7
+          if-no-files-found: warn
