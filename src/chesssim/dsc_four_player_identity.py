@@ -10,7 +10,7 @@ ordinal proxy, never a claim about the true DSC softmax probabilities.
 from __future__ import annotations
 
 import argparse
-from collections import defaultdict
+from collections import Counter, defaultdict
 import json
 import math
 from pathlib import Path
@@ -157,9 +157,30 @@ def _blind_accuracy(rows: list[dict], candidate: list[list[str]],
                 "coverage_per_player": counts}
     balanced = sum(confusion[slug][slug] / counts[slug] for slug in PLAYERS) / 4
     majority = max(counts.values()) / len(covered)
+    # Bootstrap GLOBAL game trajectories (which can contain observations
+    # from two named players) and compute an equally weighted 4-way macro.
+    # Bootstrapping the unbalanced pooled score would misstate the interval
+    # for the pre-registered balanced-identity primary endpoint.
+    grouped = defaultdict(list)
+    for row, correct in zip(covered, classification):
+        grouped[row["game_sha256"]].append((row["player"], correct))
+    clusters = [grouped[key] for key in sorted(grouped)]
     rng = random.Random(seed)
-    draws = sorted(sum(x[rng.randrange(len(x))] for _ in x)/len(x)
-                   for _ in range(2000))
+    draws = []
+    for _ in range(2000):
+        successes = Counter()
+        sizes = Counter()
+        for _j in clusters:
+            for player, correct in clusters[rng.randrange(len(clusters))]:
+                successes[player] += correct
+                sizes[player] += 1
+        if all(sizes[p] for p in PLAYERS):
+            draws.append(sum(successes[p]/sizes[p] for p in PLAYERS)/4)
+    if len(draws) < 1980:
+        raise ValueError("Unstable global game-cluster stratified bootstrap")
+    draws.sort()
+    lower = draws[int(0.025*len(draws))]
+    upper = draws[min(len(draws)-1, math.ceil(0.975*len(draws))-1)]
     return {
         "status": "BLIND_LABEL_CLASSIFIER_DIAGNOSTIC_ONLY",
         "covered": len(covered), "positions": len(rows),
@@ -172,7 +193,7 @@ def _blind_accuracy(rows: list[dict], candidate: list[list[str]],
         "balanced_accuracy": balanced,
         "coverage_per_player": counts,
         "confusion_matrix": confusion,
-        "bootstrap_95_ci_by_game": [draws[50], draws[1949]],
+        "bootstrap_95_ci_by_game": [lower, upper],
         "caveat": "Classifier uses evaluated human move; labels never used for fitted weights.",
     }
 
