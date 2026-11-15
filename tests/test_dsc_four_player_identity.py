@@ -2,7 +2,7 @@
 import chess
 import pytest
 from chesssim.dsc_four_player_identity import (
-    PLAYERS, _centered_weights, _policy, _select_alpha,
+    PLAYERS, _centered_weights, _policy,
     _blind_accuracy, _independent_split,
 )
 

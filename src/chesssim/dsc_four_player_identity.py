@@ -10,8 +10,7 @@ ordinal proxy, never a claim about the true DSC softmax probabilities.
 from __future__ import annotations
 
 import argparse
-from collections import Counter, defaultdict
-from hashlib import sha256
+from collections import defaultdict
 import json
 import math
 from pathlib import Path
@@ -66,7 +65,7 @@ def _policy(board: chess.Board, moves: list[str], weights: dict,
     if strength not in ALPHAS and strength != FIXED_IDENTITY_ALPHA:
         raise ValueError("Unregistered style scale")
     if len(set(moves)) != len(moves) or not moves:
-        raise ValueError("Incomplete duplicate DSC MultiPV response")
+        raise ValueError("Duplicate or empty DSC MultiPV response")
     parsed = [chess.Move.from_uci(move) for move in moves]
     if any(move not in board.legal_moves for move in parsed):
         raise ValueError("Illegal style-candidate")
@@ -130,6 +129,7 @@ def _blind_accuracy(rows: list[dict], candidate: list[list[str]],
     """Use human move *only as evaluation label*, never to condition inference."""
     covered = []
     classification = []
+    confusion = {slug: {pred: 0 for pred in PLAYERS} for slug in PLAYERS}
     for row, suggestions in zip(rows, candidate):
         if row["move"] not in suggestions:
             continue
@@ -141,6 +141,7 @@ def _blind_accuracy(rows: list[dict], candidate: list[list[str]],
         classified = min(PLAYERS, key=lambda s: (-q[s], s))
         covered.append(row)
         classification.append(int(classified == row["player"]))
+        confusion[row["player"]][classified] += 1
     if len({r["game_sha256"] for r in covered}) < 20:
         return {"status": "UNDERPOWERED_CANDIDATE_COVERAGE",
                 "covered": len(covered), "positions": len(rows)}
@@ -149,6 +150,13 @@ def _blind_accuracy(rows: list[dict], candidate: list[list[str]],
         games[row["game_sha256"]].append(correct)
     x = [sum(g)/len(g) for _,g in sorted(games.items())]
     avg = sum(x)/len(x)
+    counts = {slug: sum(confusion[slug].values()) for slug in PLAYERS}
+    if min(counts.values()) < 10:
+        return {"status": "UNDERPOWERED_UNBALANCED_PLAYER_COVERAGE",
+                "covered": len(covered), "positions": len(rows),
+                "coverage_per_player": counts}
+    balanced = sum(confusion[slug][slug] / counts[slug] for slug in PLAYERS) / 4
+    majority = max(counts.values()) / len(covered)
     rng = random.Random(seed)
     draws = sorted(sum(x[rng.randrange(len(x))] for _ in x)/len(x)
                    for _ in range(2000))
@@ -160,6 +168,10 @@ def _blind_accuracy(rows: list[dict], candidate: list[list[str]],
         "correct": sum(classification),
         "conditional_accuracy_by_game": avg,
         "chance": 0.25,
+        "majority_class_baseline": majority,
+        "balanced_accuracy": balanced,
+        "coverage_per_player": counts,
+        "confusion_matrix": confusion,
         "bootstrap_95_ci_by_game": [draws[50], draws[1949]],
         "caveat": "Classifier uses evaluated human move; labels never used for fitted weights.",
     }
@@ -215,7 +227,7 @@ def run(cohorts: Path, v3_path: Path, adapter_path: Path,
         engine.quit()
     per_player = {}
     aggregate_rows, aggregate_candidates = [], []
-    aggregate_own, aggregate_other = [], []
+    aggregate_own = []
     fixed_rows, fixed_candidates = [], []
     for index,slug in enumerate(PLAYERS):
         t = len(tune[slug])
@@ -261,7 +273,6 @@ def run(cohorts: Path, v3_path: Path, adapter_path: Path,
         aggregate_rows.extend(rows)
         aggregate_candidates.extend(suggestions)
         aggregate_own.extend(own)
-        aggregate_other.extend(wrong)
         fixed_rows.extend(rows)
         fixed_candidates.extend(suggestions)
     blind = _blind_accuracy(fixed_rows, fixed_candidates,
