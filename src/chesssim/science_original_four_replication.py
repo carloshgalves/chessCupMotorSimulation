@@ -14,7 +14,6 @@ import json
 from pathlib import Path
 import time
 
-import chess
 
 from .contextual_policy_v3 import (
     SCHEMA as V3_SCHEMA, _assert_training_manifest, _read_model,
@@ -57,7 +56,7 @@ def _choose_fit_replication(cohorts: Path, limit: int = COUNT) -> dict:
             "player": row["player"],
             "fen": row["policy_input"]["fen"],
             "move": row["policy_target"]["move_uci"],
-            "year": row["year"],
+            "year": row["policy_input"]["year"],
             "game_sha256": row["game_sha256"],
             "ply": row["ply"],
         })
