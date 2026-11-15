@@ -87,6 +87,9 @@ jobs:
           assert probe["status"]=="POST_HOC_EXPLORATORY_SAME_AUDIT_NOT_CONFIRMATORY"
           assert probe["never_use_for_promotion_or_protocol_changes"] is True
           assert probe["blind_sequence"]["games"]==48
+          assert all(probe["players"][slug]["correct_minus_swapped_paired_by_game"]["games"]==12
+                     and probe["players"][slug]["correct_minus_generic_paired_by_game"]["games"]==12
+                     for slug in ("fischer","karpov","kasparov","tal"))
           assert all(model["lora_only"][slug]["rejected_or_exploratory_candidate"]["status"]
                      =="NEVER_PROMOTE_FROM_DIAGNOSTIC"
                      for slug in ("fischer","karpov","kasparov","tal"))

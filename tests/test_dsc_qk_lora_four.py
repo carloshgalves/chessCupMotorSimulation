@@ -200,3 +200,38 @@ def test_original_projection_and_promotion_weights_remain_frozen():
     assert all(p.grad is None for layer in (q,k,promo)
                for p in layer.parameters())
     assert any(p.grad is not None for p in head.parameters())
+
+
+
+def test_blind_detects_mispaired_candidate_trajectory_before_scoring():
+    rows=[]
+    groups=[]
+    forecasts={slug:[] for slug in PLAYERS}
+    for player_index, player in enumerate(PLAYERS):
+        for game_index in range(12):
+            game_sha=f"{player_index*12+game_index+1:064x}"
+            entries=[{"player":player,"game_sha256":game_sha,
+                      "move":"e2e4"} for _ in range(WINDOW)]
+            rows.extend(entries); groups.append(entries)
+            for slug in PLAYERS:
+                forecasts[slug].extend([
+                    {"moves":["e2e4","d2d4"],"probs":[.6,.4],
+                     "target":0,"game_sha256":game_sha}
+                    for _ in range(WINDOW)])
+    forecasts["tal"][1]["game_sha256"]="e"*64
+    with pytest.raises(ValueError,match="identical positions"):
+        _blind(rows,forecasts,groups,42)
+
+
+def test_lora_only_checkpoint_reloads_without_material_prediction_drift():
+    example=_example()
+    head=QKLoRA(6,4,4)
+    torch.manual_seed(15)
+    with torch.no_grad():
+        head.bq.normal_(0,.1)
+        head.bk.normal_(0,.1)
+    promo=torch.randn(3,4)
+    original=predict([example],head,promo,.4)[0]["probs"]
+    restored=load_state(6,4,4,model_state(head))
+    after=predict([example],restored,promo,.4)[0]["probs"]
+    assert after==pytest.approx(original,abs=1e-5)

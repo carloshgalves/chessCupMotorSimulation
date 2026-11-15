@@ -307,6 +307,22 @@ def _blind(rows: list[dict], scores_by_identity: dict[str, list[dict]],
         raise ValueError("8-move blind game windows not aligned")
     if any(len(pred) != total for pred in scores_by_identity.values()):
         raise ValueError("Incomplete identical-board blind controls")
+    for index, row in enumerate(rows):
+        reference = scores_by_identity[PLAYERS[0]][index]
+        if (reference["game_sha256"] != row["game_sha256"] or
+                reference["moves"][reference["target"]] != row["move"]):
+            raise ValueError("Historical target/trajectory misaligned in blind scoring")
+        for name in PLAYERS:
+            item = scores_by_identity[name][index]
+            if (item["moves"] != reference["moves"]
+                    or item["target"] != reference["target"]
+                    or item["game_sha256"] != reference["game_sha256"]):
+                raise ValueError("Four blind policies were not scored on identical positions")
+            probs = item["probs"]
+            if (len(probs) != len(item["moves"])
+                    or any(not math.isfinite(p) or p < 0 for p in probs)
+                    or abs(math.fsum(probs) - 1.0) > 1e-5):
+                raise ValueError("Invalid probability vector in blind identity controls")
     matrix = {slug: {other: 0 for other in PLAYERS} for slug in PLAYERS}
     move_matrix = {slug: {other: 0 for other in PLAYERS} for slug in PLAYERS}
     observed = []
@@ -537,11 +553,27 @@ def run(cohorts: Path, v3_path: Path, model_out: Path, report_out: Path, *,
                                      key=lambda j: pred["probs"][j])]
                        for pred in swapped]
         probe = [diagnostic_predictions[slug][i] for i in positions]
+        probe_wrong = PLAYERS[(PLAYERS.index(slug)+1) % 4]
+        probe_swapped = [diagnostic_predictions[probe_wrong][i] for i in positions]
+        def first_move(prediction):
+            return prediction["moves"][max(
+                range(len(prediction["moves"])),
+                key=lambda j: prediction["probs"][j])]
         diagnostic_players[slug] = {
             "tune_selected_rank": raw_candidates[slug].rank,
             "no_activation": not choices[slug]["personal_head_activated_on_tune_only"],
             "diagnostic_correct": _metrics(rows, probe),
             "generic": _metrics(rows, common),
+            "diagnostic_swapped": _metrics(rows, probe_swapped),
+            "diagnostic_swapped_from": probe_wrong,
+            "correct_minus_generic_paired_by_game": paired_game_inference(
+                rows, [first_move(p) for p in probe],
+                [first_move(p) for p in common],
+                seed=SEED+501+index, repetitions=BOOTSTRAP_REPETITIONS),
+            "correct_minus_swapped_paired_by_game": paired_game_inference(
+                rows, [first_move(p) for p in probe],
+                [first_move(p) for p in probe_swapped],
+                seed=SEED+601+index, repetitions=BOOTSTRAP_REPETITIONS),
         }
         by_player[slug] = {
             **choices[slug], "audit_games": len(set(row["game_sha256"] for row in rows)),

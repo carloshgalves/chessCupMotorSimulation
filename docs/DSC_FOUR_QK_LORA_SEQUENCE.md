@@ -149,3 +149,62 @@ novos testes negativos confirmam que o lance humano e
 seu hash de partida não entram no cálculo dos logits
 e que os parâmetros Q/K/promo originais não recebem gradientes.
 A revisão final ainda depende de novas CIs e de re-review.
+
+
+## Integridade adicional do teste cego
+
+Todos os quatro modelos devem receber as **mesmas listas legais UCI**,
+o mesmo índice do lance humano, SHA-256 da mesma partida e
+vetores de probabilidades completos/normalizados, na mesma ordem.
+O avaliador agora falha se detectar desalinhamento em qualquer
+candidato, antes de atribuir identidade. Testes adversariais
+injetam um SHA de partida incorreto e verificam a recusa,
+além de exigir paridade numérica após serializar e carregar
+somente as matrizes LoRA.
+
+Mesmo um eventual resultado positivo no controle de sequência
+poderia refletir **época, repertório de abertura ou estilo dos
+oponentes**, não necessariamente uma assinatura causal de
+personalidade. Exigir contraprova por época/posição/abertura
+antes de qualquer conclusão forte. Nesta PR esses controles
+permanecem descritivos e não representam validação final.
+
+
+## Resultado do segundo ensaio real (candidatos rejeitados)
+
+[CI #43738104287](https://github.com/carloshgalves/chessCupMotorSimulation/actions/runs/43738104287)
+foi **SUCCESS**, na revisão intermediária do código que preserva
+os modelos TUNE-selecionados mas não ativados.
+Artefato #**14170689373**, ZIP SHA256
+`9dd384fbc0a1519e58ee90ec66cdd5b55e89ac8df2e1ae7f06b05e310f21c95f`.
+Hash lógico do relatório
+`ac3f644ef4fc03087acfb4793124701e92d4bebeeb57259bc7c4cfafabef2025`
+e do checkpoint de cabeças derivadas
+`1c4a314602d6c66cfcd369e2ee7c939864524d746090c9b053f459883601b6f0`.
+
+Os resultados do teste PRIMÁRIO não mudaram:
+DSC original **231/384**, LoRA genérica **232/384**,
+quatro cabeças ativadas **0/4**, classificação cega estrita
+**12/48 = 25%**, p de permutação 1,0.
+
+O ensaio **PÓS-HOC** que usa os pesos rejeitados foi:
+- Sequências de oito decisões: **17/48 = 35,42%**
+  (IC95 agrupado por partida **[22,92%;47,92%]**,
+  p de permutação **unilateral = 0,07446**).
+- Lances individuais: **109/384 = 28,39%**.
+- Diferença de perfis por jogador em AUDIT: Kasparov
+  melhorou top1 genérico de 58 para 59 acertos em 96;
+  Fischer 59→58, Karpov 59→58, Tal 56→55.
+  A classificação de sequência foi mais promissora que o lance
+  isolado, mas não provou identidade acima do acaso.
+
+**Nenhuma dessas diferenças foi registrada como hipótese
+confirmatória.** Além da incerteza amostral, as partidas
+históricas podem refletir década, abertura, oponente ou
+sobreposição do pré-treino original DSC. Não se devem
+modificar critérios após ler o AUDIT para produzir
+aprovados. A última revisão exige, adicionalmente, comparar
+o candidato rejeitado com o modelo genérico e todos os nomes
+trocados na mesma amostra, com pares por partida e status
+explicitamente exploratório, bem como alinhar os quatro
+vetores de probabilidades e garantir paridade de serialização.
