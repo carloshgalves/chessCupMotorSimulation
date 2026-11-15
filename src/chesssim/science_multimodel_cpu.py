@@ -4,14 +4,12 @@ Uses held-year VALIDATION only; results are exploratory, NOT a final holdout.
 """
 from __future__ import annotations
 import argparse
-from hashlib import sha256
 import importlib.util
 import json
 from pathlib import Path
 import subprocess
 import sys
 from time import perf_counter
-from collections import defaultdict
 
 import chess
 import chess.engine
