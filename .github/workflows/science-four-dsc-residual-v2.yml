@@ -1,0 +1,95 @@
+name: Four historical DSC frozen-backbone trainable conditional-logit head
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/dsc_conditional_residual_v2.py'
+      - 'tests/test_dsc_conditional_residual_v2.py'
+      - 'docs/DSC_FOUR_CONDITIONAL_HEAD_V2.md'
+      - '.github/workflows/science-four-dsc-residual-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: four-dsc-trainable-residual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  four-real-player-sampled-fit-tune-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    env:
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      TORCH_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m pytest -q tests/test_dsc_conditional_residual_v2.py
+      - run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - uses: actions/checkout@v5
+        with:
+          repository: ChessDS/chessds-dsc
+          ref: 229ef4291c38c088a9fd3a410e4c0e926a20cea1
+          path: dsc-source
+          persist-credentials: false
+      - run: |
+          python -m pip install -e ./dsc-source
+          test "$(git -C dsc-source rev-parse HEAD)" = 229ef4291c38c088a9fd3a410e4c0e926a20cea1
+      - name: Regenerate genuine historical TRAIN-year corpus (never validation/holdout)
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov \
+            --birthdates-json docs/REAL_BIRTHDATES_4.json \
+            --split-policy career-stratified --min-ply 17 \
+            --out "$RUNNER_TEMP/cohorts"
+          python -m chesssim.contextual_policy_v3 train \
+            --cohorts "$RUNNER_TEMP/cohorts" \
+            --max-per-player 1600 --max-per-game 3 --seed 2026 \
+            --out "$RUNNER_TEMP/v3-binding.json"
+      - name: Fit small real personal residual heads on frozen DSC150 full probabilities
+        run: |
+          python -m chesssim.dsc_conditional_residual_v2 \
+            --cohorts "$RUNNER_TEMP/cohorts" \
+            --v3-model "$RUNNER_TEMP/v3-binding.json" --fetch \
+            --model-out "$RUNNER_TEMP/four-residual-weights.json" \
+            --report-out "$RUNNER_TEMP/four-residual-audit.json"
+      - name: Require real source evidence and independent internal arm gates
+        run: |
+          python - <<'PY'
+          import os,json
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])
+          m=json.loads((root/"four-residual-weights.json").read_text())
+          r=json.loads((root/"four-residual-audit.json").read_text())
+          assert m["status"]=="TRAINED_ON_REAL_FIT_NOT_APPROVED"
+          assert r["official_personality_promotion"]=="DENIED"
+          assert not r["holdout_opened"] and not r["validation_opened"]
+          assert set(r["players"])=={"fischer","karpov","kasparov","tal"}
+          assert all(p["fit_decisions"]==512 for p in r["players"].values())
+          assert all(p["audit_games"]==48 for p in r["players"].values())
+          assert r["trained_weights_sha256"]==m["checkpoint_sha256"]
+          assert all(p["individual"]["top3"]>=p["individual"]["top1"]
+                     and p["individual"]["mean_log_loss_nats"]>0
+                     for p in r["players"].values())
+          assert "Bonferroni" in r["research_gate_multiplicity"]
+          assert r["numerical_reproducibility"]["stored_derived_head_decimal_places"]==5
+          assert all(x==round(x,5) for x in m["generic_weights"])
+          assert all(all(x==round(x,5) for x in values)
+                     for values in m["individual_weights"].values())
+          print("TRAINED_RESIDUAL_REAL_FIT_AND_DISJOINT_AUDIT",r["report_sha256"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: four-real-dsc-conditional-residual-heads
+          path: |
+            ${{ runner.temp }}/four-residual-weights.json
+            ${{ runner.temp }}/four-residual-audit.json
+          if-no-files-found: warn
+          retention-days: 14
