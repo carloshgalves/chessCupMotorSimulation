@@ -46,13 +46,13 @@ include these PGNs and the complete historical holdout remains sealed.
 ## Adversarial review of first genuine run
 
 First genuine four-player run: GitHub Actions
-\`43671011004\`, artifact \`four-real-dsc-conditional-residual-heads\`
+`43671011004`, artifact `four-real-dsc-conditional-residual-heads`
 ID **14144800789**, ZIP SHA256
-\`daaf4e6e73e95b13e9dc624ccae47ec62dd0e9c2f3842d06ad5b18f35a2f5a81\`.
+`daaf4e6e73e95b13e9dc624ccae47ec62dd0e9c2f3842d06ad5b18f35a2f5a81`.
 The model artifact hash was
-\`9919649fcd318359aa52f51073e7061d3f37cafa9d8860fb63a6e4935d3177df\`.
+`9919649fcd318359aa52f51073e7061d3f37cafa9d8860fb63a6e4935d3177df`.
 The report hash was
-\`cd2acd8ba6ac08064a4e6a0aa876b67116f63d5f2e524107f3903d2db19ec8ba\`.
+`cd2acd8ba6ac08064a4e6a0aa876b67116f63d5f2e524107f3903d2db19ec8ba`.
 
 2,048 genuine FIT decisions (512 per player), 192 TUNE and
 192 AUDIT decisions in 192 independent audit games.
@@ -71,9 +71,9 @@ run: (i) top-1 alone could hide harmful changes to the correct
 move probability; add proper mean log-loss and top-3 for each
 arm/personality; (ii) unadjusted per-player pairwise comparisons
 could overstate candidate acceptance; require an additional
-predeclared conservative two-sided Bonferroni p<=.0125 for
+post-audit conservative two-sided Bonferroni p<=.0125 for
 both individual-vs-generic and correct-vs-swapped comparisons
-over four historical players. Also correct a misleading comment
+over four historical players; this gate is a SOFTWARE SAFETY RULE, not a new preregistered hypothesis, and cannot justify confirmatory claims. Also correct a misleading comment
 calling the unsigned hash encoding "signed" and remove unused
 test imports flagged by Python quality CI. Re-run the genuine
 original-model inference and complete independent re-review

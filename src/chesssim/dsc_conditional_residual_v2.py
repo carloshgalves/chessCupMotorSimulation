@@ -230,7 +230,7 @@ def _quality(rows: list[dict], examples: list[dict],
     return out
 
 
-def _fit(examples: list[dict], seed: int, *
+def _fit(examples: list[dict], seed: int, *,
          generic: list[float] | None = None) -> list[float]:
     """Bounded SGD on actual human labels with original DSC log-prob offset.
 
