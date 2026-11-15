@@ -46,3 +46,24 @@ def test_blind_classifier_abstains_when_true_move_outside_top_candidates():
                               {s:{} for s in PLAYERS}, 0.2, 10)
     assert result["status"] == "UNDERPOWERED_CANDIDATE_COVERAGE"
     assert result["covered"] == 0
+
+
+def test_balanced_identity_bootstrap_keeps_equal_player_weight():
+    board = chess.Board()
+    rows=[]
+    suggestions=[]
+    for player in PLAYERS:
+        for i in range(12):
+            rows.append({
+                "fen": board.fen(), "move":"e2e4",
+                "game_sha256": ("a" if player=="fischer" else
+                                "b" if player=="karpov" else
+                                "c" if player=="kasparov" else "d")+f"{i:063x}",
+                "player": player,
+            })
+            suggestions.append(["e2e4","d2d4"])
+    outcome=_blind_accuracy(rows,suggestions,{s:{} for s in PLAYERS},0.2,10)
+    assert outcome["status"]=="BLIND_LABEL_CLASSIFIER_DIAGNOSTIC_ONLY"
+    assert outcome["balanced_accuracy"]==pytest.approx(0.25)
+    assert outcome["bootstrap_95_ci_by_game"]==pytest.approx([0.25,0.25])
+    assert outcome["majority_class_baseline"]==pytest.approx(0.25)
