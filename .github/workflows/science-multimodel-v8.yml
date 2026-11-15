@@ -1,0 +1,95 @@
+name: Genuine Maia 5M 23M 79M vs DSC-150M paired OTB CPU
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/science_multimodel_cpu.py'
+      - 'tests/test_science_multimodel_cpu.py'
+      - 'docs/MULTIMODEL_BENCHMARK_V8.md'
+      - '.github/workflows/science-multimodel-v8.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chesssim-science-multimodel-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-cpu-comparison:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m pytest -q tests/test_science_multimodel_cpu.py
+      - run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - uses: actions/checkout@v5
+        with:
+          repository: CSSLab/maia3
+          ref: 1e13597c42d4858b7cfd7cfdae01e297263364b2
+          path: maia3-source
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          repository: ChessDS/chessds-dsc
+          ref: 229ef4291c38c088a9fd3a410e4c0e926a20cea1
+          path: dsc-source
+          persist-credentials: false
+      - run: |
+          python -m pip install -e ./maia3-source -e ./dsc-source
+          test "$(git -C dsc-source rev-parse HEAD)" = 229ef4291c38c088a9fd3a410e4c0e926a20cea1
+      - name: Prepare authentic PGNs and frozen V7 comparison policy
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov --birthdates-json docs/REAL_BIRTHDATES_4.json \
+            --split-policy career-stratified --min-ply 17 \
+            --out "$RUNNER_TEMP/cohorts"
+          python -m chesssim.contextual_policy_v3 train \
+            --cohorts "$RUNNER_TEMP/cohorts" --max-per-player 1600 \
+            --max-per-game 3 --seed 2026 --out "$RUNNER_TEMP/v3.json"
+          python -m chesssim.maia_personalization_v7 fit \
+            --cohorts "$RUNNER_TEMP/cohorts" \
+            --v3-model "$RUNNER_TEMP/v3.json" \
+            --out "$RUNNER_TEMP/adapter.json"
+      - name: Compare exact genuine Maia and DSC UCI on the SAME historical positions
+        run: |
+          python -m chesssim.science_multimodel_cpu \
+            --cohorts "$RUNNER_TEMP/cohorts" --v3-model "$RUNNER_TEMP/v3.json" \
+            --adapter "$RUNNER_TEMP/adapter.json" --fetch \
+            --per-player 64 --seed 2038 \
+            --out "$RUNNER_TEMP/multimodel.json"
+      - name: Assert complete independent model comparisons and unopened holdout
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json, os
+          r = json.loads((Path(os.environ["RUNNER_TEMP"])/"multimodel.json").read_text())
+          assert r["validation_decisions"] == 256
+          assert r["holdout_opened"] is False and r["official_personality_promotion"] == "DENIED"
+          assert set(r["models"]) == {"maia3_5m", "maia3_23m", "maia3_79m",
+                                    "dsc_150m", "maia79_personal_diagnostic"}
+          assert all(m["positions"] == 256 for m in r["models"].values())
+          assert r["models"]["maia79_personal_diagnostic"]["top3"] is None
+          assert all(r["models"][name]["top3"] >= r["models"][name]["top1"]
+                     for name in ("maia3_5m","maia3_23m","maia3_79m","dsc_150m"))
+          assert r["maia_checkpoint_sha256"]["maia3_23m"] == "bce6cd1af5f0399ac7eed33fabb7a6a2ef6193662c2740f262bf93af7bfb3569"
+          assert all(v is not None and v > 0
+                     for v in r["peak_uci_process_rss_kib_linux"].values())
+          assert r["dsc_identity"]["code_commit"] == "229ef4291c38c088a9fd3a410e4c0e926a20cea1"
+          print("GENUINE_PAIRED_MODEL_EVIDENCE", r["models"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chesssim-real-maia23-79-dsc150-paired
+          path: ${{ runner.temp }}/multimodel.json
+          retention-days: 7
+          if-no-files-found: warn
