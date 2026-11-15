@@ -24,6 +24,7 @@ from .real_policy_experiment import _digest, _metric, _write_once
 
 SCHEMA = "chesssim-maia23-79-dsc150-otb-comparison-v1"
 MAIA23_HF_REVISION = "51a0145a8178046f7de23119160b136672deeb2b"
+MAIA23_CHECKPOINT_SHA256 = "bce6cd1af5f0399ac7eed33fabb7a6a2ef6193662c2740f262bf93af7bfb3569"
 DSC_SOURCE_COMMIT = "229ef4291c38c088a9fd3a410e4c0e926a20cea1"
 DSC150_WEIGHTS_SHA256 = "66b21d7882bb3fb9737bc798e709671325838e5469ed6bfcf114b3abbcb48e24"
 DSC150_CONFIG_SHA256 = "6916d0ed2b33a4f41c71e704bd23f3ebd6676759d70d5e3b009a6a39d3315e42"
@@ -69,15 +70,38 @@ def _candidates(engine: chess.engine.SimpleEngine, board: chess.Board) -> list[s
     return candidates
 
 
-def _metrics(rows: list[dict], recommendations: list[list[str]]) -> dict:
+def _peak_rss_kib(engine: chess.engine.SimpleEngine) -> int | None:
+    """Linux kernel VmHWM: peak resident memory of the exact UCI process."""
+    pid = engine.transport.get_pid()
+    status = Path(f"/proc/{pid}/status")
+    try:
+        for line in status.read_text(encoding="utf-8").splitlines():
+            if line.startswith("VmHWM:"):
+                fields = line.split()
+                if len(fields) != 3 or fields[2] != "kB":
+                    raise ValueError("Unrecognized Linux VmHWM memory unit")
+                return int(fields[1])
+    except FileNotFoundError:
+        return None
+    return None
+
+
+def _metrics(rows: list[dict], recommendations: list[list[str]], *,
+             full_ranking: bool = True) -> dict:
     if len(rows) != len(recommendations):
         raise ValueError("Different position counts across models")
     first = [moves[0] for moves in recommendations]
     result = _metric(rows, first)
-    result["top3"] = sum(row["move"] in choices[:3]
-                         for row, choices in zip(rows, recommendations)) / len(rows)
-    result["top3_correct"] = sum(row["move"] in choices[:3]
-                                for row, choices in zip(rows, recommendations))
+    if full_ranking:
+        if any(len(moves) < min(3, chess.Board(row["fen"]).legal_moves.count())
+               for row, moves in zip(rows, recommendations)):
+            raise ValueError("Top-3 metric requires at least 3 legal ranked candidates")
+        result["top3_correct"] = sum(row["move"] in choices[:3]
+                                     for row, choices in zip(rows, recommendations))
+        result["top3"] = result["top3_correct"] / len(rows)
+    else:
+        result["top3_correct"] = None
+        result["top3"] = None
     return result
 
 
@@ -106,7 +130,8 @@ def run(cohorts: Path, v3_path: Path, adapter_path: Path, output: Path, *,
     for label, (name, filename, revision) in downloads.items():
         path = Path(hf_hub_download(name, filename=filename, revision=revision))
         expected = (MAIA_CHECKPOINT_SHA256 if label == "maia3_5m" else
-                    MAIA79_CHECKPOINT_SHA256 if label == "maia3_79m" else None)
+                    MAIA79_CHECKPOINT_SHA256 if label == "maia3_79m" else
+                    MAIA23_CHECKPOINT_SHA256)
         digests[label] = _verify_checkpoint(path, known_digest=expected)
         checkpoints[label] = path
     all_rows = [r for slug in sorted(chosen) for r in chosen[slug]]
@@ -116,6 +141,7 @@ def run(cohorts: Path, v3_path: Path, adapter_path: Path, output: Path, *,
         raise ValueError("Genuine reconstructed PGN history mismatch")
     predictions = {}
     times = {}
+    peak_rss_kib = {}
     for label in ("maia3_5m", "maia3_23m", "maia3_79m", "dsc_150m"):
         t0 = perf_counter()
         if label.startswith("maia3_"):
@@ -137,6 +163,7 @@ def run(cohorts: Path, v3_path: Path, adapter_path: Path, output: Path, *,
                               "TimeControl": "classical", "RatingSystem": "fide"})
         try:
             predictions[label] = [_candidates(engine, b) for b in all_boards]
+            peak_rss_kib[label] = _peak_rss_kib(engine)
         finally:
             try:
                 engine.quit()
@@ -150,13 +177,17 @@ def run(cohorts: Path, v3_path: Path, adapter_path: Path, output: Path, *,
         individual = _rerank(board, candidates,
                              adapter["profiles"][slug]["weights"], 1.0)
         predictions.setdefault("maia79_personal_diagnostic", []).append([individual])
-    metrics = {label: _metrics(all_rows, p) for label,p in predictions.items()}
+    metrics = {
+        label: _metrics(all_rows, p, full_ranking=label != "maia79_personal_diagnostic")
+        for label,p in predictions.items()
+    }
     per_player_results = {}
     for slug in sorted(chosen):
         indexes = [i for i,r in enumerate(all_rows) if r["player"] == slug]
         rows = [all_rows[i] for i in indexes]
         per_player_results[slug] = {
-            label: _metrics(rows, [p[i] for i in indexes])
+            label: _metrics(rows, [p[i] for i in indexes],
+                            full_ranking=label != "maia79_personal_diagnostic")
             for label,p in predictions.items()
         }
     baseline = [p[0] for p in predictions["maia3_79m"]]
@@ -186,6 +217,7 @@ def run(cohorts: Path, v3_path: Path, adapter_path: Path, output: Path, *,
         "models": metrics,
         "game_paired_vs_79m": paired,
         "wall_seconds_including_engine_startup_and_inference": times,
+        "peak_uci_process_rss_kib_linux": peak_rss_kib,
         "validation_decisions": len(all_rows),
         "validation_distinct_games": len({r["game_sha256"] for r in all_rows}),
         "validation_exclusions": excluded,
@@ -196,7 +228,7 @@ def run(cohorts: Path, v3_path: Path, adapter_path: Path, output: Path, *,
             "Validation historical years were previously consulted: inferential claims exploratory.",
             "DSC-150M and Maia checkpoints pretrained on different corpora; no external decontamination certification.",
             "Adapted Maia model strength=1 diagnostic is NOT an approved personality.",
-            "Measured wall-time is runtime-specific; not a controlled cross-hardware benchmark.",
+            "Measured wall-time and per-UCI process VmHWM are Linux runner-specific, not controlled cross-hardware comparisons.",
         ],
     }
     result["report_sha256"] = _digest(result)

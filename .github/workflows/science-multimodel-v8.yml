@@ -77,6 +77,12 @@ jobs:
           assert set(r["models"]) == {"maia3_5m", "maia3_23m", "maia3_79m",
                                     "dsc_150m", "maia79_personal_diagnostic"}
           assert all(m["positions"] == 256 for m in r["models"].values())
+          assert r["models"]["maia79_personal_diagnostic"]["top3"] is None
+          assert all(r["models"][name]["top3"] >= r["models"][name]["top1"]
+                     for name in ("maia3_5m","maia3_23m","maia3_79m","dsc_150m"))
+          assert r["maia_checkpoint_sha256"]["maia3_23m"] == "bce6cd1af5f0399ac7eed33fabb7a6a2ef6193662c2740f262bf93af7bfb3569"
+          assert all(v is not None and v > 0
+                     for v in r["peak_uci_process_rss_kib_linux"].values())
           assert r["dsc_identity"]["code_commit"] == "229ef4291c38c088a9fd3a410e4c0e926a20cea1"
           print("GENUINE_PAIRED_MODEL_EVIDENCE", r["models"])
           PY
