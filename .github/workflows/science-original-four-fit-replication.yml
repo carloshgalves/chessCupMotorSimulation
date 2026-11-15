@@ -1,0 +1,87 @@
+name: Original DSC150 vs Maia79 replication on 512 genuine FIT-year games
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/science_original_four_replication.py'
+      - 'tests/test_science_original_four_replication.py'
+      - 'docs/ORIGINAL_FIT_REPLICATION_FOUR.md'
+      - '.github/workflows/science-original-four-fit-replication.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: original-dsc-maia512-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  genuine-512-sampled-fit-year-games:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m pytest -q tests/test_science_original_four_replication.py
+      - run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - uses: actions/checkout@v5
+        with:
+          repository: ChessDS/chessds-dsc
+          ref: 229ef4291c38c088a9fd3a410e4c0e926a20cea1
+          path: dsc-source
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          repository: CSSLab/maia3
+          ref: 1e13597c42d4858b7cfd7cfdae01e297263364b2
+          path: maia3-source
+          persist-credentials: false
+      - run: |
+          python -m pip install -e ./dsc-source -e ./maia3-source
+          test "$(git -C dsc-source rev-parse HEAD)" = 229ef4291c38c088a9fd3a410e4c0e926a20cea1
+          test "$(git -C maia3-source rev-parse HEAD)" = 1e13597c42d4858b7cfd7cfdae01e297263364b2
+      - name: Prepare real historical TRAIN-year corpus, never open validation/holdout
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov \
+            --birthdates-json docs/REAL_BIRTHDATES_4.json \
+            --split-policy career-stratified --min-ply 17 \
+            --out "$RUNNER_TEMP/cohorts"
+          python -m chesssim.contextual_policy_v3 train \
+            --cohorts "$RUNNER_TEMP/cohorts" \
+            --max-per-player 1600 --max-per-game 3 --seed 2026 \
+            --out "$RUNNER_TEMP/v3-binding.json"
+      - name: ORIGINAL DSC and Maia same 512 independent FIT-year games
+        run: |
+          python -m chesssim.science_original_four_replication \
+            --cohorts "$RUNNER_TEMP/cohorts" \
+            --v3-model "$RUNNER_TEMP/v3-binding.json" \
+            --fetch --out "$RUNNER_TEMP/replication512.json"
+      - name: Verify genuine original-model inference and non-promotable output
+        run: |
+          python - <<'PY'
+          import os,json
+          from pathlib import Path
+          r=json.loads((Path(os.environ["RUNNER_TEMP"])/"replication512.json").read_text())
+          assert r["decisions"]==512 and r["games"]==512
+          assert r["sample_seed"]==3109
+          assert not r["validation_opened"] and not r["final_holdout_opened"]
+          assert not r["personality_promoted"]
+          assert all(p["games"]==128 for p in r["per_player"].values())
+          assert r["overall"]["paired"]["games"]==512
+          print("REAL_512_INDEPENDENT_FIT_GAMES_ORIGINAL_MODELS",r["overall"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: original-dsc-maia-four-512-fit-replication
+          path: ${{ runner.temp }}/replication512.json
+          if-no-files-found: warn
+          retention-days: 14
