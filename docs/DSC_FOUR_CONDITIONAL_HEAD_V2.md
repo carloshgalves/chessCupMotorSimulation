@@ -82,3 +82,28 @@ at the updated HEAD before moving this PR from DRAFT.
 The first run's statistical findings are NOT changed by these
 software corrections. No model may be promoted based on this
 train-year developmental audit.
+
+
+## Revisão adicional: consistência numérica dos checkpoints
+
+A primeira CI real (artefato #14144800789) e a revisão após correção das
+métricas (artefato #14145051121) produziram os mesmos 114/113/111
+acertos, 40/192 na classificação cega e intervalos idênticos.
+Porém, os pesos do head derivado diferiam em até **2,5e-7** entre
+runs, alterando o SHA256 do checkpoint. Não é um ganho/perda de
+previsão; é um finding de reproducibilidade numérica relevante para
+congelamento de um modelo individual.
+
+A correção não foi escolhida com base nas respostas de AUDIT: ela
+fixa o número de threads do PyTorch CPU em 1, ativa a opção
+determinística e armazena pesos aprendidos com cinco casas decimais
+em vez de oito. O modelo original DSC-150M continua intocado.
+Checkpoints continuam experimentais; a precisão bit-a-bit entre
+arquiteturas, versões externas do PyTorch e builds diferentes
+**não é garantida** apenas por essa política. Comparar os hashes
+de duas execuções efetivas sob a mesma imagem antes de qualquer
+futuro congelamento confirmatório.
+
+Essa mudança exige novo ciclo completo de CI científica e re-review
+adversarial; não altera retrospectivamente o resultado negativo das
+versões anteriores.

@@ -44,6 +44,7 @@ def test_trainable_residual_uses_fit_human_labels_and_is_deterministic():
     again=_fit(cases,42)
     assert first==again
     assert len(first)==256
+    assert all(x==round(x,5) for x in first)
     assert any(abs(v)>0.001 for v in first)
     with pytest.raises(ValueError,match="Insufficient"):
         _fit(cases[:10],42)

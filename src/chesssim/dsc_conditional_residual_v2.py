@@ -260,7 +260,9 @@ def _fit(examples: list[dict], seed: int, *,
                 weights[j] += rate * L2 * anchor[j]
             for j, g in gradient.items():
                 weights[j] = max(-3.0,min(3.0,weights[j]+rate*g))
-    return [round(v,8) for v in weights]
+    # Numerical CPU output differs below 1e-6 between GitHub runner builds;
+    # snap the small derived head to stable 1e-5 storage precision.
+    return [round(v,5) for v in weights]
 
 
 def _tune_alpha(rows: list[dict], examples: list[dict],
@@ -336,6 +338,11 @@ def _get_original_probabilities(cohorts: Path, v3: dict, sampled: dict,
     if hashes!=v3["source_pgn_sha256"]:
         raise ValueError("Source PGN hash changed during FIT")
     _dsc_preflight()
+    import torch
+    # Fix inference execution order before the original frozen DSC is loaded.
+    torch.manual_seed(SEED)
+    torch.use_deterministic_algorithms(True)
+    torch.set_num_threads(1)
     from chessds_dsc.predictor import DSC, PositionInput
     model=DSC.load("dsc-150m",device="cpu")
     all_out={}
@@ -464,6 +471,12 @@ def run(cohorts:Path,v3_path:Path,model_out:Path,report_out:Path, *,
         "trained_generic":_metric(all_rows,all_generic),
         "trained_personal":_metric(all_rows,all_personal),
         "real_split":embargo,
+        "numerical_reproducibility": {
+            "torch_cpu_threads": 1,
+            "torch_deterministic_algorithms": True,
+            "stored_derived_head_decimal_places": 5,
+            "scope": "BEST_EFFORT_SAME_LIBRARY_CPU; CROSS_HARDWARE_BITWISE_NOT_CERTIFIED",
+        },
         "research_gate_multiplicity": "Bonferroni two-sided p<=0.05/4=0.0125 per profile/endpoint",
         "original_dsc_sha256":DSC150_WEIGHTS_SHA256,
         "trained_weights_sha256":checkpoint["checkpoint_sha256"],
