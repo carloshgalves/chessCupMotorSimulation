@@ -90,9 +90,42 @@ def test_final_holdout_requires_explicit_approval_and_no_repeat(tmp_path):
         evaluate_policy(cohorts, tmp_path / "model.json", tmp_path / "holdout.json",
                         archive_dir=sources, arm="holdout", per_player=4)
     assert not (tmp_path / "holdout.json").exists()
-    evaluation = evaluate_policy(
-        cohorts, tmp_path / "model.json", tmp_path / "holdout.json",
-        archive_dir=sources, arm="holdout", acknowledge_holdout=True, per_player=4)
+    with pytest.raises(PermissionError, match="frozen pre-registration"):
+        evaluate_policy(cohorts, tmp_path / "model.json", tmp_path / "holdout.json",
+                        archive_dir=sources, arm="holdout",
+                        acknowledge_holdout=True, per_player=4)
+    assert not (tmp_path / "holdout.json").exists()
+    # Synthetic fixture can exercise the one-time output behavior only after
+    # a *test-only* review allowlist injection. No actual held-out PGN is opened.
+    from chesssim import scientific_holdout_gate as guard
+    from chesssim.real_policy_experiment import _digest
+    model = _read_json(tmp_path / "model.json")
+    protocol = {
+        "schema": guard.SCHEMA,
+        "candidate_model_sha256": model["model_sha256"],
+        "train_manifest_sha256": model["train_manifest_sha256"],
+        "source_snapshot_commit": "a" * 40,
+        "source_pgn_commitment_sha256": _digest(model["source_pgn_sha256"]),
+        "blind_identity_protocol_sha256": "1" * 64,
+        "tactical_safety_protocol_sha256": "2" * 64,
+        "hypotheses_and_multiplicity_sha256": "3" * 64,
+        "seed": 2027, "per_player": 4, "per_game": 2,
+        "rodent_depth": 2, "rodent_seconds": 0.15, "use_rodent": False,
+    }
+    digest = guard._digest(protocol)
+    protocol["frozen_protocol_sha256"] = digest
+    file = tmp_path / "test-only-preregistration.json"
+    file.write_text(json.dumps(protocol))
+    with pytest.raises(PermissionError, match="separately reviewed"):
+        evaluate_policy(cohorts, tmp_path / "model.json", tmp_path / "holdout.json",
+                        archive_dir=sources, arm="holdout", per_player=4,
+                        acknowledge_holdout=True, final_preregistration=file)
+    from unittest.mock import patch
+    with patch.object(guard, "TRUSTED_FROZEN_PREREGISTRATIONS", frozenset({digest})):
+        evaluation = evaluate_policy(
+            cohorts, tmp_path / "model.json", tmp_path / "holdout.json",
+            archive_dir=sources, arm="holdout", acknowledge_holdout=True,
+            per_player=4, final_preregistration=file)
     assert evaluation["arm"] == "holdout"
     with pytest.raises(FileExistsError):
         evaluate_policy(cohorts, tmp_path / "model.json", tmp_path / "holdout.json",

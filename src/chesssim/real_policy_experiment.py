@@ -499,7 +499,8 @@ def evaluate_policy(cohorts: Path, model_path: Path, out: Path, *,
                     seed: int = 2027, per_player: int = 40, per_game: int = 2,
                     rodent_root: Path | None = None, rodent_depth: int = 2,
                     rodent_seconds: float = 0.15,
-                    acknowledge_holdout: bool = False) -> dict:
+                    acknowledge_holdout: bool = False,
+                    final_preregistration: Path | None = None) -> dict:
     if arm == "holdout" and acknowledge_holdout is not True:
         raise ValueError("Final holdout needs explicit acknowledgement")
     if type(rodent_depth) is not int or not 1 <= rodent_depth <= 20:
@@ -511,6 +512,21 @@ def evaluate_policy(cohorts: Path, model_path: Path, out: Path, *,
     if not isinstance(claimed, str) or claimed != _digest(model):
         raise ValueError("Corrupt or modified trained model")
     model["model_sha256"] = claimed
+    if arm == "holdout":
+        if final_preregistration is None:
+            raise PermissionError("Final holdout requires a separately reviewed frozen pre-registration")
+        from .scientific_holdout_gate import authorize_final_holdout, _digest as _gate_digest
+        authorize_final_holdout(
+            final_preregistration,
+            model_sha256=claimed,
+            train_manifest_sha256=model["train_manifest_sha256"],
+            source_pgn_commitment_sha256=_gate_digest(model["source_pgn_sha256"]),
+            seed=seed, per_player=per_player, per_game=per_game,
+            rodent_depth=rodent_depth, rodent_seconds=rodent_seconds,
+            use_rodent=rodent_root is not None,
+        )
+    elif final_preregistration is not None:
+        raise ValueError("Frozen final pre-registration may only be supplied for holdout")
     sample, excluded, source_hashes = _read_eval_positions(
         cohorts, model, arm=arm, archive_dir=archive_dir,
         seed=seed, per_player=per_player, per_game=per_game)
@@ -613,6 +629,8 @@ def main(argv: list[str] | None = None) -> int:
     sources.add_argument("--archive-dir", type=Path)
     ev.add_argument("--arm", choices=ALLOWED_ARMS, default="validation")
     ev.add_argument("--acknowledge-holdout", action="store_true")
+    ev.add_argument("--final-preregistration", type=Path,
+                    help="reviewed and allowlisted protocol required before any holdout read")
     ev.add_argument("--seed", type=int, default=2027)
     ev.add_argument("--per-player", type=int, default=40)
     ev.add_argument("--per-game", type=int, default=2)
@@ -631,7 +649,8 @@ def main(argv: list[str] | None = None) -> int:
             archive_dir=args.archive_dir, seed=args.seed, per_player=args.per_player,
             per_game=args.per_game, rodent_root=args.rodent_root,
             rodent_depth=args.rodent_depth, rodent_seconds=args.rodent_seconds,
-            acknowledge_holdout=args.acknowledge_holdout)
+            acknowledge_holdout=args.acknowledge_holdout,
+            final_preregistration=args.final_preregistration)
         result = {"status": output["status"], "rodent_status": output["rodent"]["status"],
                   "evaluation": {k: {name: {"top1": row["top1"],
                                           "macro_by_game": row["macro_by_game"],
