@@ -46,6 +46,21 @@ def game_arm(trajectory: str) -> str:
     return "train" if bucket < TRAIN_PARTS else "test"
 
 
+def _material_endgame(board: chess.Board) -> bool:
+    """Explicit material-based ENDGAME proxy; not a full endgame classifier.
+
+    Approximately <=16 pawn-independent points of non-king material remain
+    on BOTH sides combined. Unlike ply>=70 this examines the real position.
+    """
+    values = ((chess.KNIGHT, 3), (chess.BISHOP, 3),
+              (chess.ROOK, 5), (chess.QUEEN, 9))
+    material = sum(
+        len(board.pieces(piece, side)) * value
+        for side in (chess.WHITE, chess.BLACK)
+        for piece, value in values)
+    return material <= 16
+
+
 def _style_features(game: chess.pgn.Game, color: bool) -> dict:
     """Count actual decisions by stage, not invented attributes or Elo."""
     board = game.board()
@@ -61,6 +76,14 @@ def _style_features(game: chess.pgn.Game, color: bool) -> dict:
             stats[f"{stage}_castles"] += bool(board.is_castling(move))
             stats[f"{stage}_pawn_moves"] += (
                 board.piece_type_at(move.from_square) == chess.PAWN)
+            if _material_endgame(board):
+                stats["endgame_material_moves"] += 1
+                stats["endgame_material_captures"] += bool(board.is_capture(move))
+                stats["endgame_material_checks"] += bool(board.gives_check(move))
+                stats["endgame_material_pawn_moves"] += (
+                    board.piece_type_at(move.from_square) == chess.PAWN)
+                stats["endgame_material_king_moves"] += (
+                    board.piece_type_at(move.from_square) == chess.KING)
             if board.is_capture(move):
                 stats["captures"] += 1
             if board.gives_check(move):
@@ -79,6 +102,14 @@ def _style_summary(totals: Counter) -> dict:
         for action in ("captures", "checks", "castles", "pawn_moves"):
             out[phase][action+"_rate"] = round(
                 totals[f"{phase}_{action}"]/count, 6) if count else None
+    n = totals["endgame_material_moves"]
+    out["material_endgame"] = {
+        "decisions": n,
+        "criterion": "both_sides_combined_nonpawn_material_at_most_16",
+    }
+    for feature in ("captures", "checks", "pawn_moves", "king_moves"):
+        out["material_endgame"][feature+"_rate"] = (
+            round(totals[f"endgame_material_{feature}"]/n, 6) if n else None)
     return out
 
 
@@ -264,7 +295,7 @@ def _style_of_engine_game(game: chess.pgn.Game, player_white: bool) -> dict:
 
 
 def play_real_four(root: Path, profile_dir: Path, out: Path, *,
-                   players: list[str] | None = None, depth: int = 2,
+                   players: list[str] | None = None, depth: int = 4,
                    max_plies: int = 450, opening_seed: int = 2033,
                    use_repertoire: bool = True) -> dict:
     """Play actual Rodent-vs-Simple games, reversed colors, to terminal state.
@@ -428,7 +459,7 @@ def main(argv=None) -> int:
     play.add_argument("--profiles", type=Path, required=True)
     play.add_argument("--out", type=Path, required=True)
     play.add_argument("--players", nargs="+", default=list(DEFAULT_PLAYERS))
-    play.add_argument("--depth", type=int, default=2)
+    play.add_argument("--depth", type=int, default=4)
     play.add_argument("--max-plies", type=int, default=450)
     play.add_argument("--without-repertoire", action="store_true")
     args = p.parse_args(argv)
