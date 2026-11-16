@@ -124,6 +124,26 @@ def test_style_features_count_real_legal_decisions():
     assert pilot._style_summary(__import__("collections").Counter(w))["opening"]["decisions"] == 3
 
 
+def test_material_endgame_not_late_ply_and_captures_real_king_activity():
+    early = chess.Board()
+    assert pilot._material_endgame(early) is False
+    ending = chess.Board("8/8/4k3/8/8/4K3/3P4/8 w - - 0 1")
+    assert ending.is_valid()
+    assert pilot._material_endgame(ending) is True
+    game = chess.pgn.Game()
+    game.setup(ending)
+    move = chess.Move.from_uci("e3d3")
+    assert move in ending.legal_moves
+    game.add_variation(move)
+    stats = pilot._style_features(game,True)
+    assert stats["endgame_material_moves"] == 1
+    assert stats["endgame_material_king_moves"] == 1
+    assert stats["opening_moves"] == 1
+    summary = pilot._style_summary(__import__("collections").Counter(stats))
+    assert summary["material_endgame"]["decisions"] == 1
+    assert summary["material_endgame"]["king_moves_rate"] == 1
+
+
 def test_playable_runner_reverses_colors_and_preserves_actual_status(monkeypatch,tmp_path):
     book_root = tmp_path/"training"
     book_root.mkdir()
