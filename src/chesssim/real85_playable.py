@@ -113,6 +113,14 @@ def _style_summary(totals: Counter) -> dict:
     return out
 
 
+def opening_prediction(votes: Counter, human_move: str) -> tuple[int, float]:
+    """One reproducible top-1 and the stochastic historical-book accuracy."""
+    if not votes or any(type(v) is not int or v <= 0 for v in votes.values()):
+        raise ValueError("Observed opening counts must be positive integers")
+    winner = sorted(votes, key=lambda m: (-votes[m], m))[0]
+    return int(human_move == winner), votes.get(human_move, 0) / sum(votes.values())
+
+
 def _write_new(path: Path, content: dict) -> None:
     if path.exists() or path.is_symlink():
         raise FileExistsError(f"Refusing overwrite: {path}")
@@ -211,13 +219,10 @@ def train_real_profiles(out: Path, *, players: list[str] | None = None,
                         held_eval["decisions"] += 1
                         if votes:
                             held_eval["covered"] += 1
-                            # One deterministic top-1 (not optimistic
-                            # "any tied move wins" inflation); the live book
-                            # remains stochastic, so also report its true mass.
-                            best = sorted(votes, key=lambda m: (-votes[m], m))[0]
-                            held_eval["top1"] += int(move.uci() == best)
-                            held_eval["weighted_correct_mass"] += (
-                                votes.get(move.uci(), 0) / sum(votes.values()))
+                            # Do not count all tied modal moves as top-1.
+                            correct, mass = opening_prediction(votes, move.uci())
+                            held_eval["top1"] += correct
+                            held_eval["weighted_correct_mass"] += mass
                     board.push(move)
             book = {
                 "schema": BOOK_SCHEMA, "player": slug,
