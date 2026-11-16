@@ -1,0 +1,163 @@
+name: Real85 expansion wave two - four genuine historical UCI profiles
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/real85-wave-two.yml'
+      - 'src/chesssim/real85_playable.py'
+      - 'src/chesssim/real85_roundrobin.py'
+      - 'tests/test_real85_wave_two.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real85-expansion-wave-two-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-historical-wave-two:
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Verify second cohort and adversarial invariants
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pytest -q tests/test_real85_wave_two.py tests/test_real85_playable.py tests/test_real85_roundrobin.py
+      - name: Fit genuine source-locked PGN opening choices over 85 percent of unique games
+        run: |
+          python -m chesssim.real85_playable fit --fetch \
+            --players alekhine petrosian anand rubinstein \
+            --max-opening-plies 40 \
+            --out "$RUNNER_TEMP/real85-wave-two"
+          python - <<'PY'
+          from pathlib import Path
+          import json,os
+          root=Path(os.environ["RUNNER_TEMP"])/"real85-wave-two"
+          d=json.loads((root/"report.json").read_text())
+          assert d["schema"]=="chesssim-real-85pct-playable-historic-profile-v1"
+          assert d["original_rodent_modified"] is False
+          assert d["official_style_validated"] is False
+          assert set(d["players"])=={"alekhine","petrosian","anand","rubinstein"}
+          for slug,row in d["players"].items():
+              assert row["status"]=="REAL_GAMES_TRAINED_PLAYABLE_REPERTOIRE", (slug,row["status"])
+              assert row["accepted_distinct_games"]>=100, (slug,row["accepted_distinct_games"])
+              assert row["train_fraction"]>=0.8, (slug,row["train_fraction"])
+              assert row["test_games"]>=15
+              assert row["train_games"]+row["test_games"]==row["accepted_distinct_games"]
+              assert row["train_style"]["moves"] > 0
+              assert row["test_style"]["moves"] > 0
+              assert row["learned_opening_decisions"] > row["train_games"]
+              assert row["learned_opening_positions"] > 0
+              assert len(row["source_pgn_sha256"])==len(row["book_sha256"])==64
+              assert (root/f"{slug}.json").is_file()
+              print("WAVE_TWO_REAL_TRAIN",slug,"total",row["accepted_distinct_games"],
+                    "train",row["train_games"],"test",row["test_games"],
+                    "fraction",row["train_fraction"],
+                    "learned_positions",row["learned_opening_positions"])
+          PY
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Build pinned authentic Rodent IV and verify all four official aliases
+        run: |
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac
+          make -C rodent-source/sources build
+          mkdir -p "$RUNNER_TEMP/rodent"
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          from chesssim.catalog import find_player
+          from chesssim.registry import registered_aliases
+          root=Path(os.environ["RUNNER_TEMP"])/"rodent"
+          aliases=registered_aliases(root/"personalities/basic.ini")
+          for slug in ("alekhine","petrosian","anand","rubinstein"):
+              player=find_player(slug)
+              assert player.rodent_alias is not None
+              assert aliases[player.rodent_alias]==player.profile_filename
+              assert (root/"personalities"/player.profile_filename).is_file()
+              print("AUTHENTIC_PROFILE",slug,player.rodent_alias,player.profile_filename)
+          PY
+      - name: Actual complete games with free Simple control and mirrored colors
+        run: |
+          python -m chesssim.real85_playable play \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --profiles "$RUNNER_TEMP/real85-wave-two" \
+            --players alekhine petrosian anand rubinstein \
+            --depth 2 --max-plies 450 \
+            --out "$RUNNER_TEMP/wave-two-simple"
+          python -m chesssim.real85_roundrobin \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --profiles "$RUNNER_TEMP/real85-wave-two" \
+            --players alekhine petrosian anand rubinstein \
+            --depth 2 --max-plies 450 \
+            --out "$RUNNER_TEMP/wave-two-roundrobin"
+          python - <<'PY'
+          from pathlib import Path
+          import json,os
+          root=Path(os.environ["RUNNER_TEMP"])
+          simple=json.loads((root/"wave-two-simple/results.json").read_text())
+          roundrobin=json.loads((root/"wave-two-roundrobin/results.json").read_text())
+          assert simple["status"]=="ACTUAL_COMPLETE_GAMES_PLAYED"
+          assert roundrobin["status"]=="ALL_ROUNDROBIN_GAMES_COMPLETE"
+          assert len(simple["games"])==8
+          assert len(roundrobin["games"])==roundrobin["completed_games"]==12
+          assert all(v["completed"]==2 for v in simple["players"].values())
+          assert all(v["completed"]==6 for v in roundrobin["standings"].values())
+          assert all(g["opponent_historical_opening_moves"]==0 for g in simple["games"])
+          assert not roundrobin["historical_strength_elo_estimated"]
+          assert simple["rodent_binary_sha256"]==roundrobin["engine_sha256"]
+          print("REAL_WAVE_TWO_COMPLETE_20",{
+              slug:{"vs_simple":row["points_vs_simple"],
+                    "focal_book_plies":row["focal_book_plies_played"],
+                    "roundrobin_score":roundrobin["standings"][slug]["points"]}
+              for slug,row in simple["players"].items()})
+          PY
+      - name: Independent Stockfish review of actual second-wave moves
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y stockfish
+          python -m chesssim analyze-quality \
+            --pgn "$RUNNER_TEMP/wave-two-simple/played.pgn" \
+            --stockfish /usr/games/stockfish --depth 8 \
+            --max-positions 64 --min-fullmove 8 --pv-plies 5 \
+            --out "$RUNNER_TEMP/wave-two-stockfish.json"
+          python - <<'PY'
+          from pathlib import Path
+          import os,json
+          root=Path(os.environ["RUNNER_TEMP"])
+          d=json.loads((root/"wave-two-stockfish.json").read_text())
+          assert d["status"]=="EXPLORATORY_STRENGTH_DIAGNOSTIC_NOT_ELO"
+          assert d["reconciliation"]["status"]=="CONSISTENT"
+          assert d["independent_decisions_sampled"]>=16
+          print("WAVE_TWO_STOCKFISH_REAL",d["summary"])
+          PY
+      - name: Publish REAL source counts, repertoires, games and Stockfish evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real85-wave-two-four-historical-profile-full-games
+          path: |
+            ${{ runner.temp }}/real85-wave-two/report.json
+            ${{ runner.temp }}/real85-wave-two/alekhine.json
+            ${{ runner.temp }}/real85-wave-two/petrosian.json
+            ${{ runner.temp }}/real85-wave-two/anand.json
+            ${{ runner.temp }}/real85-wave-two/rubinstein.json
+            ${{ runner.temp }}/wave-two-simple/results.json
+            ${{ runner.temp }}/wave-two-simple/played.pgn
+            ${{ runner.temp }}/wave-two-roundrobin/results.json
+            ${{ runner.temp }}/wave-two-roundrobin/games.pgn
+            ${{ runner.temp }}/wave-two-stockfish.json
+          retention-days: 14
