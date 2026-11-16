@@ -1,0 +1,117 @@
+name: Real frozen DSC150 QK LoRA — four players and blind game sequences
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/dsc_qk_lora_core.py'
+      - 'src/chesssim/dsc_qk_lora_four.py'
+      - 'tests/test_dsc_qk_lora_four.py'
+      - 'docs/DSC_FOUR_QK_LORA_SEQUENCE.md'
+      - '.github/workflows/science-four-dsc-qk-lora.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dsc-four-qk-lora-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  four-real-qk-lora-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    env:
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      TORCH_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install ChessCup, CPU PyTorch and scientific test tools
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pip install 'torch==2.15.0+cpu' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'chess==1.11.2'
+      - name: Synthetic ENGINEERING tests only
+        run: python -m pytest -q tests/test_dsc_qk_lora_four.py
+      - uses: actions/checkout@v5
+        with:
+          repository: ChessDS/chessds-dsc
+          ref: 229ef4291c38c088a9fd3a410e4c0e926a20cea1
+          path: dsc-source
+          persist-credentials: false
+      - name: Verify immutable original DSC code and install
+        run: |
+          python -m pip install -e ./dsc-source
+          python -m pip install 'numpy==2.5.4' 'safetensors==0.8.0' 'chess==1.11.2'
+          test "$(git -C dsc-source rev-parse HEAD)" = 229ef4291c38c088a9fd3a410e4c0e926a20cea1
+      - name: Recreate authorized four-player historical TRAIN cohort
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov \
+            --birthdates-json docs/REAL_BIRTHDATES_4.json \
+            --split-policy career-stratified --min-ply 17 \
+            --out "$RUNNER_TEMP/cohorts"
+          python -m chesssim.contextual_policy_v3 train \
+            --cohorts "$RUNNER_TEMP/cohorts" \
+            --max-per-player 1600 --max-per-game 3 --seed 2026 \
+            --out "$RUNNER_TEMP/v3-binding.json"
+      - name: Genuine original DSC latents and frozen-Q/K low-rank training
+        run: |
+          python -m chesssim.dsc_qk_lora_four \
+            --cohorts "$RUNNER_TEMP/cohorts" \
+            --v3-model "$RUNNER_TEMP/v3-binding.json" --fetch \
+            --model-out "$RUNNER_TEMP/four-qk-lora-weights.json" \
+            --report-out "$RUNNER_TEMP/four-qk-lora-report.json"
+      - name: Enforce exact disjoint data budget and no official personality activation
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])
+          model=json.loads((root/"four-qk-lora-weights.json").read_text())
+          r=json.loads((root/"four-qk-lora-report.json").read_text())
+          assert model["base_weights_sha256"]=="66b21d7882bb3fb9737bc798e709671325838e5469ed6bfcf114b3abbcb48e24"
+          assert not model["holdout_opened"] and model["official_promotion"]=="DENIED"
+          assert not r["holdout_opened"] and not r["validation_opened"]
+          assert r["official_promotion"]=="DENIED"
+          assert r["numerical_environment"]["torch_version"]=="2.15.0+cpu"
+          assert r["numerical_environment"]["torch_intraop_threads"]==1
+          assert r["numerical_environment"]["torch_deterministic_algorithms"] is True
+          assert r["head_checkpoint_sha256"]==model["checkpoint_sha256"]
+          assert r["source_split"]["total_unique_source_games"]==288
+          assert r["blind_sequence"]["games"]==48
+          assert r["blind_sequence"]["decisions"]==384
+          assert r["blind_sequence"]["sequence_length"]==8
+          assert set(r["players"])=={"fischer","tal","karpov","kasparov"}
+          probe=r["posthoc_rejected_head_probe"]
+          assert probe["status"]=="POST_HOC_EXPLORATORY_SAME_AUDIT_NOT_CONFIRMATORY"
+          assert probe["never_use_for_promotion_or_protocol_changes"] is True
+          assert probe["blind_sequence"]["games"]==48
+          assert all(probe["players"][slug]["correct_minus_swapped_paired_by_game"]["games"]==12
+                     and probe["players"][slug]["correct_minus_generic_paired_by_game"]["games"]==12
+                     for slug in ("fischer","karpov","kasparov","tal"))
+          assert all(model["lora_only"][slug]["rejected_or_exploratory_candidate"]["status"]
+                     =="NEVER_PROMOTE_FROM_DIAGNOSTIC"
+                     for slug in ("fischer","karpov","kasparov","tal"))
+          assert all(x["audit_games"]==12 and x["audit_decisions"]==96
+                     for x in r["players"].values())
+          assert sum(x["fit_decisions"] for x in r["players"].values())==1536
+          assert all(x["correct"]["top3"]>=x["correct"]["top1"]
+                     and x["correct"]["mean_log_loss_nats"]>0
+                     for x in r["players"].values())
+          print("QK_LORA_REAL_TRAIN_ONLY_AND_EIGHT_MOVE_IDENTITY_AUDIT",r["report_sha256"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chesssim-four-genuine-dsc-qk-lora-blind-sequences
+          path: |
+            ${{ runner.temp }}/four-qk-lora-weights.json
+            ${{ runner.temp }}/four-qk-lora-report.json
+          if-no-files-found: warn
+          retention-days: 14
