@@ -46,3 +46,18 @@ O relatório compara Maia original, LoRA genérica, LoRA pessoal correta e LoRA 
 - A reconciliação do histórico reabre o arquivo PGN público para **localizar apenas jogos TRAIN selecionados**. Não executa inferência, cálculo de loss ou atualização de parâmetros para quaisquer partidas VALIDATION/HOLDOUT.
 - O pipeline não homologa nenhuma personalidade, não altera Rodent IV e não abre HOLDOUT final; qualquer avanço para competição demanda teste tático e gate humano posterior.
 - A verdadeira ampliação para milhares de jogos por jogador exige avaliação de custo CPU/tempo, cache seguro de latentes, checkpoints retomáveis e avaliação jogo-pareada. Não alegar que já ocorreu.
+
+
+## Segundo lote: treinamento neural ampliado
+
+Após o primeiro workflow real [run 43856760552](https://github.com/carloshgalves/chessCupMotorSimulation/actions/runs/43856760552) concluir **8 testes + treino real SUCCESS** com 160 decisões, constatou-se que o lote-piloto de 24 FIT por jogador não mudou top-1 no AUDIT de 8 decisões por jogador. Para fugir de conclusões a partir de poucos exemplos, a CI foi ampliada, **sem alterar a arquitetura/seed/loss**:
+
+| Braço TRAIN | Jogos por jogador | Decisões por jogador |
+| --- | ---: | ---: |
+| FIT | 128 | 384 |
+| TUNE | 16 | 48 |
+| AUDIT interno | 16 | 48 |
+| TOTAL | 160 | 480 |
+
+Total **640 jogos globalmente únicos e 1.920 decisões selecionadas**, incluindo **1.536 labels FIT** usadas no gradiente. Continua sendo um treinamento parcial do histórico, não todos os 122.847 labels da V7. Aumentar a amostra depois de inspecionar o primeiro AUDIT torna o segundo AUDIT um teste exploratório, nunca uma confirmação independente. A alteração é transparente e versionada no workflow.
+
