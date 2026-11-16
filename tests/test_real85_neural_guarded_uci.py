@@ -119,7 +119,6 @@ def test_failed_evaluator_blocks_game_and_bad_config_denied():
 def test_real_executor_accepts_safe_policy_contract_without_official_clock(monkeypatch,tmp_path):
     from chesssim import matches
     from chesssim.catalog import Player
-    base=chess.Move.from_uci("e2e4")
     actors=[]
     class FakeRodent:
         def play(self, board, limit, **kwargs):
