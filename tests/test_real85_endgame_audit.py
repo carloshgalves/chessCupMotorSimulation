@@ -154,7 +154,7 @@ def test_full_real_test_endgame_game_population_no_artificial_cap(monkeypatch, t
     examples = [_example("e3d3"), _example("e3f3"), _example("e3e4")]
     ids = [mainline_identity(g)[0] for g in examples]
     assert len(set(ids)) == 3
-    pgn = ("\\n\\n".join(map(str, examples)) + "\\n").encode()
+    pgn = ("\n\n".join(map(str, examples)) + "\n").encode()
     monkeypatch.setattr(endgames, "_source_bytes",
                         lambda *a, **k: (pgn,pgn,"FIXTURE_THREE_GAMES"))
     monkeypatch.setattr(endgames, "game_arm",
