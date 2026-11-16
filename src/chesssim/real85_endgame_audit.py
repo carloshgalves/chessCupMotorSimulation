@@ -147,11 +147,22 @@ def _evaluate_stockfish(engine, board: chess.Board, color: bool, depth: int) -> 
 
 def _moved_score(engine, board: chess.Board, move: chess.Move, color: bool,
                  depth: int) -> tuple[int, bool]:
+    """Evaluate a *forced root move* at the same original FEN and root depth.
+
+    Re-analysing the child at depth N would give that move an additional
+    ply of search relative to the unrestricted N-ply reference. Root
+    restriction avoids that systematic horizon mismatch, though independent
+    UCI search heuristics still make centipawns exploratory.
+    """
     if move not in board.legal_moves:
         raise ValueError("Invalid human/engine candidate on historical FEN")
-    candidate = board.copy(stack=False)
-    candidate.push(move)
-    return _evaluate_stockfish(engine, candidate, color, depth)
+    info = engine.analyse(
+        board, chess.engine.Limit(depth=depth), root_moves=[move])
+    score = info["score"].pov(color)
+    value = score.score(mate_score=100000)
+    if value is None:
+        raise RuntimeError("Independent Stockfish returned no numeric root-move evaluation")
+    return int(value), score.mate() is not None
 
 
 def audit(positions: Path, rodent_root: Path, stockfish: Path, out: Path, *,
@@ -263,6 +274,7 @@ def audit(positions: Path, rodent_root: Path, stockfish: Path, out: Path, *,
         "stockfish_name": sf_id,
         "rodent_depth": rodent_depth, "stockfish_depth": stockfish_depth,
         "training_or_parameter_selection_performed": False,
+        "comparison": "same_root_fen_and_depth_with_forced_historical_and_rodent_root_moves",
         "players": evaluated,
         "warning": "Scores are depth-sensitive, sampled once per real TEST game; not historic Elo or a promotion gate.",
     }
