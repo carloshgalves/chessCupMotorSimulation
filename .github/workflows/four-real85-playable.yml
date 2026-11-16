@@ -164,6 +164,31 @@ jobs:
                     "decisions",doc["independent_decisions_sampled"],
                     "per_player",doc["summary"])
           PY
+      - name: Derive real game-level style and quality reports from Stockfish verdicts
+        run: |
+          python -m chesssim paired-evidence \
+            --pgn "$RUNNER_TEMP/real85-games/played.pgn" \
+            --quality "$RUNNER_TEMP/book-stockfish-quality.json" \
+            --opening-plies 24 --bootstrap 300 \
+            --out "$RUNNER_TEMP/book-paired-evidence.json"
+          python -m chesssim paired-evidence \
+            --pgn "$RUNNER_TEMP/real85-games-no-book/played.pgn" \
+            --quality "$RUNNER_TEMP/no-book-stockfish-quality.json" \
+            --opening-plies 24 --bootstrap 300 \
+            --out "$RUNNER_TEMP/no-book-paired-evidence.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])
+          for name in ("book-paired-evidence.json","no-book-paired-evidence.json"):
+              d=json.loads((root/name).read_text())
+              assert d["schema"]=="chesssim-paired-style-strength-v1"
+              assert len(d["players"])==5
+              print("PAIRWISE_REAL_GAME_STYLE_AND_STRENGTH",name,
+                    {p:{"games":row["distinct_games"],
+                        "cp":row["strength"]["game_level"]["mean"]}
+                     for p,row in d["players"].items()})
+          PY
       - name: Preserve aggregate corpus, true played PGNs and profile books
         if: always()
         uses: actions/upload-artifact@v4
@@ -181,5 +206,7 @@ jobs:
             ${{ runner.temp }}/real85-games-no-book/played.pgn
             ${{ runner.temp }}/book-stockfish-quality.json
             ${{ runner.temp }}/no-book-stockfish-quality.json
+            ${{ runner.temp }}/book-paired-evidence.json
+            ${{ runner.temp }}/no-book-paired-evidence.json
           retention-days: 14
           if-no-files-found: warn
