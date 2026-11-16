@@ -51,6 +51,8 @@ def test_actual_gradient_learning_and_bitwise_resume(monkeypatch, tmp_path):
     assert p["tune"] is None
     a = json.loads((tmp_path/"part/fischer.checkpoint.json").read_text())
     assert a["completed_games"]==9
+    assert a["payload_sha256"] == net._fingerprint({
+        k:v for k,v in a.items() if k!="payload_sha256"})
     assert a["model"]["bias"] != {}
     assert a["gradient_steps"] > 0
     # An interruption after a partial checkpoint must be restartable.
@@ -86,7 +88,21 @@ def test_fail_closed_mismatched_checkpoint_and_partial_cap(monkeypatch,tmp_path)
     state=json.loads(checkpoint.read_text())
     state["input_manifest_sha256"]="0"*64
     checkpoint.write_text(json.dumps(state))
-    with pytest.raises(ValueError,match="Resume checkpoint"):
+    with pytest.raises(ValueError,match="checkpoint integrity"):
+        net.train(root,tmp_path/"partial",players=["fischer"],resume=True)
+    state["input_manifest_sha256"]=net.file_hash(root/"manifest.json")
+    state["optimizer"]["learning_rate"]=0.5
+    state["payload_sha256"]=net._fingerprint({
+        k:v for k,v in state.items() if k!="payload_sha256"})
+    checkpoint.write_text(json.dumps(state))
+    with pytest.raises(ValueError,match="optimizer or model metadata"):
+        net.train(root,tmp_path/"partial",players=["fischer"],resume=True)
+    state["optimizer"]["learning_rate"]=net.LR
+    state["gradient_steps"]+=1
+    state["payload_sha256"]=net._fingerprint({
+        k:v for k,v in state.items() if k!="payload_sha256"})
+    checkpoint.write_text(json.dumps(state))
+    with pytest.raises(ValueError,match="training counts"):
         net.train(root,tmp_path/"partial",players=["fischer"],resume=True)
     assert not (tmp_path/"no").exists() and not (tmp_path/"bad").exists()
 
