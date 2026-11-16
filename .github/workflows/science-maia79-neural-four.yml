@@ -65,7 +65,7 @@ jobs:
           python -m chesssim.maia79_neural_four \
             --cohorts "$RUNNER_TEMP/real-cohorts" \
             --v3-model "$RUNNER_TEMP/v3-binding.json" \
-            --fit-games 12 --tune-games 4 --audit-games 4 --moves-per-game 2 \
+            --fit-games 128 --tune-games 16 --audit-games 16 --moves-per-game 3 \
             --out "$RUNNER_TEMP/four-maia79-personal-neural-adapters.json" \
             --report "$RUNNER_TEMP/four-maia79-neural-results.json"
       - name: Fail closed unless genuine neural fitting and four identity controls exist
@@ -81,17 +81,17 @@ jobs:
           assert model["maia_checkpoint_sha256"] == "3fc6181d5db789b45a15305732148757ae74efa3e0028e81ba335b462dac45c2"
           assert model["rank"] == 4
           assert report["model_sha256"] == model["model_sha256"]
-          assert report["selection"]["selected_unique_games"] == 80
-          assert report["selection"]["selected_decisions"] == 160
+          assert report["selection"]["selected_unique_games"] == 640
+          assert report["selection"]["selected_decisions"] == 1920
           assert set(model["players"]) == {"fischer","karpov","kasparov","tal"}
           assert set(report["metrics"]) == set(model["players"])
           assert len(model["generic"]["training_losses"]) == 2
           assert all(len(p["fit_training_loss_by_epoch"]) == 3 for p in model["players"].values())
-          assert all(p["fit_decisions"] == 24 for p in model["players"].values())
+          assert all(p["fit_decisions"] == 384 for p in model["players"].values())
           for p in report["metrics"].values():
               for arm in ("tune", "audit"):
                   assert set(p[arm]) == {"original","generic","named","swapped","swapped_source"}
-                  assert all(p[arm][k]["decisions"] == 8 for k in
+                  assert all(p[arm][k]["decisions"] == 48 for k in
                              ("original","generic","named","swapped"))
           assert report["original_maia79_weights_changed"] is False
           assert report["validation_opened"] is False
