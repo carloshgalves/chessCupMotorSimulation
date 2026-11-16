@@ -1,8 +1,6 @@
 """Original book and neural middle-game are only combined behind narrow gate."""
 from types import SimpleNamespace
 
-import chess
-import chess.engine
 import pytest
 
 from chesssim import matches
