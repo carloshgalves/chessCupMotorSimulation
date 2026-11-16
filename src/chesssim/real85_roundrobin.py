@@ -20,7 +20,7 @@ SCHEMA = "chesssim-real85-four-player-roundrobin-uci-v1"
 
 
 def run(root: Path, trained_dir: Path, out: Path, *,
-        players: list[str] | None = None, depth: int = 2,
+        players: list[str] | None = None, depth: int = 4,
         max_plies: int = 450, use_repertoire: bool = True) -> dict:
     participants = list(players or ("fischer","tal","karpov","kasparov"))
     if len(participants) < 2 or len(participants) > 16 or len(set(participants)) != len(participants):
@@ -137,7 +137,7 @@ def main(argv=None) -> int:
     p.add_argument("--profiles",type=Path,required=True)
     p.add_argument("--out",type=Path,required=True)
     p.add_argument("--players",nargs="+",default=["fischer","tal","karpov","kasparov"])
-    p.add_argument("--depth",type=int,default=2)
+    p.add_argument("--depth",type=int,default=4)
     p.add_argument("--max-plies",type=int,default=450)
     p.add_argument("--without-repertoire",action="store_true")
     a=p.parse_args(argv)
