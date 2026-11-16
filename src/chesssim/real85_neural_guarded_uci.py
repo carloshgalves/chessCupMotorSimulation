@@ -302,4 +302,8 @@ def main(argv=None) -> int:
 
 
 if __name__=="__main__":
-    raise SystemExit(main())
+    # ``python -m`` constructs a second __main__ class object. Delegate to
+    # the canonical import so the exact-class book safety gate in matches
+    # cannot mistake this legitimate adapter for a different policy class.
+    from chesssim import real85_neural_guarded_uci as canonical
+    raise SystemExit(canonical.main())
