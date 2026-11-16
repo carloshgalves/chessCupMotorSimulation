@@ -166,7 +166,7 @@ def _moved_score(engine, board: chess.Board, move: chess.Move, color: bool,
 
 
 def audit(positions: Path, rodent_root: Path, stockfish: Path, out: Path, *,
-          rodent_depth: int = 4, stockfish_depth: int = 8) -> dict:
+          profiles: Path, rodent_depth: int = 4, stockfish_depth: int = 8) -> dict:
     """Observe ORIGINAL Rodent personalities and real Stockfish on held-out FENs.
 
     The same frozen positions and Stockfish evaluator are used for observed
@@ -175,8 +175,14 @@ def audit(positions: Path, rodent_root: Path, stockfish: Path, out: Path, *,
     if not 1 <= rodent_depth <= 12 or not 4 <= stockfish_depth <= 20:
         raise ValueError("Unsafe UCI evaluation depth budget")
     doc = json.loads(Path(positions).read_text())
-    if doc.get("schema") != EXTRACT_SCHEMA or doc.get("trained_on_test") is not False:
+    if (doc.get("schema") != EXTRACT_SCHEMA or doc.get("trained_on_test") is not False
+            or doc.get("split") != "real85-global-trajectory-TEST-only"):
         raise ValueError("Endgame audit accepts only verified TEST-only extraction")
+    frozen_manifest = Path(profiles) / "report.json"
+    manifest = json.loads(frozen_manifest.read_text())
+    if (manifest.get("schema") != REAL85_SCHEMA or
+            doc.get("source_manifest_sha256") != file_hash(frozen_manifest)):
+        raise ValueError("Endgame TEST extraction does not match original FIT manifest")
     root = Path(rodent_root).resolve(strict=True)
     exe = root / "rodent-iv-plain.exe"
     stockfish = Path(stockfish).resolve(strict=True)
@@ -194,6 +200,12 @@ def audit(positions: Path, rodent_root: Path, stockfish: Path, out: Path, *,
     try:
         sf_id = sf.id.get("name", "unknown")
         for slug, sample in players.items():
+            historical = manifest.get("players", {}).get(slug)
+            if (not isinstance(historical, dict) or
+                    historical.get("status") != "REAL_GAMES_TRAINED_PLAYABLE_REPERTOIRE" or
+                    historical.get("source_pgn_sha256") != sample.get("source_pgn_sha256") or
+                    historical.get("test_games") != sample.get("test_games")):
+                raise ValueError(f"Endgame TEST source provenance mismatch: {slug}")
             player = roster.get(slug)
             if (player is None or player.rodent_alias is None or
                     aliases.get(player.rodent_alias) != player.profile_filename):
@@ -206,6 +218,8 @@ def audit(positions: Path, rodent_root: Path, stockfish: Path, out: Path, *,
                 raise ValueError(f"Corrupted TEST endgame sample: {slug}")
             if len({r["game_sha256"] for r in rows}) != len(rows):
                 raise ValueError("TEST decision identity duplicated")
+            if any(game_arm(r["game_sha256"]) != "test" for r in rows):
+                raise ValueError("A FIT historical game was injected into TEST evaluation")
             observations = []
             engine = _open_engine(root, exe, player, book=False)
             try:
@@ -296,6 +310,8 @@ def main(argv=None) -> int:
                             help="0 includes every real TEST game with an endgame")
     evaluation = sub.add_parser("audit")
     evaluation.add_argument("--positions", type=Path, required=True)
+    evaluation.add_argument("--profiles", type=Path, required=True,
+                            help="Original source-locked real85 FIT manifest directory")
     evaluation.add_argument("--rodent-root", type=Path, required=True)
     evaluation.add_argument("--stockfish", type=Path, required=True)
     evaluation.add_argument("--out", type=Path, required=True)
@@ -311,7 +327,7 @@ def main(argv=None) -> int:
             for k,v in result["players"].items()}, sort_keys=True))
     else:
         result = audit(args.positions, args.rodent_root, args.stockfish,
-                       args.out, rodent_depth=args.rodent_depth,
+                       args.out, profiles=args.profiles, rodent_depth=args.rodent_depth,
                        stockfish_depth=args.stockfish_depth)
         print(json.dumps({k:{
             "games":v["sampled_distinct_games"],
