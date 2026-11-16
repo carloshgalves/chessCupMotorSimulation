@@ -1,0 +1,113 @@
+name: Maia3 79M four historical neural QK training (real CPU)
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/maia79_neural_four.py'
+      - 'tests/test_maia79_neural_four.py'
+      - 'docs/MAIA79_NEURAL_FOUR.md'
+      - '.github/workflows/science-maia79-neural-four.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maia79-neural-four-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fit-original-maia79-four:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+      TORCH_NUM_THREADS: '2'
+      PYTHONHASHSEED: '0'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install project (no premium compute)
+        run: python -m pip install -e '.[dev]'
+      - name: Install CPU-only PyTorch for gradient-based QK training
+        run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Unit and adversarial regression tests
+        run: python -m pytest -q tests/test_maia79_neural_four.py
+      - uses: actions/checkout@v5
+        with:
+          repository: CSSLab/maia3
+          ref: 1e13597c42d4858b7cfd7cfdae01e297263364b2
+          path: maia3-source
+          persist-credentials: false
+      - name: Install original Maia3 frozen network from verified source
+        run: |
+          test "$(git -C maia3-source rev-parse HEAD)" = 1e13597c42d4858b7cfd7cfdae01e297263364b2
+          python -m pip install -e ./maia3-source
+      - name: Rebuild four historical real TRAIN cohorts from pinned source
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov \
+            --birthdates-json docs/REAL_BIRTHDATES_4.json \
+            --split-policy career-stratified --min-ply 17 \
+            --out "$RUNNER_TEMP/real-cohorts"
+      - name: Create deterministic V3 provenance binding from TRAIN alone
+        run: |
+          python -m chesssim.contextual_policy_v3 train \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --max-per-player 1600 --max-per-game 3 --seed 2026 \
+            --out "$RUNNER_TEMP/v3-binding.json"
+      - name: Execute actual Q/K gradient training for FOUR players on original Maia3-79M
+        run: |
+          python -m chesssim.maia79_neural_four \
+            --cohorts "$RUNNER_TEMP/real-cohorts" \
+            --v3-model "$RUNNER_TEMP/v3-binding.json" \
+            --fit-games 12 --tune-games 4 --audit-games 4 --moves-per-game 2 \
+            --out "$RUNNER_TEMP/four-maia79-personal-neural-adapters.json" \
+            --report "$RUNNER_TEMP/four-maia79-neural-results.json"
+      - name: Fail closed unless genuine neural fitting and four identity controls exist
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          home = Path(os.environ["RUNNER_TEMP"])
+          model = json.loads((home/"four-maia79-personal-neural-adapters.json").read_text())
+          report = json.loads((home/"four-maia79-neural-results.json").read_text())
+          assert model["schema"] == "chesssim-maia79-four-neural-qk-fit-v1"
+          assert report["schema"] == "chesssim-maia79-four-neural-qk-training-report-v1"
+          assert model["maia_checkpoint_sha256"] == "3fc6181d5db789b45a15305732148757ae74efa3e0028e81ba335b462dac45c2"
+          assert model["rank"] == 4
+          assert report["model_sha256"] == model["model_sha256"]
+          assert report["selection"]["selected_unique_games"] == 80
+          assert report["selection"]["selected_decisions"] == 160
+          assert set(model["players"]) == {"fischer","karpov","kasparov","tal"}
+          assert set(report["metrics"]) == set(model["players"])
+          assert len(model["generic"]["training_losses"]) == 2
+          assert all(len(p["fit_training_loss_by_epoch"]) == 3 for p in model["players"].values())
+          assert all(p["fit_decisions"] == 24 for p in model["players"].values())
+          for p in report["metrics"].values():
+              for arm in ("tune", "audit"):
+                  assert set(p[arm]) == {"original","generic","named","swapped","swapped_source"}
+                  assert all(p[arm][k]["decisions"] == 8 for k in
+                             ("original","generic","named","swapped"))
+          assert report["original_maia79_weights_changed"] is False
+          assert report["validation_opened"] is False
+          assert report["final_holdout_opened"] is False
+          assert report["official_rodent_modified"] is False
+          assert report["personality_homologated"] is False
+          print("MAIA79_REAL_NEURAL_FOUR_TRAINED", report["selection"]["selected_decisions"])
+          print("PERSONAL_TUNE_AUDIT", report["metrics"])
+          PY
+      - name: Upload only small neural LoRA deltas and aggregated evidence (no PGN/pretrained weights)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maia79-four-genuine-neural-qk-train-only
+          path: |
+            ${{ runner.temp }}/four-maia79-personal-neural-adapters.json
+            ${{ runner.temp }}/four-maia79-neural-results.json
+          if-no-files-found: warn
+          retention-days: 14
