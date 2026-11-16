@@ -281,3 +281,47 @@ def test_twenty_full_move_opening_window_includes_plies_25_through_40():
     features = pilot._style_features(game, True)
     assert features["opening_moves"] == 20
     assert features.get("middle_moves", 0) == 0
+
+
+def test_single_observation_opening_support_is_explicit_and_never_without_book(
+        monkeypatch, tmp_path):
+    from chesssim.matches import file_hash
+    p = tmp_path / "fit"
+    p.mkdir()
+    b = {"schema":"chesssim-opening-v9", "player":"fischer",
+         "policy":{"max_plies":40},
+         "positions":{"white":{},"black":{}},
+         "source":{"pgn_sha256":"f"*64},
+         "opponent_positions":{"white":{},"black":{}}}
+    (p/"fischer.json").write_text(json.dumps(b))
+    (p/"report.json").write_text(json.dumps({"schema":pilot.SCHEMA,"players":{
+        "fischer":{"status":"REAL_GAMES_TRAINED_PLAYABLE_REPERTOIRE",
+                   "train_fraction":0.85,"test_games":30,"train_games":170,
+                   "test_style":{},"book_sha256":file_hash(p/"fischer.json")}}}))
+    root=tmp_path/"engine"
+    (root/"personalities").mkdir(parents=True)
+    (root/"personalities/basic.ini").write_text(
+        "Simple=simple.txt\nFischer=fischer.txt\n")
+    (root/"personalities/fischer.txt").write_text("profile")
+    (root/"personalities/simple.txt").write_text("baseline")
+    (root/"rodent-iv-plain.exe").write_text("fixture")
+    observed=[]
+    def fake(*args, **kwargs):
+        observed.append(kwargs["opening_min_count"])
+        game=chess.pgn.Game()
+        game.headers["Result"]="1/2-1/2"
+        return game,{"status":"COMPLETED","result":"1/2-1/2",
+                     "termination":"DRAW","plies":40,
+                     "opening_moves":{"white":1,"black":0}}
+    monkeypatch.setattr(pilot,"_play_one",fake)
+    r=pilot.play_real_four(root,p,tmp_path/"support1",
+                           players=["fischer"],opening_min_count=1)
+    assert observed==[1,1]
+    assert r["opening_min_observations"] == 1
+    for invalid in (True,0,11,1.5):
+        with pytest.raises(ValueError, match="opening_min_count"):
+            pilot.play_real_four(root,p,tmp_path/"invalid",
+                players=["fischer"],opening_min_count=invalid)
+    with pytest.raises(ValueError,match="inapplicable"):
+        pilot.play_real_four(root,p,tmp_path/"no-book",
+            players=["fischer"],use_repertoire=False,opening_min_count=1)

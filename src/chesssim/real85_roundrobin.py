@@ -23,12 +23,17 @@ SCHEMA = "chesssim-real85-four-player-roundrobin-uci-v1"
 def run(root: Path, trained_dir: Path, out: Path, *,
         players: list[str] | None = None, depth: int = 4,
         max_plies: int = 450, use_repertoire: bool = True,
-        depth_overrides: dict[str, int] | None = None) -> dict:
+        depth_overrides: dict[str, int] | None = None,
+        opening_min_count: int = 2) -> dict:
     participants = list(players or ("fischer","tal","karpov","kasparov"))
     if len(participants) < 2 or len(participants) > 16 or len(set(participants)) != len(participants):
         raise ValueError("Round robin needs 2..16 distinct historical players")
     if not 1 <= depth <= 12 or not 100 <= max_plies <= 800:
         raise ValueError("Invalid UCI search or game length budget")
+    if type(opening_min_count) is not int or not 1 <= opening_min_count <= 10:
+        raise ValueError("opening_min_count must be an integer from 1 through 10")
+    if not use_repertoire and opening_min_count != 2:
+        raise ValueError("Opening support threshold is inapplicable without repertoire")
     if depth_overrides is not None and (
             not isinstance(depth_overrides, dict) or
             set(depth_overrides) != set(participants) or
@@ -83,7 +88,7 @@ def run(root: Path, trained_dir: Path, out: Path, *,
                 historical_openings=({white.slug:book[white.slug],
                                       black.slug:book[black.slug]}
                                      if use_repertoire else None),
-                opening_min_count=2, opening_seed=3219,
+                opening_min_count=opening_min_count, opening_seed=3219,
                 experimental_depths=({white.slug:depth_overrides[white.slug],
                                       black.slug:depth_overrides[black.slug]}
                                      if depth_overrides is not None else None),
@@ -129,6 +134,7 @@ def run(root: Path, trained_dir: Path, out: Path, *,
             sha256(json.dumps(depth_overrides,sort_keys=True,separators=(",",":")).encode()).hexdigest()
             if depth_overrides is not None else None),
         "historical_85pct_repertoire":use_repertoire,
+        "opening_min_observations": opening_min_count if use_repertoire else None,
         "scheduled_games":len(games),
         "completed_games":sum(x["status"]=="COMPLETED" for x in games),
         "official_personality_files_changed":False,
@@ -155,6 +161,8 @@ def main(argv=None) -> int:
     p.add_argument("--depth",type=int,default=4)
     p.add_argument("--max-plies",type=int,default=450)
     p.add_argument("--without-repertoire",action="store_true")
+    p.add_argument("--opening-min-count",type=int,default=2,
+                   help="Minimum count from real TRAIN games per opening move (1..10)")
     p.add_argument("--depths-file",type=Path,
                    help="JSON mapping each participant slug to experimental depth 1..12")
     a=p.parse_args(argv)
@@ -162,7 +170,8 @@ def main(argv=None) -> int:
     report=run(a.rodent_root,a.profiles,a.out,players=a.players,
                depth=a.depth,max_plies=a.max_plies,
                use_repertoire=not a.without_repertoire,
-               depth_overrides=overrides)
+               depth_overrides=overrides,
+               opening_min_count=a.opening_min_count)
     print(json.dumps({"status":report["status"],"standings":report["standings"],
                       "completed_games":report["completed_games"]},sort_keys=True))
     return 0
