@@ -183,10 +183,29 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
               experimental_policy: ExperimentalPolicyAdapter | None = None,
               experimental_depths: dict[str, int] | None = None) -> tuple[chess.pgn.Game, dict]:
     if experimental_policy is not None:
-        if clock is not None or use_books is not False or historical_openings:
-            raise ValueError("Learned policy control is development-only: no clocks or books")
+        if clock is not None or use_books is not False:
+            raise ValueError("Learned policy control is development-only: no clocks or internal books")
         if set(experimental_policy.bindings) != {white.slug, black.slug}:
             raise ValueError("Policy bindings disagree with current players")
+        if historical_openings:
+            # ONLY the source-locked, mate-aware neural style policy may
+            # coexist with a historical book, and it cannot act until AFTER
+            # the entire configured empirical opening window has ended.
+            # Legacy policies remain forbidden from combining with books.
+            from .real85_neural_guarded_uci import NeuralGuardedPolicy
+            if type(experimental_policy) is not NeuralGuardedPolicy:
+                raise ValueError("Only frozen Stockfish-guarded neural policy supports opening books")
+            if "control-simple" in historical_openings:
+                raise ValueError("Rodent Simple control opening must stay free UCI")
+            if set(historical_openings) != {experimental_policy.player}:
+                raise ValueError("Only the focal historical player's book may be applied")
+            try:
+                cutoff = historical_openings[experimental_policy.player]["policy"]["max_plies"]
+            except (KeyError, TypeError) as exc:
+                raise ValueError("Historical book lacks an explicit maximum ply") from exc
+            if (type(cutoff) is not int or not 1 <= cutoff <= 40 or
+                    experimental_policy.min_ply <= cutoff):
+                raise ValueError("Neural intervention must start after the complete historical book")
         if experimental_policy.gate is not None and (
                 depth != experimental_policy.gate["engine_depth"] or
                 movetime is not None):
