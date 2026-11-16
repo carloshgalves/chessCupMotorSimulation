@@ -65,7 +65,7 @@ def test_roundrobin_rejects_untrained_and_incomplete_does_not_score(
     root,folder,slugs=_fixture(tmp_path)
     with pytest.raises(ValueError,match="distinct"):
         robin.run(root,folder,tmp_path/"no",players=[slugs[0],slugs[0]])
-    with pytest.raises(ValueError,match="historical"):
+    with pytest.raises(ValueError,match="Rodent personality"):
         robin.run(root,folder,tmp_path/"missing",players=[slugs[0],"mequinho"])
     n=[0]
     def fake(*args,**kwargs):
