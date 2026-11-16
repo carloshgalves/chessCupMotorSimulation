@@ -116,8 +116,8 @@ def build(out: Path, *, players: list[str] | None = None,
             hashers = {arm: sha256() for arm in files}
             serialized_games = Counter()
             serialized_decisions = Counter()
-            with files["fit"].open("x", encoding="utf-8", newline="\\n") as fit_handle, (
-                    files["tune"].open("x", encoding="utf-8", newline="\\n")) as tune_handle:
+            with files["fit"].open("x", encoding="utf-8", newline="") as fit_handle, (
+                    files["tune"].open("x", encoding="utf-8", newline="")) as tune_handle:
                 handles = {"fit":fit_handle,"tune":tune_handle}
                 for game, meta in _iter_verified_games(pgn, rows, conf[slug]["surname"]):
                     digest, _ = mainline_identity(game)
