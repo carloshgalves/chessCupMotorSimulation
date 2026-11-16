@@ -86,3 +86,35 @@ def test_roundrobin_rejects_untrained_and_incomplete_does_not_score(
     assert r["scheduled_games"]==2 and r["completed_games"]==1
     assert r["standings"][slugs[0]]["points"]==0.5
     assert r["standings"][slugs[1]]["points"]==0.5
+
+
+def test_per_player_search_budget_is_validated_and_sent_to_real_uci(
+        monkeypatch, tmp_path):
+    root, folder, slugs = _fixture(tmp_path)
+    roster = list(slugs[:2])
+    valid = {roster[0]: 2, roster[1]: 6}
+    with pytest.raises(ValueError, match="Depth overrides"):
+        robin.run(root, folder, tmp_path/"missing-depth",
+                  players=roster, depth_overrides={roster[0]: 4})
+    with pytest.raises(ValueError, match="Depth overrides"):
+        robin.run(root, folder, tmp_path/"boolean-depth",
+                  players=roster, depth_overrides={roster[0]: True, roster[1]: 4})
+    seen = []
+    def fake(*args, **kwargs):
+        w, b = args[2:4]
+        seen.append((w.slug, b.slug, kwargs["experimental_depths"]))
+        game = chess.pgn.Game()
+        game.headers["White"] = w.name
+        game.headers["Black"] = b.name
+        game.headers["Result"] = "1/2-1/2"
+        return game, {"status":"COMPLETED", "result":"1/2-1/2",
+                      "termination":"DRAW","plies":16,
+                      "opening_moves":{"white":0,"black":0}}
+    monkeypatch.setattr(robin, "_play_one", fake)
+    result = robin.run(root, folder, tmp_path/"experiment",
+                       players=roster, depth_overrides=valid)
+    assert len(seen) == 2
+    assert all(d == {w:valid[w],b:valid[b]} for w,b,d in seen)
+    assert result["experimental_search_depth_by_player"] == valid
+    assert len(result["experimental_depth_plan_sha256"]) == 64
+    assert result["completed_games"] == 2

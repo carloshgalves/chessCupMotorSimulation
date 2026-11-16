@@ -309,7 +309,8 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
                    players: list[str] | None = None, depth: int = 4,
                    max_plies: int = 450, opening_seed: int = 2033,
                    use_repertoire: bool = True,
-                   seed_opponent_opening: bool = False) -> dict:
+                   seed_opponent_opening: bool = False,
+                   depth_overrides: dict[str, int] | None = None) -> dict:
     """Play actual Rodent-vs-Simple games, reversed colors, to terminal state.
 
     A ply cap produces INCOMPLETE, never a fabricated draw or strength score.
@@ -327,6 +328,12 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
     if book_meta.get("schema") != SCHEMA:
         raise ValueError("Not a supported real 85% trained profile set")
     requested = list(players or DEFAULT_PLAYERS)
+    if depth_overrides is not None and (
+            not isinstance(depth_overrides, dict) or
+            set(depth_overrides) != set(requested) or
+            any(type(d) is not int or not 1 <= d <= 12
+                for d in depth_overrides.values())):
+        raise ValueError("Depth overrides require each historical player and integer 1..12")
     roster = {p.slug: p for p in load_roster()}
     exe = root / "rodent-iv-plain.exe"
     if not exe.is_file():
@@ -386,12 +393,18 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
                 max_plies=max_plies, round_number=color_idx+1,
                 hashes=hashes, use_books=False,
                 historical_openings=books, opening_seed=opening_seed,
-                opening_min_count=2)
+                opening_min_count=2,
+                experimental_depths=({slug:depth_overrides[slug],
+                                      control.slug:depth}
+                                     if depth_overrides is not None else None))
             # Original source, engine and per-game modification remain traceable.
             pgn.headers["HistoricalTrainingFraction"] = str(
                 book_meta["players"][slug]["train_fraction"])
             pgn.headers["HistoricalBookSHA256"] = book_meta["players"][slug]["book_sha256"]
             pgn.headers["HistoricalPlayer"] = slug
+            if depth_overrides is not None:
+                pgn.headers["HistoricalPlayerDepth"] = str(depth_overrides[slug])
+                pgn.headers["SimpleControlDepth"] = str(depth)
             pgn.headers["ExperimentalProfile"] = "true"
             pgn.headers["HistoricalOpponentOpeningSeed"] = (
                 "true" if use_repertoire and seed_opponent_opening else "false")
@@ -428,6 +441,8 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
             "opponent_book_plies_played": sum(
                 r["opponent_historical_opening_moves"] for r in subset),
             "historical_test_style": book_meta["players"][slug]["test_style"],
+            "focal_search_depth": depth_overrides[slug] if depth_overrides else depth,
+            "simple_control_search_depth": depth,
             "historical_train_games": book_meta["players"][slug]["train_games"],
             "historical_test_games": book_meta["players"][slug]["test_games"],
             "games_style": [r["engine_style"] for r in subset],
@@ -439,6 +454,7 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
         "rodent_source_commit_reference": OFFICIAL_COMMIT,
         "rodent_binary_sha256": exe_sha,
         "search_depth": depth, "max_plies": max_plies,
+        "experimental_search_depth_by_player":depth_overrides,
         "opponent": "Rodent IV Simple (same binary)",
         "opening_training_method": "real_85pct_game_disjoint_empirical_moves",
         "use_historical_repertoire": bool(use_repertoire),
@@ -485,6 +501,8 @@ def main(argv=None) -> int:
     play.add_argument("--without-repertoire", action="store_true")
     play.add_argument("--seed-opponent-historical-book", action="store_true",
                       help="Condition Simple on the real opponent trajectory (not a free baseline)")
+    play.add_argument("--depths-file",type=Path,
+                      help="JSON mapping historical player slug to experimental depth 1..12")
     args = p.parse_args(argv)
     if args.command == "fit":
         doc = train_real_profiles(args.out, players=args.players,
@@ -499,11 +517,13 @@ def main(argv=None) -> int:
                               for slug,row in doc["players"].items()}},
                          sort_keys=True), flush=True)
     else:
+        overrides=json.loads(args.depths_file.read_text()) if args.depths_file else None
         doc = play_real_four(args.rodent_root, args.profiles, args.out,
                              players=args.players, depth=args.depth,
                              max_plies=args.max_plies,
                              use_repertoire=not args.without_repertoire,
-                             seed_opponent_opening=args.seed_opponent_historical_book)
+                             seed_opponent_opening=args.seed_opponent_historical_book,
+                             depth_overrides=overrides)
         print(json.dumps({"status": doc["status"], "players": doc["players"]},
                          sort_keys=True), flush=True)
     return 0

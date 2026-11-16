@@ -180,7 +180,8 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
               stop_check: Callable[[], bool] | None = None,
               on_progress: Callable[[chess.pgn.Game], None] | None = None,
               max_wall_seconds: float | None = None,
-              experimental_policy: ExperimentalPolicyAdapter | None = None) -> tuple[chess.pgn.Game, dict]:
+              experimental_policy: ExperimentalPolicyAdapter | None = None,
+              experimental_depths: dict[str, int] | None = None) -> tuple[chess.pgn.Game, dict]:
     if experimental_policy is not None:
         if clock is not None or use_books is not False or historical_openings:
             raise ValueError("Learned policy control is development-only: no clocks or books")
@@ -190,6 +191,12 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                 depth != experimental_policy.gate["engine_depth"] or
                 movetime is not None):
             raise ValueError("Real calibrated gate requires the same UCI search depth and no movetime")
+    if experimental_depths is not None:
+        if clock is not None or movetime is not None or experimental_policy is not None or depth is None:
+            raise ValueError("Per-player depth overrides require unclocked UCI-only experimental play")
+        if set(experimental_depths) != {white.slug, black.slug} or any(
+                type(v) is not int or not 1 <= v <= 12 for v in experimental_depths.values()):
+            raise ValueError("Depth overrides must map exactly both players to integer 1..12")
     engines = []
     failed_engine_ids: set[int] = set()
     try:
@@ -222,6 +229,13 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             "TimeControl": f"{clock[0]}+{clock[1]}" if clock else "-",
             "BookMode": "historical-v09-exploratory" if historical_openings else "historical" if use_books else "disabled" if use_books is not None else "legacy",
         })
+        if experimental_depths is not None:
+            game.headers["SearchLimit"] = (
+                f"experimental:depth-white={experimental_depths[white.slug]},"
+                f"depth-black={experimental_depths[black.slug]}")
+            game.headers["ExperimentalDepthWhite"] = str(experimental_depths[white.slug])
+            game.headers["ExperimentalDepthBlack"] = str(experimental_depths[black.slug])
+            game.headers["DepthByPlayerOptIn"] = "true"
         if experimental_policy is not None:
             game.headers["Event"] = "ChessSim - Experimental Learned Policy vs Rodent IV"
             game.headers["PolicyMechanism"] = "EXTERNAL_MOVE_OVERRIDE_NOT_ENGINE_TRAINING"
@@ -273,7 +287,10 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             turn_limit = (chess.engine.Limit(white_clock=max(0.001, clocks[0]),
                          black_clock=max(0.001, clocks[1]),
                          white_inc=clock[1], black_inc=clock[1],
-                         depth=depth) if clock else limit)
+                         depth=depth) if clock else
+                         chess.engine.Limit(depth=experimental_depths[
+                             white.slug if board.turn == chess.WHITE else black.slug])
+                         if experimental_depths is not None else limit)
             opening_move = None
             opening_source = None
             if historical_openings:

@@ -180,7 +180,8 @@ def test_playable_runner_reverses_colors_and_preserves_actual_status(monkeypatch
     (root/"rodent-iv-plain.exe").write_text("fake\n")
     observed = []
     def fake_play(_root,_exe,white,black,**kwargs):
-        observed.append((white.slug,black.slug,kwargs["historical_openings"]))
+        observed.append((white.slug,black.slug,kwargs["historical_openings"],
+                         kwargs["experimental_depths"]))
         g = chess.pgn.Game()
         g.headers["White"] = white.name
         g.headers["Black"] = black.name
@@ -208,6 +209,14 @@ def test_playable_runner_reverses_colors_and_preserves_actual_status(monkeypatch
     assert "NOT an independent baseline" in conditional["opening_protocol"]
     assert all(set(entry[2]) == {"fischer","control-simple"}
                for entry in observed[-2:])
+    with pytest.raises(ValueError, match="Depth overrides"):
+        pilot.play_real_four(root,book_root,tmp_path/"invalid-depth",
+            players=["fischer"],depth_overrides={"fischer":True})
+    calibrated = pilot.play_real_four(root,book_root,tmp_path/"depth-by-player",
+            players=["fischer"],depth=3,depth_overrides={"fischer":6})
+    assert calibrated["players"]["fischer"]["focal_search_depth"] == 6
+    assert calibrated["players"]["fischer"]["simple_control_search_depth"] == 3
+    assert all(x[3] == {"fischer":6,"control-simple":3} for x in observed[-2:])
 
 
 def test_playable_runner_does_not_convert_incomplete_into_draw(monkeypatch,tmp_path):
