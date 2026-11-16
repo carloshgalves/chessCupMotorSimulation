@@ -56,6 +56,10 @@ upstream commit and a real Stockfish engine with a pinned binary
 SHA in the report. Every event records FEN hash, selected actor,
 Rodent bestmove, proposed neural alternative, safety status,
 centipawn allowance, and whether a genuine override was played.
+The result JSON preserves the **complete per-ply policy trace** for every
+played game. CI independently checks each effective override against
+its recorded Stockfish candidate count, allowed centipawn difference,
+model recommendation, player identity and unchanged Simple control.
 Only actual completed chess results are scored. Reaching a ply
 budget yields INCOMPLETE, never an artificial draw. PGNs are
 preserved, and postgame Stockfish depth10 reanalyzes genuine moves.
