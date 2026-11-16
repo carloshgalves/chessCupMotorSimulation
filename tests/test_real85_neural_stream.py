@@ -122,3 +122,12 @@ def test_local_absence_is_explicit_but_malformed_source_is_not_ignored(tmp_path)
         neural.build(tmp_path/"malformed-local",players=["fischer"],
                      archive_dir=archive,allow_missing=True)
     assert not (tmp_path/"malformed-local").exists()
+    source.unlink()
+    try:
+        source.symlink_to(archive/"nonexistent-target.pgn")
+    except OSError:
+        pytest.skip("Symbolic links unavailable on this filesystem")
+    with pytest.raises(ValueError, match="Symbolic historical PGN"):
+        neural.build(tmp_path/"symlink-local",players=["fischer"],
+                     archive_dir=archive,allow_missing=True)
+    assert not (tmp_path/"symlink-local").exists()
