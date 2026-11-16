@@ -8,7 +8,6 @@ import pytest
 
 torch = pytest.importorskip("torch")
 from chesssim import maia79_contrastive_four as v2
-from chesssim import maia79_neural_four as v1
 from chesssim.dsc_qk_lora_core import QKLoRA
 
 
