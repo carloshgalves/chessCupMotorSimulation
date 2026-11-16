@@ -96,6 +96,7 @@ def test_missing_source_explicit_and_fails_closed(monkeypatch,tmp_path):
     r=neural.build(tmp_path/"allowed",players=["fischer"],allow_missing=True)
     assert r["players"]["fischer"]["status"]=="SOURCE_MISSING"
     assert not (tmp_path/"allowed/fischer-fit.jsonl").exists()
+    assert neural.verify(tmp_path/"allowed")["status"] == "NO_REAL_INPUT_SHARDS"
     with pytest.raises(HTTPError):
         neural.build(tmp_path/"forbidden",players=["fischer"],allow_missing=False)
     assert not (tmp_path/"forbidden").exists()
@@ -109,6 +110,7 @@ def test_local_absence_is_explicit_but_malformed_source_is_not_ignored(tmp_path)
                    archive_dir=archive,allow_missing=True)
     assert r["players"]["fischer"]=={
         "status":"SOURCE_MISSING","reason":"LOCAL_SOURCE_MISSING"}
+    assert neural.verify(tmp_path/"allowed-local")["status"] == "NO_REAL_INPUT_SHARDS"
     with pytest.raises(FileNotFoundError,match="Local historical"):
         neural.build(tmp_path/"forbidden-local",players=["fischer"],
                      archive_dir=archive,allow_missing=False)
