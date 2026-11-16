@@ -116,6 +116,7 @@ def test_local_absence_is_explicit_but_malformed_source_is_not_ignored(tmp_path)
     source = archive/"Fischer.pgn"
     source.write_bytes(b"invalid not a valid PGN")
     # Present-but-malformed data must NEVER be classified as absent.
-    result=neural.build(tmp_path/"malformed-local",players=["fischer"],
-                        archive_dir=archive,allow_missing=True)
-    assert result["players"]["fischer"]["status"]=="NO_REAL_ELIGIBLE_GAMES"
+    with pytest.raises(ValueError, match="Invalid raw player PGN"):
+        neural.build(tmp_path/"malformed-local",players=["fischer"],
+                     archive_dir=archive,allow_missing=True)
+    assert not (tmp_path/"malformed-local").exists()
