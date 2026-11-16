@@ -87,8 +87,13 @@ class FakeRodent:
 class FakeStockfish:
     id = {"name": "fake TEST stockfish"}
 
-    def analyse(self, board, limit):
-        # Synthetic evaluator is ONLY a unit-test fixture, never scientific evidence.
+    def __init__(self):
+        self.calls = []
+
+    def analyse(self, board, limit, root_moves=None):
+        # A unit-test contract, NEVER scientific chess-quality evidence.
+        self.calls.append((board.fen(), limit.depth,
+                           None if root_moves is None else tuple(root_moves)))
         return {"score": chess.engine.PovScore(
             chess.engine.Cp(30 if board.turn == chess.WHITE else -30),
             board.turn)}
@@ -115,9 +120,18 @@ def test_audit_provenance_legality_and_true_game_count(monkeypatch, tmp_path):
     stockfish.write_text("mock")
     monkeypatch.setattr(endgames, "_open_engine",
                         lambda *args, **kwargs: FakeRodent())
+    fake_stockfish = FakeStockfish()
     monkeypatch.setattr(endgames.chess.engine.SimpleEngine, "popen_uci",
-                        lambda *args, **kwargs: FakeStockfish())
+                        lambda *args, **kwargs: fake_stockfish)
     result = endgames.audit(sample, root, stockfish, tmp_path/"quality.json")
+    assert len(fake_stockfish.calls) == 3
+    assert all(fen == fake_stockfish.calls[0][0] and depth == 8
+               for fen, depth, _ in fake_stockfish.calls)
+    assert fake_stockfish.calls[0][2] is None
+    assert all(len(root_moves) == 1
+               for _, _, root_moves in fake_stockfish.calls[1:])
+    assert result["comparison"] == (
+        "same_root_fen_and_depth_with_forced_historical_and_rodent_root_moves")
     assert result["schema"] == endgames.AUDIT_SCHEMA
     assert result["training_or_parameter_selection_performed"] is False
     row = result["players"]["fischer"]
