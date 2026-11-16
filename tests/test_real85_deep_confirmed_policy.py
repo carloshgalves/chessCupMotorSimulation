@@ -27,7 +27,7 @@ class ControlledStockfish:
             raise OSError("Stockfish unavailable")
         def info_for(uci, value, *, depth=None):
             move=chess.Move.from_uci(uci)
-            score=(chess.engine.Mate(3) if self.mate and uci=="d2d4"
+            score=(chess.engine.Mate(3) if self.mate and root_moves is not None and uci=="d2d4"
                    else chess.engine.Cp(value))
             result={"pv":[move],"score":chess.engine.PovScore(score,mover)}
             if depth is not None:
