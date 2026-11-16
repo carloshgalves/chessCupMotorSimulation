@@ -118,3 +118,27 @@ def test_per_player_search_budget_is_validated_and_sent_to_real_uci(
     assert result["experimental_search_depth_by_player"] == valid
     assert len(result["experimental_depth_plan_sha256"]) == 64
     assert result["completed_games"] == 2
+
+
+def test_roundrobin_support_threshold_propagated_and_validated(monkeypatch,tmp_path):
+    root,folder,slugs=_fixture(tmp_path)
+    with pytest.raises(ValueError,match="opening_min_count"):
+        robin.run(root,folder,tmp_path/"invalid",players=list(slugs[:2]),
+                  opening_min_count=True)
+    with pytest.raises(ValueError,match="inapplicable"):
+        robin.run(root,folder,tmp_path/"nobook",players=list(slugs[:2]),
+                  use_repertoire=False,opening_min_count=1)
+    seen=[]
+    def fake(*args,**kwargs):
+        seen.append(kwargs["opening_min_count"])
+        g=chess.pgn.Game()
+        g.headers["Result"]="1/2-1/2"
+        return g,{"status":"COMPLETED","result":"1/2-1/2",
+                  "termination":"DRAW","plies":20,
+                  "opening_moves":{"white":0,"black":0}}
+    monkeypatch.setattr(robin,"_play_one",fake)
+    r=robin.run(root,folder,tmp_path/"support1",
+                players=list(slugs[:2]),opening_min_count=1)
+    assert seen==[1,1]
+    assert r["opening_min_observations"]==1
+    assert r["completed_games"]==2
