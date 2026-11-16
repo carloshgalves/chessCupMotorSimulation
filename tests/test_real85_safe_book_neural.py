@@ -85,3 +85,18 @@ def test_legacy_policy_cannot_ever_mix_books(monkeypatch,tmp_path):
         matches._play_one(*args,use_books=True,
                           historical_openings={"fischer":book},
                           experimental_policy=policy)
+
+
+def test_python_m_entrypoint_uses_canonical_policy_class(monkeypatch):
+    """An actual -m entrypoint must not create a foreign __main__ class."""
+    import runpy
+    from chesssim import real85_neural_guarded_uci as canonical
+    calls = []
+    def stub_main():
+        calls.append(canonical.NeuralGuardedPolicy.__module__)
+        return 0
+    monkeypatch.setattr(canonical, "main", stub_main)
+    with pytest.raises(SystemExit) as stopped:
+        runpy.run_module("chesssim.real85_neural_guarded_uci", run_name="__main__")
+    assert stopped.value.code == 0
+    assert calls == ["chesssim.real85_neural_guarded_uci"]
