@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 from itertools import combinations
+from hashlib import sha256
 import json
 from pathlib import Path
 
@@ -21,12 +22,19 @@ SCHEMA = "chesssim-real85-four-player-roundrobin-uci-v1"
 
 def run(root: Path, trained_dir: Path, out: Path, *,
         players: list[str] | None = None, depth: int = 4,
-        max_plies: int = 450, use_repertoire: bool = True) -> dict:
+        max_plies: int = 450, use_repertoire: bool = True,
+        depth_overrides: dict[str, int] | None = None) -> dict:
     participants = list(players or ("fischer","tal","karpov","kasparov"))
     if len(participants) < 2 or len(participants) > 16 or len(set(participants)) != len(participants):
         raise ValueError("Round robin needs 2..16 distinct historical players")
     if not 1 <= depth <= 12 or not 100 <= max_plies <= 800:
         raise ValueError("Invalid UCI search or game length budget")
+    if depth_overrides is not None and (
+            not isinstance(depth_overrides, dict) or
+            set(depth_overrides) != set(participants) or
+            any(type(d) is not int or not 1 <= d <= 12
+                for d in depth_overrides.values())):
+        raise ValueError("Depth overrides require exactly every participant with integer 1..12")
     root = Path(root).resolve(strict=True)
     trained_dir = Path(trained_dir)
     out = Path(out)
@@ -76,6 +84,9 @@ def run(root: Path, trained_dir: Path, out: Path, *,
                                       black.slug:book[black.slug]}
                                      if use_repertoire else None),
                 opening_min_count=2, opening_seed=3219,
+                experimental_depths=({white.slug:depth_overrides[white.slug],
+                                      black.slug:depth_overrides[black.slug]}
+                                     if depth_overrides is not None else None),
             )
             pgn.headers["ExperimentalProfile"]="true"
             pgn.headers["TrueResultOnly"]="true"
@@ -113,6 +124,10 @@ def run(root: Path, trained_dir: Path, out: Path, *,
             "ROUNDROBIN_HAS_REAL_INCOMPLETE_GAMES"),
         "players":participants,"games":games,"standings":counts,
         "engine_sha256":exe_sha,"depth":depth,
+        "experimental_search_depth_by_player":depth_overrides,
+        "experimental_depth_plan_sha256":(
+            sha256(json.dumps(depth_overrides,sort_keys=True,separators=(",",":")).encode()).hexdigest()
+            if depth_overrides is not None else None),
         "historical_85pct_repertoire":use_repertoire,
         "scheduled_games":len(games),
         "completed_games":sum(x["status"]=="COMPLETED" for x in games),
@@ -140,10 +155,14 @@ def main(argv=None) -> int:
     p.add_argument("--depth",type=int,default=4)
     p.add_argument("--max-plies",type=int,default=450)
     p.add_argument("--without-repertoire",action="store_true")
+    p.add_argument("--depths-file",type=Path,
+                   help="JSON mapping each participant slug to experimental depth 1..12")
     a=p.parse_args(argv)
+    overrides=json.loads(a.depths_file.read_text()) if a.depths_file else None
     report=run(a.rodent_root,a.profiles,a.out,players=a.players,
                depth=a.depth,max_plies=a.max_plies,
-               use_repertoire=not a.without_repertoire)
+               use_repertoire=not a.without_repertoire,
+               depth_overrides=overrides)
     print(json.dumps({"status":report["status"],"standings":report["standings"],
                       "completed_games":report["completed_games"]},sort_keys=True))
     return 0
