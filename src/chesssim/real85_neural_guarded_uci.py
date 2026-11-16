@@ -205,8 +205,11 @@ def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
          stockfish_depth: int = 8, cp_budget: int = 25,
          min_ply: int = 21, max_plies: int = 450,
          profiles: Path | None = None,
-         confirmation_depth: int | None = None) -> dict:
+         confirmation_depth: int | None = None,
+         opening_seed: int = 2033) -> dict:
     participants=list(players or ("fischer","tal","karpov","kasparov"))
+    if type(opening_seed) is not int or not 0 <= opening_seed <= 2**31-1:
+        raise ValueError("Historical book seed must be a bounded integer")
     if (not 1<=len(participants)<=8 or len(set(participants))!=len(participants) or
             type(rodent_depth) is not int or not 1<=rodent_depth<=12 or
             type(max_plies) is not int or not 100<=max_plies<=800):
@@ -272,14 +275,14 @@ def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
                         round_number=round_number,hashes=hashes,use_books=False,
                         historical_openings=({slug:original_books[slug]}
                                              if original_books else None),
-                        opening_seed=2033,opening_min_count=2,
+                        opening_seed=opening_seed,opening_min_count=2,
                         experimental_policy=policy)
                     pgn.headers["NeuralMode"]=arm
                     pgn.headers["IndependentStockfishSHA256"]=sf_hash
                     pgn.headers["ExperimentalNeuralSourceSHA256"]=policy.model["model_sha256"]
                     pgns.append(str(pgn))
                     records.append({
-                        "player":slug,"arm":arm,
+                        "player":slug,"arm":arm,"opening_seed":opening_seed,
                         "color":"white" if white.slug==slug else "black",
                         "status":meta["status"],"result":meta["result"],
                         "termination":meta["termination"],"plies":meta["plies"],
@@ -320,6 +323,7 @@ def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
         "stockfish_sha256":sf_hash,
         "rodent_depth":rodent_depth,"stockfish_depth":stockfish_depth,
         "cp_budget":cp_budget,"min_ply":min_ply,
+        "opening_seed":opening_seed,
         "confirmation_depth":confirmation_depth,
         "deep_guard_enabled":confirmation_depth is not None,
         "historical_focal_book_enabled":bool(original_books),
@@ -350,11 +354,14 @@ def main(argv=None) -> int:
     p.add_argument("--cp-budget",type=int,default=25)
     p.add_argument("--min-ply",type=int,default=21)
     p.add_argument("--max-plies",type=int,default=450)
+    p.add_argument("--opening-seed",type=int,default=2033,
+                   help="Fixed book choice seed; legacy default 2033")
     a=p.parse_args(argv)
     result=play(a.rodent_root,a.stockfish,a.weights,a.out,players=a.players,
                 rodent_depth=a.rodent_depth,stockfish_depth=a.stockfish_depth,
                 cp_budget=a.cp_budget,min_ply=a.min_ply,max_plies=a.max_plies,
-                profiles=a.profiles,confirmation_depth=a.confirmation_depth)
+                profiles=a.profiles,confirmation_depth=a.confirmation_depth,
+                 opening_seed=a.opening_seed)
     print(json.dumps({"status":result["status"],"games":len(result["games"]),
                       "overrides":sum(g["actual_overrides"] for g in result["games"])}))
     return 0 if result["status"]=="ALL_REAL_UCI_GAMES_COMPLETE" else 2
