@@ -123,7 +123,7 @@ def test_audit_provenance_legality_and_true_game_count(monkeypatch, tmp_path):
     fake_stockfish = FakeStockfish()
     monkeypatch.setattr(endgames.chess.engine.SimpleEngine, "popen_uci",
                         lambda *args, **kwargs: fake_stockfish)
-    result = endgames.audit(sample, root, stockfish, tmp_path/"quality.json")
+    result = endgames.audit(sample, root, stockfish, tmp_path/"quality.json", profiles=folder)
     assert len(fake_stockfish.calls) == 3
     assert all(fen == fake_stockfish.calls[0][0] and depth == 8
                for fen, depth, _ in fake_stockfish.calls)
@@ -143,14 +143,28 @@ def test_audit_provenance_legality_and_true_game_count(monkeypatch, tmp_path):
             ["sampled_decisions"][0]["fen"]).legal_moves]
     assert row["nonmate_mean_rodent_cp_loss"] >= 0
     with pytest.raises(FileExistsError):
-        endgames.audit(sample, root, stockfish, tmp_path/"quality.json")
+        endgames.audit(sample, root, stockfish, tmp_path/"quality.json", profiles=folder)
     corrupt = json.loads(sample.read_text())
     corrupt["players"]["fischer"]["sampled_decisions"][0]["fen_sha256"] = "0"*64
     (tmp_path/"corrupted.json").write_text(json.dumps(corrupt))
     with pytest.raises(ValueError, match="Corrupted historical"):
         endgames.audit(tmp_path/"corrupted.json", root, stockfish,
-                       tmp_path/"no-quality.json")
+                       tmp_path/"no-quality.json", profiles=folder)
     assert not (tmp_path/"no-quality.json").exists()
+    bad_arm=json.loads(sample.read_text())
+    train_mainline,_ = mainline_identity(_example("e3d3"))
+    bad_arm["players"]["fischer"]["sampled_decisions"][0]["game_sha256"] = train_mainline
+    (tmp_path/"injected-fit.json").write_text(json.dumps(bad_arm))
+    with pytest.raises(ValueError, match="FIT historical game"):
+        endgames.audit(tmp_path/"injected-fit.json", root, stockfish,
+                       tmp_path/"invalid-fit-quality.json", profiles=folder)
+    assert not (tmp_path/"invalid-fit-quality.json").exists()
+    tampered=json.loads(sample.read_text())
+    tampered["source_manifest_sha256"]="0"*64
+    (tmp_path/"invalid-provenance.json").write_text(json.dumps(tampered))
+    with pytest.raises(ValueError, match="FIT manifest"):
+        endgames.audit(tmp_path/"invalid-provenance.json", root, stockfish,
+                       tmp_path/"bad-provenance-quality.json", profiles=folder)
 
 
 def test_invalid_depth_and_non_test_manifest_fail_closed(tmp_path):
@@ -158,10 +172,10 @@ def test_invalid_depth_and_non_test_manifest_fail_closed(tmp_path):
     a.write_text(json.dumps({"schema":endgames.EXTRACT_SCHEMA,
                              "trained_on_test":True,"players":{"fischer":{}}}))
     with pytest.raises(ValueError, match="TEST-only"):
-        endgames.audit(a, tmp_path, tmp_path, tmp_path/"result.json")
+        endgames.audit(a, tmp_path, tmp_path, tmp_path/"result.json", profiles=tmp_path)
     with pytest.raises(ValueError, match="depth budget"):
         endgames.audit(a, tmp_path, tmp_path, tmp_path/"bad.json",
-                       rodent_depth=0)
+                       profiles=tmp_path, rodent_depth=0)
 
 
 def test_full_real_test_endgame_game_population_no_artificial_cap(monkeypatch, tmp_path):
