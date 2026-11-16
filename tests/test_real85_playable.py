@@ -124,6 +124,17 @@ def test_style_features_count_real_legal_decisions():
     assert pilot._style_summary(__import__("collections").Counter(w))["opening"]["decisions"] == 3
 
 
+def test_opening_metrics_do_not_award_every_modal_tie_as_top1():
+    from collections import Counter
+    votes = Counter({"e2e4": 1, "d2d4": 1})
+    # Fixed lexicographic tie-breaking means only one move is modal top1.
+    assert pilot.opening_prediction(votes, "d2d4") == (1, 0.5)
+    assert pilot.opening_prediction(votes, "e2e4") == (0, 0.5)
+    assert pilot.opening_prediction(votes, "g1f3") == (0, 0)
+    with pytest.raises(ValueError, match="positive"):
+        pilot.opening_prediction(Counter({"e2e4": 0}), "e2e4")
+
+
 def test_material_endgame_not_late_ply_and_captures_real_king_activity():
     early = chess.Board()
     assert pilot._material_endgame(early) is False
