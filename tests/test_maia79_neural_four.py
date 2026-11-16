@@ -137,6 +137,9 @@ def test_pack_rejects_impossible_target_and_vocabulary():
         v1._pack([e])
     e["target"] = 0
     e["ids"] = torch.tensor([0, 4352])
+    with pytest.raises(ValueError, match="prior"):
+        v1._pack([e])
+    e["prior"] = e["prior"][:2]
     model = QKLoRA(1024, 1024, 4)
     with pytest.raises(ValueError, match="vocabulary"):
         v1._adapted_logits(v1._pack([e]), model, torch.zeros(4, 1024))
