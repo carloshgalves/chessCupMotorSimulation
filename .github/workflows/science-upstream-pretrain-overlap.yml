@@ -1,0 +1,80 @@
+name: Upstream pretraining overlap — real TRAIN-only four-player census
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/upstream_pretrain_overlap.py'
+      - 'tests/test_upstream_pretrain_overlap.py'
+      - 'docs/UPSTREAM_PRETRAIN_OVERLAP.md'
+      - '.github/workflows/science-upstream-pretrain-overlap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upstream-overlap-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-train-provenance-census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[dev]'
+      - name: Test fail-closed candidate matching controls
+        run: python -m pytest -q tests/test_upstream_pretrain_overlap.py
+      - name: Build real historical four-player TRAIN-only data
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov \
+            --birthdates-json docs/REAL_BIRTHDATES_4.json \
+            --split-policy career-stratified --min-ply 17 \
+            --out "$RUNNER_TEMP/cohorts"
+      - name: Record unknown external pretraining provenance without reading reserved arms
+        run: |
+          python -m chesssim.upstream_pretrain_overlap \
+            --cohorts "$RUNNER_TEMP/cohorts" \
+            --out "$RUNNER_TEMP/upstream-overlap.json"
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import os
+
+          report = json.loads(
+              (Path(os.environ["RUNNER_TEMP"]) / "upstream-overlap.json").read_text()
+          )
+          assert report["status"] == "UNVERIFIABLE_PRETRAIN_OVERLAP"
+          assert report["training_decisions"] > 0
+          assert report["globally_distinct_training_games"] > 0
+          assert not report["validation_opened"]
+          assert not report["final_holdout_opened"]
+          assert not report["personality_promoted"]
+          for model in ("dsc150", "maia79"):
+              item = report["models"][model]
+              assert item["status"] == "UNVERIFIABLE_PRETRAIN_OVERLAP"
+              assert not item["candidate_index_supplied"]
+              assert all(item["per_player_year"][slug] for slug in
+                         ("fischer", "karpov", "kasparov", "tal"))
+              assert all(
+                  year["unknown_training_provenance_games"] == year["games"]
+                  for years in item["per_player_year"].values()
+                  for year in years.values()
+              )
+          print("UPSTREAM_UNKNOWN_NOT_DISJOINT", report["training_decisions"])
+          PY
+      - name: Save redacted aggregate provenance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: four-player-train-only-upstream-provenance
+          path: ${{ runner.temp }}/upstream-overlap.json
+          if-no-files-found: warn
+          retention-days: 14
