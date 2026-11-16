@@ -29,9 +29,8 @@ DEFAULT_SEEDS = (2033, 2041, 2053, 2063)
 def _validated_seeds(seeds: list[int] | tuple[int, ...]) -> list[int]:
     if (not isinstance(seeds, (list, tuple)) or
             len(seeds) < 2 or len(seeds) > 8 or
-            len(set(seeds)) != len(seeds) or
             any(type(seed) is not int or not 0 <= seed <= 2**31 - 1
-                for seed in seeds)):
+                for seed in seeds) or len(set(seeds)) != len(seeds)):
         raise ValueError("Expected 2..8 distinct bounded predetermined opening seeds")
     return list(seeds)
 
@@ -47,12 +46,12 @@ def _focal_points(game: dict) -> float:
     return float((result == "1-0") == (game["color"] == "white"))
 
 
-def _pgn_identities(path: Path) -> list[tuple[str,str]]:
+def _pgn_identities(path: Path, expected_seed: int) -> list[tuple[str,str]]:
     games = []
     with path.open(encoding="utf-8") as stream:
         while (game := chess.pgn.read_game(stream)) is not None:
-            if game.errors:
-                raise ValueError("Corrupt real UCI game in crossover PGN")
+            if game.errors or game.headers.get("OpeningSeed") != str(expected_seed):
+                raise ValueError("Corrupt or wrong-seed real UCI game in crossover PGN")
             digest, _ = mainline_identity(game)
             # Opening variation directly observed in the genuine game,
             # not synthesized by the experimental runner.
@@ -106,7 +105,7 @@ def summarize(folder: Path, seeds: list[int] | tuple[int, ...] = DEFAULT_SEEDS,
         elif baseline != provenance:
             raise ValueError("Mixed Rodent, Stockfish, depth or corpus across seed arms")
         _load_replayed(document, pgn_file)
-        ids = _pgn_identities(pgn_file)
+        ids = _pgn_identities(pgn_file, seed)
         if len(ids) != len(document["games"]) or len(ids) != 16:
             raise ValueError("Real UCI game count and hashes do not reconcile")
         pairs = defaultdict(dict)
