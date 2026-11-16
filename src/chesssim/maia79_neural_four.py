@@ -247,6 +247,9 @@ def _pack(examples: list[dict]) -> dict:
         k = len(e["ids"])
         if not 0 <= e["target"] < k or k == 0:
             raise ValueError("Invalid historical legal-move label")
+        if (len(e["prior"]) != k or not bool(torch.isfinite(e["prior"]).all())
+                or len(set(e["ids"].tolist())) != k or bool((e["ids"] < 0).any())):
+            raise ValueError("Malformed historical Maia original legal-move prior")
         ids[i, :k] = e["ids"]
         prior[i, :k] = e["prior"]
         mask[i, :k] = True
