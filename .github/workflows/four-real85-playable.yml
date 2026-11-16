@@ -212,13 +212,10 @@ jobs:
               d=json.loads((root/directory/"results.json").read_text())
               assert d["experimental_search_depth_by_player"]=={
                   "fischer":4,"tal":6,"karpov":4,"kasparov":6}
-              assert all("ExperimentalDepthWhite" in g and
-                         "ExperimentalDepthBlack" in g
-                         for g in (line for line in [])) if False else True
               assert all(g["status"]=="COMPLETED" for g in d["games"])
               assert len(d["games"])==(12 if kind=="round" else 8)
               pgn=(root/directory/("games.pgn" if kind=="round" else "played.pgn")).read_text()
-              assert pgn.count('DepthByPlayerOptIn "true"')==len(d["games"])
+              assert pgn.count('[DepthByPlayerOptIn "true"]')==len(d["games"])
               print("EXPERIMENTAL_PER_PLAYER_UCI_DEPTH",kind,d["status"],len(d["games"]))
           PY
       - name: Independent Stockfish tactical-quality diagnosis of both true game sets
