@@ -157,6 +157,29 @@ jobs:
           assert not d["historical_strength_elo_estimated"]
           print("REAL_ROUNDROBIN_COMPLETE",d["standings"])
           PY
+      - name: Test stronger actual search in full four-player round robin (depth 4)
+        run: |
+          python -m chesssim.real85_roundrobin \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --profiles "$RUNNER_TEMP/real85-trained" \
+            --players fischer tal karpov kasparov \
+            --depth 4 --max-plies 450 \
+            --out "$RUNNER_TEMP/real85-roundrobin-depth4"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])
+          a=json.loads((root/"real85-roundrobin"/"results.json").read_text())
+          b=json.loads((root/"real85-roundrobin-depth4"/"results.json").read_text())
+          assert b["status"]=="ALL_ROUNDROBIN_GAMES_COMPLETE"
+          assert b["depth"]==4
+          assert b["completed_games"]==12
+          assert sum(x["points"] for x in b["standings"].values())==12
+          print("REAL_UCI_DEPTH_CALIBRATION_PILOT", {
+              player:{"depth2_points":a["standings"][player]["points"],
+                      "depth4_points":b["standings"][player]["points"]}
+              for player in b["standings"]})
+          PY
       - name: Independent Stockfish tactical-quality diagnosis of both true game sets
         run: |
           sudo apt-get update -qq
@@ -177,12 +200,18 @@ jobs:
             --stockfish /usr/games/stockfish \
             --depth 8 --max-positions 72 --min-fullmove 8 --pv-plies 5 \
             --out "$RUNNER_TEMP/roundrobin-stockfish-quality.json"
+          python -m chesssim analyze-quality \
+            --pgn "$RUNNER_TEMP/real85-roundrobin-depth4/games.pgn" \
+            --stockfish /usr/games/stockfish \
+            --depth 8 --max-positions 72 --min-fullmove 8 --pv-plies 5 \
+            --out "$RUNNER_TEMP/roundrobin-depth4-stockfish-quality.json"
           python - <<'PY'
           from pathlib import Path
           import json,os
           folder=Path(os.environ["RUNNER_TEMP"])
           for path in ("book-stockfish-quality.json","no-book-stockfish-quality.json",
-                       "roundrobin-stockfish-quality.json"):
+                       "roundrobin-stockfish-quality.json",
+                       "roundrobin-depth4-stockfish-quality.json"):
               doc=json.loads((folder/path).read_text())
               assert doc["protocol"] == "independent-stockfish-postgame-v9.1"
               assert doc["status"] == "EXPLORATORY_STRENGTH_DIAGNOSTIC_NOT_ELO"
@@ -211,12 +240,18 @@ jobs:
             --quality "$RUNNER_TEMP/roundrobin-stockfish-quality.json" \
             --opening-plies 24 --bootstrap 300 \
             --out "$RUNNER_TEMP/roundrobin-paired-evidence.json"
+          python -m chesssim paired-evidence \
+            --pgn "$RUNNER_TEMP/real85-roundrobin-depth4/games.pgn" \
+            --quality "$RUNNER_TEMP/roundrobin-depth4-stockfish-quality.json" \
+            --opening-plies 24 --bootstrap 300 \
+            --out "$RUNNER_TEMP/roundrobin-depth4-paired-evidence.json"
           python - <<'PY'
           import json, os
           from pathlib import Path
           root=Path(os.environ["RUNNER_TEMP"])
           for name in ("book-paired-evidence.json","no-book-paired-evidence.json",
-                       "roundrobin-paired-evidence.json"):
+                       "roundrobin-paired-evidence.json",
+                       "roundrobin-depth4-paired-evidence.json"):
               d=json.loads((root/name).read_text())
               assert d["schema"]=="chesssim-paired-style-strength-v1"
               assert len(d["players"])==(4 if name.startswith("roundrobin") else 5)
@@ -248,5 +283,9 @@ jobs:
             ${{ runner.temp }}/real85-roundrobin/games.pgn
             ${{ runner.temp }}/roundrobin-stockfish-quality.json
             ${{ runner.temp }}/roundrobin-paired-evidence.json
+            ${{ runner.temp }}/real85-roundrobin-depth4/results.json
+            ${{ runner.temp }}/real85-roundrobin-depth4/games.pgn
+            ${{ runner.temp }}/roundrobin-depth4-stockfish-quality.json
+            ${{ runner.temp }}/roundrobin-depth4-paired-evidence.json
           retention-days: 14
           if-no-files-found: warn
