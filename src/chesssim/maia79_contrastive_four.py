@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import argparse
 from collections import defaultdict
-from hashlib import sha256
 import json
 from pathlib import Path
 import random
