@@ -211,10 +211,13 @@ def train_real_profiles(out: Path, *, players: list[str] | None = None,
                         held_eval["decisions"] += 1
                         if votes:
                             held_eval["covered"] += 1
-                            best = max(votes.values())
-                            held_eval["top1"] += move.uci() in {
-                                m for m, n in votes.items() if n == best
-                            }
+                            # One deterministic top-1 (not optimistic
+                            # "any tied move wins" inflation); the live book
+                            # remains stochastic, so also report its true mass.
+                            best = sorted(votes, key=lambda m: (-votes[m], m))[0]
+                            held_eval["top1"] += int(move.uci() == best)
+                            held_eval["weighted_correct_mass"] += (
+                                votes.get(move.uci(), 0) / sum(votes.values()))
                     board.push(move)
             book = {
                 "schema": BOOK_SCHEMA, "player": slug,
@@ -254,6 +257,9 @@ def train_real_profiles(out: Path, *, players: list[str] | None = None,
                     **dict(held_eval),
                     "top1_over_covered": round(
                         held_eval["top1"]/held_eval["covered"], 6
+                    ) if held_eval["covered"] else None,
+                    "weighted_expected_accuracy_over_covered": round(
+                        held_eval["weighted_correct_mass"]/held_eval["covered"], 6
                     ) if held_eval["covered"] else None,
                     "coverage": round(
                         held_eval["covered"]/held_eval["decisions"], 6
