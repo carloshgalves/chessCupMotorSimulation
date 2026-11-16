@@ -99,3 +99,23 @@ def test_missing_source_explicit_and_fails_closed(monkeypatch,tmp_path):
     with pytest.raises(HTTPError):
         neural.build(tmp_path/"forbidden",players=["fischer"],allow_missing=False)
     assert not (tmp_path/"forbidden").exists()
+
+
+
+def test_local_absence_is_explicit_but_malformed_source_is_not_ignored(tmp_path):
+    archive = tmp_path/"archive"
+    archive.mkdir()
+    r=neural.build(tmp_path/"allowed-local",players=["fischer"],
+                   archive_dir=archive,allow_missing=True)
+    assert r["players"]["fischer"]=={
+        "status":"SOURCE_MISSING","reason":"LOCAL_SOURCE_MISSING"}
+    with pytest.raises(FileNotFoundError,match="Local historical"):
+        neural.build(tmp_path/"forbidden-local",players=["fischer"],
+                     archive_dir=archive,allow_missing=False)
+    assert not (tmp_path/"forbidden-local").exists()
+    source = archive/"Fischer.pgn"
+    source.write_bytes(b"invalid not a valid PGN")
+    # Present-but-malformed data must NEVER be classified as absent.
+    result=neural.build(tmp_path/"malformed-local",players=["fischer"],
+                        archive_dir=archive,allow_missing=True)
+    assert result["players"]["fischer"]["status"]=="NO_REAL_ELIGIBLE_GAMES"
