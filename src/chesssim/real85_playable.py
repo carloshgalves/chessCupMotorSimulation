@@ -308,7 +308,8 @@ def _style_of_engine_game(game: chess.pgn.Game, player_white: bool) -> dict:
 def play_real_four(root: Path, profile_dir: Path, out: Path, *,
                    players: list[str] | None = None, depth: int = 4,
                    max_plies: int = 450, opening_seed: int = 2033,
-                   use_repertoire: bool = True) -> dict:
+                   use_repertoire: bool = True,
+                   seed_opponent_opening: bool = False) -> dict:
     """Play actual Rodent-vs-Simple games, reversed colors, to terminal state.
 
     A ply cap produces INCOMPLETE, never a fabricated draw or strength score.
@@ -316,6 +317,8 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
     """
     if not 1 <= depth <= 12 or not 100 <= max_plies <= 800:
         raise ValueError("Invalid real UCI depth or full-game ply budget")
+    if seed_opponent_opening and not use_repertoire:
+        raise ValueError("Cannot seed opponent historical openings without repertoire")
     root = Path(root).resolve(strict=True)
     out = Path(out)
     if out.exists() or out.is_symlink() or not out.parent.is_dir():
@@ -372,7 +375,11 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
                 "source": trained[slug]["source"],
                 "positions": trained[slug]["opponent_positions"],
             }
-            books = ({slug: trained[slug], control.slug: opponent_book}
+            # A historical opponent forced along the original PGN is a
+            # separate *conditioned* protocol, NOT a fair control against
+            # an independent Rodent Simple baseline. Default to free Simple.
+            books = ({slug: trained[slug], **(
+                {control.slug: opponent_book} if seed_opponent_opening else {})}
                      if use_repertoire else None)
             pgn, meta = _play_one(
                 root, exe, white, black, depth=depth, movetime=None,
@@ -387,7 +394,7 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
             pgn.headers["HistoricalPlayer"] = slug
             pgn.headers["ExperimentalProfile"] = "true"
             pgn.headers["HistoricalOpponentOpeningSeed"] = (
-                "true" if use_repertoire else "false")
+                "true" if use_repertoire and seed_opponent_opening else "false")
             pgn.headers["TrueResultOnly"] = "true"
             pgns.append(str(pgn))
             player_white = white.slug == slug
@@ -435,10 +442,13 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
         "opponent": "Rodent IV Simple (same binary)",
         "opening_training_method": "real_85pct_game_disjoint_empirical_moves",
         "use_historical_repertoire": bool(use_repertoire),
+        "seed_opponent_historical_book": bool(seed_opponent_opening),
         "opening_protocol": (
-            "both sides seeded from real TRAIN games with >=2 observations; "
-            "opponent Simple takes over from natural UCI as soon as out of book"
-            if use_repertoire else "unconstrained Rodent IV UCI, no books"),
+            ("conditioned opening: historical player and opponent seeded from TRAIN "
+             "games with >=2 observations; Simple is NOT an independent baseline")
+            if seed_opponent_opening else
+            ("focal historical opening only; Rodent Simple chooses moves via UCI"
+             if use_repertoire else "unconstrained Rodent IV UCI, no books")),
         "no_elo_inferred_from_small_sample": True,
         "no_neural_finetuning_claim": True,
         "players": totals, "games": games,
@@ -473,6 +483,8 @@ def main(argv=None) -> int:
     play.add_argument("--depth", type=int, default=4)
     play.add_argument("--max-plies", type=int, default=450)
     play.add_argument("--without-repertoire", action="store_true")
+    play.add_argument("--seed-opponent-historical-book", action="store_true",
+                      help="Condition Simple on the real opponent trajectory (not a free baseline)")
     args = p.parse_args(argv)
     if args.command == "fit":
         doc = train_real_profiles(args.out, players=args.players,
@@ -490,7 +502,8 @@ def main(argv=None) -> int:
         doc = play_real_four(args.rodent_root, args.profiles, args.out,
                              players=args.players, depth=args.depth,
                              max_plies=args.max_plies,
-                             use_repertoire=not args.without_repertoire)
+                             use_repertoire=not args.without_repertoire,
+                             seed_opponent_opening=args.seed_opponent_historical_book)
         print(json.dumps({"status": doc["status"], "players": doc["players"]},
                          sort_keys=True), flush=True)
     return 0
