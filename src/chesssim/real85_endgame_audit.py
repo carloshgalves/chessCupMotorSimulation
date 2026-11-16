@@ -37,15 +37,15 @@ def _order(*parts: object) -> str:
 
 
 def extract(profiles: Path, out: Path, *, players: list[str] | None = None,
-            archive_dir: Path | None = None, per_player: int = 12) -> dict:
+            archive_dir: Path | None = None, per_player: int = 0) -> dict:
     """Select <=1 TEST endgame move per historical game, without exposing FIT.
 
     Each accepted unique trajectory is assigned using real85's global
     trajectory hash; observed historical decisions are NOT model fit material.
     Selection is hash-based and deterministic, with no reliance on PGN order.
     """
-    if not 1 <= per_player <= 128:
-        raise ValueError("per_player must be between 1 and 128")
+    if type(per_player) is not int or not 0 <= per_player <= 10000:
+        raise ValueError("per_player must be 0 (all games) or a positive integer <=10000")
     players = list(players or DEFAULT_PLAYERS)
     conf = _player_configuration(players, None, None)
     profiles = Path(profiles)
@@ -101,8 +101,9 @@ def extract(profiles: Path, out: Path, *, players: list[str] | None = None,
         if tests_seen != expected_test:
             raise RuntimeError(f"TEST identity population mismatch: {slug}")
         # One decision per real TEST game; sampled games equally independent.
-        sampled = sorted(candidates,
-                         key=lambda r: _order("between-real85-test-games", r["game_sha256"]))[:per_player]
+        ordered = sorted(candidates,
+                         key=lambda r: _order("between-real85-test-games", r["game_sha256"]))
+        sampled = ordered[:per_player] if per_player else ordered
         if len({r["game_sha256"] for r in sampled}) != len(sampled):
             raise RuntimeError("A game was selected more than once")
         for row in sampled:
@@ -126,6 +127,7 @@ def extract(profiles: Path, out: Path, *, players: list[str] | None = None,
         "old_year_holdout_used": False, "trained_on_test": False,
         "selection": "min-hash-one-material-endgame-decision-per-real-TEST-game",
         "per_player_limit": per_player,
+        "all_available_test_endgame_games_selected": per_player == 0,
         "criterion": "both_sides_combined_nonpawn_material_at_most_16",
         "players": results,
         "warning": "This is a diagnostic TEST arm; do not tune parameters on these positions.",
@@ -278,7 +280,8 @@ def main(argv=None) -> int:
     extraction.add_argument("--profiles", type=Path, required=True)
     extraction.add_argument("--out", type=Path, required=True)
     extraction.add_argument("--players", nargs="+", default=list(DEFAULT_PLAYERS))
-    extraction.add_argument("--per-player", type=int, default=12)
+    extraction.add_argument("--per-player", type=int, default=0,
+                            help="0 includes every real TEST game with an endgame")
     evaluation = sub.add_parser("audit")
     evaluation.add_argument("--positions", type=Path, required=True)
     evaluation.add_argument("--rodent-root", type=Path, required=True)
