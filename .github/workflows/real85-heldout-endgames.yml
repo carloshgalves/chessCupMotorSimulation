@@ -84,6 +84,7 @@ jobs:
         run: |
           python -m chesssim.real85_endgame_audit audit \
             --positions "$RUNNER_TEMP/real85-test-endgame-positions.json" \
+            --profiles "$RUNNER_TEMP/real85-fitted" \
             --rodent-root "$RUNNER_TEMP/rodent" \
             --stockfish /usr/games/stockfish \
             --rodent-depth 4 --stockfish-depth 8 \
