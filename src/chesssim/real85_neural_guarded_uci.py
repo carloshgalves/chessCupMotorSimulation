@@ -212,6 +212,7 @@ def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
                         "color":"white" if white.slug==slug else "black",
                         "status":meta["status"],"result":meta["result"],
                         "termination":meta["termination"],"plies":meta["plies"],
+                        "policy_trace":meta["policy_trace"],
                         "actual_overrides":sum(
                             e["outcome"]=="EXTERNAL_POLICY_OVERRIDE"
                             for e in meta["policy_trace"]),
