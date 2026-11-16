@@ -84,6 +84,14 @@ jobs:
             --players fischer tal karpov kasparov \
             --depth 2 --max-plies 450 \
             --out "$RUNNER_TEMP/real85-games"
+      - name: Play the SAME four profiles without historical books (strength/style control)
+        run: |
+          python -m chesssim.real85_playable play \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --profiles "$RUNNER_TEMP/real85-trained" \
+            --players fischer tal karpov kasparov \
+            --depth 2 --max-plies 450 --without-repertoire \
+            --out "$RUNNER_TEMP/real85-games-no-book"
       - name: Require real completed results and inspect historical style comparison
         run: |
           python - <<'PY'
@@ -110,7 +118,20 @@ jobs:
           assert all(g["result"] in ("1-0","0-1","1/2-1/2") and g["plies"]>10
                      for g in d["games"])
           assert (p/"played.pgn").is_file()
-          print("REAL_8_COMPLETED_PGN_GAMES_WITH_HISTORICAL_COVERAGE")
+          no_book=json.loads((Path(os.environ["RUNNER_TEMP"])/
+                              "real85-games-no-book"/"results.json").read_text())
+          assert len(no_book["games"])==8
+          assert no_book["use_historical_repertoire"] is False
+          assert all(g["opening_moves_from_real_pg_ns"]==0
+                     for g in no_book["games"])
+          assert all(x["status"]=="COMPLETED" for x in no_book["games"])
+          print("BOOK_ABLATION", {
+              player: {"with_historical_opening":entry["points_vs_simple"],
+                       "without_historical_opening":no_book["players"][player]["points_vs_simple"],
+                       "book_moves_focal":entry["focal_book_plies_played"],
+                       "book_moves_opponent":entry["opponent_book_plies_played"]}
+              for player,entry in d["players"].items()})
+          print("REAL_16_COMPLETED_PGN_GAMES_WITH_BOOK_ABLATION")
           PY
       - name: Preserve aggregate corpus, true played PGNs and profile books
         if: always()
@@ -125,5 +146,7 @@ jobs:
             ${{ runner.temp }}/real85-trained/kasparov.json
             ${{ runner.temp }}/real85-games/results.json
             ${{ runner.temp }}/real85-games/played.pgn
+            ${{ runner.temp }}/real85-games-no-book/results.json
+            ${{ runner.temp }}/real85-games-no-book/played.pgn
           retention-days: 14
           if-no-files-found: warn
