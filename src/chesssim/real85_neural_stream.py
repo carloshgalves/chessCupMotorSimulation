@@ -94,13 +94,20 @@ def build(out: Path, *, players: list[str] | None = None,
     try:
         for slug in selected:
             source_key = conf[slug]["source"]
-            if archive_dir is not None and not any(
-                    (Path(archive_dir) / (source_key + ext)).is_file()
-                    for ext in (".pgn", ".zip")):
-                if not allow_missing:
-                    raise FileNotFoundError(f"Local historical PGN source absent: {source_key}")
-                summaries[slug] = {"status":"SOURCE_MISSING","reason":"LOCAL_SOURCE_MISSING"}
-                continue
+            if archive_dir is not None:
+                directory = Path(archive_dir)
+                if not directory.is_dir():
+                    raise FileNotFoundError(f"Historical source directory does not exist: {directory}")
+                if any(part.is_symlink() for part in (directory, *directory.parents)):
+                    raise ValueError("Symbolic historical source directory is not supported")
+                candidates = [directory / (source_key + ext) for ext in (".pgn", ".zip")]
+                if any(candidate.is_symlink() for candidate in candidates):
+                    raise ValueError("Symbolic historical PGN source is not supported")
+                if not any(candidate.is_file() for candidate in candidates):
+                    if not allow_missing:
+                        raise FileNotFoundError(f"Local historical PGN source absent: {source_key}")
+                    summaries[slug] = {"status":"SOURCE_MISSING","reason":"LOCAL_SOURCE_MISSING"}
+                    continue
             try:
                 _, pgn, source = _source_bytes(source_key, archive_dir)
             except (HTTPError, FileNotFoundError) as exc:
