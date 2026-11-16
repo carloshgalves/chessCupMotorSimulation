@@ -148,3 +148,35 @@ def test_invalid_depth_and_non_test_manifest_fail_closed(tmp_path):
     with pytest.raises(ValueError, match="depth budget"):
         endgames.audit(a, tmp_path, tmp_path, tmp_path/"bad.json",
                        rodent_depth=0)
+
+
+def test_full_real_test_endgame_game_population_no_artificial_cap(monkeypatch, tmp_path):
+    examples = [_example("e3d3"), _example("e3f3"), _example("e3e4")]
+    ids = [mainline_identity(g)[0] for g in examples]
+    assert len(set(ids)) == 3
+    pgn = ("\\n\\n".join(map(str, examples)) + "\\n").encode()
+    monkeypatch.setattr(endgames, "_source_bytes",
+                        lambda *a, **k: (pgn,pgn,"FIXTURE_THREE_GAMES"))
+    monkeypatch.setattr(endgames, "game_arm",
+                        lambda digest: "train" if digest == ids[0] else "test")
+    folder=tmp_path/"fit"
+    folder.mkdir()
+    (folder/"report.json").write_text(json.dumps({
+        "schema":REAL85_SCHEMA,
+        "players":{"fischer":{
+            "status":"REAL_GAMES_TRAINED_PLAYABLE_REPERTOIRE",
+            "source_pgn_sha256":sha256(pgn).hexdigest(),
+            "accepted_distinct_games":3,"train_games":1,"test_games":2
+        }}}))
+    all_games=endgames.extract(folder,tmp_path/"all.json",players=["fischer"])
+    player=all_games["players"]["fischer"]
+    assert all_games["all_available_test_endgame_games_selected"] is True
+    assert player["sampled_distinct_games"]==player["test_endgame_games_available"]==2
+    assert {x["game_sha256"] for x in player["sampled_decisions"]}==set(ids[1:])
+    limited=endgames.extract(folder,tmp_path/"limited.json",
+                             players=["fischer"],per_player=1)
+    assert limited["players"]["fischer"]["sampled_distinct_games"]==1
+    for wrong in (-1, True, 10001):
+        with pytest.raises(ValueError,match="per_player"):
+            endgames.extract(folder,tmp_path/"invalid.json",
+                             players=["fischer"],per_player=wrong)
