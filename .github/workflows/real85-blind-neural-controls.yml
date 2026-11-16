@@ -1,0 +1,92 @@
+name: Four-player real neural style identity controls on identical TUNE games
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/real85_blind_controls.py'
+      - 'tests/test_real85_blind_controls.py'
+      - '.github/workflows/real85-blind-neural-controls.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real85-blind-neural-controls-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  genuine-frozen-tune-controls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Regression controls - equal styles and game-level bootstrap
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pytest -q tests/test_real85_blind_controls.py tests/test_real85_online_residual.py
+      - name: Real historical FIT/TUNE games, never outer TEST
+        run: |
+          python -m chesssim.real85_neural_stream build --fetch \
+            --players fischer tal karpov kasparov \
+            --out "$RUNNER_TEMP/four-real-input"
+      - name: Train original four with actual CPU SGD on ALL FIT games and moves
+        run: |
+          python -m chesssim.real85_online_residual \
+            --inputs "$RUNNER_TEMP/four-real-input" \
+            --players fischer tal karpov kasparov \
+            --checkpoint-every 300 \
+            --out "$RUNNER_TEMP/four-real-weights"
+      - name: Frozen correct-versus-swapped and untrained on identical real TUNE decisions
+        run: |
+          python -m chesssim.real85_blind_controls \
+            --inputs "$RUNNER_TEMP/four-real-input" \
+            --weights "$RUNNER_TEMP/four-real-weights" \
+            --players fischer tal karpov kasparov \
+            --bootstrap-reps 500 \
+            --out "$RUNNER_TEMP/blind-tune-comparison.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])
+          report=json.loads((root/"blind-tune-comparison.json").read_text())
+          source=json.loads((root/"four-real-input/manifest.json").read_text())
+          trained=json.loads((root/"four-real-weights/report.json").read_text())
+          assert report["schema"]=="chesssim-real85-frozen-identity-controls-v1"
+          assert report["status"]=="PAIRED_REAL_TUNE_ONLY_NO_HISTORICAL_IDENTITY_CLAIM"
+          assert report["all_models_same_positions_and_legal_negative_per_player"] is True
+          assert not report["outer_test_used"]
+          assert not report["old_year_holdout_used"]
+          assert not report["actual_full_training_weights_changed"]
+          assert set(report["players"])=={"fischer","tal","karpov","kasparov"}
+          assert trained["status"]=="ALL_REQUESTED_PLAYER_RESIDUALS_FITTED"
+          for slug,row in report["players"].items():
+              assert source["players"][slug]["fit_fraction_of_all_eligible_games"]>=.8
+              assert row["tune_games"]==source["players"][slug]["tune_games"]
+              assert row["tune_focal_decisions"]==source["players"][slug]["tune_focal_decisions_all_phases"]
+              assert row["legal_pairwise_comparisons"]>0
+              assert row["comparable_game_count"]>=10
+              assert len(row["per_model_mean_game_logloss"])==5
+              assert row["mean_wrong_minus_correct_logloss"]["n_games"]==row["comparable_game_count"]
+              assert len(row["mean_wrong_minus_correct_logloss"]["confidence_95"])==2
+              assert row["correct_game_predictions"] <= row["comparable_game_count"]
+              assert sum(row["blind_prediction_counts"].values())+row["tied_game_predictions"]==row["comparable_game_count"]
+              print("FOUR_REAL_TUNE_BLIND_IDENTITY",slug,
+                    "games",row["comparable_game_count"],
+                    "wrong_minus_correct",row["mean_wrong_minus_correct_logloss"],
+                    "correct_blind",row["correct_game_predictions"],
+                    "confusions",row["blind_prediction_counts"])
+          PY
+      - name: Keep aggregate comparisons only, no real historical individual trajectories
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: four-player-frozen-real-neural-tune-wrong-name-controls
+          path: |
+            ${{ runner.temp }}/four-real-input/manifest.json
+            ${{ runner.temp }}/four-real-weights/report.json
+            ${{ runner.temp }}/blind-tune-comparison.json
+          retention-days: 14
