@@ -101,6 +101,8 @@ def _load_replayed(doc: dict, raw_pgn: Path) -> dict[str, list[dict]]:
             if game is None or game.errors:
                 raise ValueError("Missing, truncated or malformed UCI PGN")
             if (game.headers.get("Result") != record.get("result") or
+                    game.headers.get("Termination") != record.get("termination") or
+                    game.board().fen() != chess.STARTING_FEN or
                     game.headers.get("NeuralMode") != record["arm"] or
                     game.headers.get("EngineSHA256") != doc["rodent_original_sha256"] or
                     game.headers.get("IndependentStockfishSHA256") != doc["stockfish_sha256"]):
@@ -169,6 +171,9 @@ def _load_replayed(doc: dict, raw_pgn: Path) -> dict[str, list[dict]]:
                        event.get("outcome") != "CONTROL_RODENT_UNMODIFIED")):
                     raise ValueError("Unreported policy mutation in original UCI game")
                 board.push(move)
+            outcome = board.outcome(claim_draw=True)
+            if outcome is None or outcome.result() != record.get("result"):
+                raise ValueError("Claimed complete UCI outcome contradicts actual legal chess")
             if actual_overrides != record.get("actual_overrides"):
                 raise ValueError("Actual neural intervention count does not reconcile")
             if record["arm"] == "shadow" and actual_overrides:
@@ -243,6 +248,8 @@ def audit(results: Path, pgn: Path, stockfish: Path, out: Path, *,
         raise ValueError("Symbolic source evidence paths forbidden")
     doc = _read_json(results)
     rows_by_player = _load_replayed(doc, pgn)
+    if sum(len(rows) for rows in rows_by_player.values()) == 0:
+        raise ValueError("No actual guided neural override exists to counterfactually audit")
     stockfish = Path(stockfish).resolve(strict=True)
     if not stockfish.is_file():
         raise FileNotFoundError("Independent Stockfish UCI executable missing")
