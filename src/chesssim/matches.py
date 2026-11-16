@@ -230,6 +230,9 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             "BookMode": "historical-v09-exploratory" if historical_openings else "historical" if use_books else "disabled" if use_books is not None else "legacy",
         })
         if experimental_depths is not None:
+            game.headers["SearchLimit"] = (
+                f"experimental:depth-white={experimental_depths[white.slug]},"
+                f"depth-black={experimental_depths[black.slug]}")
             game.headers["ExperimentalDepthWhite"] = str(experimental_depths[white.slug])
             game.headers["ExperimentalDepthBlack"] = str(experimental_depths[black.slug])
             game.headers["DepthByPlayerOptIn"] = "true"
