@@ -231,3 +231,33 @@ def test_playable_runner_does_not_convert_incomplete_into_draw(monkeypatch,tmp_p
     assert d["status"] == "REAL_UCI_GAMES_SOME_INCOMPLETE"
     assert d["players"]["fischer"]["completed"] == 0
     assert d["players"]["fischer"]["score_rate_vs_simple"] is None
+
+
+def test_twenty_full_move_opening_window_includes_plies_25_through_40():
+    from chesssim.opening_books import position_token
+    assert pilot.MAX_OPENING_PLIES == 40
+    board = chess.Board()
+    game = chess.pgn.Game()
+    node = game
+    cycle = ("g1f3", "g8f6", "f3g1", "f6g8")
+    for _ in range(8):
+        for uci in cycle:
+            move = chess.Move.from_uci(uci)
+            assert move in board.legal_moves
+            node = node.add_variation(move)
+            board.push(move)
+    assert board.ply() == 32
+    book = {"schema": "chesssim-opening-v9", "player": "fischer",
+            "policy": {"max_plies": pilot.MAX_OPENING_PLIES},
+            "positions": {"white": {position_token(board): {"g1f3": 2}},
+                          "black": {}}}
+    assert select_book_move(book, board, min_count=2) == chess.Move.from_uci("g1f3")
+    for uci in cycle * 2:
+        move = chess.Move.from_uci(uci)
+        node = node.add_variation(move)
+        board.push(move)
+    assert board.ply() == 40
+    assert select_book_move(book, board, min_count=2) is None
+    features = pilot._style_features(game, True)
+    assert features["opening_moves"] == 20
+    assert features["middle_moves"] == 0
