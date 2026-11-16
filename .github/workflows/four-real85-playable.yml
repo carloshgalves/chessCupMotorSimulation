@@ -133,6 +133,37 @@ jobs:
               for player,entry in d["players"].items()})
           print("REAL_16_COMPLETED_PGN_GAMES_WITH_BOOK_ABLATION")
           PY
+      - name: Independent Stockfish tactical-quality diagnosis of both true game sets
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y stockfish
+          test -x /usr/games/stockfish
+          python -m chesssim analyze-quality \
+            --pgn "$RUNNER_TEMP/real85-games/played.pgn" \
+            --stockfish /usr/games/stockfish \
+            --depth 8 --max-positions 64 --min-fullmove 8 --pv-plies 5 \
+            --out "$RUNNER_TEMP/book-stockfish-quality.json"
+          python -m chesssim analyze-quality \
+            --pgn "$RUNNER_TEMP/real85-games-no-book/played.pgn" \
+            --stockfish /usr/games/stockfish \
+            --depth 8 --max-positions 64 --min-fullmove 8 --pv-plies 5 \
+            --out "$RUNNER_TEMP/no-book-stockfish-quality.json"
+          python - <<'PY'
+          from pathlib import Path
+          import json,os
+          folder=Path(os.environ["RUNNER_TEMP"])
+          for path in ("book-stockfish-quality.json","no-book-stockfish-quality.json"):
+              doc=json.loads((folder/path).read_text())
+              assert doc["protocol"] == "independent-stockfish-postgame-v9.1"
+              assert doc["status"] == "EXPLORATORY_STRENGTH_DIAGNOSTIC_NOT_ELO"
+              assert doc["inputs"]["depth"]==8
+              assert doc["independent_decisions_sampled"]>=16
+              assert doc["reconciliation"]["status"]=="CONSISTENT"
+              assert len(doc["summary"])>=2
+              print("STOCKFISH_TACTICAL_QUALITY",path,
+                    "decisions",doc["independent_decisions_sampled"],
+                    "per_player",doc["summary"])
+          PY
       - name: Preserve aggregate corpus, true played PGNs and profile books
         if: always()
         uses: actions/upload-artifact@v4
@@ -148,5 +179,7 @@ jobs:
             ${{ runner.temp }}/real85-games/played.pgn
             ${{ runner.temp }}/real85-games-no-book/results.json
             ${{ runner.temp }}/real85-games-no-book/played.pgn
+            ${{ runner.temp }}/book-stockfish-quality.json
+            ${{ runner.temp }}/no-book-stockfish-quality.json
           retention-days: 14
           if-no-files-found: warn
