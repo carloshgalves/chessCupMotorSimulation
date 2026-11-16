@@ -49,10 +49,14 @@ def _initial(seed: int = SEED) -> dict:
     return {"rank": RANK, "seed": seed, "context": {}, "action": {}, "bias": {}}
 
 
-def _emb(model: dict, field: str, token: str) -> list[float]:
+def _emb(model: dict, field: str, token: str, *,
+         create: bool = False) -> list[float]:
     table = model[field]
     if token not in table:
-        table[token] = _hashed_vector(field, token, model["seed"], model["rank"])
+        vector = _hashed_vector(field, token, model["seed"], model["rank"])
+        if create:
+            table[token] = vector
+        return vector
     return table[token]
 
 
@@ -120,11 +124,11 @@ def _pair(model: dict, board: chess.Board, preferred: chess.Move,
     ctx = [0.0] * rank
     act = [0.0] * rank
     for token in context:
-        vec = _emb(model, "context", token)
+        vec = _emb(model, "context", token, create=update)
         for i in range(rank):
             ctx[i] += vec[i]
     for token, weight in delta.items():
-        vec = _emb(model, "action", token)
+        vec = _emb(model, "action", token, create=update)
         for i in range(rank):
             act[i] += weight * vec[i]
     margin = sum(ctx[i]*act[i] for i in range(rank)) + sum(
@@ -193,6 +197,10 @@ def _atomic_json(path: Path, record: dict) -> None:
     if path.is_symlink():
         raise ValueError("Refuse symbolic link checkpoint")
     tmp = path.with_name("." + path.name + ".tmp")
+    if tmp.exists() or tmp.is_symlink():
+        if tmp.is_symlink() or not tmp.is_file():
+            raise ValueError("Unsafe interrupted temporary checkpoint")
+        tmp.unlink()
     with tmp.open("x", encoding="utf-8", newline="") as writer:
         json.dump(record, writer, sort_keys=True, separators=(",", ":"),
                   ensure_ascii=False, allow_nan=False)
@@ -220,13 +228,8 @@ def _tune(model: dict, root: Path, row: dict) -> dict:
             comparisons += outcome["counts"]["tune_comparisons"]
             decisions += outcome["counts"]["focal_decisions"]
             games += 1
-    # An empty positional feature can be initialized by a TUNE observation:
-    # do not mistake this for a gradient. No fitted weights are updated here.
-    after_weights = {"context": {}, "action": {}, "bias": model["bias"]}
-    for family in ("context", "action"):
-        for key in model[family]:
-            if key in after_weights[family]:
-                raise RuntimeError("Duplicate neural feature")
+    if sha256(json.dumps(model, sort_keys=True).encode()).hexdigest() != before:
+        raise RuntimeError("TUNE altered learned parameters or feature tables")
     if games != row["tune_games"] or decisions != row["tune_focal_decisions_all_phases"]:
         raise RuntimeError("Neural TUNE game/decision accounting failed")
     return {
