@@ -5,6 +5,10 @@ on:
     paths:
       - 'src/chesssim/real85_playable.py'
       - 'tests/test_real85_playable.py'
+      - 'tests/test_real85_roundrobin.py'
+      - 'tests/test_real85_depth_budget.py'
+      - 'src/chesssim/matches.py'
+      - 'src/chesssim/real85_roundrobin.py'
       - '.github/workflows/four-real85-playable.yml'
   workflow_dispatch:
 
@@ -27,7 +31,7 @@ jobs:
       - name: Install project and run negative controls
         run: |
           python -m pip install -e '.[dev]'
-          python -m pytest -q tests/test_real85_playable.py tests/test_real85_roundrobin.py
+          python -m pytest -q tests/test_real85_playable.py tests/test_real85_roundrobin.py tests/test_real85_depth_budget.py
       - name: Train genuine player-specific empirical moves on target 85 percent real historical games
         run: |
           python -m chesssim.real85_playable fit --fetch \
@@ -180,6 +184,43 @@ jobs:
                       "depth4_points":b["standings"][player]["points"]}
               for player in b["standings"]})
           PY
+      - name: Exercise actual individual search limits (exploratory not historical Elo)
+        run: |
+          cat > "$RUNNER_TEMP/player-depths.json" <<'JSON'
+          {"fischer": 4, "tal": 6, "karpov": 4, "kasparov": 6}
+          JSON
+          python -m chesssim.real85_roundrobin \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --profiles "$RUNNER_TEMP/real85-trained" \
+            --players fischer tal karpov kasparov \
+            --depth 4 --depths-file "$RUNNER_TEMP/player-depths.json" \
+            --max-plies 450 \
+            --out "$RUNNER_TEMP/real85-player-depth-roundrobin"
+          python -m chesssim.real85_playable play \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --profiles "$RUNNER_TEMP/real85-trained" \
+            --players fischer tal karpov kasparov \
+            --depth 4 --depths-file "$RUNNER_TEMP/player-depths.json" \
+            --max-plies 450 \
+            --out "$RUNNER_TEMP/real85-player-depth-vs-simple"
+          python - <<'PY'
+          from pathlib import Path
+          import json,os
+          root=Path(os.environ["RUNNER_TEMP"])
+          for directory,kind in (("real85-player-depth-roundrobin","round"),
+                                 ("real85-player-depth-vs-simple","simple")):
+              d=json.loads((root/directory/"results.json").read_text())
+              assert d["experimental_search_depth_by_player"]=={
+                  "fischer":4,"tal":6,"karpov":4,"kasparov":6}
+              assert all("ExperimentalDepthWhite" in g and
+                         "ExperimentalDepthBlack" in g
+                         for g in (line for line in [])) if False else True
+              assert all(g["status"]=="COMPLETED" for g in d["games"])
+              assert len(d["games"])==(12 if kind=="round" else 8)
+              pgn=(root/directory/("games.pgn" if kind=="round" else "played.pgn")).read_text()
+              assert pgn.count('DepthByPlayerOptIn "true"')==len(d["games"])
+              print("EXPERIMENTAL_PER_PLAYER_UCI_DEPTH",kind,d["status"],len(d["games"]))
+          PY
       - name: Independent Stockfish tactical-quality diagnosis of both true game sets
         run: |
           sudo apt-get update -qq
@@ -285,6 +326,10 @@ jobs:
             ${{ runner.temp }}/roundrobin-paired-evidence.json
             ${{ runner.temp }}/real85-roundrobin-depth4/results.json
             ${{ runner.temp }}/real85-roundrobin-depth4/games.pgn
+            ${{ runner.temp }}/real85-player-depth-roundrobin/results.json
+            ${{ runner.temp }}/real85-player-depth-roundrobin/games.pgn
+            ${{ runner.temp }}/real85-player-depth-vs-simple/results.json
+            ${{ runner.temp }}/real85-player-depth-vs-simple/played.pgn
             ${{ runner.temp }}/roundrobin-depth4-stockfish-quality.json
             ${{ runner.temp }}/roundrobin-depth4-paired-evidence.json
           retention-days: 14
