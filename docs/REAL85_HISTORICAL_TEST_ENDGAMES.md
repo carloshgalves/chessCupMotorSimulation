@@ -28,7 +28,7 @@ year-based holdout is not opened.
 For each TEST PGN, the extractor identifies actual played decisions of the
 historic player in positions with <=16 total non-pawn material points
 across BOTH players. It selects at most one endgame decision **per game** with
-a deterministic SHA rule, then up to 12 independent TEST games per player.
+a deterministic SHA rule, then **every available** independent TEST endgame game per player (no artificial cap).
 This avoids a long game overpowering a sample. Each audited record carries
 the real trajectory SHA, FEN SHA, color, ply, year and historical UCI move.
 Missing or insufficient endgames are reported, never invented.
@@ -45,8 +45,7 @@ mean/median Rodent nonmate centipawn loss, human nonmate centipawn loss,
 count of >=250 cp Rodent errors and separate mate-affected counts.
 
 **Limitations:** (a) Stockfish analyses before and after a move are
-depth-sensitive and can differ due to horizon effects. (b) Twelve decisions
-per player are diagnostic, not historically significant. (c) Human chess
+depth-sensitive and can differ due to horizon effects. (b) The test endgame population is larger but still not a random representative sample of the full career, and diagnostic precision is not a historical strength rating. (c) Human chess
 decisions may intentionally prefer objectively inferior positions, so
 centipawn loss is not style identity. (d) No parameter may be selected
 using these TEST positions. Prepare future calibration using a separate
@@ -60,7 +59,7 @@ After producing `/tmp/real85-fit` with
 
 ```bash
 python -m chesssim.real85_endgame_audit extract \
-  --fetch --profiles /tmp/real85-fit --per-player 12 \
+  --fetch --profiles /tmp/real85-fit --per-player 0 \
   --out /tmp/real85-historical-endgame-test.json
 
 python -m chesssim.real85_endgame_audit audit \
