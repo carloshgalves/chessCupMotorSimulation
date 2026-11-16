@@ -39,7 +39,7 @@ jobs:
           python -m chesssim.real85_endgame_audit extract --fetch \
             --profiles "$RUNNER_TEMP/real85-fitted" \
             --players fischer tal karpov kasparov \
-            --per-player 12 \
+            --per-player 0 \
             --out "$RUNNER_TEMP/real85-test-endgame-positions.json"
           python - <<'PY'
           import json,os
@@ -53,7 +53,8 @@ jobs:
           for slug,row in report["players"].items():
               assert row["test_games"]==fit["players"][slug]["test_games"]
               assert row["source_pgn_sha256"]==fit["players"][slug]["source_pgn_sha256"]
-              assert 1 <= row["sampled_distinct_games"] <= 12, (slug,row["status"])
+              assert row["sampled_distinct_games"] >= 1, (slug,row["status"])
+              assert row["sampled_distinct_games"] == row["test_endgame_games_available"]
               assert len({x["game_sha256"] for x in row["sampled_decisions"]})==row["sampled_distinct_games"]
               assert row["sampled_distinct_games"]<=row["test_endgame_games_available"]
               print("REAL_TEST_ENDGAME_CORPUS",slug,"test_games",row["test_games"],
@@ -98,7 +99,7 @@ jobs:
           assert set(doc["players"])=={"fischer","tal","karpov","kasparov"}
           for slug,row in doc["players"].items():
               n=row["sampled_distinct_games"]
-              assert 1<=n<=12
+              assert n >= 1
               assert len(row["observations"])==n
               assert 0<=row["same_historical_move"]<=n
               assert all(x["historical_uci"] and x["rodent_uci"] for x in row["observations"])
