@@ -82,6 +82,30 @@ jobs:
           assert not data["maia_dsc_weights_changed"]
           assert len(data["rodent_original_sha256"])==len(data["stockfish_sha256"])==64
           assert all(g["status"]=="COMPLETED" for g in data["games"])
+          # Independently reconcile EACH signed-in PGN move with its
+          # Stockfish root-candidate guard; aggregates alone are insufficient.
+          for game in data["games"]:
+              trace=game["policy_trace"]
+              assert len(trace)==game["plies"]>0
+              true_overrides=0
+              for event in trace:
+                  assert event["rodent_move"] and event["played_move"]
+                  if event["outcome"]=="EXTERNAL_POLICY_OVERRIDE":
+                      true_overrides+=1
+                      assert game["arm"]=="guided"
+                      assert event["player"]==game["player"]
+                      assert event["sampled"] is True
+                      assert event["rodent_in_analyzed_set"] is True
+                      assert event["safe_candidate_count"]>=2
+                      assert 0<=event["proposed_cp_gap_from_best"]<=data["cp_budget"]
+                      assert event["played_move"]==event["policy_move"]
+                      assert event["played_move"]!=event["rodent_move"]
+                  else:
+                      assert event["played_move"]==event["rodent_move"]
+                      assert event["sampled"] is False
+                  if event["player"]=="control-simple":
+                      assert event["outcome"]=="CONTROL_RODENT_UNMODIFIED"
+              assert true_overrides==game["actual_overrides"]
           for slug in data["players"]:
               games=[g for g in data["games"] if g["player"]==slug]
               assert len(games)==4
