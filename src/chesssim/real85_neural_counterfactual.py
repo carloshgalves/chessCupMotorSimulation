@@ -17,7 +17,7 @@ from hashlib import sha256
 import json
 import math
 from pathlib import Path
-from statistics import mean
+from statistics import mean, median
 
 import chess
 import chess.engine
@@ -213,10 +213,8 @@ def _summary(observations: list[dict]) -> dict:
             round(mean(row["deep_neural_minus_rodent_cp"] for row in nonmate), 3)
             if nonmate else None),
         "nonmate_median_neural_minus_original_cp": (
-            sorted(row["deep_neural_minus_rodent_cp"] for row in nonmate)[len(nonmate)//2]
-            if len(nonmate) % 2 else
-            round(mean(sorted(row["deep_neural_minus_rodent_cp"] for row in nonmate)[
-                len(nonmate)//2-1:len(nonmate)//2+1]),3) if nonmate else None),
+            round(median(row["deep_neural_minus_rodent_cp"] for row in nonmate), 3)
+            if nonmate else None),
         "neural_deeper_worse_more_than_25cp": sum(
             r["deep_neural_minus_rodent_cp"] < -25 for r in nonmate),
         "neural_deeper_worse_more_than_100cp": sum(
@@ -229,10 +227,7 @@ def _summary(observations: list[dict]) -> dict:
             abs(r["deep_neural_minus_rodent_cp"]) <= 25 for r in nonmate),
         "guided_game_means_cp": game_means,
         "confidence_interval": None,
-        "confidence_reason": (
-            "Only <=2 guided games per player; cannot estimate robust
-            strength or improvement with bootstrap."
-        ) if False else "Fewer than 20 independent guided games; no strength CI.",
+        "confidence_reason": "Fewer than 20 independent guided games; no strength CI.",
     }
 
 
