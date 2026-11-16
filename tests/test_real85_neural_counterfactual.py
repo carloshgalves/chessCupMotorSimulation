@@ -127,7 +127,8 @@ class FakeDeeperStockfish:
         self.calls.append((board.fen(), move.uci()))
         numeric = 45 if move.uci() == "e2e4" else 5
         sc = chess.engine.Mate(3) if self.mate else chess.engine.Cp(numeric)
-        return {"score": chess.engine.PovScore(sc, board.turn), "pv": [move]}
+        return {"score": chess.engine.PovScore(sc, board.turn), "pv": [move],
+                "depth": limit.depth}
 
 
 def test_independent_forced_root_search_uses_identical_fen_and_depth():
@@ -146,6 +147,24 @@ def test_independent_forced_root_search_uses_identical_fen_and_depth():
     assert mate == {"cp": None, "mate_in": 3}
     with pytest.raises(ValueError, match="not legal"):
         deep._root_score(engine, board, chess.Move.from_uci("e2e5"), 12)
+
+
+def test_forced_root_rejects_unreached_depth_and_forged_pv():
+    board = chess.Board()
+    move = chess.Move.from_uci("e2e4")
+    class BadEngine:
+        def __init__(self, corrupt):
+            self.corrupt = corrupt
+        def analyse(self, board, limit, root_moves, info, game):
+            return {
+                "score": chess.engine.PovScore(chess.engine.Cp(13), board.turn),
+                "pv": [chess.Move.from_uci("d2d4") if self.corrupt else root_moves[0]],
+                "depth": 5,
+            }
+    with pytest.raises(RuntimeError, match="did not reach required root depth"):
+        deep._root_score(BadEngine(False),board,move,12)
+    with pytest.raises(RuntimeError, match="could not prove root-move"):
+        deep._root_score(BadEngine(True),board,move,12)
 
 
 def test_evidence_summary_does_not_make_up_strength_ci_or_hide_negative_delta():
