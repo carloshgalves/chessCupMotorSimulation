@@ -163,11 +163,6 @@ def train_real_profiles(out: Path, *, players: list[str] | None = None,
                         pos = position_token(board)
                         if arm == "train":
                             move_votes[side][pos][move.uci()] += 1
-                        else:
-                            held_eval["opening_decisions"] += 1
-                            observed = move_votes[side].get(pos)
-                            # Deferred evaluation below: votes are incomplete
-                            # until ALL TRAIN games have been processed.
                     board.push(move)
             if games_seen["train"] != train_count or games_seen["test"] != test_count:
                 raise AssertionError("Second PGN pass changed historic game split")
@@ -251,7 +246,6 @@ def train_real_profiles(out: Path, *, players: list[str] | None = None,
         return report
     except BaseException:
         import shutil
-        import os
         if stage.exists():
             shutil.rmtree(stage)
         raise
