@@ -32,12 +32,17 @@ class NeuralGuardedPolicy:
     """Satisfies the existing development-only policy hook, with no clock/book."""
     def __init__(self, player: str, checkpoint: dict, stockfish, *,
                  depth: int = 8, cp_budget: int = 25,
-                 min_ply: int = 21, override_percent: int = 100):
+                 min_ply: int = 21, override_percent: int = 100,
+                 confirmation_depth: int | None = None):
         if (type(depth) is not int or not 8 <= depth <= 20 or
                 type(cp_budget) is not int or not 0 <= cp_budget <= 100 or
                 type(min_ply) is not int or not 1 <= min_ply <= 500 or
                 type(override_percent) is not int or
-                override_percent not in (0,100)):
+                override_percent not in (0,100) or
+                (confirmation_depth is not None and (
+                    type(confirmation_depth) is not int or
+                    not 10 <= confirmation_depth <= 20 or
+                    confirmation_depth <= depth))):
             raise ValueError("Invalid development-only neural safety parameters")
         if (checkpoint.get("schema") != TRAIN_SCHEMA or
                 checkpoint.get("player") != player or
@@ -50,10 +55,36 @@ class NeuralGuardedPolicy:
         self.cp_budget=cp_budget
         self.min_ply=min_ply
         self.override_percent=override_percent
+        self.confirmation_depth=confirmation_depth
         self.gate=None
         self.bindings={player:"overall","control-simple":"overall"}
         self.model={"model_sha256":sha256(
             json.dumps(checkpoint["model"],sort_keys=True).encode()).hexdigest()}
+
+    def _forced_root_cp(self, board: chess.Board, move: chess.Move) -> tuple[int | None, int | None]:
+        """Independently score a forced root candidate on the same original FEN."""
+        if move not in board.legal_moves or self.confirmation_depth is None:
+            raise ValueError("Deep safety confirmation requested for invalid candidate")
+        try:
+            info=self.stockfish.analyse(
+                board,chess.engine.Limit(depth=self.confirmation_depth),
+                root_moves=[move],info=chess.engine.INFO_SCORE | chess.engine.INFO_PV,
+                game=object())
+        except Exception as exc:
+            raise RuntimeError("Independent deep Stockfish confirmation failed") from exc
+        pv=info.get("pv")
+        value=info.get("score")
+        if not pv or pv[0]!=move or value is None:
+            raise RuntimeError("Independent deep Stockfish returned incorrect forced PV")
+        pov=value.pov(board.turn)
+        mate=pov.mate()
+        if mate is not None:
+            return None,mate
+        cp=pov.score()
+        if (type(cp) is not int or type(info.get("depth")) is not int or
+                info["depth"]<self.confirmation_depth):
+            raise RuntimeError("Stockfish did not complete required deep root confirmation")
+        return cp,None
 
     def select(self, board: chess.Board, *, slug: str, engine_move: chess.Move,
                round_number: int, ply: int) -> PolicyDecision:
@@ -124,6 +155,22 @@ class NeuralGuardedPolicy:
         if proposed==engine_move:
             event["outcome"]="POLICY_RODENT_AGREEMENT"
             return PolicyDecision(engine_move,event)
+        if self.confirmation_depth is not None:
+            original_cp,original_mate=self._forced_root_cp(board,engine_move)
+            proposed_cp,proposed_mate=self._forced_root_cp(board,proposed)
+            event["confirmation_depth"]=self.confirmation_depth
+            event["confirmation_original_cp"]=original_cp
+            event["confirmation_proposed_cp"]=proposed_cp
+            event["confirmation_original_mate"]=original_mate
+            event["confirmation_proposed_mate"]=proposed_mate
+            if original_mate is not None or proposed_mate is not None:
+                event["outcome"]="DEEP_MATE_GUARD_RETAINED_RODENT"
+                return PolicyDecision(engine_move,event)
+            delta=proposed_cp-original_cp
+            event["confirmation_neural_minus_rodent_cp"]=delta
+            if delta < -self.cp_budget:
+                event["outcome"]="DEEP_CP_GUARD_RETAINED_RODENT"
+                return PolicyDecision(engine_move,event)
         if self.override_percent==0:
             event["outcome"]="SHADOW_ONLY"
             return PolicyDecision(engine_move,event)
@@ -157,7 +204,8 @@ def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
          players: list[str] | None = None, rodent_depth: int = 4,
          stockfish_depth: int = 8, cp_budget: int = 25,
          min_ply: int = 21, max_plies: int = 450,
-         profiles: Path | None = None) -> dict:
+         profiles: Path | None = None,
+         confirmation_depth: int | None = None) -> dict:
     participants=list(players or ("fischer","tal","karpov","kasparov"))
     if (not 1<=len(participants)<=8 or len(set(participants))!=len(participants) or
             type(rodent_depth) is not int or not 1<=rodent_depth<=12 or
@@ -214,7 +262,8 @@ def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
             for arm,percent in (("shadow",0),("guided",100)):
                 policy=NeuralGuardedPolicy(
                     slug,checkpoints[slug],sf,depth=stockfish_depth,
-                    cp_budget=cp_budget,min_ply=min_ply,override_percent=percent)
+                    cp_budget=cp_budget,min_ply=min_ply,override_percent=percent,
+                    confirmation_depth=confirmation_depth)
                 for round_number,(white,black) in enumerate(
                         ((focal,simple),(simple,focal)),1):
                     pgn,meta=_play_one(
@@ -250,6 +299,12 @@ def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
                             e["outcome"] in ("MATE_SENSITIVE_RODENT_RETAINED",
                                              "RODENT_NOT_IN_INDEPENDENT_SAFE_SET")
                             for e in meta["policy_trace"]),
+                        "deep_confirmed_candidate_pairs":sum(
+                            "confirmation_depth" in e for e in meta["policy_trace"]),
+                        "deep_rejected":sum(
+                            e["outcome"] in ("DEEP_MATE_GUARD_RETAINED_RODENT",
+                                             "DEEP_CP_GUARD_RETAINED_RODENT")
+                            for e in meta["policy_trace"]),
                     })
     finally:
         try:
@@ -265,6 +320,8 @@ def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
         "stockfish_sha256":sf_hash,
         "rodent_depth":rodent_depth,"stockfish_depth":stockfish_depth,
         "cp_budget":cp_budget,"min_ply":min_ply,
+        "confirmation_depth":confirmation_depth,
+        "deep_guard_enabled":confirmation_depth is not None,
         "historical_focal_book_enabled":bool(original_books),
         "historical_book_training":"real85_game_disjoint_85pct_train" if original_books else None,
         "official_personality_files_changed":False,
@@ -288,6 +345,8 @@ def main(argv=None) -> int:
     p.add_argument("--players",nargs="+",default=["fischer","tal","karpov","kasparov"])
     p.add_argument("--rodent-depth",type=int,default=4)
     p.add_argument("--stockfish-depth",type=int,default=8)
+    p.add_argument("--confirmation-depth",type=int,
+                   help="Opt-in deeper forced-root comparison; must exceed --stockfish-depth")
     p.add_argument("--cp-budget",type=int,default=25)
     p.add_argument("--min-ply",type=int,default=21)
     p.add_argument("--max-plies",type=int,default=450)
@@ -295,7 +354,7 @@ def main(argv=None) -> int:
     result=play(a.rodent_root,a.stockfish,a.weights,a.out,players=a.players,
                 rodent_depth=a.rodent_depth,stockfish_depth=a.stockfish_depth,
                 cp_budget=a.cp_budget,min_ply=a.min_ply,max_plies=a.max_plies,
-                profiles=a.profiles)
+                profiles=a.profiles,confirmation_depth=a.confirmation_depth)
     print(json.dumps({"status":result["status"],"games":len(result["games"]),
                       "overrides":sum(g["actual_overrides"] for g in result["games"])}))
     return 0 if result["status"]=="ALL_REAL_UCI_GAMES_COMPLETE" else 2
