@@ -9,7 +9,7 @@ import pytest
 from chesssim.upstream_pretrain_overlap import (
     FINGERPRINT_CONTRACT, INDEX_SCHEMA, MODELS,
     audit_train_rows, canonical_position_digest, validate_candidate_index,
-    _strict_json,
+    _strict_json, assert_train_layout,
 )
 
 START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -136,3 +136,27 @@ def test_roundtrip_real_index_contract_and_nonmatch_stays_unknown():
     observed = r["models"]["maia79"]["per_player_year"]["tal"]["1972"]
     assert observed["candidate_exact_game_matches"] == 0
     assert observed["unknown_training_provenance_games"] == 1
+
+
+def test_no_train_directory_symlink_or_other_arm_path(tmp_path):
+    outside = tmp_path / "reserved"
+    outside.mkdir()
+    (outside / "1972.jsonl").write_text("{}\n", encoding="utf-8")
+    cohorts = tmp_path / "cohorts"
+    cohorts.mkdir()
+    (cohorts / "train").symlink_to(outside)
+    with pytest.raises(ValueError, match="symlink"):
+        assert_train_layout(cohorts, {"training_files": ["train/fischer/1972.jsonl"]})
+    with pytest.raises(ValueError, match="non-TRAIN"):
+        assert_train_layout(cohorts, {"training_files": ["holdout/fischer/1972.jsonl"]})
+
+
+def test_train_subdirectory_symlink_blocked(tmp_path):
+    cohorts = tmp_path / "cohorts"
+    (cohorts / "train").mkdir(parents=True)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "1972.jsonl").write_text("{}\n", encoding="utf-8")
+    (cohorts / "train" / "fischer").symlink_to(outside)
+    with pytest.raises(ValueError, match="symlink"):
+        assert_train_layout(cohorts, {"training_files": ["train/fischer/1972.jsonl"]})
