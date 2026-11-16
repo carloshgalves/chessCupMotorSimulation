@@ -1,7 +1,6 @@
 """Independent experimental player-specific UCI limits cannot leak into official play."""
 from types import SimpleNamespace
 
-import chess
 import pytest
 
 from chesssim.catalog import Player
