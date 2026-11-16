@@ -62,9 +62,12 @@ def test_real_training_uses_most_games_separates_test_and_learns_book(
     assert row["train_style"]["moves"] > 0
     assert row["test_style"]["moves"] > 0
     assert row["learned_opening_positions"] > 0
+    assert row["learned_historical_opponent_positions"] > 0
     assert row["learned_opening_decisions"] > 0
     book = load_opening_book(tmp_path/"trained/fischer.json","fischer")
     assert book["source"]["accepted_games"] == row["train_games"]
+    assert book["opponent_positions"]["white"]
+    assert book["opponent_positions"]["black"]
     assert book["source"]["source_games_total"] == row["accepted_distinct_games"]
     assert book["source"]["provenance"] == "REAL_PGN_85PCT_GAME_DISJOINT_TRAIN"
     assert row["heldout_opening"]["decisions"] > 0
@@ -126,7 +129,8 @@ def test_playable_runner_reverses_colors_and_preserves_actual_status(monkeypatch
     book_root.mkdir()
     # use valid schema and digest; report size is not fabricated inside runner
     book = {"schema":"chesssim-opening-v9","player":"fischer","policy":{"max_plies":12},
-            "positions":{"white":{},"black":{}}}
+            "positions":{"white":{},"black":{}},
+            "opponent_positions":{"white":{},"black":{}}}
     book_path = book_root/"fischer.json"
     book_path.write_text(json.dumps(book))
     from chesssim.matches import file_hash
@@ -156,6 +160,7 @@ def test_playable_runner_reverses_colors_and_preserves_actual_status(monkeypatch
     assert result["status"] == "ACTUAL_COMPLETE_GAMES_PLAYED"
     assert [r[:2] for r in observed] == [
         ("fischer","control-simple"),("control-simple","fischer")]
+    assert all(set(r[2]) == {"fischer", "control-simple"} for r in observed)
     assert all(item["score_vs_simple"] == 0.5 for item in result["games"])
     assert result["no_elo_inferred_from_small_sample"] is True
     assert (tmp_path/"matches/played.pgn").is_file()
@@ -168,7 +173,8 @@ def test_playable_runner_does_not_convert_incomplete_into_draw(monkeypatch,tmp_p
     path=book_root/"fischer.json"
     path.write_text(json.dumps({"schema":"chesssim-opening-v9",
         "player":"fischer","policy":{"max_plies":12},
-        "positions":{"white":{},"black":{}}}))
+        "positions":{"white":{},"black":{}},
+        "opponent_positions":{"white":{},"black":{}}}))
     from chesssim.matches import file_hash
     (book_root/"report.json").write_text(json.dumps({
         "schema":pilot.SCHEMA,"players":{"fischer":{
