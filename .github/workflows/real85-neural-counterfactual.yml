@@ -1,0 +1,210 @@
+name: Deeper independent same-root neural override audit on genuine book+UCI games
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/real85_neural_counterfactual.py'
+      - 'tests/test_real85_neural_counterfactual.py'
+      - '.github/workflows/real85-neural-counterfactual.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real85-deeper-neural-counterfactual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  independent-same-root-neural-override-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Negative compatibility gates - official clock, Simple control and book cutoff
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pytest -q \
+            tests/test_real85_safe_book_neural.py \
+            tests/test_real85_neural_guarded_uci.py \
+            tests/test_real85_playable.py \
+            tests/test_real85_neural_counterfactual.py
+      - name: Fit authentic opening repertoire on 85pct of real distinct historical games
+        run: |
+          python -m chesssim.real85_playable fit --fetch \
+            --players fischer tal karpov kasparov \
+            --max-opening-plies 40 \
+            --out "$RUNNER_TEMP/real85-opening-books"
+      - name: Build separate 80pct-plus all-phase neural FIT and TUNE corpus
+        run: |
+          python -m chesssim.real85_neural_stream build --fetch \
+            --players fischer tal karpov kasparov \
+            --out "$RUNNER_TEMP/real85-neural-input"
+          python -m chesssim.real85_online_residual \
+            --inputs "$RUNNER_TEMP/real85-neural-input" \
+            --players fischer tal karpov kasparov \
+            --out "$RUNNER_TEMP/real85-trained-residual"
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Build original Rodent and install independent Stockfish
+        run: |
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac
+          make -C rodent-source/sources build
+          mkdir -p "$RUNNER_TEMP/rodent"
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          sudo apt-get update -qq
+          sudo apt-get install -y stockfish
+          test -x /usr/games/stockfish
+      - name: Complete book-guided and neural-guided UCI games in both colors
+        run: |
+          python -m chesssim.real85_neural_guarded_uci \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --stockfish /usr/games/stockfish \
+            --weights "$RUNNER_TEMP/real85-trained-residual" \
+            --profiles "$RUNNER_TEMP/real85-opening-books" \
+            --players fischer tal karpov kasparov \
+            --rodent-depth 4 --stockfish-depth 8 \
+            --cp-budget 25 --min-ply 41 --max-plies 450 \
+            --out "$RUNNER_TEMP/combined-uci"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])
+          data=json.loads((root/"combined-uci/results.json").read_text())
+          manifest=json.loads((root/"real85-opening-books/report.json").read_text())
+          assert data["schema"]=="chesssim-real85-actual-guarded-neural-uci-v1"
+          assert data["historical_focal_book_enabled"] is True
+          assert data["status"]=="ALL_REAL_UCI_GAMES_COMPLETE"
+          assert data["min_ply"]==41
+          assert len(data["games"])==16
+          assert set(data["players"])=={"fischer","tal","karpov","kasparov"}
+          assert not data["official_personality_files_changed"]
+          assert not data["historical_elo_estimated"]
+          focal_book_total=real_guided_overrides=0
+          for slug in data["players"]:
+              assert manifest["players"][slug]["train_fraction"]>=0.80
+              group=[g for g in data["games"] if g["player"]==slug]
+              assert len(group)==4
+              assert {g["arm"] for g in group}=={"shadow","guided"}
+              assert {g["color"] for g in group}=={"white","black"}
+              assert sum(g["actual_overrides"] for g in group if g["arm"]=="shadow")==0
+              focal_book=sum(g["focal_historical_book_plies"] for g in group)
+              assert focal_book>0
+              focal_book_total+=focal_book
+              real_guided_overrides+=sum(g["actual_overrides"] for g in group)
+              for game in group:
+                  assert game["simple_book_plies"]==0
+                  assert len(game["policy_trace"])==game["plies"]
+                  assert len(game["opening_trace"])==game["focal_historical_book_plies"]
+                  assert all(t["ply"]<=40 and t["player"]==slug for t in game["opening_trace"])
+                  assert game["actual_overrides"]==sum(
+                      t["outcome"]=="EXTERNAL_POLICY_OVERRIDE" for t in game["policy_trace"])
+                  for event in game["policy_trace"]:
+                      if event["outcome"]=="EXTERNAL_POLICY_OVERRIDE":
+                          assert event["ply"]>=41
+                          assert event["sampled"] is True
+                          assert event["rodent_in_analyzed_set"] is True
+                          assert event["safe_candidate_count"]>=2
+                          assert 0<=event["proposed_cp_gap_from_best"]<=data["cp_budget"]
+                          assert event["played_move"]==event["policy_move"]
+                      else:
+                          assert event["played_move"]==event["rodent_move"]
+              print("REAL85_BOOK_PLUS_NEURAL",slug,
+                    "book_plies",focal_book,
+                    "actual_neural_overrides",sum(g["actual_overrides"] for g in group))
+          assert focal_book_total>=4
+          assert real_guided_overrides>=1
+          print("COMPLETE_HISTORICAL_BOOK_NEURAL_UCI",len(data["games"]),
+                focal_book_total,real_guided_overrides)
+          PY
+      - name: Reanalyze actual unified PGNs with Stockfish (exploratory)
+        run: |
+          python -m chesssim analyze-quality \
+            --pgn "$RUNNER_TEMP/combined-uci/games.pgn" \
+            --stockfish /usr/games/stockfish \
+            --depth 10 --max-positions 128 --min-fullmove 8 --pv-plies 5 \
+            --out "$RUNNER_TEMP/combined-quality.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])
+          q=json.loads((root/"combined-quality.json").read_text())
+          assert q["status"]=="EXPLORATORY_STRENGTH_DIAGNOSTIC_NOT_ELO"
+          assert q["reconciliation"]["status"]=="CONSISTENT"
+          assert q["independent_decisions_sampled"]>=32
+          print("HISTORICAL_BOOK_NEURAL_STOCKFISH",q["summary"])
+          PY
+      - name: Deeper root-forced Stockfish comparison of ALL real neural interventions
+        run: |
+          python -m chesssim.real85_neural_counterfactual \
+            --results "$RUNNER_TEMP/combined-uci/results.json" \
+            --pgn "$RUNNER_TEMP/combined-uci/games.pgn" \
+            --stockfish /usr/games/stockfish \
+            --depth 12 \
+            --out "$RUNNER_TEMP/deeper-counterfactual.json"
+          python - <<'PY'
+          from pathlib import Path
+          import json, os
+          root = Path(os.environ["RUNNER_TEMP"])
+          play = json.loads((root/"combined-uci/results.json").read_text())
+          audit = json.loads((root/"deeper-counterfactual.json").read_text())
+          assert audit["schema"]=="chesssim-real85-deeper-same-root-neural-counterfactual-v1"
+          assert audit["status"]=="INDEPENDENT_DEPTH_STRESS_OBSERVATION_NOT_HUMAN_ELO"
+          assert audit["depth_of_original_move_guard"]==8
+          assert audit["depth_of_independent_counterfactual"]==12
+          assert audit["no_game_or_model_training_performed"] is True
+          assert audit["outer_test_used"] is False
+          assert audit["model_tune_used"] is False
+          assert audit["all_observed_guided_overrides_audited"] is True
+          assert set(audit["players"])==set(play["players"])
+          guided=sum(g["actual_overrides"] for g in play["games"])
+          assert guided>=1
+          assert audit["totals"]["actual_guided_overrides"]==guided
+          for slug, row in audit["players"].items():
+              original=sum(g["actual_overrides"] for g in play["games"] if g["player"]==slug)
+              assert row["actual_guided_overrides"]==original
+              assert len(row["observations"])==original
+              assert row["cp_comparisons"]+row["mate_affected_excluded_from_cp"]==original
+              assert row["neural_deeper_worse_more_than_100cp"]<=row["cp_comparisons"]
+              assert row["confidence_interval"] is None
+              for observation in row["observations"]:
+                  assert observation["ply"]>=41
+                  assert observation["rodent_move"]!=observation["neural_move"]
+                  if observation["mate_affected"]:
+                      assert observation["deep_neural_minus_rodent_cp"] is None
+                  else:
+                      assert observation["deep_neural_minus_rodent_cp"]==(
+                          observation["neural_deep_root_cp"]-observation["rodent_deep_root_cp"])
+              print("DEEP_SAME_ROOT_NEURAL",slug,
+                    "actual_overrides",original,
+                    "nonmate",row["cp_comparisons"],
+                    "mate_affected",row["mate_affected_excluded_from_cp"],
+                    "deep_mean_incremental_cp",row["nonmate_mean_neural_minus_original_cp"],
+                    "deep_100cp_regressions",row["neural_deeper_worse_more_than_100cp"])
+          print("REAL85_DEEP_COUNTERFACTUAL_ALL_OVERRIDES",guided,
+                "depth12_nonmate",audit["totals"]["cp_comparisons"],
+                "deep_100cp_regressions",audit["totals"]["neural_deeper_worse_more_than_100cp"])
+          PY
+      - name: Preserve authentic books, checkpoints SHA, full PGNs and per-ply audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real85-four-player-deeper-independent-counterfactual-audit
+          path: |
+            ${{ runner.temp }}/real85-opening-books/report.json
+            ${{ runner.temp }}/real85-trained-residual/report.json
+            ${{ runner.temp }}/combined-uci/results.json
+            ${{ runner.temp }}/combined-uci/games.pgn
+            ${{ runner.temp }}/combined-quality.json
+            ${{ runner.temp }}/deeper-counterfactual.json
+          retention-days: 14
