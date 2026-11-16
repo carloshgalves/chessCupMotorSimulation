@@ -95,8 +95,10 @@ jobs:
           doc=json.loads((root/"real85-test-endgame-quality.json").read_text())
           assert doc["schema"]=="chesssim-real85-rodent-stockfish-historical-endgames-v1"
           assert doc["training_or_parameter_selection_performed"] is False
+          assert doc["comparison"]=="same_root_fen_and_depth_with_forced_historical_and_rodent_root_moves"
           assert len(doc["rodent_binary_sha256"])==len(doc["stockfish_binary_sha256"])==64
           assert set(doc["players"])=={"fischer","tal","karpov","kasparov"}
+          assert sum(row["sampled_distinct_games"] for row in doc["players"].values())>=300
           for slug,row in doc["players"].items():
               n=row["sampled_distinct_games"]
               assert n >= 1
