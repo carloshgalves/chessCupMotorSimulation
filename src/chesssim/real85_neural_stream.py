@@ -75,7 +75,7 @@ def _record(game, meta: dict, slug: str, arm: str, source_sha: str) -> tuple[dic
 def build(out: Path, *, players: list[str] | None = None,
           archive_dir: Path | None = None,
           allow_missing: bool = False) -> dict:
-    """Write resumable-by-file source-verified FIT/TUNE trajectory shards.
+    """Write source-verified FIT/TUNE trajectory shards for a later trainer.
 
     The entire source is scanned, so there is no first-N-games, first-N-moves,
     max-games=128 or arbitrary per-game decision sampling. We preserve every
@@ -116,8 +116,8 @@ def build(out: Path, *, players: list[str] | None = None,
             hashers = {arm: sha256() for arm in files}
             serialized_games = Counter()
             serialized_decisions = Counter()
-            with files["fit"].open("x", encoding="utf-8") as fit_handle, (
-                    files["tune"].open("x", encoding="utf-8")) as tune_handle:
+            with files["fit"].open("x", encoding="utf-8", newline="\\n") as fit_handle, (
+                    files["tune"].open("x", encoding="utf-8", newline="\\n")) as tune_handle:
                 handles = {"fit":fit_handle,"tune":tune_handle}
                 for game, meta in _iter_verified_games(pgn, rows, conf[slug]["surname"]):
                     digest, _ = mainline_identity(game)
@@ -166,7 +166,9 @@ def build(out: Path, *, players: list[str] | None = None,
             "training_game_protocol": "real85-global-SHA-game-arm",
             "subsplit": "97-percent-of-original-TRAIN-for-FIT-3-percent-TUNE",
             "subsplit_salt": TUNE_SALT,
-            "source_public_pgn_only": True, "old_year_holdout_used": False,
+            "source_public_pgn_only": archive_dir is None,
+            "source_mode": "PINNED_PUBLIC_FETCH" if archive_dir is None else "LOCAL_OPERATOR_SUPPLIED",
+            "old_year_holdout_used": False,
             "excluded_test_games_serialized": 0,
             "training_gradients_applied": False,
             "neural_weights_changed": False,
