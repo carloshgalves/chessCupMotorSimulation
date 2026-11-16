@@ -200,6 +200,22 @@ def audit_train_rows(rows, candidate_indexes: dict[str, dict] | None = None) -> 
     }
 
 
+
+def assert_train_layout(cohorts: Path, manifest: dict) -> None:
+    """Refuse symbolic intermediates before delegating to the TRAIN reader."""
+    train_files = manifest.get("training_files")
+    if not isinstance(train_files, list) or not train_files:
+        raise ValueError("Missing TRAIN-only file inventory")
+    for name in train_files:
+        if not isinstance(name, str) or re.fullmatch(
+                r"train/[a-z0-9-]+/[0-9]{4}\.jsonl", name) is None:
+            raise ValueError("Unexpected non-TRAIN inventory path")
+        path = Path(cohorts) / name
+        if (any(p.is_symlink() for p in (path, *path.parents))
+                or not path.is_file()):
+            raise ValueError("Missing or symlinked TRAIN file or parent")
+
+
 def run(cohorts: Path, out: Path, *, dsc_index: Path | None = None,
         maia_index: Path | None = None) -> dict:
     from .real_policy_experiment import (
@@ -210,6 +226,7 @@ def run(cohorts: Path, out: Path, *, dsc_index: Path | None = None,
     if (manifest.get("schema") != "chesssim-real-player-year-train-v1"
             or set(manifest.get("players", {})) != set(PLAYERS)):
         raise ValueError("Expected four-player real TRAIN corpus, never sealed arms")
+    assert_train_layout(Path(cohorts), manifest)
     indexes = {}
     if dsc_index is not None:
         indexes["dsc150"] = _strict_json(dsc_index)
