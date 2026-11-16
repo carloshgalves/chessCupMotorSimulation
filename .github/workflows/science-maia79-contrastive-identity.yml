@@ -1,0 +1,123 @@
+name: Maia79 real four-player contrastive neural identity
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/maia79_contrastive_four.py'
+      - 'tests/test_maia79_contrastive_four.py'
+      - '.github/workflows/science-maia79-contrastive-identity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maia79-contrastive-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-contrastive-four:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      TORCH_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+      PYTHONHASHSEED: '0'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install actual CPU neural training dependencies
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Regression and adversarial controls before real training
+        run: |
+          python -m pytest -q tests/test_maia79_contrastive_four.py tests/test_maia79_neural_four.py
+      - uses: actions/checkout@v5
+        with:
+          repository: CSSLab/maia3
+          ref: 1e13597c42d4858b7cfd7cfdae01e297263364b2
+          path: maia3-source
+          persist-credentials: false
+      - name: Pin the Maia3 original source code exactly
+        run: |
+          test "$(git -C maia3-source rev-parse HEAD)" = 1e13597c42d4858b7cfd7cfdae01e297263364b2
+          python -m pip install -e ./maia3-source
+      - name: Rebuild historical TRAIN corpus only for four real players
+        run: |
+          python -m chesssim.real_training_cohorts --fetch \
+            --players fischer tal karpov kasparov \
+            --birthdates-json docs/REAL_BIRTHDATES_4.json \
+            --split-policy career-stratified --min-ply 17 \
+            --out "$RUNNER_TEMP/cohorts"
+      - name: Bind immutable sources using train-only V3 reference
+        run: |
+          python -m chesssim.contextual_policy_v3 train \
+            --cohorts "$RUNNER_TEMP/cohorts" --max-per-player 1600 \
+            --max-per-game 3 --seed 2026 --out "$RUNNER_TEMP/v3.json"
+      - name: Train ordinary CE and contrastive Maia79 adapters on identical real FIT data
+        run: |
+          python -m chesssim.maia79_contrastive_four \
+            --cohorts "$RUNNER_TEMP/cohorts" --v3-model "$RUNNER_TEMP/v3.json" \
+            --fit-games 128 --tune-games 16 --audit-games 16 --moves-per-game 3 \
+            --model-out "$RUNNER_TEMP/maia79-contrastive-model.json" \
+            --report-out "$RUNNER_TEMP/maia79-contrastive-report.json"
+      - name: Assert actual training, negative controls, and sealed final holdout
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"])
+          model = json.loads((root/"maia79-contrastive-model.json").read_text())
+          report = json.loads((root/"maia79-contrastive-report.json").read_text())
+          names = {"fischer", "karpov", "kasparov", "tal"}
+          assert model["schema"] == "chesssim-maia79-four-contrastive-qk-v1"
+          assert report["schema"] == "chesssim-maia79-four-contrastive-identity-report-v1"
+          assert model["model_sha256"] == report["trained_model_sha256"]
+          assert model["maia_checkpoint_sha256"] == "3fc6181d5db789b45a15305732148757ae74efa3e0028e81ba335b462dac45c2"
+          assert report["selection"]["selected_unique_games"] == 640
+          assert report["selection"]["selected_decisions"] == 1920
+          assert model["fit_decisions_per_player"] == 384
+          assert set(model["contrastive"]) == set(model["move_only"]) == names
+          assert len(model["generic"]["loss_by_epoch"]) == 2
+          assert len(model["contrastive_losses"]) == 3
+          assert all(len(m["loss_by_epoch"]) == 3 for m in model["move_only"].values())
+          for arm in ("tune", "audit"):
+              identities = report["blinded_identity"][arm]
+              assert set(identities) == {"contrastive","move_only","contrastive_swapped_names"}
+              for key, payload in identities.items():
+                  assert payload["games"] == 64
+                  assert sum(payload["per_player_games"].values()) == 64
+                  assert all(n == 16 for n in payload["per_player_games"].values())
+                  assert payload["permutations"] == 2000
+                  assert 0 <= payload["accuracy"] <= 1
+              for player, detail in report["move_prediction"][arm].items():
+                  assert player in names
+                  assert detail["swapped_source"] != player
+                  assert all(detail[key]["decisions"] == 48 for key in
+                             ("original", "generic", "move_only_correct",
+                              "contrastive_correct", "contrastive_swapped"))
+          assert report["data_leakage_controls"] == {
+              "validation_opened": False, "final_holdout_opened": False,
+              "original_weights_updated": False, "rodent_official_updated": False}
+          assert not model["personality_homologated"]
+          assert not report["personality_homologated"]
+          print("MAIA79_REAL_CONTRASTIVE_TRAIN_OK")
+          print("BLIND_TUNE", identities if arm=="tune" else report["blinded_identity"]["tune"])
+          print("BLIND_AUDIT", report["blinded_identity"]["audit"])
+          print("MOVE_PREDICTION_AUDIT", report["move_prediction"]["audit"])
+          PY
+      - name: Save ONLY trained small LoRA weights and aggregate identity metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: four-player-maia79-real-contrastive-identity-v1
+          path: |
+            ${{ runner.temp }}/maia79-contrastive-model.json
+            ${{ runner.temp }}/maia79-contrastive-report.json
+          retention-days: 14
+          if-no-files-found: warn
