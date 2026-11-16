@@ -1,5 +1,4 @@
 """Adversarial tests for actual CPU gradients over real full-game FIT shards."""
-from hashlib import sha256
 import json
 
 import chess
