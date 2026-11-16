@@ -27,7 +27,7 @@ jobs:
       - name: Install project and run negative controls
         run: |
           python -m pip install -e '.[dev]'
-          python -m pytest -q tests/test_real85_playable.py
+          python -m pytest -q tests/test_real85_playable.py tests/test_real85_roundrobin.py
       - name: Train genuine player-specific empirical moves on target 85 percent real historical games
         run: |
           python -m chesssim.real85_playable fit --fetch \
@@ -133,6 +133,30 @@ jobs:
               for player,entry in d["players"].items()})
           print("REAL_16_COMPLETED_PGN_GAMES_WITH_BOOK_ABLATION")
           PY
+      - name: Play full round robin between four historical personalities (12 actual UCI games)
+        run: |
+          python -m chesssim.real85_roundrobin \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --profiles "$RUNNER_TEMP/real85-trained" \
+            --players fischer tal karpov kasparov \
+            --depth 2 --max-plies 450 \
+            --out "$RUNNER_TEMP/real85-roundrobin"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])/"real85-roundrobin"
+          d=json.loads((root/"results.json").read_text())
+          assert d["status"]=="ALL_ROUNDROBIN_GAMES_COMPLETE"
+          assert d["scheduled_games"]==d["completed_games"]==12
+          assert set(d["players"])=={"fischer","karpov","kasparov","tal"}
+          assert len(d["games"])==12
+          assert len({(g["white"],g["black"]) for g in d["games"]})==12
+          assert all(v["scheduled"]==v["completed"]==6
+                     for v in d["standings"].values())
+          assert sum(v["points"] for v in d["standings"].values())==12
+          assert not d["historical_strength_elo_estimated"]
+          print("REAL_ROUNDROBIN_COMPLETE",d["standings"])
+          PY
       - name: Independent Stockfish tactical-quality diagnosis of both true game sets
         run: |
           sudo apt-get update -qq
@@ -148,11 +172,17 @@ jobs:
             --stockfish /usr/games/stockfish \
             --depth 8 --max-positions 64 --min-fullmove 8 --pv-plies 5 \
             --out "$RUNNER_TEMP/no-book-stockfish-quality.json"
+          python -m chesssim analyze-quality \
+            --pgn "$RUNNER_TEMP/real85-roundrobin/games.pgn" \
+            --stockfish /usr/games/stockfish \
+            --depth 8 --max-positions 72 --min-fullmove 8 --pv-plies 5 \
+            --out "$RUNNER_TEMP/roundrobin-stockfish-quality.json"
           python - <<'PY'
           from pathlib import Path
           import json,os
           folder=Path(os.environ["RUNNER_TEMP"])
-          for path in ("book-stockfish-quality.json","no-book-stockfish-quality.json"):
+          for path in ("book-stockfish-quality.json","no-book-stockfish-quality.json",
+                       "roundrobin-stockfish-quality.json"):
               doc=json.loads((folder/path).read_text())
               assert doc["protocol"] == "independent-stockfish-postgame-v9.1"
               assert doc["status"] == "EXPLORATORY_STRENGTH_DIAGNOSTIC_NOT_ELO"
@@ -176,14 +206,20 @@ jobs:
             --quality "$RUNNER_TEMP/no-book-stockfish-quality.json" \
             --opening-plies 24 --bootstrap 300 \
             --out "$RUNNER_TEMP/no-book-paired-evidence.json"
+          python -m chesssim paired-evidence \
+            --pgn "$RUNNER_TEMP/real85-roundrobin/games.pgn" \
+            --quality "$RUNNER_TEMP/roundrobin-stockfish-quality.json" \
+            --opening-plies 24 --bootstrap 300 \
+            --out "$RUNNER_TEMP/roundrobin-paired-evidence.json"
           python - <<'PY'
           import json, os
           from pathlib import Path
           root=Path(os.environ["RUNNER_TEMP"])
-          for name in ("book-paired-evidence.json","no-book-paired-evidence.json"):
+          for name in ("book-paired-evidence.json","no-book-paired-evidence.json",
+                       "roundrobin-paired-evidence.json"):
               d=json.loads((root/name).read_text())
               assert d["schema"]=="chesssim-paired-style-strength-v1"
-              assert len(d["players"])==5
+              assert len(d["players"])==(4 if name.startswith("roundrobin") else 5)
               print("PAIRWISE_REAL_GAME_STYLE_AND_STRENGTH",name,
                     {p:{"games":row["distinct_games"],
                         "cp":row["strength"]["game_level"]["mean"]}
@@ -208,5 +244,9 @@ jobs:
             ${{ runner.temp }}/no-book-stockfish-quality.json
             ${{ runner.temp }}/book-paired-evidence.json
             ${{ runner.temp }}/no-book-paired-evidence.json
+            ${{ runner.temp }}/real85-roundrobin/results.json
+            ${{ runner.temp }}/real85-roundrobin/games.pgn
+            ${{ runner.temp }}/roundrobin-stockfish-quality.json
+            ${{ runner.temp }}/roundrobin-paired-evidence.json
           retention-days: 14
           if-no-files-found: warn
