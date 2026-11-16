@@ -310,7 +310,8 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
                    max_plies: int = 450, opening_seed: int = 2033,
                    use_repertoire: bool = True,
                    seed_opponent_opening: bool = False,
-                   depth_overrides: dict[str, int] | None = None) -> dict:
+                   depth_overrides: dict[str, int] | None = None,
+                   opening_min_count: int = 2) -> dict:
     """Play actual Rodent-vs-Simple games, reversed colors, to terminal state.
 
     A ply cap produces INCOMPLETE, never a fabricated draw or strength score.
@@ -320,6 +321,10 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
         raise ValueError("Invalid real UCI depth or full-game ply budget")
     if seed_opponent_opening and not use_repertoire:
         raise ValueError("Cannot seed opponent historical openings without repertoire")
+    if type(opening_min_count) is not int or not 1 <= opening_min_count <= 10:
+        raise ValueError("opening_min_count must be an integer from 1 through 10")
+    if not use_repertoire and opening_min_count != 2:
+        raise ValueError("Opening support threshold is inapplicable without repertoire")
     root = Path(root).resolve(strict=True)
     out = Path(out)
     if out.exists() or out.is_symlink() or not out.parent.is_dir():
@@ -372,10 +377,8 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
                   slug: file_hash(root / "personalities" / player.profile_filename),
                   control.slug: file_hash(control_file)}
         for color_idx, (white, black) in enumerate(((player, control), (control, player))):
-            # Seed BOTH sides from the player's real TRAIN repertoire to
-            # avoid a generic opponent taking us out of book by move 2.
-            # This is an experimental conditioned opening, not a claim
-            # that Simple freely chose those moves.
+            # Build an optional conditioned opponent book from real TRAIN
+            # games. Simple remains free UCI unless explicitly requested.
             opponent_book = {
                 "schema": BOOK_SCHEMA, "player": control.slug,
                 "policy": trained[slug]["policy"],
@@ -393,7 +396,7 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
                 max_plies=max_plies, round_number=color_idx+1,
                 hashes=hashes, use_books=False,
                 historical_openings=books, opening_seed=opening_seed,
-                opening_min_count=2,
+                opening_min_count=opening_min_count,
                 experimental_depths=({slug:depth_overrides[slug],
                                       control.slug:depth}
                                      if depth_overrides is not None else None))
@@ -458,10 +461,11 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
         "opponent": "Rodent IV Simple (same binary)",
         "opening_training_method": "real_85pct_game_disjoint_empirical_moves",
         "use_historical_repertoire": bool(use_repertoire),
+        "opening_min_observations": opening_min_count if use_repertoire else None,
         "seed_opponent_historical_book": bool(seed_opponent_opening),
         "opening_protocol": (
             ("conditioned opening: historical player and opponent seeded from TRAIN "
-             "games with >=2 observations; Simple is NOT an independent baseline")
+             f"games with >={opening_min_count} observations; Simple is NOT an independent baseline")
             if seed_opponent_opening else
             ("focal historical opening only; Rodent Simple chooses moves via UCI"
              if use_repertoire else "unconstrained Rodent IV UCI, no books")),
@@ -499,6 +503,8 @@ def main(argv=None) -> int:
     play.add_argument("--depth", type=int, default=4)
     play.add_argument("--max-plies", type=int, default=450)
     play.add_argument("--without-repertoire", action="store_true")
+    play.add_argument("--opening-min-count",type=int,default=2,
+                      help="Minimum real TRAIN observations for a selectable opening move (1..10)")
     play.add_argument("--seed-opponent-historical-book", action="store_true",
                       help="Condition Simple on the real opponent trajectory (not a free baseline)")
     play.add_argument("--depths-file",type=Path,
@@ -523,7 +529,8 @@ def main(argv=None) -> int:
                              max_plies=args.max_plies,
                              use_repertoire=not args.without_repertoire,
                              seed_opponent_opening=args.seed_opponent_historical_book,
-                             depth_overrides=overrides)
+                             depth_overrides=overrides,
+                             opening_min_count=args.opening_min_count)
         print(json.dumps({"status": doc["status"], "players": doc["players"]},
                          sort_keys=True), flush=True)
     return 0
