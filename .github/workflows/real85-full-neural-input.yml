@@ -1,0 +1,90 @@
+name: Real85 lossless all-game neural FIT/TUNE inputs - eight historical pilots
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/real85_neural_stream.py'
+      - 'tests/test_real85_neural_stream.py'
+      - '.github/workflows/real85-full-neural-input.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real85-full-neural-input-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  genuine-all-trajectory-neural-input:
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Regression and adversarial controls
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pytest -q tests/test_real85_neural_stream.py
+      - name: Materialize every real FIT game and every move from eight original pilots
+        run: |
+          python -m chesssim.real85_neural_stream build --fetch \
+            --players fischer tal karpov kasparov alekhine petrosian anand rubinstein \
+            --out "$RUNNER_TEMP/neural-stream"
+      - name: Replay all original game histories with legal moves and verify global partitions
+        run: |
+          python -m chesssim.real85_neural_stream verify \
+            --dir "$RUNNER_TEMP/neural-stream"
+      - name: Require actual 80pct-plus neural FIT-ready game coverage and all-phase decisions
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          base=Path(os.environ["RUNNER_TEMP"])/"neural-stream"
+          m=json.loads((base/"manifest.json").read_text())
+          expected={"fischer","tal","karpov","kasparov",
+                    "alekhine","petrosian","anand","rubinstein"}
+          assert m["schema"]=="chesssim-real85-full-trajectory-stream-v1"
+          assert m["status"]=="FULL_TRAJECTORIES_STAGED_NOT_NEURAL_TRAINED"
+          assert m["training_gradients_applied"] is False
+          assert m["neural_weights_changed"] is False
+          assert m["excluded_test_games_serialized"]==0
+          assert m["old_year_holdout_used"] is False
+          assert set(m["players"])==expected
+          fit_games=fit_moves=tune_games=test_games=0
+          for slug,row in m["players"].items():
+              assert row["status"]=="READY_ALL_REAL_MOVES_FOR_NEURAL_TRAINING", (slug,row)
+              assert row["fit_fraction_of_all_eligible_games"]>=0.80,(slug,row)
+              assert row["original_train_fraction"]>=0.80,(slug,row)
+              assert row["fit_games"]+row["tune_games"]+row["excluded_test_games"]==row["accepted_distinct_games"]
+              assert row["fit_games"]>row["tune_games"]>=1
+              assert row["excluded_test_games"]>=1
+              assert row["fit_focal_decisions_all_phases"]>row["fit_games"]*6
+              assert row["tune_focal_decisions_all_phases"]>row["tune_games"]
+              for part in ("fit","tune"):
+                  file=base/row["shards"][part]["file"]
+                  assert file.is_file() and file.stat().st_size>0
+                  assert len(row["shards"][part]["sha256"])==64
+              fit_games+=row["fit_games"]
+              tune_games+=row["tune_games"]
+              fit_moves+=row["fit_focal_decisions_all_phases"]
+              test_games+=row["excluded_test_games"]
+              print("GENUINE_NEURAL_ALL_PHASES_READY",slug,
+                    "all_games",row["accepted_distinct_games"],
+                    "fit_games",row["fit_games"],"tune_games",row["tune_games"],
+                    "test_sealed",row["excluded_test_games"],
+                    "fit_fraction",row["fit_fraction_of_all_eligible_games"],
+                    "real_focal_train_moves",row["fit_focal_decisions_all_phases"])
+          print("EIGHT_PLAYER_REAL85_INPUT_TOTALS",{"fit_games":fit_games,
+                "tune_games":tune_games,"sealed_test_games":test_games,
+                "fit_decisions_all_phases":fit_moves})
+          PY
+      - name: Publish counts and SHA only, NEVER human PGN trajectories or model weights
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real85-all-game-neural-training-input-manifest-only
+          path: ${{ runner.temp }}/neural-stream/manifest.json
+          retention-days: 14
