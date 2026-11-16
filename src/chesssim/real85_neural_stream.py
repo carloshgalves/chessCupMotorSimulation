@@ -253,8 +253,14 @@ def verify(root: Path) -> dict:
             count_decisions[slug] += observed_decisions
         if count_games[slug] != row["fit_games"] + row["tune_games"]:
             raise ValueError("Neural full-game stream count does not match manifest")
+    expected = set(report["players"])
+    ready = {slug for slug,row in report["players"].items()
+             if row.get("status") == "READY_ALL_REAL_MOVES_FOR_NEURAL_TRAINING"}
+    status = ("NO_REAL_INPUT_SHARDS" if sum(count_games.values()) == 0 else
+              "PARTIAL_REAL_INPUT_VERIFICATION" if ready != expected else
+              "VERIFIED_ALL_REAL_NEURAL_INPUT_TRAJECTORIES")
     return {
-        "status": "VERIFIED_ALL_REAL_NEURAL_INPUT_TRAJECTORIES",
+        "status": status,
         "players": {slug:{"games":count_games[slug],"focal_decisions":count_decisions[slug]}
                     for slug in sorted(count_games)},
     }
@@ -282,7 +288,10 @@ def main(argv=None) -> int:
                  "fit_fraction_of_all_eligible_games","fit_focal_decisions_all_phases")}
                 for s,row in result["players"].items()}},sort_keys=True),flush=True)
     else:
-        print(json.dumps(verify(args.dir),sort_keys=True),flush=True)
+        checked = verify(args.dir)
+        print(json.dumps(checked,sort_keys=True),flush=True)
+        if checked["status"] != "VERIFIED_ALL_REAL_NEURAL_INPUT_TRAJECTORIES":
+            return 2
     return 0
 
 
