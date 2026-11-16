@@ -18,6 +18,8 @@ import chess.engine
 from .catalog import load_roster, Player
 from .experimental_policy_adapter import PolicyDecision
 from .matches import _play_one, file_hash
+from .opening_books import load_opening_book
+from .real85_playable import SCHEMA as HISTORICAL_BOOK_SCHEMA
 from .real85_online_residual import (
     REPORT_SCHEMA, SCHEMA as TRAIN_SCHEMA, _action, _context, _read_checkpoint, _score,
 )
@@ -154,7 +156,8 @@ def _load_player(weights: Path, slug: str) -> dict:
 def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
          players: list[str] | None = None, rodent_depth: int = 4,
          stockfish_depth: int = 8, cp_budget: int = 25,
-         min_ply: int = 21, max_plies: int = 450) -> dict:
+         min_ply: int = 21, max_plies: int = 450,
+         profiles: Path | None = None) -> dict:
     participants=list(players or ("fischer","tal","karpov","kasparov"))
     if (not 1<=len(participants)<=8 or len(set(participants))!=len(participants) or
             type(rodent_depth) is not int or not 1<=rodent_depth<=12 or
@@ -182,6 +185,22 @@ def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
                 aliases.get(profile.rodent_alias)!=profile.profile_filename):
             raise ValueError(f"No authentic Rodent personality for {slug}")
         checkpoints[slug]=_load_player(weights,slug)
+    original_books={}
+    if profiles is not None:
+        profiles=Path(profiles).resolve(strict=True)
+        manifest=json.loads((profiles/"report.json").read_text())
+        if manifest.get("schema")!=HISTORICAL_BOOK_SCHEMA or min_ply<=40:
+            raise ValueError("Historical neural books require genuine real85 FIT and min_ply>=41")
+        for slug in participants:
+            row=manifest.get("players",{}).get(slug, {})
+            book_file=profiles/f"{slug}.json"
+            if (row.get("status")!="REAL_GAMES_TRAINED_PLAYABLE_REPERTOIRE" or
+                    row.get("train_fraction",0)<0.8 or
+                    file_hash(book_file)!=row.get("book_sha256")):
+                raise ValueError(f"Historical real85 opening corpus/book not verified: {slug}")
+            original_books[slug]=load_opening_book(book_file,slug)
+            if original_books[slug].get("policy",{}).get("max_plies")!=40:
+                raise ValueError("Expected trained 40-ply historical repertoire")
     engine_hash=file_hash(executable)
     sf_hash=file_hash(stockfish)
     records,pgns=[],[]
@@ -202,6 +221,9 @@ def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
                         root,executable,white,black,
                         depth=rodent_depth,movetime=None,max_plies=max_plies,
                         round_number=round_number,hashes=hashes,use_books=False,
+                        historical_openings=({slug:original_books[slug]}
+                                             if original_books else None),
+                        opening_seed=2033,opening_min_count=2,
                         experimental_policy=policy)
                     pgn.headers["NeuralMode"]=arm
                     pgn.headers["IndependentStockfishSHA256"]=sf_hash
@@ -213,6 +235,11 @@ def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
                         "status":meta["status"],"result":meta["result"],
                         "termination":meta["termination"],"plies":meta["plies"],
                         "policy_trace":meta["policy_trace"],
+                        "opening_trace":meta["opening_trace"],
+                        "focal_historical_book_plies":meta["opening_moves"][
+                            "white" if white.slug==slug else "black"],
+                        "simple_book_plies":meta["opening_moves"][
+                            "black" if white.slug==slug else "white"],
                         "actual_overrides":sum(
                             e["outcome"]=="EXTERNAL_POLICY_OVERRIDE"
                             for e in meta["policy_trace"]),
@@ -238,6 +265,8 @@ def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
         "stockfish_sha256":sf_hash,
         "rodent_depth":rodent_depth,"stockfish_depth":stockfish_depth,
         "cp_budget":cp_budget,"min_ply":min_ply,
+        "historical_focal_book_enabled":bool(original_books),
+        "historical_book_training":"real85_game_disjoint_85pct_train" if original_books else None,
         "official_personality_files_changed":False,
         "rated_official_games":False,"historical_elo_estimated":False,
         "maia_dsc_weights_changed":False,
@@ -254,6 +283,7 @@ def main(argv=None) -> int:
     p.add_argument("--rodent-root",type=Path,required=True)
     p.add_argument("--stockfish",type=Path,required=True)
     p.add_argument("--weights",type=Path,required=True)
+    p.add_argument("--profiles",type=Path,help="Genuine real85 85pct FIT opening books; requires --min-ply >=41")
     p.add_argument("--out",type=Path,required=True)
     p.add_argument("--players",nargs="+",default=["fischer","tal","karpov","kasparov"])
     p.add_argument("--rodent-depth",type=int,default=4)
@@ -264,7 +294,8 @@ def main(argv=None) -> int:
     a=p.parse_args(argv)
     result=play(a.rodent_root,a.stockfish,a.weights,a.out,players=a.players,
                 rodent_depth=a.rodent_depth,stockfish_depth=a.stockfish_depth,
-                cp_budget=a.cp_budget,min_ply=a.min_ply,max_plies=a.max_plies)
+                cp_budget=a.cp_budget,min_ply=a.min_ply,max_plies=a.max_plies,
+                profiles=a.profiles)
     print(json.dumps({"status":result["status"],"games":len(result["games"]),
                       "overrides":sum(g["actual_overrides"] for g in result["games"])}))
     return 0 if result["status"]=="ALL_REAL_UCI_GAMES_COMPLETE" else 2
