@@ -1,0 +1,291 @@
+name: Four actually playable historical engines from 85pct real games
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/real85_playable.py'
+      - 'tests/test_real85_playable.py'
+      - '.github/workflows/four-real85-playable.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real85-playable-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  historical85-and-complete-uci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install project and run negative controls
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pytest -q tests/test_real85_playable.py tests/test_real85_roundrobin.py
+      - name: Train genuine player-specific empirical moves on target 85 percent real historical games
+        run: |
+          python -m chesssim.real85_playable fit --fetch \
+            --players fischer tal karpov kasparov \
+            --max-opening-plies 40 \
+            --out "$RUNNER_TEMP/real85-trained"
+      - name: Verify all four genuine corpora used over 80 percent of distinct eligible games
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json,os
+          p = Path(os.environ["RUNNER_TEMP"])/"real85-trained"/"report.json"
+          m=json.loads(p.read_text())
+          assert m["schema"]=="chesssim-real-85pct-playable-historic-profile-v1"
+          assert set(m["players"])=={"fischer","tal","karpov","kasparov"}
+          for player,row in m["players"].items():
+              assert row["status"]=="REAL_GAMES_TRAINED_PLAYABLE_REPERTOIRE",player
+              assert row["train_fraction"]>=0.8, (player,row["train_fraction"])
+              assert row["train_games"]+row["test_games"]==row["accepted_distinct_games"]
+              assert row["test_games"]>=25
+              assert row["learned_opening_positions"]>0
+              assert row["learned_opening_decisions"]>row["train_games"]
+              assert row["train_style"]["moves"]>0
+              assert row["test_style"]["moves"]>0
+              print("HISTORIC_REAL_85_TRAIN",player,
+                    row["accepted_distinct_games"],row["train_games"],
+                    row["test_games"],row["train_fraction"],
+                    "test_opening",row["heldout_opening"])
+          assert m["original_rodent_modified"] is False
+          assert m["official_style_validated"] is False
+          PY
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Build ORIGINAL genuine UCI engine Rodent IV
+        run: |
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac
+          make -C rodent-source/sources build
+          mkdir -p "$RUNNER_TEMP/rodent"
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          test -s "$RUNNER_TEMP/rodent/personalities/basic.ini"
+          test -s "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+      - name: Play 8 full real UCI games, reverse colors against unchanged Rodent Simple
+        run: |
+          python -m chesssim.real85_playable play \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --profiles "$RUNNER_TEMP/real85-trained" \
+            --players fischer tal karpov kasparov \
+            --depth 2 --max-plies 450 \
+            --out "$RUNNER_TEMP/real85-games"
+      - name: Play the SAME four profiles without historical books (strength/style control)
+        run: |
+          python -m chesssim.real85_playable play \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --profiles "$RUNNER_TEMP/real85-trained" \
+            --players fischer tal karpov kasparov \
+            --depth 2 --max-plies 450 --without-repertoire \
+            --out "$RUNNER_TEMP/real85-games-no-book"
+      - name: Require real completed results and inspect historical style comparison
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json,os
+          p=Path(os.environ["RUNNER_TEMP"])/"real85-games"
+          d=json.loads((p/"results.json").read_text())
+          assert d["schema"]=="chesssim-real-four-complete-uci-calibration-v1"
+          assert d["rodent_binary_sha256"] and len(d["rodent_binary_sha256"])==64
+          assert d["no_neural_finetuning_claim"] and d["no_elo_inferred_from_small_sample"]
+          assert len(d["games"])==8
+          assert set(d["players"])=={"fischer","tal","karpov","kasparov"}
+          for player,entry in d["players"].items():
+              assert entry["scheduled"]==2
+              assert entry["completed"]==2, (player,entry)
+              assert entry["historical_train_games"] > entry["historical_test_games"]
+              assert len(entry["games_style"]) == 2
+              assert entry["score_rate_vs_simple"] is not None
+              print("PLAYABLE_STRENGTH_PROXY", player,
+                    "score",entry["points_vs_simple"],"/2",
+                    "recorded_style",entry["historical_test_style"],
+                    "actual_game_style",entry["games_style"])
+          assert d["status"] == "ACTUAL_COMPLETE_GAMES_PLAYED"
+          assert all(g["result"] in ("1-0","0-1","1/2-1/2") and g["plies"]>10
+                     for g in d["games"])
+          assert (p/"played.pgn").is_file()
+          no_book=json.loads((Path(os.environ["RUNNER_TEMP"])/
+                              "real85-games-no-book"/"results.json").read_text())
+          assert len(no_book["games"])==8
+          assert no_book["use_historical_repertoire"] is False
+          assert all(g["opening_moves_from_real_pg_ns"]==0
+                     for g in no_book["games"])
+          assert all(x["status"]=="COMPLETED" for x in no_book["games"])
+          print("BOOK_ABLATION", {
+              player: {"with_historical_opening":entry["points_vs_simple"],
+                       "without_historical_opening":no_book["players"][player]["points_vs_simple"],
+                       "book_moves_focal":entry["focal_book_plies_played"],
+                       "book_moves_opponent":entry["opponent_book_plies_played"]}
+              for player,entry in d["players"].items()})
+          print("REAL_16_COMPLETED_PGN_GAMES_WITH_BOOK_ABLATION")
+          PY
+      - name: Play full round robin between four historical personalities (12 actual UCI games)
+        run: |
+          python -m chesssim.real85_roundrobin \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --profiles "$RUNNER_TEMP/real85-trained" \
+            --players fischer tal karpov kasparov \
+            --depth 2 --max-plies 450 \
+            --out "$RUNNER_TEMP/real85-roundrobin"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])/"real85-roundrobin"
+          d=json.loads((root/"results.json").read_text())
+          assert d["status"]=="ALL_ROUNDROBIN_GAMES_COMPLETE"
+          assert d["scheduled_games"]==d["completed_games"]==12
+          assert set(d["players"])=={"fischer","karpov","kasparov","tal"}
+          assert len(d["games"])==12
+          assert len({(g["white"],g["black"]) for g in d["games"]})==12
+          assert all(v["scheduled"]==v["completed"]==6
+                     for v in d["standings"].values())
+          assert sum(v["points"] for v in d["standings"].values())==12
+          assert not d["historical_strength_elo_estimated"]
+          print("REAL_ROUNDROBIN_COMPLETE",d["standings"])
+          PY
+      - name: Test stronger actual search in full four-player round robin (depth 4)
+        run: |
+          python -m chesssim.real85_roundrobin \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --profiles "$RUNNER_TEMP/real85-trained" \
+            --players fischer tal karpov kasparov \
+            --depth 4 --max-plies 450 \
+            --out "$RUNNER_TEMP/real85-roundrobin-depth4"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])
+          a=json.loads((root/"real85-roundrobin"/"results.json").read_text())
+          b=json.loads((root/"real85-roundrobin-depth4"/"results.json").read_text())
+          assert b["status"]=="ALL_ROUNDROBIN_GAMES_COMPLETE"
+          assert b["depth"]==4
+          assert b["completed_games"]==12
+          assert sum(x["points"] for x in b["standings"].values())==12
+          print("REAL_UCI_DEPTH_CALIBRATION_PILOT", {
+              player:{"depth2_points":a["standings"][player]["points"],
+                      "depth4_points":b["standings"][player]["points"]}
+              for player in b["standings"]})
+          PY
+      - name: Independent Stockfish tactical-quality diagnosis of both true game sets
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y stockfish
+          test -x /usr/games/stockfish
+          python -m chesssim analyze-quality \
+            --pgn "$RUNNER_TEMP/real85-games/played.pgn" \
+            --stockfish /usr/games/stockfish \
+            --depth 8 --max-positions 64 --min-fullmove 8 --pv-plies 5 \
+            --out "$RUNNER_TEMP/book-stockfish-quality.json"
+          python -m chesssim analyze-quality \
+            --pgn "$RUNNER_TEMP/real85-games-no-book/played.pgn" \
+            --stockfish /usr/games/stockfish \
+            --depth 8 --max-positions 64 --min-fullmove 8 --pv-plies 5 \
+            --out "$RUNNER_TEMP/no-book-stockfish-quality.json"
+          python -m chesssim analyze-quality \
+            --pgn "$RUNNER_TEMP/real85-roundrobin/games.pgn" \
+            --stockfish /usr/games/stockfish \
+            --depth 8 --max-positions 72 --min-fullmove 8 --pv-plies 5 \
+            --out "$RUNNER_TEMP/roundrobin-stockfish-quality.json"
+          python -m chesssim analyze-quality \
+            --pgn "$RUNNER_TEMP/real85-roundrobin-depth4/games.pgn" \
+            --stockfish /usr/games/stockfish \
+            --depth 8 --max-positions 72 --min-fullmove 8 --pv-plies 5 \
+            --out "$RUNNER_TEMP/roundrobin-depth4-stockfish-quality.json"
+          python - <<'PY'
+          from pathlib import Path
+          import json,os
+          folder=Path(os.environ["RUNNER_TEMP"])
+          for path in ("book-stockfish-quality.json","no-book-stockfish-quality.json",
+                       "roundrobin-stockfish-quality.json",
+                       "roundrobin-depth4-stockfish-quality.json"):
+              doc=json.loads((folder/path).read_text())
+              assert doc["protocol"] == "independent-stockfish-postgame-v9.1"
+              assert doc["status"] == "EXPLORATORY_STRENGTH_DIAGNOSTIC_NOT_ELO"
+              assert doc["inputs"]["depth"]==8
+              assert doc["independent_decisions_sampled"]>=16
+              assert doc["reconciliation"]["status"]=="CONSISTENT"
+              assert len(doc["summary"])>=2
+              print("STOCKFISH_TACTICAL_QUALITY",path,
+                    "decisions",doc["independent_decisions_sampled"],
+                    "per_player",doc["summary"])
+          PY
+      - name: Derive real game-level style and quality reports from Stockfish verdicts
+        run: |
+          python -m chesssim paired-evidence \
+            --pgn "$RUNNER_TEMP/real85-games/played.pgn" \
+            --quality "$RUNNER_TEMP/book-stockfish-quality.json" \
+            --opening-plies 40 --bootstrap 300 \
+            --out "$RUNNER_TEMP/book-paired-evidence.json"
+          python -m chesssim paired-evidence \
+            --pgn "$RUNNER_TEMP/real85-games-no-book/played.pgn" \
+            --quality "$RUNNER_TEMP/no-book-stockfish-quality.json" \
+            --opening-plies 40 --bootstrap 300 \
+            --out "$RUNNER_TEMP/no-book-paired-evidence.json"
+          python -m chesssim paired-evidence \
+            --pgn "$RUNNER_TEMP/real85-roundrobin/games.pgn" \
+            --quality "$RUNNER_TEMP/roundrobin-stockfish-quality.json" \
+            --opening-plies 40 --bootstrap 300 \
+            --out "$RUNNER_TEMP/roundrobin-paired-evidence.json"
+          python -m chesssim paired-evidence \
+            --pgn "$RUNNER_TEMP/real85-roundrobin-depth4/games.pgn" \
+            --quality "$RUNNER_TEMP/roundrobin-depth4-stockfish-quality.json" \
+            --opening-plies 40 --bootstrap 300 \
+            --out "$RUNNER_TEMP/roundrobin-depth4-paired-evidence.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])
+          for name in ("book-paired-evidence.json","no-book-paired-evidence.json",
+                       "roundrobin-paired-evidence.json",
+                       "roundrobin-depth4-paired-evidence.json"):
+              d=json.loads((root/name).read_text())
+              assert d["schema"]=="chesssim-paired-style-strength-v1"
+              assert len(d["players"])==(4 if name.startswith("roundrobin") else 5)
+              print("PAIRWISE_REAL_GAME_STYLE_AND_STRENGTH",name,
+                    {p:{"games":row["distinct_games"],
+                        "cp":row["strength"]["game_level"]["mean"]}
+                     for p,row in d["players"].items()})
+          PY
+      - name: Preserve aggregate corpus, true played PGNs and profile books
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chesssim-real85-four-playable-full-uci-pilot
+          path: |
+            ${{ runner.temp }}/real85-trained/report.json
+            ${{ runner.temp }}/real85-trained/fischer.json
+            ${{ runner.temp }}/real85-trained/tal.json
+            ${{ runner.temp }}/real85-trained/karpov.json
+            ${{ runner.temp }}/real85-trained/kasparov.json
+            ${{ runner.temp }}/real85-games/results.json
+            ${{ runner.temp }}/real85-games/played.pgn
+            ${{ runner.temp }}/real85-games-no-book/results.json
+            ${{ runner.temp }}/real85-games-no-book/played.pgn
+            ${{ runner.temp }}/book-stockfish-quality.json
+            ${{ runner.temp }}/no-book-stockfish-quality.json
+            ${{ runner.temp }}/book-paired-evidence.json
+            ${{ runner.temp }}/no-book-paired-evidence.json
+            ${{ runner.temp }}/real85-roundrobin/results.json
+            ${{ runner.temp }}/real85-roundrobin/games.pgn
+            ${{ runner.temp }}/roundrobin-stockfish-quality.json
+            ${{ runner.temp }}/roundrobin-paired-evidence.json
+            ${{ runner.temp }}/real85-roundrobin-depth4/results.json
+            ${{ runner.temp }}/real85-roundrobin-depth4/games.pgn
+            ${{ runner.temp }}/roundrobin-depth4-stockfish-quality.json
+            ${{ runner.temp }}/roundrobin-depth4-paired-evidence.json
+          retention-days: 14
+          if-no-files-found: warn
