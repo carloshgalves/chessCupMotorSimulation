@@ -192,11 +192,22 @@ def test_playable_runner_reverses_colors_and_preserves_actual_status(monkeypatch
     assert result["status"] == "ACTUAL_COMPLETE_GAMES_PLAYED"
     assert [r[:2] for r in observed] == [
         ("fischer","control-simple"),("control-simple","fischer")]
-    assert all(set(r[2]) == {"fischer", "control-simple"} for r in observed)
+    assert all(set(r[2]) == {"fischer"} for r in observed)
+    assert result["seed_opponent_historical_book"] is False
+    assert "focal historical opening only" in result["opening_protocol"]
     assert all(item["score_vs_simple"] == 0.5 for item in result["games"])
     assert result["no_elo_inferred_from_small_sample"] is True
     assert (tmp_path/"matches/played.pgn").is_file()
     assert sum(v["opening_moves_from_real_pg_ns"] for v in result["games"]) == 0
+    with pytest.raises(ValueError, match="Cannot seed opponent"):
+        pilot.play_real_four(root,book_root,tmp_path/"invalid",
+            players=["fischer"],use_repertoire=False,seed_opponent_opening=True)
+    conditional = pilot.play_real_four(root,book_root,tmp_path/"conditioned",
+            players=["fischer"],seed_opponent_opening=True)
+    assert conditional["seed_opponent_historical_book"] is True
+    assert "NOT an independent baseline" in conditional["opening_protocol"]
+    assert all(set(entry[2]) == {"fischer","control-simple"}
+               for entry in observed[-2:])
 
 
 def test_playable_runner_does_not_convert_incomplete_into_draw(monkeypatch,tmp_path):
