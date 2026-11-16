@@ -42,6 +42,7 @@ def test_each_side_receives_its_own_actual_search_budget(monkeypatch, tmp_path):
     assert pgn.headers["ExperimentalDepthWhite"] == "2"
     assert pgn.headers["ExperimentalDepthBlack"] == "6"
     assert pgn.headers["DepthByPlayerOptIn"] == "true"
+    assert pgn.headers["SearchLimit"] == "experimental:depth-white=2,depth-black=6"
     assert meta["status"] == "INCOMPLETE"
     assert meta["result"] == "*"  # no artificial draw at ply cap
     seen.clear()
