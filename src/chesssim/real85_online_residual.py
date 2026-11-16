@@ -193,9 +193,18 @@ def _game(model: dict, row: dict, *, update: bool) -> dict:
     return {"counts":counts, "loss":loss, "correct":correct}
 
 
+def _fingerprint(value: dict) -> str:
+    return sha256(json.dumps(value, sort_keys=True, separators=(",", ":"),
+                             ensure_ascii=False, allow_nan=False).encode()).hexdigest()
+
+
 def _atomic_json(path: Path, record: dict) -> None:
     if path.is_symlink():
         raise ValueError("Refuse symbolic link checkpoint")
+    record = dict(record)
+    if record.get("schema") == SCHEMA:
+        record.pop("payload_sha256", None)
+        record["payload_sha256"] = _fingerprint(record)
     tmp = path.with_name("." + path.name + ".tmp")
     if tmp.exists() or tmp.is_symlink():
         if tmp.is_symlink() or not tmp.is_file():
@@ -213,7 +222,45 @@ def _atomic_json(path: Path, record: dict) -> None:
 def _read_checkpoint(path: Path) -> dict:
     if path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_JSON_BYTES:
         raise ValueError("Missing or unsafe neural checkpoint")
-    return json.loads(path.read_text(encoding="utf-8"))
+    state = json.loads(path.read_text(encoding="utf-8"))
+    claimed = state.pop("payload_sha256", None)
+    if (state.get("schema") != SCHEMA or
+            not isinstance(claimed, str) or claimed != _fingerprint(state)):
+        raise ValueError("Neural checkpoint integrity digest mismatch")
+    state["payload_sha256"] = claimed
+    model = state.get("model", {})
+    if (not isinstance(model, dict) or model.get("rank") != RANK or
+            model.get("seed") != state.get("seed") or
+            state.get("optimizer") != {"learning_rate":LR, "decay":DECAY, "rank":RANK}):
+        raise ValueError("Neural checkpoint optimizer or model metadata mismatch")
+    for family in ("context", "action"):
+        weights = model.get(family)
+        if not isinstance(weights, dict) or len(weights) > 100000:
+            raise ValueError("Invalid learned neural feature table")
+        for token, vector in weights.items():
+            if (not isinstance(token, str) or not isinstance(vector, list) or
+                    len(vector) != RANK or any(
+                        type(n) not in (float, int) or
+                        not math.isfinite(n) or abs(n) > 10000
+                        for n in vector)):
+                raise ValueError("Invalid learned neural embedding")
+    biases = model.get("bias")
+    if (not isinstance(biases, dict) or len(biases) > 100000 or any(
+            not isinstance(k, str) or type(v) not in (float, int) or
+            not math.isfinite(v) or abs(v) > 10000
+            for k,v in biases.items())):
+        raise ValueError("Invalid neural action bias")
+    for name in ("completed_games","focal_decisions","gradient_steps","forced_without_gradient"):
+        if type(state.get(name)) is not int or state[name] < 0:
+            raise ValueError("Invalid neural checkpoint progress")
+    if (state["gradient_steps"] + state["forced_without_gradient"] !=
+            state["focal_decisions"] or
+            not isinstance(state.get("phase_decisions"), dict) or
+            sum(state["phase_decisions"].values()) != state["gradient_steps"] or
+            type(state.get("sum_fit_loss")) not in (float,int) or
+            not math.isfinite(state["sum_fit_loss"]) or state["sum_fit_loss"] < 0):
+        raise ValueError("Neural checkpoint training counts are inconsistent")
+    return state
 
 
 def _tune(model: dict, root: Path, row: dict) -> dict:
@@ -294,6 +341,7 @@ def train(inputs: Path, out: Path, *, players: list[str] | None = None,
         else:
             state = {
                 "schema":SCHEMA,"player":slug,"seed":seed,
+                "optimizer":{"learning_rate":LR,"decay":DECAY,"rank":RANK},
                 "input_manifest_sha256":manifest_hash,
                 "fit_shard_sha256":fit["sha256"],
                 "completed_games":0,"focal_decisions":0,
@@ -362,7 +410,8 @@ def train(inputs: Path, out: Path, *, players: list[str] | None = None,
         "input_manifest_sha256":manifest_hash,
         "learner":"CPU_SPARSE_BILINEAR_RANK6_ONLINE_PAIRWISE_GRADIENTS",
         "seed":seed, "learning_rate":LR, "rank":RANK,
-        "neural_weights_actually_updated":True,
+        "neural_weights_actually_updated":any(
+            row["gradient_steps"] > 0 for row in training_rows.values()),
         "maia_dsc_backbone_finetuned":False,
         "uci_playable_and_tactical_safe":False,
         "old_year_holdout_used":False, "inspected_test_used":False,
