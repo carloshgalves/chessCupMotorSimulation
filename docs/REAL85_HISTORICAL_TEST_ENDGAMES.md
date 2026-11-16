@@ -21,7 +21,10 @@ statistics of #168, **not** to this endgame TEST evaluation and **not** to an
 endgame-specific weight update. Full-game neural fitting remains #169.
 
 Each trajectory's globally hashed TEST assignment is recomputed and verified
-against the frozen training manifest and PGN bytes. No new split, alternate
+against the frozen training manifest and PGN bytes.
+The auditor itself also rechecks the original FIT manifest hash, the player-specific
+source SHA, test-game counts and global TEST assignments. Input files cannot
+self-certify TEST status merely by setting a label. No new split, alternate
 holdout or per-player-specific game reassignment is introduced. The prior
 year-based holdout is not opened.
 
@@ -66,6 +69,7 @@ python -m chesssim.real85_endgame_audit extract \
 
 python -m chesssim.real85_endgame_audit audit \
   --positions /tmp/real85-historical-endgame-test.json \
+  --profiles /tmp/real85-fit \
   --rodent-root /path/to/rodent-iv --stockfish /usr/games/stockfish \
   --rodent-depth 4 --stockfish-depth 8 \
   --out /tmp/real85-rodent-endgame-audit.json
