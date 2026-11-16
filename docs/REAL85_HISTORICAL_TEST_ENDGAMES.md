@@ -36,7 +36,9 @@ Missing or insufficient endgames are reported, never invented.
 The next step runs **original Rodent IV UCI** with its official untouched
 Personality and internal books disabled in the same historical FENs. An
 independent Stockfish binary evaluates the baseline FEN, the observed human
-move, and the real Rodent move at the same nominal depth. True legal moves are
+move, and the real Rodent move at the **same root FEN and search depth**;
+for each historical/Rodent candidate it constrains the root search to that
+legal move rather than spending an extra search ply on the child position. True legal moves are
 validated before scoring. Engine/profile/baseline source hashes and depth are
 retained.
 
