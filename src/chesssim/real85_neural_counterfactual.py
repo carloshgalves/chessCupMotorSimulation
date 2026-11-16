@@ -141,6 +141,8 @@ def _load_replayed(doc: dict, raw_pgn: Path) -> dict[str, list[dict]]:
                         chess.Move.from_uci(original) not in board.legal_moves or
                         move not in board.legal_moves):
                     raise ValueError("PGN and full UCI decision trace diverge")
+                if board.is_game_over(claim_draw=True):
+                    raise ValueError("Actual UCI game continued after a terminal chess position")
                 if ply in opening_seen and (played != opening_seen[ply] or
                                              acting != record["player"]):
                     raise ValueError("Historical repertoire entry was not the played move")
@@ -198,6 +200,9 @@ def _root_score(engine, board: chess.Board, move: chess.Move, depth: int):
     perspective = score.pov(board.turn)
     mate = perspective.mate()
     cp = perspective.score()
+    if mate is None and (type(info.get("depth")) is not int or
+                         info["depth"] < depth):
+        raise RuntimeError("Independent Stockfish did not reach required root depth")
     if mate is None and (type(cp) is not int or not math.isfinite(cp)):
         raise RuntimeError("Independent Stockfish returned no centipawn evaluation")
     return {"cp": cp if mate is None else None, "mate_in": mate}
@@ -232,7 +237,11 @@ def _summary(observations: list[dict]) -> dict:
             abs(r["deep_neural_minus_rodent_cp"]) <= 25 for r in nonmate),
         "guided_game_means_cp": game_means,
         "confidence_interval": None,
-        "confidence_reason": "Fewer than 20 independent guided games; no strength CI.",
+        "confidence_reason": (
+            "Fewer than 20 independent guided games; no strength CI."
+            if len({row["game_index"] for row in observations}) < 20 else
+            "No preregistered strength interval from these exploratory games."),
+
     }
 
 
