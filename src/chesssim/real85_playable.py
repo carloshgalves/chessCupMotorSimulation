@@ -34,7 +34,7 @@ DEFAULT_PLAYERS = ("fischer", "tal", "karpov", "kasparov")
 SALT = "chesssim-real-85pct-v1"
 TRAIN_PARTS = 8500
 DENOMINATOR = 10000
-MAX_OPENING_PLIES = 24
+MAX_OPENING_PLIES = 40
 
 
 def game_arm(trajectory: str) -> str:
@@ -67,8 +67,8 @@ def _style_features(game: chess.pgn.Game, color: bool) -> dict:
     stats = Counter()
     for move in game.mainline_moves():
         if board.turn == color:
-            stage = "opening" if board.ply() < 24 else (
-                "middle" if board.ply() < 70 else "late")
+            stage = "opening" if board.ply() < 40 else (
+                "middle" if board.ply() < 80 else "late")
             stats[f"{stage}_moves"] += 1
             stats["moves"] += 1
             stats[f"{stage}_captures"] += bool(board.is_capture(move))
