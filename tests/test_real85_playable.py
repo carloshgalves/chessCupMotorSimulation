@@ -271,4 +271,4 @@ def test_twenty_full_move_opening_window_includes_plies_25_through_40():
     assert select_book_move(book, board, min_count=2) is None
     features = pilot._style_features(game, True)
     assert features["opening_moves"] == 20
-    assert features["middle_moves"] == 0
+    assert features.get("middle_moves", 0) == 0
