@@ -1,0 +1,110 @@
+name: Real85 CPU gradient training of all historical FIT moves (eight profiles)
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/real85_online_residual.py'
+      - 'tests/test_real85_online_residual.py'
+      - '.github/workflows/real85-online-neural-residual.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real85-online-neural-residual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actual-cpu-neural-gradients:
+    runs-on: ubuntu-latest
+    timeout-minutes: 115
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Verify actual SGD, interrupted checkpoint reproduction and TUNE isolation
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pytest -q tests/test_real85_online_residual.py
+      - name: Rebuild every real game trajectory into 8 source-locked full-move neural input sets
+        run: |
+          python -m chesssim.real85_neural_stream build --fetch \
+            --players fischer tal karpov kasparov alekhine petrosian anand rubinstein \
+            --out "$RUNNER_TEMP/neural-input"
+          python -m chesssim.real85_neural_stream verify \
+            --dir "$RUNNER_TEMP/neural-input"
+      - name: Apply real low-rank neural SGD to every focal FIT move, eight historical players
+        run: |
+          python -m chesssim.real85_online_residual \
+            --inputs "$RUNNER_TEMP/neural-input" \
+            --players fischer tal karpov kasparov alekhine petrosian anand rubinstein \
+            --checkpoint-every 300 \
+            --out "$RUNNER_TEMP/real85-lowrank-trained"
+      - name: Reconcile every gradient-trained real player and TUNE-only evaluation
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from chesssim.matches import file_hash
+          root=Path(os.environ["RUNNER_TEMP"])
+          source=json.loads((root/"neural-input/manifest.json").read_text())
+          trained=json.loads((root/"real85-lowrank-trained/report.json").read_text())
+          assert trained["schema"]=="chesssim-real85-online-residual-training-report-v1"
+          assert trained["status"]=="ALL_REQUESTED_PLAYER_RESIDUALS_FITTED"
+          assert trained["neural_weights_actually_updated"] is True
+          assert trained["maia_dsc_backbone_finetuned"] is False
+          assert trained["uci_playable_and_tactical_safe"] is False
+          assert not trained["old_year_holdout_used"] and not trained["inspected_test_used"]
+          assert set(trained["players"])==set(source["players"])
+          total_fit=total_moves=total_grads=total_tune=0
+          for slug,row in trained["players"].items():
+              expected=source["players"][slug]
+              assert row["status"]=="FITTED_ALL_REAL_FOCAL_MOVES_CPU"
+              assert expected["fit_fraction_of_all_eligible_games"] >= 0.8
+              assert row["fit_games_processed"]==row["fit_games_available"]==expected["fit_games"]
+              assert row["focal_decisions_processed"]==row["fit_focal_decisions_available"]==expected["fit_focal_decisions_all_phases"]
+              assert row["gradient_steps"] + row["forced_without_gradient"] == row["focal_decisions_processed"]
+              assert row["gradient_steps"] >= row["focal_decisions_processed"] * 0.8
+              assert row["phase_decisions"].get("decisions_opening",0)>0
+              assert row["phase_decisions"].get("decisions_middlegame",0)>0
+              assert row["phase_decisions"].get("decisions_endgame",0)>0
+              assert row["tune"]["games"]==expected["tune_games"]
+              assert row["tune"]["decisions"]==expected["tune_focal_decisions_all_phases"]
+              assert row["tune"]["comparisons"]>0
+              assert row["tune"]["fit_weights_mutated_by_tune"] is False
+              path=root/"real85-lowrank-trained"/row["checkpoint_file"]
+              assert file_hash(path)==row["checkpoint_sha256"]
+              model=json.loads(path.read_text())
+              assert model["gradient_steps"]==row["gradient_steps"]
+              assert len(model["model"]["bias"])>5
+              assert len(model["model"]["action"])>50
+              assert len(model["model"]["context"])>5
+              total_fit+=row["fit_games_processed"]
+              total_moves+=row["focal_decisions_processed"]
+              total_grads+=row["gradient_steps"]
+              total_tune+=row["tune"]["games"]
+              print("REAL_NEURAL_FULL_FIT",slug,
+                    "games",row["fit_games_processed"],
+                    "real_moves",row["focal_decisions_processed"],
+                    "gradient_updates",row["gradient_steps"],
+                    "tune_pairwise_rate",row["tune"]["pairwise_preference_rate"],
+                    "tune_logloss",row["tune"]["mean_pairwise_logloss"])
+          assert total_fit>=14000 and total_moves>=550000
+          assert total_tune>=400
+          print("EIGHT_REAL_NEURAL_FULL_FIT",{
+              "games":total_fit,"focal_moves":total_moves,
+              "actual_gradient_updates":total_grads,"tune_games":total_tune,
+              "model":"experimental sparse bilinear rank-6, NOT pretrained Maia/DSC"})
+          PY
+      - name: Preserve learned small CPU model weights and scientific report, never raw historical FIT shards
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real85-eight-player-actual-online-neural-trained-weights
+          path: |
+            ${{ runner.temp }}/neural-input/manifest.json
+            ${{ runner.temp }}/real85-lowrank-trained/report.json
+            ${{ runner.temp }}/real85-lowrank-trained/*.checkpoint.json
+          retention-days: 14
