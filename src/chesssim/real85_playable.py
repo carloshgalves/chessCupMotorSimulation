@@ -147,6 +147,8 @@ def train_real_profiles(out: Path, *, players: list[str] | None = None,
             if len(rows) >= 100 and coverage < 0.8:
                 raise ValueError(f"REAL_SOURCE_COVERAGE_UNDER_80_PERCENT: {slug}")
             move_votes = {"white": defaultdict(Counter), "black": defaultdict(Counter)}
+            # Real opponents from the same TRAIN games, never a synthetic line.
+            opponent_votes = {"white": defaultdict(Counter), "black": defaultdict(Counter)}
             historical = {"train": Counter(), "test": Counter()}
             held_eval = Counter()
             games_seen = Counter()
@@ -158,11 +160,10 @@ def train_real_profiles(out: Path, *, players: list[str] | None = None,
                 historical[arm].update(_style_features(game, color))
                 board = game.board()
                 for move in game.mainline_moves():
-                    if board.turn == color and board.ply() < max_opening_plies:
-                        side = meta["color"]
-                        pos = position_token(board)
-                        if arm == "train":
-                            move_votes[side][pos][move.uci()] += 1
+                    if board.ply() < max_opening_plies and arm == "train":
+                        side = "white" if board.turn else "black"
+                        votes = move_votes if board.turn == color else opponent_votes
+                        votes[side][position_token(board)][move.uci()] += 1
                     board.push(move)
             if games_seen["train"] != train_count or games_seen["test"] != test_count:
                 raise AssertionError("Second PGN pass changed historic game split")
@@ -203,6 +204,11 @@ def train_real_profiles(out: Path, *, players: list[str] | None = None,
                            for fen, moves in sorted(move_votes[side].items())}
                     for side in ("white", "black")
                 },
+                "opponent_positions": {
+                    side: {fen: dict(sorted(moves.items()))
+                           for fen, moves in sorted(opponent_votes[side].items())}
+                    for side in ("white", "black")
+                },
             }
             _write_new(stage / f"{slug}.json", book)
             result[slug] = {
@@ -224,6 +230,8 @@ def train_real_profiles(out: Path, *, players: list[str] | None = None,
                 },
                 "learned_opening_positions": sum(
                     len(book["positions"][side]) for side in ("white", "black")),
+                "learned_historical_opponent_positions": sum(
+                    len(book["opponent_positions"][side]) for side in ("white", "black")),
                 "learned_opening_decisions": sum(
                     sum(sum(votes.values()) for votes in book["positions"][side].values())
                     for side in ("white", "black")),
@@ -312,18 +320,32 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
                   slug: file_hash(root / "personalities" / player.profile_filename),
                   control.slug: file_hash(control_file)}
         for color_idx, (white, black) in enumerate(((player, control), (control, player))):
-            books = {slug: trained[slug]} if use_repertoire else None
+            # Seed BOTH sides from the player's real TRAIN repertoire to
+            # avoid a generic opponent taking us out of book by move 2.
+            # This is an experimental conditioned opening, not a claim
+            # that Simple freely chose those moves.
+            opponent_book = {
+                "schema": BOOK_SCHEMA, "player": control.slug,
+                "policy": trained[slug]["policy"],
+                "source": trained[slug]["source"],
+                "positions": trained[slug]["opponent_positions"],
+            }
+            books = ({slug: trained[slug], control.slug: opponent_book}
+                     if use_repertoire else None)
             pgn, meta = _play_one(
                 root, exe, white, black, depth=depth, movetime=None,
                 max_plies=max_plies, round_number=color_idx+1,
                 hashes=hashes, use_books=False,
-                historical_openings=books, opening_seed=opening_seed)
+                historical_openings=books, opening_seed=opening_seed,
+                opening_min_count=2)
             # Original source, engine and per-game modification remain traceable.
             pgn.headers["HistoricalTrainingFraction"] = str(
                 book_meta["players"][slug]["train_fraction"])
             pgn.headers["HistoricalBookSHA256"] = book_meta["players"][slug]["book_sha256"]
             pgn.headers["HistoricalPlayer"] = slug
             pgn.headers["ExperimentalProfile"] = "true"
+            pgn.headers["HistoricalOpponentOpeningSeed"] = (
+                "true" if use_repertoire else "false")
             pgn.headers["TrueResultOnly"] = "true"
             pgns.append(str(pgn))
             player_white = white.slug == slug
@@ -337,6 +359,10 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
                 "termination": meta["termination"], "plies": meta["plies"],
                 "score_vs_simple": score,
                 "opening_moves_from_real_pg_ns": sum(meta["opening_moves"].values()),
+                "focal_opening_moves": meta["opening_moves"][
+                    "white" if player_white else "black"],
+                "opponent_historical_opening_moves": meta["opening_moves"][
+                    "black" if player_white else "white"],
                 "engine_style": _style_of_engine_game(pgn, player_white),
             })
     totals = {}
@@ -349,6 +375,9 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
             "score_rate_vs_simple": round(sum(r["score_vs_simple"] for r in completed)
                                          /len(completed), 6) if completed else None,
             "book_plies_played": sum(r["opening_moves_from_real_pg_ns"] for r in subset),
+            "focal_book_plies_played": sum(r["focal_opening_moves"] for r in subset),
+            "opponent_book_plies_played": sum(
+                r["opponent_historical_opening_moves"] for r in subset),
             "historical_test_style": book_meta["players"][slug]["test_style"],
             "historical_train_games": book_meta["players"][slug]["train_games"],
             "historical_test_games": book_meta["players"][slug]["test_games"],
@@ -364,6 +393,10 @@ def play_real_four(root: Path, profile_dir: Path, out: Path, *,
         "opponent": "Rodent IV Simple (same binary)",
         "opening_training_method": "real_85pct_game_disjoint_empirical_moves",
         "use_historical_repertoire": bool(use_repertoire),
+        "opening_protocol": (
+            "both sides seeded from real TRAIN games with >=2 observations; "
+            "opponent Simple takes over from natural UCI as soon as out of book"
+            if use_repertoire else "unconstrained Rodent IV UCI, no books"),
         "no_elo_inferred_from_small_sample": True,
         "no_neural_finetuning_claim": True,
         "players": totals, "games": games,
