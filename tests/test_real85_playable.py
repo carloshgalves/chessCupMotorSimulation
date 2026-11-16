@@ -130,7 +130,8 @@ def test_playable_runner_reverses_colors_and_preserves_actual_status(monkeypatch
     # use valid schema and digest; report size is not fabricated inside runner
     book = {"schema":"chesssim-opening-v9","player":"fischer","policy":{"max_plies":12},
             "positions":{"white":{},"black":{}},
-            "opponent_positions":{"white":{},"black":{}}}
+            "opponent_positions":{"white":{},"black":{}},
+            "source":{"pgn_sha256":"a"*64}}
     book_path = book_root/"fischer.json"
     book_path.write_text(json.dumps(book))
     from chesssim.matches import file_hash
@@ -174,7 +175,8 @@ def test_playable_runner_does_not_convert_incomplete_into_draw(monkeypatch,tmp_p
     path.write_text(json.dumps({"schema":"chesssim-opening-v9",
         "player":"fischer","policy":{"max_plies":12},
         "positions":{"white":{},"black":{}},
-        "opponent_positions":{"white":{},"black":{}}}))
+        "opponent_positions":{"white":{},"black":{}},
+        "source":{"pgn_sha256":"a"*64}}))
     from chesssim.matches import file_hash
     (book_root/"report.json").write_text(json.dumps({
         "schema":pilot.SCHEMA,"players":{"fischer":{
