@@ -25,12 +25,19 @@ def synthetic_uci(tmp_path, monkeypatch):
 import sys
 import chess
 board = chess.Board()
+personality = "Fischer"
+use_book = True
 for raw in sys.stdin:
     line = raw.strip()
     if line == "uci":
         print("id name ChessSim synthetic UCI", flush=True)
         print("option name Personality type combo default Fischer var Fischer var Tal var Simple", flush=True)
+        print("option name UseBook type check default true", flush=True)
         print("uciok", flush=True)
+    elif line.startswith("setoption name Personality value "):
+        personality = line.split(" value ", 1)[1]
+    elif line.startswith("setoption name UseBook value "):
+        use_book = line.split(" value ", 1)[1] == "true"
     elif line == "isready":
         print("readyok", flush=True)
     elif line == "ucinewgame":
@@ -49,6 +56,9 @@ for raw in sys.stdin:
                 board.push_uci(uci)
     elif line.startswith("go "):
         move = next(iter(board.legal_moves), None)
+        if personality == "Simple" and board.fen() == chess.Board().fen():
+            # Distinguish real UCI selection from a mere metadata claim.
+            move = chess.Move.from_uci("e2e4" if not use_book else "d2d4")
         print("bestmove " + (move.uci() if move else "(none)"), flush=True)
     elif line == "quit":
         break
@@ -482,6 +492,28 @@ def test_shared_simple_human_roster_and_pgn(synthetic_uci, monkeypatch):
         assert sum(p["human_profile_source"] == "shared_simple" for p in players) == 43
         assert sum(p["installed"] for p in players) == 21
         shared = next(p for p in players if p["human_profile_source"] == "shared_simple")
+        simple = personalities / "simple.txt"
+        original = simple.read_text(encoding="utf-8")
+        simple.unlink()
+        unavailable = get(base, "/api/arena")["players"]
+        assert sum(p["human_playable"] for p in unavailable) == 21
+        with pytest.raises(HTTPError) as error:
+            post(base, "/api/arena/human/start",
+                 {**GOOD, "opponent": shared["slug"]}, token)
+        assert error.value.code == 400
+        simple.write_text(original, encoding="utf-8")
+        named = next(p for p in load_roster() if p.slug == "fischer")
+        named_path = personalities / named.profile_filename
+        named_original = named_path.read_text(encoding="utf-8")
+        named_path.unlink()
+        availability = get(base, "/api/arena")["players"]
+        assert sum(p["human_playable"] for p in availability) == 63
+        fischer = next(p for p in availability if p["slug"] == "fischer")
+        assert fischer["human_profile_source"] is None
+        with pytest.raises(HTTPError) as error:
+            post(base, "/api/arena/human/start", GOOD, token)
+        assert error.value.code == 400
+        named_path.write_text(named_original, encoding="utf-8")
         with pytest.raises(HTTPError) as error:
             post(base, "/api/arena/human/start",
                  {**GOOD, "opponent": shared["slug"], "opening_mode": "internal"}, token)
@@ -503,3 +535,11 @@ def test_shared_simple_human_roster_and_pgn(synthetic_uci, monkeypatch):
         assert record.headers["EngineProfileSource"] == "shared_simple"
         assert record.headers["EngineSlug"] == shared["slug"]
         assert record.headers["EngineProfileSHA256"] == matches.file_hash(personalities / "simple.txt")
+        assert next(iter(record.mainline_moves())).uci() == "e2e4"
+        with post(base, "/api/arena/human/action",
+                  {"id": game["id"], "action": "interrupt"}, token) as response:
+            assert json.load(response)["status"] == "INTERRUPTED"
+        simple.write_text(original + "\nchanged", encoding="utf-8")
+        with pytest.raises(HTTPError) as error:
+            post(base, "/api/arena/human/resume", {"id": game["id"]}, token)
+        assert error.value.code == 400
