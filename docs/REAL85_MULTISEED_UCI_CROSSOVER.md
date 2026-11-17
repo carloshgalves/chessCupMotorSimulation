@@ -39,7 +39,7 @@ position. The UCI engine depth stays at four; the shallow safety gate
 at eight, and the candidate confirmation at twelve. The distinct
 opening seed affects only the historically trained stochastic book
 tie-breaking, not the corpus, personality, source, or engine.
-201? No: seed 2033 was already inspected in the previous pilot and
+Seed 2033 was already inspected in the previous pilot and
 must not be represented as a fresh independent evaluation; the other
 seeds do not alter TRAIN/TUNE/TEST.
 
