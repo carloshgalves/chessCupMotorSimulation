@@ -85,11 +85,18 @@ def census(root: Path, *, require_full_roster: bool = True) -> dict:
                     by_arm[arm].add(identity)
                     distinct_openings.add(tuple(game["uci_moves"][:12]))
                     focal_white = game["focal_color"] == "white"
-                    for i in range(len(game["uci_moves"])):
-                        if i % 2 == (0 if focal_white else 1):
-                            proxy["opening_to_ply20"] += int(i < 20)
-                            proxy["middle_ply21_to60"] += int(20 <= i < 60)
-                            proxy["late_from_ply61"] += int(i >= 60)
+                    # Historical PGNs may legally begin at an arbitrary FEN
+                    # (including Black to move). Keep original move numbers.
+                    parts = game["initial_fen"].split()
+                    initial_white = parts[1] == "w"
+                    first_ply = (int(parts[5]) - 1) * 2 + (1 if initial_white else 2)
+                    for index in range(len(game["uci_moves"])):
+                        if (initial_white if index % 2 == 0 else
+                                not initial_white) == focal_white:
+                            ply = first_ply + index
+                            proxy["opening_to_ply20"] += int(ply <= 20)
+                            proxy["middle_ply21_to60"] += int(21 <= ply <= 60)
+                            proxy["late_from_ply61"] += int(ply >= 61)
                     training_games += 1
                     training_decisions += game["focal_decisions"]
             # The second counting pass must independently bind its exact bytes
