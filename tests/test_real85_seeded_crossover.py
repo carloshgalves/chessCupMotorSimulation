@@ -27,6 +27,10 @@ def _seed(tmp_path, seed: int):
             for color in ("white","black"):
                 board = chess.Board()
                 game = chess.pgn.Game()
+                code = actors.index(slug)+1
+                model_sha = "0"*63 + str(code)
+                focal_profile = str(code)*64
+                control_profile = "f"*64
                 game.headers.update({
                     "Result":"0-1","Termination":"CHECKMATE",
                     "NeuralMode":arm,"EngineSHA256":"a"*64,
@@ -35,9 +39,10 @@ def _seed(tmp_path, seed: int):
                     "White":real_names[slug] if color=="white" else "Rodent IV Simple",
                     "Black":real_names[slug] if color=="black" else "Rodent IV Simple",
                     "BookMode":"historical-v09-exploratory",
-                    "ExperimentalNeuralSourceSHA256":("0"*63+"1") if slug=="fischer" else
-                        ("0"*63+"2") if slug=="tal" else
-                        ("0"*63+"3") if slug=="karpov" else ("0"*63+"4"),
+                    "ExperimentalNeuralSourceSHA256":model_sha,
+                    "PolicyModelSHA256":model_sha,
+                    "WhiteProfileSHA256":focal_profile if color=="white" else control_profile,
+                    "BlackProfileSHA256":focal_profile if color=="black" else control_profile,
                 })
                 node=game
                 trace=[]
@@ -97,6 +102,8 @@ def test_seeded_crossover_exact_game_replay_and_paired_accounting(tmp_path):
     assert report["total_paired_seed_color_blocks"]==16
     assert report["total_guided_actual_overrides"]==0
     assert set(report["per_player_frozen_model_sha256"])==set(cross.DEFAULT_PLAYERS)
+    assert set(report["frozen_original_rodent_personality_sha256"])=={
+        *cross.DEFAULT_PLAYERS,"control-simple"}
     for slug,row in report["players"].items():
         assert row["games_per_arm"]==4
         assert row["complete_games"]==8
@@ -206,4 +213,19 @@ def test_forged_report_color_cannot_override_actual_pgn_player_color(tmp_path):
     p.write_text(source.replace('[White "Rodent IV Simple"]',
                                 '[White "Bobby Bogus"]',1))
     with pytest.raises(ValueError,match="actor/color identity"):
+        cross.summarize(tmp_path,(2033,2041))
+
+
+def test_switching_original_rodent_personality_mid_series_is_rejected(tmp_path):
+    for seed in (2033,2041):
+        _seed(tmp_path,seed)
+    p=tmp_path/"seed-2041/games.pgn"
+    raw=p.read_text()
+    assert "WhiteProfileSHA256" in raw
+    # Only one matched game changes original personality SHA;
+    # all metadata/game legal moves otherwise remain valid.
+    raw=raw.replace('WhiteProfileSHA256 "'+"1"*64+'"',
+                    'WhiteProfileSHA256 "'+"9"*64+'"',1)
+    p.write_text(raw)
+    with pytest.raises(ValueError,match="personality file changed"):
         cross.summarize(tmp_path,(2033,2041))
