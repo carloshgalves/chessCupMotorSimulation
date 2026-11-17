@@ -145,6 +145,25 @@ def _points(result: str, focal_white: bool) -> float:
     return float((result == "1-0") == focal_white)
 
 
+def _verify_deep_override_event(event: dict) -> None:
+    """Forbid forged CP/mate confirmation of a neural replacement at one FEN.
+
+    Stockfish depth12 was a limited safety check, NOT a guarantee that
+    independent depth14+ search will agree with it.
+    """
+    if (event.get("outcome") != "EXTERNAL_POLICY_OVERRIDE" or
+            event.get("confirmation_depth") != 12 or
+            event.get("confirmation_original_mate") is not None or
+            event.get("confirmation_proposed_mate") is not None or
+            type(event.get("confirmation_original_cp")) is not int or
+            type(event.get("confirmation_proposed_cp")) is not int or
+            type(event.get("confirmation_neural_minus_rodent_cp")) is not int or
+            event["confirmation_neural_minus_rodent_cp"] !=
+            event["confirmation_proposed_cp"]-event["confirmation_original_cp"] or
+            event["confirmation_neural_minus_rodent_cp"] < -25):
+        raise ValueError("Forged original-FEN neural deep confirmation")
+
+
 def validate(root: Path) -> dict:
     """Replay all real chess PGNs and trace their exact UCI decisions and sources."""
     root = Path(root)
@@ -284,12 +303,9 @@ def validate(root: Path) -> dict:
                             ply in opening_by_ply or
                             event.get("policy_move") != move.uci() or
                             event["rodent_move"] == move.uci() or
-                            event.get("confirmation_depth") != 12 or
-                            event.get("confirmation_original_mate") is not None or
-                            event.get("confirmation_proposed_mate") is not None or
-                            type(event.get("confirmation_neural_minus_rodent_cp")) is not int or
-                            event["confirmation_neural_minus_rodent_cp"] < -25):
+                            event.get("confirmation_depth") != 12):
                         raise ValueError("Unverified external neural replacement")
+                    _verify_deep_override_event(event)
                 elif (move.uci() != event["rodent_move"] or
                       event.get("sampled") is True or
                       (not focal_turn and
