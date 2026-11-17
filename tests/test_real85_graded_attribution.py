@@ -1,5 +1,4 @@
 """Engineering fixtures only; no synthetic game counts are scientific evidence."""
-from hashlib import sha256
 import json
 from types import SimpleNamespace
 
