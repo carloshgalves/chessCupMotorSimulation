@@ -181,6 +181,7 @@ def validate(root: Path, *, focal_depth: int = FOCAL_DEPTH) -> dict:
     doc = json.loads((root/"results.json").read_text())
     if (panel.get("schema") != PANEL_SCHEMA or doc.get("schema") != SCHEMA or
             doc.get("opening_panel_sha256") != file_hash(root/"starts.json") or
+            doc.get("original_fit_manifest_sha256") != panel.get("source_manifest_sha256") or
             doc.get("players") != list(PILOTS) or
             doc.get("opponent_depths") != list(DEPTHS) or
             type(doc.get("focal_depth")) is not int or
@@ -366,6 +367,7 @@ def validate(root: Path, *, focal_depth: int = FOCAL_DEPTH) -> dict:
         "stockfish_sha256":doc["stockfish_sha256"],
         "profile_sha256":{slug:next(iter(values)) for slug,values in personalities.items()},
         "model_sha256":{slug:next(iter(values)) for slug,values in policies.items()},
+        "book_sha256":doc.get("book_sha256"),
         "total_complete_games":len(actual),
         "total_player_start_positions":sum(len(panel["players"][slug]) for slug in PILOTS),
         "distinct_source_fit_positions":len({
@@ -485,6 +487,7 @@ def play(rodent: Path, stockfish: Path, weights: Path, profiles: Path,
         "opening_panel_sha256":file_hash(out/"starts.json"),
         "original_fit_manifest_sha256":panel["source_manifest_sha256"],
         "rodent_original_sha256":engine_hash,"stockfish_sha256":stockfish_hash,
+        "book_sha256":{slug:file_hash(profiles/f"{slug}.json") for slug in PILOTS},
         "book_source_training":"real85_85pct_source_verified_fit",
         "model_fitted_on_original_80pct_plus_fit":True,
         "old_year_holdout_used":False,"original_test_used":False,
