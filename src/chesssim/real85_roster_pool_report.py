@@ -75,8 +75,10 @@ def census(root: Path, *, require_full_roster: bool = True) -> dict:
         proxy = Counter()
         for arm in ARMS:
             path = root / row["shards"][arm]["file"]
-            with path.open(encoding="utf-8") as handle:
+            shard_hash = sha256()
+            with path.open("rb") as handle:
                 for line in handle:
+                    shard_hash.update(line)
                     game = json.loads(line)
                     identity = game["game_sha256"]
                     all_game_owners[identity].add(slug)
@@ -90,6 +92,10 @@ def census(root: Path, *, require_full_roster: bool = True) -> dict:
                             proxy["late_from_ply61"] += int(i >= 60)
                     training_games += 1
                     training_decisions += game["focal_decisions"]
+            # The second counting pass must independently bind its exact bytes
+            # to the authenticated source manifest, not just trust verify().
+            if shard_hash.hexdigest() != row["shards"][arm]["sha256"]:
+                raise ValueError("Historical trajectory changed after verification")
         expected_games = row["fit_games"] + row["tune_games"]
         expected_decisions = (row["fit_focal_decisions_all_phases"] +
                               row["tune_focal_decisions_all_phases"])
