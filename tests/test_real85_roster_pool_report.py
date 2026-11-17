@@ -94,3 +94,33 @@ def test_roster_pool_rejects_tampering_even_with_updated_shard_hash(monkeypatch,
     manifest.write_text(json.dumps(data))
     with pytest.raises(ValueError,match="identity or partition leak"):
         census(tmp_path/"stream",require_full_roster=False)
+
+
+def test_phase_census_uses_nonstandard_pgn_initial_fen_and_actual_turn(monkeypatch,tmp_path):
+    from chesssim.game_diversity import mainline_identity
+    root = chess.Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 8")
+    selected = None
+    for seed in range(30):
+        game = chess.pgn.Game()
+        game.setup(root)
+        game.headers["White"] = "Bobby Fischer"
+        game.headers["Black"] = "Mikhail Tal"
+        game.headers["Date"] = "1960.01.02"
+        board = root.copy()
+        node = game
+        for i in range(8):
+            move = sorted(board.legal_moves,key=lambda m:m.uci())[(seed+i*3)%board.legal_moves.count()]
+            node = node.add_variation(move)
+            board.push(move)
+        if stream.neural_arm(mainline_identity(game)[0]) == "fit":
+            selected = game
+            break
+    assert selected is not None
+    raw = (str(selected)+"\n").encode()
+    monkeypatch.setattr(stream,"_source_bytes",lambda *a,**k:(raw,raw,"FIXTURE"))
+    stream.build(tmp_path/"fen-input", players=["fischer","tal"])
+    result = census(tmp_path/"fen-input",require_full_roster=False)
+    assert result["players"]["fischer"]["training_ply_phase_proxies"] == {
+        "middle_ply21_to60": 2,"opening_to_ply20": 2}
+    assert result["players"]["tal"]["training_ply_phase_proxies"] == {
+        "middle_ply21_to60": 1,"opening_to_ply20": 3}
