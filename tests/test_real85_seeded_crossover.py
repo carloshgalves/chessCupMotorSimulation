@@ -177,9 +177,16 @@ def test_model_swapping_and_fake_book_header_are_detected(tmp_path):
     path=tmp_path/"seed-2041/games.pgn"
     source=path.read_text(encoding="utf-8")
     assert "ExperimentalNeuralSourceSHA256" in source
-    path.write_text(source.replace("0000000000000000000000000000000000000000000000000000000000000001",
-                                   "0000000000000000000000000000000000000000000000000000000000000009",1),
-                    encoding="utf-8")
+    before="0"*63+"1"
+    changed="0"*63+"9"
+    # Mutate BOTH self-consistent PGN model identifiers for one game,
+    # then ensure cross-seed frozen-weight equality still rejects it.
+    forged=source.replace(f'ExperimentalNeuralSourceSHA256 "{before}"',
+                          f'ExperimentalNeuralSourceSHA256 "{changed}"',1)
+    forged=forged.replace(f'PolicyModelSHA256 "{before}"',
+                          f'PolicyModelSHA256 "{changed}"',1)
+    assert forged != source
+    path.write_text(forged,encoding="utf-8")
     with pytest.raises(ValueError,match="weights changed"):
         cross.summarize(tmp_path,(2033,2041))
     path.write_text(source.replace("historical-v09-exploratory","disabled",1),
