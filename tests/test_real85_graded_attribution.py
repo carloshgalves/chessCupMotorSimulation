@@ -127,3 +127,58 @@ def test_independent_forced_root_refuses_illegal_move_before_analysis():
     board=chess.Board()
     with pytest.raises(ValueError,match="illegal"):
         graded._root_score(None,board,chess.Move.from_uci("e2e5"),12)
+
+
+def test_source_ledger_rejects_forged_original_move_and_book_provenance():
+    board=chess.Board()
+    played=chess.Move.from_uci("e2e4")
+    event={"outcome":"WARMUP_RODENT_UNMODIFIED",
+           "played_move":"e2e4","rodent_move":"e2e4"}
+    opts={"owner":"fischer","slug":"fischer","arm":"guided",
+          "source_pgn_sha256":"a"*64,"seed":5303,"round_number":1}
+    graded._verify_source_event(board,played,event,None,**opts)
+    book={"player":"fischer","move":"e2e4","seed":5303,"round":1,
+          "book_source_sha256":"a"*64}
+    graded._verify_source_event(board,played,event,book,**opts)
+    with pytest.raises(ValueError,match="source provenance"):
+        graded._verify_source_event(board,played,event,
+                                    {**book,"book_source_sha256":"b"*64},**opts)
+    with pytest.raises(ValueError,match="source provenance"):
+        graded._verify_source_event(board,played,event,
+                                    {**book,"round":2},**opts)
+    with pytest.raises(ValueError,match="falsely attributed"):
+        graded._verify_source_event(board,played,
+                                    {**event,"rodent_move":"d2d4"},None,**opts)
+    with pytest.raises(ValueError,match="illegal"):
+        graded._verify_source_event(board,played,
+                                    {**event,"rodent_move":"e2e5"},None,**opts)
+
+
+def test_source_ledger_requires_deep_root_confirmation_for_real_neural_changes():
+    board=chess.Board()
+    played=chess.Move.from_uci("e2e4")
+    opts={"owner":"fischer","slug":"fischer","arm":"guided",
+          "source_pgn_sha256":"a"*64,"seed":5303,"round_number":1}
+    event={"outcome":"EXTERNAL_POLICY_OVERRIDE",
+           "played_move":"e2e4","rodent_move":"d2d4",
+           "confirmation_depth":12,
+           "confirmation_original_cp":35,
+           "confirmation_proposed_cp":17,
+           "confirmation_neural_minus_rodent_cp":-18,
+           "confirmation_original_mate":None,
+           "confirmation_proposed_mate":None}
+    graded._verify_source_event(board,played,event,None,**opts)
+    with pytest.raises(ValueError,match="unsafe neural"):
+        graded._verify_source_event(board,played,
+                                    {**event,"confirmation_proposed_cp":-100},None,**opts)
+    with pytest.raises(ValueError,match="unsafe neural"):
+        graded._verify_source_event(board,played,
+                                    {**event,"confirmation_original_mate":1},None,**opts)
+    with pytest.raises(ValueError,match="unsafe neural"):
+        graded._verify_source_event(board,played,event,None,
+                                    **{**opts,"arm":"shadow"})
+    with pytest.raises(ValueError,match="source provenance"):
+        graded._verify_source_event(board,played,event,
+                                    {"player":"fischer","move":"e2e4",
+                                     "seed":5303,"round":1,
+                                     "book_source_sha256":"a"*64},**opts)
