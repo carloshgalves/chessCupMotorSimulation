@@ -35,6 +35,10 @@ def main(argv: list[str] | None = None) -> int:
     setup.add_argument("--rodent", type=Path)
     setup.add_argument("--apply", action="store_true", help="Autoriza mudanças locais após backup")
     setup.add_argument("--with-books", action="store_true", help="Baixa também livros mencionados pelos perfis")
+    setup.add_argument("--human-roster", action="store_true", help="Inclui Simple para os 43 adversários humanos compartilhados")
+    human_check = sub.add_parser("check-human", help="Audita disponibilidade dos 64 adversários humanos")
+    human_check.add_argument("--rodent", type=Path)
+    human_check.add_argument("--probe", action="store_true", help="Executa um lance legal UCI por alias distinto")
 
     draw = sub.add_parser("draw", help="Sorteia 32 confrontos sem exigência de perfis prontos")
     draw.add_argument("--seed", type=int, required=True)
@@ -1302,10 +1306,16 @@ def main(argv: list[str] | None = None) -> int:
             for name, alias, state in rows:
                 print(f"{name:<29} {alias:<12} {state}")
             print("\n", len([r for r in rows if r[2] == "PRONTO_PARA_TESTE"]), "/21 perfis existentes e registrados", sep="")
-        elif args.command == "setup":
-            report = setup_official(rodent_root(args), apply=args.apply, books=args.with_books)
+        elif args.command == "check-human":
+            from .human_roster import audit_human_roster
+            report = audit_human_roster(rodent_root(args), probe=args.probe)
             print(json.dumps(report, indent=2, ensure_ascii=False))
-            print("\n" + ("Instalação aplicada; confira com 'check'." if args.apply else "Prévia apenas: nada foi modificado. Para aplicar: setup --apply --with-books"))
+            return 0 if report["status"] in ("FILES_READY", "UCI_READY") else 2
+        elif args.command == "setup":
+            report = setup_official(rodent_root(args), apply=args.apply, books=args.with_books,
+                                    human_roster=args.human_roster)
+            print(json.dumps(report, indent=2, ensure_ascii=False))
+            print("\n" + ("Instalação aplicada; confira com 'check' ou 'check-human --probe'." if args.apply else "Prévia apenas: nada foi modificado. Para aplicar: setup --apply --with-books"))
         elif args.command == "draw":
             result = generate_draw(args.seed)
             by_slug = {p.slug: p.name for p in load_roster()}
