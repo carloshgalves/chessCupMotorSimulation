@@ -181,7 +181,8 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
               on_progress: Callable[[chess.pgn.Game], None] | None = None,
               max_wall_seconds: float | None = None,
               experimental_policy: ExperimentalPolicyAdapter | None = None,
-              experimental_depths: dict[str, int] | None = None) -> tuple[chess.pgn.Game, dict]:
+              experimental_depths: dict[str, int] | None = None,
+              experimental_start_fen: str | None = None) -> tuple[chess.pgn.Game, dict]:
     if experimental_policy is not None:
         if clock is not None or use_books is not False:
             raise ValueError("Learned policy control is development-only: no clocks or internal books")
@@ -211,11 +212,27 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                 movetime is not None):
             raise ValueError("Real calibrated gate requires the same UCI search depth and no movetime")
     if experimental_depths is not None:
-        if clock is not None or movetime is not None or experimental_policy is not None or depth is None:
+        if clock is not None or movetime is not None or depth is None:
             raise ValueError("Per-player depth overrides require unclocked UCI-only experimental play")
+        if experimental_policy is not None and (
+                experimental_policy.gate is not None or
+                experimental_depths.get(experimental_policy.player) != depth):
+            raise ValueError("Neural+graded UCI requires unchanged focal depth and no calibrated clock")
         if set(experimental_depths) != {white.slug, black.slug} or any(
                 type(v) is not int or not 1 <= v <= 12 for v in experimental_depths.values()):
             raise ValueError("Depth overrides must map exactly both players to integer 1..12")
+    if experimental_start_fen is not None:
+        if (experimental_policy is None or clock is not None or
+                use_books is not False or not isinstance(experimental_start_fen, str)):
+            raise ValueError("Historical FEN starts are only supported in experimental unclocked UCI")
+        try:
+            initial_board = chess.Board(experimental_start_fen)
+        except ValueError as exc:
+            raise ValueError("Invalid historical start FEN") from exc
+        if not initial_board.is_valid() or not 8 <= initial_board.ply() <= 20:
+            raise ValueError("Historical start FEN needs a legal 8..20-ply opening")
+    else:
+        initial_board = chess.Board()
     engines = []
     failed_engine_ids: set[int] = set()
     try:
@@ -223,8 +240,10 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
         engines.append(w)
         b = _open_engine(root, exe, black, book=use_books)
         engines.append(b)
-        board = chess.Board()
+        board = initial_board.copy()
         game = chess.pgn.Game()
+        if experimental_start_fen is not None:
+            game.setup(board)
         game.headers.update({
             "Event": ("Copa dos Imortais - Oficial" if clock == (600, 2) else
                       "Copa dos Imortais - Ritmo Experimental" if clock else
@@ -248,6 +267,9 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             "TimeControl": f"{clock[0]}+{clock[1]}" if clock else "-",
             "BookMode": "historical-v09-exploratory" if historical_openings else "historical" if use_books else "disabled" if use_books is not None else "legacy",
         })
+        if experimental_start_fen is not None:
+            game.headers["HistoricalStartMode"] = "PINNED_REAL_FIT_OPENING_FEN"
+            game.headers["HistoricalStartPly"] = str(board.ply())
         if experimental_depths is not None:
             game.headers["SearchLimit"] = (
                 f"experimental:depth-white={experimental_depths[white.slug]},"
@@ -292,7 +314,7 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
         interrupted = None
         if on_progress is not None:
             on_progress(game)
-        for ply in range(max_plies):
+        for ply in range(board.ply(), max_plies):
             if board.is_game_over(claim_draw=True):
                 break
             if stop_check is not None and stop_check():
