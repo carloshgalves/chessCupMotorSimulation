@@ -16,6 +16,7 @@ from statistics import mean
 
 import chess.pgn
 
+from .catalog import load_roster
 from .game_diversity import mainline_identity
 from .matches import file_hash
 from .real85_neural_counterfactual import _load_replayed, _read_json
@@ -46,7 +47,7 @@ def _focal_points(game: dict) -> float:
     return float((result == "1-0") == (game["color"] == "white"))
 
 
-def _pgn_identities(path: Path, expected_seed: int) -> list[tuple[str,str,str]]:
+def _pgn_identities(path: Path, expected_seed: int) -> list[tuple[str,str,str,str,str]]:
     games = []
     with path.open(encoding="utf-8") as stream:
         while (game := chess.pgn.read_game(stream)) is not None:
@@ -62,7 +63,8 @@ def _pgn_identities(path: Path, expected_seed: int) -> list[tuple[str,str,str]]:
             # not synthesized by the experimental runner.
             opening = " ".join(move.uci() for i,move in
                                enumerate(game.mainline_moves()) if i < 12)
-            games.append((digest,opening,identity_sha))
+            games.append((digest,opening,identity_sha,
+                          game.headers.get("White",""),game.headers.get("Black","")))
     return games
 
 
@@ -81,6 +83,7 @@ def summarize(folder: Path, seeds: list[int] | tuple[int, ...] = DEFAULT_SEEDS,
     unique = defaultdict(lambda: defaultdict(set))
     openers = defaultdict(lambda: defaultdict(set))
     player_model_hashes = {}
+    real_names = {p.slug:p.name for p in load_roster()}
     for seed in selected:
         root = Path(folder)/f"seed-{seed}"
         result_file = root/"results.json"
@@ -115,8 +118,13 @@ def summarize(folder: Path, seeds: list[int] | tuple[int, ...] = DEFAULT_SEEDS,
         if len(ids) != len(document["games"]) or len(ids) != 16:
             raise ValueError("Real UCI game count and hashes do not reconcile")
         pairs = defaultdict(dict)
-        for record, (identity, opening, model_sha) in zip(document["games"], ids):
+        for record, (identity, opening, model_sha, white_name, black_name) in zip(
+                document["games"], ids):
             slug = record["player"]
+            expected_white = real_names[slug] if record["color"]=="white" else "Rodent IV Simple"
+            expected_black = real_names[slug] if record["color"]=="black" else "Rodent IV Simple"
+            if white_name!=expected_white or black_name!=expected_black:
+                raise ValueError("Actual UCI PGN actor/color identity differs from scored report")
             if slug in player_model_hashes and player_model_hashes[slug] != model_sha:
                 raise ValueError("Historical neural weights changed across seed/color arms")
             player_model_hashes[slug] = model_sha
