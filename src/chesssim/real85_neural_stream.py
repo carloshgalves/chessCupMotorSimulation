@@ -21,6 +21,7 @@ from urllib.error import HTTPError
 
 import chess
 
+from .catalog import load_roster
 from .game_diversity import mainline_identity
 from .real85_playable import DEFAULT_PLAYERS, game_arm, _write_new
 from .real_training_cohorts import (
