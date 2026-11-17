@@ -1,0 +1,148 @@
+name: Real85 graded opponents, authentic FIT roots and error-source attribution
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/matches.py'
+      - 'src/chesssim/real85_neural_guarded_uci.py'
+      - 'src/chesssim/real85_graded_attribution.py'
+      - 'tests/test_real85_graded_attribution.py'
+      - '.github/workflows/real85-graded-strength-attribution.yml'
+      - 'docs/REAL85_GRADED_STRENGTH_ATTRIBUTION.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real85-graded-attribution-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  authentic-graded-uci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install and test graded UCI and inherited policy contracts
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pytest -q \
+            tests/test_real85_graded_attribution.py \
+            tests/test_real85_seeded_crossover.py \
+            tests/test_real85_neural_guarded_uci.py \
+            tests/test_real85_deep_confirmed_policy.py
+      - name: Refit 85pct real historical opening choices from all four full source PGNs
+        run: |
+          python -m chesssim.real85_playable fit --fetch \
+            --players fischer tal karpov kasparov \
+            --max-opening-plies 40 \
+            --out "$RUNNER_TEMP/real85-books"
+      - name: Rebuild all legal FIT/TUNE trajectories without per-game move caps
+        run: |
+          python -m chesssim.real85_neural_stream build --fetch \
+            --players fischer tal karpov kasparov \
+            --out "$RUNNER_TEMP/real85-input"
+          python -m chesssim.real85_neural_stream verify \
+            --dir "$RUNNER_TEMP/real85-input"
+      - name: Genuinely fit CPU residual on every eligible FIT decision
+        run: |
+          python -m chesssim.real85_online_residual \
+            --inputs "$RUNNER_TEMP/real85-input" \
+            --players fischer tal karpov kasparov \
+            --out "$RUNNER_TEMP/real85-weights"
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Compile authentic original Rodent IV and install independent Stockfish
+        run: |
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac
+          make -C rodent-source/sources build
+          mkdir -p "$RUNNER_TEMP/rodent"
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          sudo apt-get update -qq
+          sudo apt-get install -y stockfish
+          test -x /usr/games/stockfish
+      - name: Run 96 actual depth-graded SHADOW/GUIDED UCI games on FIT real opening roots
+        run: |
+          python -m chesssim.real85_graded_attribution run \
+            --inputs "$RUNNER_TEMP/real85-input" \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --stockfish /usr/games/stockfish \
+            --weights "$RUNNER_TEMP/real85-weights" \
+            --profiles "$RUNNER_TEMP/real85-books" \
+            --out "$RUNNER_TEMP/graded"
+      - name: Reconcile actual player/color/root/opponent strength and source identities
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=Path(os.environ["RUNNER_TEMP"])
+          s=json.loads((p/"graded/summary.json").read_text())
+          inputs=json.loads((p/"real85-input/manifest.json").read_text())
+          weights=json.loads((p/"real85-weights/report.json").read_text())
+          assert s["schema"]=="chesssim-real85-graded-historic-root-crossover-v1"
+          assert s["status"]=="ALL_AUTHENTIC_GRADED_UCI_GAMES_COMPLETE_EXPLORATORY"
+          assert s["complete_games"]==96
+          assert s["paired_conditions"]==48
+          assert s["historical_start_roots"]==16
+          assert s["distinct_game_trajectories"] >= 16
+          assert s["opponent_depths"]==[2,4,6]
+          assert s["holdout_or_test_used_for_training"] is False
+          assert len(s["frozen_player_model_sha256"])==4
+          assert weights["status"]=="ALL_REQUESTED_PLAYER_RESIDUALS_FITTED"
+          for slug,by_depth in s["results"].items():
+              assert inputs["players"][slug]["fit_fraction_of_all_eligible_games"]>=0.8
+              assert weights["players"][slug]["fit_games_processed"]==inputs["players"][slug]["fit_games"]
+              for depth,row in by_depth.items():
+                  assert row["games_per_arm"]==4
+                  assert 0<=row["guided_points"]<=4
+                  assert 0<=row["shadow_points"]<=4
+                  print("GRADED_FULL_UCI",slug,depth,row)
+          print("DIVERSE_ROOTS",s["historical_start_roots"],
+                "COMPLETE_GAMES",s["complete_games"],
+                "DISTINCT_GAMES",s["distinct_game_trajectories"])
+          PY
+      - name: Independent same-FEN Stockfish 12 analysis attributes moves by actual source
+        run: |
+          python -m chesssim.real85_graded_attribution audit \
+            --dir "$RUNNER_TEMP/graded" \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --stockfish /usr/games/stockfish \
+            --out "$RUNNER_TEMP/source-attribution.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          r=json.loads((Path(os.environ["RUNNER_TEMP"])/"source-attribution.json").read_text())
+          assert r["schema"]=="chesssim-real85-graded-source-attribution-v1"
+          assert r["played_complete_games"]==96
+          assert r["reference_depth"]==12
+          assert r["sampled_positions"]>0
+          assert not r["holdout_or_test_used"] and not r["new_training_applied"]
+          print("SOURCE_ATTRIBUTION",r["source_counts"])
+          PY
+      - name: Publish played PGNs, paired strength results and sampled attribution (not source PGNs)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real85-96-complete-graded-uci-and-source-attribution
+          path: |
+            ${{ runner.temp }}/real85-books/report.json
+            ${{ runner.temp }}/real85-input/manifest.json
+            ${{ runner.temp }}/real85-weights/report.json
+            ${{ runner.temp }}/graded/schedule.json
+            ${{ runner.temp }}/graded/summary.json
+            ${{ runner.temp }}/graded/*/results.json
+            ${{ runner.temp }}/graded/*/games.pgn
+            ${{ runner.temp }}/source-attribution.json
+          retention-days: 14
+          if-no-files-found: warn
