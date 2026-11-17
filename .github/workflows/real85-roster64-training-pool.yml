@@ -1,0 +1,77 @@
+name: Real85 all-roster historical FIT/TUNE training pool
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/real85_roster_pool_report.py'
+      - 'src/chesssim/real85_neural_stream.py'
+      - 'src/chesssim/real85_online_residual.py'
+      - 'tests/test_real85_roster_pool_report.py'
+      - '.github/workflows/real85-roster64-training-pool.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real85-all-roster-training-pool-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  complete-historical-source-census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install CPU-only chess science dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Regression tests for verified overlapping sources and missing players
+        run: |
+          python -m pytest -q \
+            tests/test_real85_roster_pool_report.py \
+            tests/test_real85_neural_stream.py \
+            tests/test_real85_online_residual.py
+      - name: Preserve every eligible historical move from all 64 sources
+        run: |
+          python -m chesssim.real85_neural_stream build \
+            --fetch --all-roster --allow-missing \
+            --out "$RUNNER_TEMP/roster64-historical-private-shards"
+      - name: Independently verify legal FIT and TUNE games and cross-roster overlaps
+        run: |
+          python -m chesssim.real85_roster_pool_report \
+            --inputs "$RUNNER_TEMP/roster64-historical-private-shards" \
+            --out "$RUNNER_TEMP/roster64-training-census.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path(os.environ["RUNNER_TEMP"])/"roster64-training-census.json"
+          r = json.loads(p.read_text())
+          assert r["roster_size"] == 64
+          assert r["source_present"] >= 60, "Too many historical sources unavailable"
+          assert r["global_distinct_fit_games"] > 0
+          assert r["global_distinct_tune_games"] > 0
+          assert r["excluded_test_trajectories_exported"] == 0
+          assert all(r["players"][p]["status"] ==
+                     "READY_ALL_REAL_MOVES_FOR_NEURAL_TRAINING"
+                     for p in ("fischer","tal","karpov","kasparov"))
+          assert r["global_unique_training_game_trajectories"] == (
+              r["global_distinct_fit_games"] + r["global_distinct_tune_games"])
+          print("REAL_HISTORICAL_ROSTER64", r["source_present"],
+                "ready",r["ready_for_training"],
+                "distinct FIT+TUNE games",r["global_unique_training_game_trajectories"],
+                "focal move decisions",r["total_focal_training_decisions_across_profiles"],
+                "missing or insufficient",r["missing_or_insufficient"])
+          PY
+      - name: Publish digests and aggregate counts only (never original PGNs or TEST)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real85-roster64-historical-source-census-no-pgn
+          path: |
+            ${{ runner.temp }}/roster64-training-census.json
+            ${{ runner.temp }}/roster64-historical-private-shards/manifest.json
+          retention-days: 7
+          if-no-files-found: warn

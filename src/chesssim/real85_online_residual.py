@@ -304,8 +304,14 @@ def train(inputs: Path, out: Path, *, players: list[str] | None = None,
     _initial(seed)
     inputs = Path(inputs).resolve(strict=True)
     checked = verify(inputs)
-    if checked["status"] != "VERIFIED_ALL_REAL_NEURAL_INPUT_TRAJECTORIES":
-        raise ValueError("Only fully verified, present real FIT/TUNE inputs may train")
+    if checked["status"] not in (
+            "VERIFIED_ALL_REAL_NEURAL_INPUT_TRAJECTORIES",
+            "PARTIAL_REAL_INPUT_VERIFICATION"):
+        raise ValueError("No verified real FIT/TUNE inputs available")
+    # A source absent from the 64-player pool must not prevent explicitly
+    # selected, fully audited players from training. Missing players themselves
+    # remain ineligible; the selection check below fails closed.
+
     manifest_file = inputs / "manifest.json"
     manifest = json.loads(manifest_file.read_text())
     if manifest["schema"] != INPUT_SCHEMA:
@@ -313,7 +319,14 @@ def train(inputs: Path, out: Path, *, players: list[str] | None = None,
     chosen = list(players or manifest["players"])
     if len(chosen) != len(set(chosen)) or not chosen or any(
             manifest["players"].get(slug, {}).get("status") !=
-            "READY_ALL_REAL_MOVES_FOR_NEURAL_TRAINING" for slug in chosen):
+            "READY_ALL_REAL_MOVES_FOR_NEURAL_TRAINING" or
+            checked["players"].get(slug) != {
+                "games": manifest["players"][slug]["fit_games"] +
+                         manifest["players"][slug]["tune_games"],
+                "focal_decisions": (
+                    manifest["players"][slug]["fit_focal_decisions_all_phases"] +
+                    manifest["players"][slug]["tune_focal_decisions_all_phases"])}
+            for slug in chosen):
         raise ValueError("All selected players need verified and sufficient real training input")
     out = Path(out)
     if out.is_symlink() or (out.exists() and (not resume or not out.is_dir())):

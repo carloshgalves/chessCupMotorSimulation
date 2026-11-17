@@ -21,6 +21,7 @@ from urllib.error import HTTPError
 
 import chess
 
+from .catalog import load_roster
 from .game_diversity import mainline_identity
 from .real85_playable import DEFAULT_PLAYERS, game_arm, _write_new
 from .real_training_cohorts import (
@@ -280,14 +281,18 @@ def main(argv=None) -> int:
     src=b.add_mutually_exclusive_group(required=True)
     src.add_argument("--fetch",action="store_true")
     src.add_argument("--archive-dir",type=Path)
-    b.add_argument("--players",nargs="+",default=list(DEFAULT_PLAYERS))
+    choice=b.add_mutually_exclusive_group()
+    choice.add_argument("--players",nargs="+")
+    choice.add_argument("--all-roster",action="store_true")
     b.add_argument("--allow-missing",action="store_true")
     b.add_argument("--out",type=Path,required=True)
     v=sub.add_parser("verify")
     v.add_argument("--dir",type=Path,required=True)
     args=p.parse_args(argv)
     if args.command=="build":
-        result=build(args.out,players=args.players,archive_dir=args.archive_dir,
+        selected = ([p.slug for p in load_roster()] if args.all_roster
+                    else args.players or list(DEFAULT_PLAYERS))
+        result=build(args.out,players=selected,archive_dir=args.archive_dir,
                      allow_missing=args.allow_missing)
         print(json.dumps({"status":result["status"],
             "players":{s:{k:row.get(k) for k in
