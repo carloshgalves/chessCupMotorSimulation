@@ -29,7 +29,7 @@ for raw in sys.stdin:
     line = raw.strip()
     if line == "uci":
         print("id name ChessSim synthetic UCI", flush=True)
-        print("option name Personality type combo default Fischer var Fischer var Tal", flush=True)
+        print("option name Personality type combo default Fischer var Fischer var Tal var Simple", flush=True)
         print("uciok", flush=True)
     elif line == "isready":
         print("readyok", flush=True)
@@ -459,3 +459,47 @@ def test_restart_rejects_pgn_identity_or_clock_mismatch(synthetic_uci,field,bad)
     path.write_text(str(pg)+"\n",encoding="utf-8")
     with pytest.raises(ValueError,match="PGN humano diverge"):
         human_game.HumanGame(root,workspace)
+
+
+def test_shared_simple_human_roster_and_pgn(synthetic_uci, monkeypatch):
+    from chesssim import matches
+    from chesssim.catalog import load_roster
+    root, _ = synthetic_uci
+    personalities = root / "personalities"
+    personalities.mkdir()
+    registry = personalities / "basic.ini"
+    registered = {p.rodent_alias: p.profile_filename for p in load_roster() if p.rodent_alias}
+    registered["Simple"] = "simple.txt"
+    registry.write_text("".join(f"{key}={value}\n" for key, value in registered.items()), encoding="utf-8")
+    for filename in registered.values():
+        (personalities / filename).write_text("synthetic profile " + filename, encoding="utf-8")
+    monkeypatch.setattr(human_game, "validate", matches.validate)
+    with server_context(synthetic_uci) as (server, base):
+        token = server.arena_token
+        players = get(base, "/api/arena")["players"]
+        assert len(players) == 64
+        assert all(p["human_playable"] for p in players)
+        assert sum(p["human_profile_source"] == "shared_simple" for p in players) == 43
+        assert sum(p["installed"] for p in players) == 21
+        shared = next(p for p in players if p["human_profile_source"] == "shared_simple")
+        with pytest.raises(HTTPError) as error:
+            post(base, "/api/arena/human/start",
+                 {**GOOD, "opponent": shared["slug"], "opening_mode": "internal"}, token)
+        assert error.value.code == 400
+        with post(base, "/api/arena/human/start",
+                  {**GOOD, "opponent": shared["slug"], "color": "black"}, token) as response:
+            assert response.status == 201
+        deadline = time.monotonic() + 5
+        game = get(base)["game"]
+        while game["revision"] == 0 and time.monotonic() < deadline:
+            time.sleep(.02)
+            game = get(base)["game"]
+        assert game["revision"] == 1
+        assert game["config"]["profile_source"] == "shared_simple"
+        assert game["config"]["opponent"] == shared["slug"]
+        pgn = server.arena_manager.workspace / "human-games" / game["id"] / "game.pgn"
+        with pgn.open(encoding="utf-8") as stream:
+            record = chess.pgn.read_game(stream)
+        assert record.headers["EngineProfileSource"] == "shared_simple"
+        assert record.headers["EngineSlug"] == shared["slug"]
+        assert record.headers["EngineProfileSHA256"] == matches.file_hash(personalities / "simple.txt")
