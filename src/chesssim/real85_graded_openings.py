@@ -319,7 +319,10 @@ def validate(root: Path) -> dict:
     return {
         "status":"GRADED_AUTHENTIC_UCI_DESCRIPTIVE_NO_HUMAN_ELO",
         "total_complete_games":len(actual),
-        "distinct_source_fit_positions":sum(len(panel["players"][slug]) for slug in PILOTS),
+        "total_player_start_positions":sum(len(panel["players"][slug]) for slug in PILOTS),
+        "distinct_source_fit_positions":len({
+            opening["fen"] for slug in PILOTS for opening in panel["players"][slug]
+        }),
         "players":result,
     }
 
