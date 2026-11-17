@@ -9,7 +9,7 @@ Do not turn this small observational crossover into human Elo.
 from __future__ import annotations
 
 import argparse
-from collections import Counter, defaultdict
+from collections import defaultdict
 import json
 from pathlib import Path
 from statistics import mean
