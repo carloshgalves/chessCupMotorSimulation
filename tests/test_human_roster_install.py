@@ -61,6 +61,20 @@ def test_conflicting_simple_is_not_overwritten(installation):
     assert ini.read_bytes() == before
 
 
+def test_simple_directory_is_rejected_before_network_or_mutation(installation, monkeypatch):
+    base = installation / "personalities"
+    (base / "simple.txt").mkdir()
+    ini = base / "basic.ini"
+    before = ini.read_bytes()
+    def forbidden_fetch(path):
+        pytest.fail(f"Unexpected download: {path}")
+    monkeypatch.setattr(rodent, "_fetch", forbidden_fetch)
+    with pytest.raises(RegistryError, match="arquivo regular"):
+        rodent.setup_official(installation, apply=True, human_roster=True)
+    assert ini.read_bytes() == before
+    assert not (base / "_backups").exists()
+
+
 def test_probe_counts_unique_aliases_and_fails_closed(installation, monkeypatch):
     base = installation / "personalities"
     ini = base / "basic.ini"
