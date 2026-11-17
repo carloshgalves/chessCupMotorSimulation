@@ -120,7 +120,8 @@ def census(root: Path, *, require_full_roster: bool = True) -> dict:
             "tune_focal_decisions": row["tune_focal_decisions_all_phases"],
             "source_pgn_sha256": row["source_pgn_sha256"],
             "unique_training_openings_first12": len(distinct_openings),
-            "training_ply_phase_proxies": dict(sorted(proxy.items())),
+            "training_ply_phase_proxies": dict(sorted((key, value) for key, value in
+                                                       proxy.items() if value)),
         }
         total_focal_decisions += training_decisions
         if state != "READY_ALL_REAL_MOVES_FOR_NEURAL_TRAINING":
