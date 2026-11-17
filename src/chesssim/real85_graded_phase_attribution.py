@@ -145,9 +145,9 @@ def evaluate(results: Path, pgn: Path, stockfish: Path,
             slug=row["player"]
             board=chess.Board(row["fen"])
             actual=chess.Move.from_uci(row["played_move"])
+            if slug not in original:
+                original[slug]=_open_engine(root,exe,profiles[slug],book=False)
             if row["source"]=="repertoire":
-                if slug not in original:
-                    original[slug]=_open_engine(root,exe,profiles[slug],book=False)
                 result=original[slug].play(board,chess.engine.Limit(depth=4),
                                            game=object())
                 baseline=result.move
@@ -157,6 +157,13 @@ def evaluate(results: Path, pgn: Path, stockfish: Path,
                 baseline=chess.Move.from_uci(row["original_rodent_move"])
                 if baseline not in board.legal_moves:
                     raise ValueError("Missing authentic original UCI Rodent bestmove")
+            # Focal depth is always 4 in played UCI games. A separate
+            # unbooked depth-8 Rodent search on the SAME FEN isolates how much
+            # stronger original search alone would alter the decision.
+            deeper=original[slug].play(board,chess.engine.Limit(depth=8),
+                                       game=object()).move
+            if deeper not in board.legal_moves:
+                raise ValueError("Original depth-8 counterfactual was illegal")
             def cached(move):
                 key=(board.fen(), move.uci() if move is not None else "-")
                 if key not in cache:
@@ -165,17 +172,23 @@ def evaluate(results: Path, pgn: Path, stockfish: Path,
             best=cached(None)
             played=cached(actual)
             orig=cached(baseline)
-            affected=any(value["mate"] is not None for value in (best,played,orig))
+            deep=cached(deeper)
+            affected=any(value["mate"] is not None
+                         for value in (best,played,orig,deep))
             row["stockfish_best_move"]=best["move"]
             row["original_rodent_move"]=baseline.uci()
             row["stockfish_best_cp"]=best["cp"]
             row["stockfish_played_cp"]=played["cp"]
             row["stockfish_original_rodent_cp"]=orig["cp"]
+            row["original_rodent_depth8_move"]=deeper.uci()
+            row["stockfish_depth8_rodent_cp"]=deep["cp"]
             row["mate_affected"]=affected
             row["played_gap_from_best_cp"]=(
                 None if affected else best["cp"]-played["cp"])
             row["rodent_gap_from_best_cp"]=(
                 None if affected else best["cp"]-orig["cp"])
+            row["depth8_rodent_minus_depth4_cp"]=(
+                None if affected else deep["cp"]-orig["cp"])
             row["policy_minus_rodent_cp"]=(
                 None if affected or row["source"]=="rodent" else
                 played["cp"]-orig["cp"])
@@ -198,6 +211,8 @@ def evaluate(results: Path, pgn: Path, stockfish: Path,
         cp=[row["played_gap_from_best_cp"] for row in rows if not row["mate_affected"]]
         compared=[row["policy_minus_rodent_cp"] for row in rows
                   if row["policy_minus_rodent_cp"] is not None]
+        stronger=[row["depth8_rodent_minus_depth4_cp"] for row in rows
+                  if row["depth8_rodent_minus_depth4_cp"] is not None]
         summary["|".join(key)]={
             "observations":len(rows),
             "unique_positions":len({row["fen_sha256"] for row in rows}),
@@ -207,6 +222,10 @@ def evaluate(results: Path, pgn: Path, stockfish: Path,
             "played_gaps_over_100cp":sum(x>100 for x in cp),
             "mean_policy_minus_original_rodent_cp":(
                 round(sum(compared)/len(compared),2) if compared else None),
+            "mean_original_rodent_depth8_minus_depth4_cp":(
+                round(sum(stronger)/len(stronger),2) if stronger else None),
+            "original_depth8_improves_over_100cp":sum(x>100 for x in stronger),
+            "original_depth8_worsens_over_100cp":sum(x < -100 for x in stronger),
             "observed_position_based_endgames":sum(row["phase"]=="endgame" for row in rows),
         }
     report={
@@ -217,6 +236,8 @@ def evaluate(results: Path, pgn: Path, stockfish: Path,
         "stockfish_sha256":file_hash(sfpath),
         "original_rodent_sha256":file_hash(exe),
         "independent_stockfish_depth":depth,
+        "original_rodent_played_depth":4,
+        "original_rodent_unbooked_counterfactual_depth":8,
         "deterministic_sample_limit_per_game_phase_source":max_per_phase_source,
         "total_sampled_real_focal_decisions":len(observations),
         "distinct_original_fens":len({o["fen_sha256"] for o in observations}),
@@ -227,6 +248,7 @@ def evaluate(results: Path, pgn: Path, stockfish: Path,
         "limitations":[
             "The sample is a fixed subset of actual games, not every move.",
             "Stockfish depth-limited forced-root values can change at deeper searches.",
+            "Rodent depth8 is a same-position counterfactual, not a completed depth8 game.",
             "Model and book choices occur on different game trajectories; this cannot assign causal match-point losses.",
             "A missing phase/source cell is missing evidence, never a zero-error claim.",
             "Opponent depths calibrate relative engine search, not verified human Elo.",
