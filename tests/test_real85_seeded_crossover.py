@@ -30,6 +30,10 @@ def _seed(tmp_path, seed: int):
                     "NeuralMode":arm,"EngineSHA256":"a"*64,
                     "IndependentStockfishSHA256":"b"*64,
                     "OpeningSeed":str(seed),
+                    "BookMode":"historical-v09-exploratory",
+                    "ExperimentalNeuralSourceSHA256":("0"*63+"1") if slug=="fischer" else
+                        ("0"*63+"2") if slug=="tal" else
+                        ("0"*63+"3") if slug=="karpov" else ("0"*63+"4"),
                 })
                 node=game
                 trace=[]
@@ -88,6 +92,7 @@ def test_seeded_crossover_exact_game_replay_and_paired_accounting(tmp_path):
     assert report["total_complete_uci_games"]==32
     assert report["total_paired_seed_color_blocks"]==16
     assert report["total_guided_actual_overrides"]==0
+    assert set(report["per_player_frozen_model_sha256"])==set(cross.DEFAULT_PLAYERS)
     for slug,row in report["players"].items():
         assert row["games_per_arm"]==4
         assert row["complete_games"]==8
@@ -153,3 +158,36 @@ def test_seed_list_contract_and_no_explicit_fabrication(tmp_path):
     assert cross._validated_seeds((2033,2041,2053,2063))==[2033,2041,2053,2063]
     with pytest.raises(ValueError,match="new output"):
         cross.run(tmp_path,tmp_path,tmp_path,tmp_path,tmp_path,seeds=(2033,2041))
+
+
+def test_model_swapping_and_fake_book_header_are_detected(tmp_path):
+    for seed in (2033,2041):
+        _seed(tmp_path,seed)
+    path=tmp_path/"seed-2041/games.pgn"
+    source=path.read_text(encoding="utf-8")
+    assert "ExperimentalNeuralSourceSHA256" in source
+    path.write_text(source.replace("0000000000000000000000000000000000000000000000000000000000000001",
+                                   "0000000000000000000000000000000000000000000000000000000000000009",1),
+                    encoding="utf-8")
+    with pytest.raises(ValueError,match="weights changed"):
+        cross.summarize(tmp_path,(2033,2041))
+    path.write_text(source.replace("historical-v09-exploratory","disabled",1),
+                    encoding="utf-8")
+    with pytest.raises(ValueError,match="unbooked"):
+        cross.summarize(tmp_path,(2033,2041))
+
+
+def test_crossover_executor_passes_each_precommitted_seed_without_tuning(tmp_path,monkeypatch):
+    calls=[]
+    def fake_play(rodent,stockfish,weights,out,**options):
+        seed=options["opening_seed"]
+        calls.append((seed,options["confirmation_depth"],options["min_ply"],
+                      options["players"],options["cp_budget"]))
+        _seed(out.parent,seed)
+        return {"status":"ALL_REAL_UCI_GAMES_COMPLETE"}
+    monkeypatch.setattr(cross,"play",fake_play)
+    out=tmp_path/"all"
+    result=cross.run(tmp_path,tmp_path,tmp_path,tmp_path,out,seeds=(2033,2041))
+    assert result["total_complete_uci_games"]==32
+    assert calls==[(seed,12,41,list(cross.DEFAULT_PLAYERS),25)
+                   for seed in (2033,2041)]
