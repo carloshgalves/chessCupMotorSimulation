@@ -19,7 +19,7 @@ import chess.pgn
 
 from .catalog import load_roster
 from .matches import _open_engine, file_hash
-from .real85_graded_openings import SCHEMA as GAMES_SCHEMA, validate
+from .real85_graded_openings import SCHEMA as GAMES_SCHEMA, FOCAL_DEPTHS, validate
 from .real85_playable import _material_endgame
 from .registry import registered_aliases
 
@@ -33,12 +33,13 @@ def phase(board: chess.Board) -> str:
     return "endgame" if _material_endgame(board) else "middlegame"
 
 
-def sample(results: Path, pgn: Path, *, max_per_phase_source: int = 1) -> list[dict]:
+def sample(results: Path, pgn: Path, *, max_per_phase_source: int = 1,
+           focal_depth: int = 4) -> list[dict]:
     if (type(max_per_phase_source) is not int or
             not 1 <= max_per_phase_source <= 4):
         raise ValueError("Preselected phase-source sample limit must be 1..4")
     results = Path(results)
-    checked = validate(results.parent)
+    checked = validate(results.parent, focal_depth=focal_depth)
     if checked["total_complete_games"] != 96 or pgn.resolve() != (results.parent/"games.pgn").resolve():
         raise ValueError("Only complete and joined source-locked 96-game evidence is accepted")
     doc = json.loads(results.read_text())
@@ -107,14 +108,15 @@ def _score(engine,board: chess.Board,move: chess.Move | None,depth: int) -> dict
 
 def evaluate(results: Path, pgn: Path, stockfish: Path,
              rodent_root: Path, out: Path, *, depth: int = 14,
-             max_per_phase_source: int = 1) -> dict:
+             max_per_phase_source: int = 1, focal_depth: int = 4) -> dict:
     if type(depth) is not int or not 12 <= depth <= 20:
         raise ValueError("Independent diagnostic depth must be 12..20")
     results,pgn,out=Path(results),Path(pgn),Path(out)
     if out.exists() or out.is_symlink() or not out.parent.is_dir():
         raise ValueError("Phase-audit artifact must not overwrite earlier evidence")
     doc=json.loads(results.read_text())
-    observations=sample(results,pgn,max_per_phase_source=max_per_phase_source)
+    observations=sample(results,pgn,max_per_phase_source=max_per_phase_source,
+                        focal_depth=focal_depth)
     sfpath=Path(stockfish).resolve(strict=True)
     root=Path(rodent_root).resolve(strict=True)
     exe=root/"rodent-iv-plain.exe"
@@ -148,7 +150,7 @@ def evaluate(results: Path, pgn: Path, stockfish: Path,
             if slug not in original:
                 original[slug]=_open_engine(root,exe,profiles[slug],book=False)
             if row["source"]=="repertoire":
-                result=original[slug].play(board,chess.engine.Limit(depth=4),
+                result=original[slug].play(board,chess.engine.Limit(depth=focal_depth),
                                            game=object())
                 baseline=result.move
                 if baseline not in board.legal_moves:
@@ -157,7 +159,7 @@ def evaluate(results: Path, pgn: Path, stockfish: Path,
                 baseline=chess.Move.from_uci(row["original_rodent_move"])
                 if baseline not in board.legal_moves:
                     raise ValueError("Missing authentic original UCI Rodent bestmove")
-            # Focal depth is always 4 in played UCI games. A separate
+            # The focal depth is committed before the games. A separate
             # unbooked depth-8 Rodent search on the SAME FEN isolates how much
             # stronger original search alone would alter the decision.
             deeper=original[slug].play(board,chess.engine.Limit(depth=8),
@@ -187,7 +189,7 @@ def evaluate(results: Path, pgn: Path, stockfish: Path,
                 None if affected else best["cp"]-played["cp"])
             row["rodent_gap_from_best_cp"]=(
                 None if affected else best["cp"]-orig["cp"])
-            row["depth8_rodent_minus_depth4_cp"]=(
+            row[f"depth8_rodent_minus_depth{focal_depth}_cp"]=(
                 None if affected else deep["cp"]-orig["cp"])
             row["policy_minus_rodent_cp"]=(
                 None if affected or row["source"]=="rodent" else
@@ -211,8 +213,8 @@ def evaluate(results: Path, pgn: Path, stockfish: Path,
         cp=[row["played_gap_from_best_cp"] for row in rows if not row["mate_affected"]]
         compared=[row["policy_minus_rodent_cp"] for row in rows
                   if row["policy_minus_rodent_cp"] is not None]
-        stronger=[row["depth8_rodent_minus_depth4_cp"] for row in rows
-                  if row["depth8_rodent_minus_depth4_cp"] is not None]
+        stronger=[row[f"depth8_rodent_minus_depth{focal_depth}_cp"] for row in rows
+                  if row[f"depth8_rodent_minus_depth{focal_depth}_cp"] is not None]
         summary["|".join(key)]={
             "observations":len(rows),
             "unique_positions":len({row["fen_sha256"] for row in rows}),
@@ -222,7 +224,7 @@ def evaluate(results: Path, pgn: Path, stockfish: Path,
             "played_gaps_over_100cp":sum(x>100 for x in cp),
             "mean_policy_minus_original_rodent_cp":(
                 round(sum(compared)/len(compared),2) if compared else None),
-            "mean_original_rodent_depth8_minus_depth4_cp":(
+            f"mean_original_rodent_depth8_minus_depth{focal_depth}_cp":(
                 round(sum(stronger)/len(stronger),2) if stronger else None),
             "original_depth8_improves_over_100cp":sum(x>100 for x in stronger),
             "original_depth8_worsens_over_100cp":sum(x < -100 for x in stronger),
@@ -236,14 +238,14 @@ def evaluate(results: Path, pgn: Path, stockfish: Path,
         "stockfish_sha256":file_hash(sfpath),
         "original_rodent_sha256":file_hash(exe),
         "independent_stockfish_depth":depth,
-        "original_rodent_played_depth":4,
+        "original_rodent_played_depth":focal_depth,
         "original_rodent_unbooked_counterfactual_depth":8,
         "deterministic_sample_limit_per_game_phase_source":max_per_phase_source,
         "total_sampled_real_focal_decisions":len(observations),
         "distinct_original_fens":len({o["fen_sha256"] for o in observations}),
         "sources":["rodent","repertoire","neural"],
         "phase_definition":"opening_before_ply40_else_material_endgame_<=16_nonpawn_points_else_middlegame",
-        "repertoire_counterfactual":"ACTUAL_ORIGINAL_RODENT_UCI_ROOT_DEPTH4",
+        "repertoire_counterfactual":f"ACTUAL_ORIGINAL_RODENT_UCI_ROOT_DEPTH{focal_depth}",
         "outer_test_used":False,"model_tuned_to_diagnostics":False,
         "limitations":[
             "The sample is a fixed subset of actual games, not every move.",
@@ -269,9 +271,10 @@ def main(argv=None) -> int:
     parser.add_argument("--stockfish",type=Path,required=True)
     parser.add_argument("--out",type=Path,required=True)
     parser.add_argument("--depth",type=int,default=14)
+    parser.add_argument("--focal-depth",type=int,choices=FOCAL_DEPTHS,default=4)
     args=parser.parse_args(argv)
     result=evaluate(args.results,args.pgn,args.stockfish,args.rodent_root,
-                    args.out,depth=args.depth)
+                    args.out,depth=args.depth,focal_depth=args.focal_depth)
     print(json.dumps({
         "status":result["status"],
         "sampled":result["total_sampled_real_focal_decisions"],
