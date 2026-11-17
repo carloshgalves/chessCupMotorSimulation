@@ -46,18 +46,23 @@ def _focal_points(game: dict) -> float:
     return float((result == "1-0") == (game["color"] == "white"))
 
 
-def _pgn_identities(path: Path, expected_seed: int) -> list[tuple[str,str]]:
+def _pgn_identities(path: Path, expected_seed: int) -> list[tuple[str,str,str]]:
     games = []
     with path.open(encoding="utf-8") as stream:
         while (game := chess.pgn.read_game(stream)) is not None:
-            if game.errors or game.headers.get("OpeningSeed") != str(expected_seed):
-                raise ValueError("Corrupt or wrong-seed real UCI game in crossover PGN")
+            if (game.errors or game.headers.get("OpeningSeed") != str(expected_seed)
+                    or game.headers.get("BookMode") != "historical-v09-exploratory"):
+                raise ValueError("Corrupt, wrong-seed or unbooked real UCI game in crossover PGN")
+            identity_sha = game.headers.get("ExperimentalNeuralSourceSHA256")
+            if (not isinstance(identity_sha, str) or len(identity_sha) != 64
+                    or any(ch not in "0123456789abcdef" for ch in identity_sha)):
+                raise ValueError("Original UCI game lacks verified frozen neural model identity")
             digest, _ = mainline_identity(game)
             # Opening variation directly observed in the genuine game,
             # not synthesized by the experimental runner.
             opening = " ".join(move.uci() for i,move in
                                enumerate(game.mainline_moves()) if i < 12)
-            games.append((digest,opening))
+            games.append((digest,opening,identity_sha))
     return games
 
 
@@ -75,6 +80,7 @@ def summarize(folder: Path, seeds: list[int] | tuple[int, ...] = DEFAULT_SEEDS,
     paths = {}
     unique = defaultdict(lambda: defaultdict(set))
     openers = defaultdict(lambda: defaultdict(set))
+    player_model_hashes = {}
     for seed in selected:
         root = Path(folder)/f"seed-{seed}"
         result_file = root/"results.json"
@@ -109,7 +115,11 @@ def summarize(folder: Path, seeds: list[int] | tuple[int, ...] = DEFAULT_SEEDS,
         if len(ids) != len(document["games"]) or len(ids) != 16:
             raise ValueError("Real UCI game count and hashes do not reconcile")
         pairs = defaultdict(dict)
-        for record, (identity, opening) in zip(document["games"], ids):
+        for record, (identity, opening, model_sha) in zip(document["games"], ids):
+            slug = record["player"]
+            if slug in player_model_hashes and player_model_hashes[slug] != model_sha:
+                raise ValueError("Historical neural weights changed across seed/color arms")
+            player_model_hashes[slug] = model_sha
             if record.get("opening_seed") != seed:
                 raise ValueError("Detached per-game opening seed")
             slug, arm, color = record["player"],record["arm"],record["color"]
@@ -228,6 +238,7 @@ def summarize(folder: Path, seeds: list[int] | tuple[int, ...] = DEFAULT_SEEDS,
         "paired_interpretation":
             "SHADOW/GUIDED matched by seed/color/opponent/depth, but diverging actual chess trajectories preclude per-position causal equivalence.",
         "source_binary_provenance":baseline,
+        "per_player_frozen_model_sha256":player_model_hashes,
         "source_files":paths,
     }
     target = Path(folder)/"crossover-report.json"
