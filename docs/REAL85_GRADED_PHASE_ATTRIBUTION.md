@@ -13,7 +13,10 @@ partição histórica, não jogos artificiais para treino.
 
 Para cada jogador, selecionar **antes dos jogos** três aberturas distintas
 de partidas reais FIT, após os 12 primeiros meios-lances, com origem e
-SHA registrados. Nunca selecionar uma linha de TUNE ou TEST. O mesmo
+SHA registrados. Priorizar frequência **real FIT da posição**, preservando
+linhas diferentes nos quatro primeiros meios-lances; a seleção é fixada
+antes de observar resultados e não é adaptada ao desempenho do motor.
+Nunca selecionar uma linha de TUNE ou TEST. O mesmo
 ponto de partida é usado pelos dois braços, e os jogos UCI prosseguem
 até um resultado terminal, com atribuição de cor invertida.
 
