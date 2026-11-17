@@ -90,9 +90,22 @@ def select_fit_openings(inputs: Path) -> dict:
                     "source_pgn_sha256": row["source_pgn_sha256"],
                     "opening_uci_12": moves, "sort_hash": score,
                 }
-                if fen not in candidates or score < candidates[fen]["sort_hash"]:
+                if fen not in candidates:
+                    candidate["fit_source_games_at_fen"] = 1
                     candidates[fen] = candidate
-        ordered = sorted(candidates.values(), key=lambda r:r["sort_hash"])
+                else:
+                    prior = candidates[fen]
+                    count = prior["fit_source_games_at_fen"] + 1
+                    if score < prior["sort_hash"]:
+                        candidate["fit_source_games_at_fen"] = count
+                        candidates[fen] = candidate
+                    else:
+                        prior["fit_source_games_at_fen"] = count
+        # Source-support priority makes a real trained repertoire more likely
+        # to activate; it is fixed before any simulated result is observed.
+        # Distinct first four plies remain a stronger requirement than support.
+        ordered = sorted(candidates.values(), key=lambda r:(
+            -r["fit_source_games_at_fen"], r["sort_hash"]))
         if len(ordered) < START_COUNT:
             raise ValueError(f"Not enough independently recorded FIT starting positions: {slug}")
         chosen = []
@@ -114,6 +127,7 @@ def select_fit_openings(inputs: Path) -> dict:
             "source_arm":p["source_arm"],
             "source_pgn_sha256":p["source_pgn_sha256"],
             "opening_uci_12":p["opening_uci_12"],
+            "fit_source_games_at_fen":p["fit_source_games_at_fen"],
         } for p in chosen]
     return {
         "schema": PANEL_SCHEMA, "source_manifest_sha256": file_hash(inputs/"manifest.json"),
@@ -155,6 +169,8 @@ def validate(root: Path) -> dict:
         for p in openings:
             if (p["source_arm"] != "fit" or neural_arm(p["game_sha256"]) != "fit" or
                     not _sha(p["source_pgn_sha256"]) or
+                    type(p.get("fit_source_games_at_fen")) is not int or
+                    p["fit_source_games_at_fen"] < 1 or
                     len(p["opening_uci_12"]) != FEN_PLIES):
                 raise ValueError("Unverified historical FIT opening source")
             board = chess.Board()
