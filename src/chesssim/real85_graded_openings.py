@@ -402,6 +402,7 @@ def play(rodent: Path, stockfish: Path, weights: Path, profiles: Path,
     if manifest.get("schema") != BOOK_SCHEMA:
         raise ValueError("No genuine fitted 85-percent historical books")
     books, checkpoints = {},{}
+    book_hashes = {}
     for slug in PILOTS:
         player = roster[slug]
         if (player.rodent_alias is None or
@@ -415,6 +416,9 @@ def play(rodent: Path, stockfish: Path, weights: Path, profiles: Path,
                 file_hash(bookpath) != row["book_sha256"]):
             raise ValueError("Historical FIT source and book must match original snapshot")
         books[slug] = load_opening_book(bookpath,slug)
+        book_hashes[slug] = row["book_sha256"]
+        if file_hash(bookpath) != book_hashes[slug]:
+            raise ValueError("Historical book changed while loading")
         if books[slug]["policy"]["max_plies"] != 40:
             raise ValueError("Expected complete real85 historical opening repertoire")
         checkpoints[slug] = _load_player(weights,slug)
@@ -487,7 +491,7 @@ def play(rodent: Path, stockfish: Path, weights: Path, profiles: Path,
         "opening_panel_sha256":file_hash(out/"starts.json"),
         "original_fit_manifest_sha256":panel["source_manifest_sha256"],
         "rodent_original_sha256":engine_hash,"stockfish_sha256":stockfish_hash,
-        "book_sha256":{slug:file_hash(profiles/f"{slug}.json") for slug in PILOTS},
+        "book_sha256":book_hashes,
         "book_source_training":"real85_85pct_source_verified_fit",
         "model_fitted_on_original_80pct_plus_fit":True,
         "old_year_holdout_used":False,"original_test_used":False,
