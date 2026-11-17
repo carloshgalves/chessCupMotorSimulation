@@ -33,6 +33,13 @@ DEPTHS = (2, 6)
 START_COUNT = 3
 FEN_PLIES = 12
 FOCAL_DEPTH = 4
+FOCAL_DEPTHS = (4, 6)
+
+
+def _focal_depth(value: int) -> int:
+    if type(value) is not int or value not in FOCAL_DEPTHS:
+        raise ValueError("Focal experimental depth must be 4 or 6")
+    return value
 
 
 def _sha(value: object) -> bool:
@@ -164,8 +171,9 @@ def _verify_deep_override_event(event: dict) -> None:
         raise ValueError("Forged original-FEN neural deep confirmation")
 
 
-def validate(root: Path) -> dict:
+def validate(root: Path, *, focal_depth: int = FOCAL_DEPTH) -> dict:
     """Replay all real chess PGNs and trace their exact UCI decisions and sources."""
+    focal_depth = _focal_depth(focal_depth)
     root = Path(root)
     if not root.is_dir() or root.is_symlink():
         raise ValueError("Missing actual UCI evidence directory")
@@ -175,7 +183,8 @@ def validate(root: Path) -> dict:
             doc.get("opening_panel_sha256") != file_hash(root/"starts.json") or
             doc.get("players") != list(PILOTS) or
             doc.get("opponent_depths") != list(DEPTHS) or
-            doc.get("focal_depth") != FOCAL_DEPTH or
+            type(doc.get("focal_depth")) is not int or
+            doc.get("focal_depth") != focal_depth or
             doc.get("status") != "ALL_ACTUAL_FEN_UCI_GAMES_COMPLETE" or
             not _sha(doc.get("rodent_original_sha256")) or
             not _sha(doc.get("stockfish_sha256")) or
@@ -235,9 +244,9 @@ def validate(root: Path) -> dict:
                     game.headers.get("IndependentStockfishSHA256") != doc["stockfish_sha256"] or
                     game.headers.get("NeuralMode") != arm or
                     game.headers.get("ExperimentalDepthWhite") != str(
-                        FOCAL_DEPTH if color == "white" else depth) or
+                        focal_depth if color == "white" else depth) or
                     game.headers.get("ExperimentalDepthBlack") != str(
-                        FOCAL_DEPTH if color == "black" else depth) or
+                        focal_depth if color == "black" else depth) or
                     game.headers.get("White") != (
                         actors[slug] if color == "white" else "Rodent IV Simple") or
                     game.headers.get("Black") != (
@@ -350,6 +359,13 @@ def validate(root: Path) -> dict:
                 arms["guided"]["points"]-arms["shadow"]["points"])
     return {
         "status":"GRADED_AUTHENTIC_UCI_DESCRIPTIVE_NO_HUMAN_ELO",
+        "focal_depth":focal_depth,
+        "opening_panel_sha256":doc["opening_panel_sha256"],
+        "source_manifest_sha256":panel["source_manifest_sha256"],
+        "rodent_original_sha256":doc["rodent_original_sha256"],
+        "stockfish_sha256":doc["stockfish_sha256"],
+        "profile_sha256":{slug:next(iter(values)) for slug,values in personalities.items()},
+        "model_sha256":{slug:next(iter(values)) for slug,values in policies.items()},
         "total_complete_games":len(actual),
         "total_player_start_positions":sum(len(panel["players"][slug]) for slug in PILOTS),
         "distinct_source_fit_positions":len({
@@ -360,8 +376,9 @@ def validate(root: Path) -> dict:
 
 
 def play(rodent: Path, stockfish: Path, weights: Path, profiles: Path,
-         inputs: Path, out: Path) -> dict:
+         inputs: Path, out: Path, *, focal_depth: int = FOCAL_DEPTH) -> dict:
     """Run the full preselected four-player / two-depth / three-opening matrix."""
+    focal_depth = _focal_depth(focal_depth)
     out = Path(out)
     if out.exists() or out.is_symlink() or not out.parent.is_dir():
         raise ValueError("Graded real UCI output must be a new directory")
@@ -420,14 +437,14 @@ def play(rodent: Path, stockfish: Path, weights: Path, profiles: Path,
                             white,black = ((focal,simple) if color=="white"
                                            else (simple,focal))
                             game,meta = _play_one(
-                                root,executable,white,black,depth=FOCAL_DEPTH,
+                                root,executable,white,black,depth=focal_depth,
                                 movetime=None,max_plies=450,
                                 round_number=1 if color=="white" else 2,
                                 hashes=hashes,use_books=False,
                                 historical_openings={slug:books[slug]},
                                 opening_seed=35021+idx,opening_min_count=2,
                                 experimental_policy=policy,
-                                experimental_depths={slug:FOCAL_DEPTH,
+                                experimental_depths={slug:focal_depth,
                                                      "control-simple":depth},
                                 experimental_start_fen=opening["fen"])
                             game.headers["NeuralMode"] = arm
@@ -464,7 +481,7 @@ def play(rodent: Path, stockfish: Path, weights: Path, profiles: Path,
             row["status"]=="COMPLETED" for row in records)
             else "INCOMPLETE_UNSCORABLE_UCI_GAMES"),
         "players":list(PILOTS),"opponent_depths":list(DEPTHS),
-        "focal_depth":FOCAL_DEPTH,"source_start_plies":FEN_PLIES,
+        "focal_depth":focal_depth,"source_start_plies":FEN_PLIES,
         "opening_panel_sha256":file_hash(out/"starts.json"),
         "original_fit_manifest_sha256":panel["source_manifest_sha256"],
         "rodent_original_sha256":engine_hash,"stockfish_sha256":stockfish_hash,
@@ -478,7 +495,7 @@ def play(rodent: Path, stockfish: Path, weights: Path, profiles: Path,
     (out/"games.pgn").write_text("\n\n".join(pgns)+"\n")
     if report["status"] != "ALL_ACTUAL_FEN_UCI_GAMES_COMPLETE":
         raise RuntimeError("A real chess game failed to reach a terminal position")
-    summary=validate(out)
+    summary=validate(out,focal_depth=focal_depth)
     (out/"summary.json").write_text(json.dumps(summary,sort_keys=True,indent=2)+"\n")
     return summary
 
@@ -487,8 +504,10 @@ def main(argv=None) -> int:
     parser=argparse.ArgumentParser(description="Authentic real85 diverse FIT opening UCI graded opponent crossover")
     for key in ("rodent-root","stockfish","weights","profiles","inputs","out"):
         parser.add_argument("--"+key,type=Path,required=True)
+    parser.add_argument("--focal-depth",type=int,choices=FOCAL_DEPTHS,default=FOCAL_DEPTH)
     args=parser.parse_args(argv)
-    result=play(args.rodent_root,args.stockfish,args.weights,args.profiles,args.inputs,args.out)
+    result=play(args.rodent_root,args.stockfish,args.weights,args.profiles,args.inputs,args.out,
+                focal_depth=args.focal_depth)
     print(json.dumps(result,sort_keys=True),flush=True)
     return 0
 
