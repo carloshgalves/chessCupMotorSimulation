@@ -5,6 +5,7 @@ The process-wide Arena workspace lock is held by ArenaManager. One game at a tim
 """
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import RLock, Thread
@@ -22,6 +23,7 @@ import chess.pgn
 from .catalog import find_player, load_roster
 from .matches import _atomic_text, _open_engine, file_hash, validate, official_book_hashes
 from .peak_windows import CLOCK_PRESETS
+from .registry import registered_aliases
 
 SCHEMA = "chesssim-human-game-v1"
 VALID_STATES = {"RUNNING", "COMPLETED", "INCOMPLETE", "INTERRUPTED", "FAILED"}
@@ -87,6 +89,27 @@ def normalize_human(raw: object) -> dict:
     }
 
 
+def shared_human_profile(root: Path, opponent):
+    """Resolve the existing generic Rodent Simple, never create a named profile."""
+    aliases = registered_aliases(root / "personalities" / "basic.ini")
+    filename = aliases.get("Simple")
+    if not filename:
+        raise ValueError("Perfil compartilhado Simple não registrado")
+    base = (root / "personalities").resolve()
+    path = (base / filename).resolve()
+    if not path.is_relative_to(base) or not path.is_file():
+        raise ValueError("Perfil compartilhado Simple indisponível")
+    return replace(opponent, rodent_alias="Simple", rodent_file=filename)
+
+
+def resolve_human_profile(root: Path, opponent):
+    source = "individual" if opponent.rodent_alias else "shared_simple"
+    effective = (opponent if opponent.rodent_alias else
+                 shared_human_profile(root, opponent))
+    exe, profiles = validate(root, effective, effective)
+    return effective, exe, profiles, source
+
+
 class HumanGame:
     def __init__(self, root: Path, workspace: Path, *,
                  max_wall_seconds: float = 3600, engine_factory=None):
@@ -142,6 +165,8 @@ class HumanGame:
                 config.get("color") not in ("white", "black") or
                 config.get("opponent") not in {p.slug for p in load_roster()} or
                 config.get("opening_mode") not in ("none", "internal") or
+                config.get("profile_source", "individual") not in ("individual", "shared_simple") or
+                (config.get("profile_source") == "shared_simple" and config["opening_mode"] != "none") or
                 config.get("preset") not in (*CLOCKS, "custom") or
                 type(config.get("depth")) is not int or
                 not 1 <= config["depth"] <= 16 or
@@ -179,6 +204,8 @@ class HumanGame:
                 game.headers.get("EngineSHA256") != hashes["engine"] or
                 game.headers.get("EngineProfileSHA256") != hashes["profile"] or
                 game.headers.get("EngineSlug") != config["opponent"] or
+                game.headers.get("EngineProfileSource", "individual") !=
+                config.get("profile_source", "individual") or
                 game.headers.get("White") != expected_white or
                 game.headers.get("Black") != expected_black):
             raise ValueError("PGN humano diverge dos metadados de sessão")
@@ -287,6 +314,7 @@ class HumanGame:
                 epoch = self._epoch
                 revision = self._data["revision"]
                 conf = self._data["config"].copy()
+                hashes = self._data["hashes"].copy()
                 board = self._board.copy(stack=True)
                 game = self._game
                 limits = self._data["clocks"]
@@ -297,8 +325,12 @@ class HumanGame:
                     white_inc=conf["clock"][1] if limits else None,
                     black_inc=conf["clock"][1] if limits else None)
             opponent = find_player(conf["opponent"])
-            exe, _ = validate(self.root, opponent, opponent)
-            engine = self.engine_factory(self.root, exe, opponent,
+            effective, exe, profiles, source = resolve_human_profile(self.root, opponent)
+            if (source != conf.get("profile_source", "individual") or
+                    file_hash(exe) != hashes["engine"] or
+                    file_hash(profiles[opponent.slug]) != hashes["profile"]):
+                raise ValueError("Motor ou perfil mudou durante a partida")
+            engine = self.engine_factory(self.root, exe, effective,
                                          book=conf["opening_mode"] == "internal")
             try:
                 with self._lock:
@@ -357,7 +389,10 @@ class HumanGame:
                 raise HumanBusy("Já há uma partida ou duelo em execução")
             opponent = find_player(conf["opponent"])
             try:
-                exe, profiles = validate(self.root, opponent, opponent)
+                _, exe, profiles, source = resolve_human_profile(self.root, opponent)
+                if source == "shared_simple" and conf["opening_mode"] != "none":
+                    raise HumanInput("Motor compartilhado exige repertório desligado")
+                conf["profile_source"] = source
                 if conf["opening_mode"] == "internal":
                     official_book_hashes(self.root, profiles)
                 hashes = {"engine": file_hash(exe),
@@ -386,7 +421,8 @@ class HumanGame:
                 if conf["clock"] else "-",
                 "EngineSHA256": hashes["engine"],
                 "EngineProfileSHA256": hashes["profile"],
-                "EngineSlug": opponent.slug, "SearchLimit": "depth=" + str(conf["depth"]),
+                "EngineSlug": opponent.slug, "EngineProfileSource": source,
+                "SearchLimit": "depth=" + str(conf["depth"]),
                 "SourceKind": "human_vs_engine",
             })
             self._epoch += 1
@@ -544,8 +580,9 @@ class HumanGame:
             conf = self._data["config"]
             p = find_player(conf["opponent"])
             try:
-                exe, profiles = validate(self.root, p, p)
-                if (file_hash(exe) != self._data["hashes"]["engine"] or
+                _, exe, profiles, source = resolve_human_profile(self.root, p)
+                if (source != conf.get("profile_source", "individual") or
+                        file_hash(exe) != self._data["hashes"]["engine"] or
                         file_hash(profiles[p.slug]) != self._data["hashes"]["profile"]):
                     raise HumanInput("Motor ou perfil mudou desde o último checkpoint")
             except (OSError, ValueError, FileNotFoundError) as exc:

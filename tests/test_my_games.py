@@ -114,6 +114,44 @@ def test_my_games_per_user_wdl_pagination_replay_and_evidence(tmp_path):
     assert before == after, "GET must not recover or mutate sessions"
 
 
+@pytest.mark.parametrize("state_source,pgn_source,opening_mode,accepted", [
+    ("shared_simple", "shared_simple", "none", True),
+    ("shared_simple", None, "none", False),
+    ("shared_simple", "individual", "none", False),
+    ("individual", "shared_simple", "none", False),
+    ("shared_simple", "shared_simple", "internal", False),
+    ("unknown", "unknown", "none", False),
+    (None, None, "none", True),
+])
+def test_personal_archive_preserves_profile_source(tmp_path, state_source, pgn_source,
+                                                   opening_mode, accepted):
+    directory = make_game(tmp_path)
+    state_path = directory / "state.json"
+    pgn_path = directory / "game.pgn"
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["config"]["opening_mode"] = opening_mode
+    if state_source is not None:
+        state["config"]["profile_source"] = state_source
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+    with pgn_path.open(encoding="utf-8") as stream:
+        game = chess.pgn.read_game(stream)
+    if pgn_source is not None:
+        game.headers["EngineProfileSource"] = pgn_source
+    pgn_path.write_text(str(game) + "\n", encoding="utf-8")
+    report = my_games.listing(tmp_path)
+    if accepted:
+        assert report["total"] == 1
+        assert report["games"][0]["profile_source"] == (state_source or "individual")
+        replay = my_games.replay(tmp_path, directory.name)
+        assert replay["game"]["profile_source"] == (state_source or "individual")
+        assert replay["game"]["rating_eligible"] is False
+    else:
+        assert report["total"] == 0
+        assert report["coverage"]["rejected"] == 1
+        with pytest.raises(my_games.MyGamesInput):
+            my_games.replay(tmp_path, directory.name)
+
+
 def test_my_games_never_affects_64_engine_profiles_or_elo(tmp_path):
     make_game(tmp_path)
     make_game(tmp_path, 2, opponent="fischer", finished=False)

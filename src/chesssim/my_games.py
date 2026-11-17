@@ -154,6 +154,9 @@ def _document(workspace: Path, ident: str):
             conf["opponent"] not in roster or
             type(conf.get("color")) is not str or
             conf["color"] not in {"white", "black"} or
+            conf.get("profile_source", "individual") not in ("individual", "shared_simple") or
+            (conf.get("profile_source") == "shared_simple" and
+             conf.get("opening_mode") != "none") or
             not isinstance(hashes, dict) or
             any(type(hashes.get(k)) is not str or
                 not re.fullmatch(r"[0-9a-f]{64}", hashes[k])
@@ -214,6 +217,8 @@ def _document(workspace: Path, ident: str):
             headers.get("EngineSlug") != conf["opponent"] or
             headers.get("EngineSHA256") != hashes["engine"] or
             headers.get("EngineProfileSHA256") != hashes["profile"] or
+            headers.get("EngineProfileSource", "individual") !=
+            conf.get("profile_source", "individual") or
             headers.get("SourceKind") != "human_vs_engine" or
             headers.get("TimeControl") != expected_clock or
             state["revision"] != board.ply()):
@@ -279,6 +284,7 @@ def _document(workspace: Path, ident: str):
         "duration_seconds": None, "clock": clock,
         "engine_sha256": hashes["engine"],
         "profile_sha256": hashes["profile"],
+        "profile_source": conf.get("profile_source", "individual"),
         "pgn_sha256": sha256(pgn_raw).hexdigest(),
         "provenance": "locally_consistent", "rating_eligible": False,
         "origin": "human_vs_engine",

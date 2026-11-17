@@ -33,6 +33,7 @@ const id1="human-20261109T200000Z-000000000001";
 const id2="human-20261109T200000Z-000000000002";
 const game=(id,outcome,status="COMPLETED")=>({
   id,opponent:"tal",opponent_name:"Mikhail Tal",color:"white",
+  profile_source:id===id1?"individual":"shared_simple",
   result:outcome==="loss"?"0-1":"*",outcome,status,ply_count:4,
   termination:status==="COMPLETED"?"CHECKMATE":"OperatorStop",
   created_at_utc:"2026-11-09T20:00:00+00:00",rating_eligible:false
@@ -92,12 +93,15 @@ async function flush(){for(let i=0;i<12;i++)await new Promise(resolve=>setImmedi
   assert.equal(get("my-games-losses").textContent,"1");
   assert.equal(get("my-games-unfinished").textContent,"1");
   assert.equal(get("my-games-rows").children.length,2);
+  assert.match(get("my-games-rows").children[0].children[1].textContent,/individual.*não homologado/);
+  assert.match(get("my-games-rows").children[1].children[1].textContent,/Simple compartilhado.*não calibrado/);
   assert.equal(get("my-games-opponents").children.length,1);
   assert(!activeRequests.some(p=>p.includes("/api/history")||p.includes("/rating")));
   const first=get("my-games-rows").children[0].children.at(-1).firstChild;
   await first.events.click();await flush();
   assert.equal(get("my-games-dialog").open,true,"Personal replay dialog must open");
   assert.match(get("my-games-replay-meta").textContent,/Causa: Xeque-mate/);
+  assert.match(get("my-games-replay-meta").textContent,/individual.*não homologado/);
   assert.equal(get("my-games-download").download,id1+".pgn");
   assert.equal(get("my-games-moves").children.length,1);
   assert.equal(paints.at(-1).ply,0);
@@ -117,6 +121,7 @@ async function flush(){for(let i=0;i<12;i++)await new Promise(resolve=>setImmedi
   await secondAction.events.click();await flush();
   assert.equal(get("my-games-dialog").open,true);
   assert.equal(get("my-games-download").download,id2+".pgn");
+  assert.match(get("my-games-replay-meta").textContent,/Simple compartilhado.*não calibrado/);
   pendingReplay({ok:true,json:async()=>({
     schema:"chesssim-my-replay-v1",game:game(id1,"loss"),
     states:[{fen,last:null,san:null},{fen,last:["e2","e4"],san:"e4"}]

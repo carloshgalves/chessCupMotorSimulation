@@ -89,12 +89,16 @@
     if(!groups.children.length)
       groups.append(node("p","Nenhum adversário no seu histórico."));
   }
+  function profileLabel(game){
+    return game.profile_source==="shared_simple"?"Rodent Simple compartilhado (não calibrado)":
+      game.profile_source==="individual"?"Perfil individual (não homologado)":"Origem do perfil não informada";
+  }
   function fillGames(report){
     const list=$("my-games-rows");list.replaceChildren();
     for(const game of report.games){
       const tr=node("tr");
       for(const value of [
-        date(game.created_at_utc),game.opponent_name,
+        date(game.created_at_utc),game.opponent_name+" · "+profileLabel(game),
         colorText[game.color]||game.color,statusText[game.status]||game.status
       ])tr.append(node("td",value));
       const result=node("td",resultText[game.outcome]||"Indisponível",
@@ -173,7 +177,7 @@
       $("my-games-replay-meta").textContent=
         statusText[data.game.status]+" · "+resultText[data.game.outcome]+
         " · "+colorText[data.game.color]+" · "+date(data.game.created_at_utc)+
-        " · Causa: "+termination(data.game.termination)+
+        " · "+profileLabel(data.game)+" · Causa: "+termination(data.game.termination)+
         " · arquivo local consistente; não é prova de autoria externa.";
       const moves=$("my-games-moves");moves.replaceChildren();
       data.states.slice(1).forEach((step,index)=>{

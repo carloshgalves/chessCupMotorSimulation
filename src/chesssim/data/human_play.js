@@ -98,17 +98,26 @@
     for(const p of players) {
       const option=document.createElement("option");
       option.value=p.slug;
-      option.disabled=!p.installed;
-      option.textContent=p.name+(p.installed?" · disponível":" · instalação necessária");
-      if(p.installed) available++;
+      option.disabled=!p.human_playable;
+      option.dataset.profileSource=p.human_profile_source||"";
+      option.textContent=p.name+(p.human_profile_source==="shared_simple"?
+        " · motor-base compartilhado (não calibrado)":p.human_playable?
+        " · perfil individual (não homologado)":" · instalação necessária");
+      if(p.human_playable) available++;
       select.appendChild(option);
     }
-    const selectable=players.find(p=>p.slug===existing&&p.installed);
-    select.value=selectable?existing:(players.find(p=>p.installed)?.slug||"");
+    const selectable=players.find(p=>p.slug===existing&&p.human_playable);
+    select.value=selectable?existing:(players.find(p=>p.human_playable)?.slug||"");
+    syncOpeningMode();
     state.ready=available>0;
     el("human-availability").textContent=available+
-      " perfis UCI instalados. Os demais não possuem motor jogável; "+
-      "a fidelidade histórica continua experimental.";
+      "/64 adversários jogáveis. Motor-base compartilhado não representa estilo ou força histórica.";
+  }
+  function syncOpeningMode() {
+    const shared=el("human-opponent").selectedOptions[0]?.dataset.profileSource==="shared_simple";
+    const opening=el("human-opening");
+    if(shared) opening.value="none";
+    opening.disabled=shared;
   }
   function currentConfig() {
     const preset=el("human-clock").value;
@@ -206,7 +215,8 @@
     dl.replaceChildren();
     if(!g)return;
     const details=[
-      ["Adversário",g.config.opponent],["Você",signed[g.config.color]],
+      ["Adversário",g.config.opponent],["Perfil",g.config.profile_source==="shared_simple"?
+        "Rodent Simple compartilhado — não calibrado":"Individual — não homologado"],["Você",signed[g.config.color]],
       ["Profundidade",String(g.config.depth)],
       ["Ritmo",g.config.preset],["Lances",String(g.revision)],
       ["Origem","Jogo local contra Rodent IV; não é partida histórica"]
@@ -954,6 +964,7 @@
       }
     });
   }
+  el("human-opponent").addEventListener("change",syncOpeningMode);
   el("human-clock").addEventListener("change",()=>{
     el("human-custom-clock").hidden=el("human-clock").value!=="custom";
   });
