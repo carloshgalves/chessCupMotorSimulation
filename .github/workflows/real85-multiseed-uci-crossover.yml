@@ -1,0 +1,177 @@
+name: Real85 64-game mirrored SHADOW vs GUIDED UCI multiseed crossover
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/real85_seeded_crossover.py'
+      - 'src/chesssim/real85_neural_guarded_uci.py'
+      - 'tests/test_real85_seeded_crossover.py'
+      - '.github/workflows/real85-multiseed-uci-crossover.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real85-64game-crossover-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  authentic-64game-multiseed-uci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Adversarial paired-block and full-PGN evidence regressions
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pytest -q \
+            tests/test_real85_seeded_crossover.py \
+            tests/test_real85_safe_book_neural.py \
+            tests/test_real85_deep_confirmed_policy.py \
+            tests/test_real85_neural_counterfactual.py
+      - name: Original real85 85pct historical game-trained opening books for all four players
+        run: |
+          python -m chesssim.real85_playable fit --fetch \
+            --players fischer tal karpov kasparov \
+            --max-opening-plies 40 \
+            --out "$RUNNER_TEMP/real85-books"
+      - name: Every genuine focal move in >80pct game-disjoint neural FIT partition
+        run: |
+          python -m chesssim.real85_neural_stream build --fetch \
+            --players fischer tal karpov kasparov \
+            --out "$RUNNER_TEMP/real85-input"
+          python -m chesssim.real85_neural_stream verify --dir "$RUNNER_TEMP/real85-input"
+          python -m chesssim.real85_online_residual \
+            --inputs "$RUNNER_TEMP/real85-input" \
+            --players fischer tal karpov kasparov \
+            --out "$RUNNER_TEMP/real85-weights"
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Compile unchanged pin-locked Rodent IV; install independent Stockfish
+        run: |
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac
+          make -C rodent-source/sources build
+          mkdir -p "$RUNNER_TEMP/rodent"
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          sudo apt-get update -qq
+          sudo apt-get install -y stockfish
+          test -x /usr/games/stockfish
+      - name: Run 64 actual UCI games with seed-matched SHADOW/GUIDED and inverted colors
+        run: |
+          python -m chesssim.real85_seeded_crossover \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --stockfish /usr/games/stockfish \
+            --weights "$RUNNER_TEMP/real85-weights" \
+            --profiles "$RUNNER_TEMP/real85-books" \
+            --seeds 2033 2041 2053 2063 \
+            --rodent-depth 4 \
+            --out "$RUNNER_TEMP/crossover"
+      - name: Reconcile every real game, exact source coverage and fixed paired score blocks
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])
+          rep=json.loads((root/"crossover/crossover-report.json").read_text())
+          books=json.loads((root/"real85-books/report.json").read_text())
+          inputs=json.loads((root/"real85-input/manifest.json").read_text())
+          weights=json.loads((root/"real85-weights/report.json").read_text())
+          assert rep["schema"]=="chesssim-real85-depth-confirmed-four-player-crossover-v1"
+          assert rep["status"]=="EXPLORATORY_ACTUAL_UCI_MULTISEED_CROSSOVER_NOT_HUMAN_ELO"
+          assert rep["seeds"]==[2033,2041,2053,2063]
+          assert rep["total_complete_uci_games"]==64
+          assert rep["total_paired_seed_color_blocks"]==32
+          assert not rep["historical_test_or_final_holdout_used_for_parameter_tuning"]
+          assert rep["original_engines_and_model_profiles_unchanged"] is True
+          assert set(rep["players"])=={"fischer","tal","karpov","kasparov"}
+          assert weights["status"]=="ALL_REQUESTED_PLAYER_RESIDUALS_FITTED"
+          for slug,row in rep["players"].items():
+              assert books["players"][slug]["train_fraction"]>=0.80
+              assert inputs["players"][slug]["fit_fraction_of_all_eligible_games"]>=.8
+              assert weights["players"][slug]["fit_games_processed"]==inputs["players"][slug]["fit_games"]
+              assert weights["players"][slug]["focal_decisions_processed"]==inputs["players"][slug]["fit_focal_decisions_all_phases"]
+              assert row["games_per_arm"]==8 and row["complete_games"]==16
+              assert row["paired_seed_color_blocks"]==8
+              assert len(row["games"])==8
+              assert len(row["seed_clusters"])==4
+              assert row["confidence_interval"] is None
+              assert row["unique_guided_game_trajectories"]<=8
+              assert row["unique_guided_first12_uci_openings"]<=8
+              assert row["guided_actual_neural_overrides"]>=0
+              assert row["guided_deep_rejections"]>=0
+              assert 0 <= row["guided_points"] <= 8
+              assert 0 <= row["shadow_points"] <= 8
+              assert row["paired_score_difference_points"]==row["guided_points"]-row["shadow_points"]
+              print("REAL85_64GAME_CROSSOVER_PLAYER",slug,
+                    "guided",row["guided_points"],"shadow",row["shadow_points"],
+                    "paired_delta",row["paired_mean_difference_per_game"],
+                    "distinct_openings",row["unique_guided_first12_uci_openings"],
+                    "distinct_games",row["unique_guided_game_trajectories"],
+                    "historical_book_plies",row["guided_historical_book_plies"],
+                    "guided_overrides",row["guided_actual_neural_overrides"],
+                    "deep_rejected",row["guided_deep_rejections"])
+          print("REAL85_64GAME_CROSSOVER_TOTALS",rep["total_complete_uci_games"],
+                rep["total_guided_actual_overrides"],
+                rep["total_guided_historical_book_plies"])
+          PY
+      - name: Independent depth14 audit of every genuinely played neural override for every seed
+        run: |
+          python - <<'PY'
+          import json,os,subprocess,sys
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])/"crossover"
+          all_guided=all_checked=all_cp_regressions=0
+          for seed in (2033,2041,2053,2063):
+              original=root/f"seed-{seed}"
+              data=json.loads((original/"results.json").read_text())
+              guided=sum(g["actual_overrides"] for g in data["games"])
+              all_guided+=guided
+              if not guided:
+                  print("DEEP_AUDIT_NO_GUIDED_OVERRIDE",seed)
+                  continue
+              out=original/"depth14-counterfactual.json"
+              subprocess.run([sys.executable,"-m","chesssim.real85_neural_counterfactual",
+                  "--results",str(original/"results.json"),
+                  "--pgn",str(original/"games.pgn"),
+                  "--stockfish","/usr/games/stockfish",
+                  "--depth","14","--out",str(out)],check=True)
+              audit=json.loads(out.read_text())
+              assert audit["status"]=="INDEPENDENT_DEPTH_STRESS_OBSERVATION_NOT_HUMAN_ELO"
+              assert audit["depth_of_independent_counterfactual"]==14
+              assert audit["totals"]["actual_guided_overrides"]==guided
+              assert not audit["outer_test_used"] and not audit["model_tune_used"]
+              all_checked+=audit["totals"]["actual_guided_overrides"]
+              all_cp_regressions+=audit["totals"]["neural_deeper_worse_more_than_100cp"]
+              print("SEED_DEEP14_OVERRIDE_AUDIT",seed,
+                    "guided",guided,
+                    "cp_comparisons",audit["totals"]["cp_comparisons"],
+                    "deep_100cp_regressions",audit["totals"]["neural_deeper_worse_more_than_100cp"])
+          assert all_checked==all_guided
+          print("ALL_SEED_DEEP14_AUDITED",all_checked,
+                "depth14_100cp_regressions",all_cp_regressions)
+          PY
+      - name: Publish actual played PGNs, full guard traces, aggregate scores, no original human FIT PGNs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real85-four-player-64game-multi-seed-crossover-real-UCI
+          path: |
+            ${{ runner.temp }}/real85-books/report.json
+            ${{ runner.temp }}/real85-input/manifest.json
+            ${{ runner.temp }}/real85-weights/report.json
+            ${{ runner.temp }}/crossover/crossover-report.json
+            ${{ runner.temp }}/crossover/seed-*/results.json
+            ${{ runner.temp }}/crossover/seed-*/games.pgn
+            ${{ runner.temp }}/crossover/seed-*/depth14-counterfactual.json
+          retention-days: 14
