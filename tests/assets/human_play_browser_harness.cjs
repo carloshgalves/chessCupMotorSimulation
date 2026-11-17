@@ -54,6 +54,7 @@ class Node {
     return prior;
   }
   get lastElementChild(){return this.children.at(-1)||null;}
+  get selectedOptions(){return this.children.filter(c=>c.tagName==="OPTION"&&c.value===this.value);}
   getBoundingClientRect(){
     return {left:0,top:0,right:640,bottom:640,width:640,height:640};
   }
@@ -123,9 +124,10 @@ $("human-minutes").value="10";
 $("human-increment").value="2";
 $("human-promotion").hidden=true;
 const players=[
-  {slug:"fischer",name:"Bobby Fischer",installed:true},
-  {slug:"tal",name:"Mikhail Tal",installed:true},
-  {slug:"mequinho",name:"Henrique Mecking",installed:false}
+  {slug:"fischer",name:"Bobby Fischer",installed:true,human_playable:true,human_profile_source:"individual"},
+  {slug:"tal",name:"Mikhail Tal",installed:true,human_playable:true,human_profile_source:"individual"},
+  {slug:"mequinho",name:"Henrique Mecking",installed:false,human_playable:true,human_profile_source:"shared_simple"},
+  {slug:"unavailable",name:"Unavailable",installed:false,human_playable:false,human_profile_source:null}
 ];
 const reply=payload=>({ok:true,json:async()=>payload});
 const fetch=async(path,options={})=>{
@@ -262,6 +264,20 @@ const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));await ne
   assert.equal($("human-viewer").hidden,false);
   assert.equal($("duel-viewer").hidden,true);
   assert.equal($("human-opponent").value,"fischer");
+  const options=$("human-opponent").children;
+  assert.equal(options.find(o=>o.value==="mequinho").disabled,false);
+  assert.match(options.find(o=>o.value==="mequinho").textContent,/compartilhado.*não calibrado/);
+  assert.equal(options.find(o=>o.value==="unavailable").disabled,true);
+  assert.equal($("human-opening").disabled,false);
+  $("human-opening").value="internal";
+  $("human-opponent").value="mequinho";
+  $("human-opponent").events.change();
+  assert.equal($("human-opening").value,"none");
+  assert.equal($("human-opening").disabled,true);
+  $("human-opponent").value="fischer";
+  $("human-opponent").events.change();
+  assert.equal($("human-opening").disabled,false);
+  assert.equal($("human-opening").value,"none");
   assert.equal($("human-launch").disabled,false);
   await $("human-form").events.submit({preventDefault(){}});
   await flush();
