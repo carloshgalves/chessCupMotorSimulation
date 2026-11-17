@@ -49,8 +49,11 @@ Os lances realmente jogados são classificados como:
   Rodent responder, com confirmação Stockfish depth12.
 
 O Stockfish independente depth14 avalia a **mesma posição de origem**,
-o lance real, o lance original do Rodent e o melhor lance observado
-a essa profundidade. Separar posições de abertura (ply abaixo de 40),
+o lance real, o lance original do Rodent depth4, o lance que o
+mesmo Rodent escolheria em depth8 **sem alterar a personalidade** e
+o melhor lance observado a essa profundidade. Isso permite verificar
+se uma decisão ruim melhora apenas com busca mais profunda, antes
+de atribuir o problema à personalização. Separar posições de abertura (ply abaixo de 40),
 meio-jogo e finais com pouco material; finais não são identificados
 apenas por ultrapassar um número de lances. Limitar e publicar
 quantas posições foram efetivamente avaliadas.
