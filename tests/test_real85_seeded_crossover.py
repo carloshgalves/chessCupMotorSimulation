@@ -12,6 +12,7 @@ import chess.pgn
 import pytest
 
 from chesssim import real85_seeded_crossover as cross
+from chesssim.catalog import load_roster
 from chesssim.real85_neural_guarded_uci import SCHEMA as REAL_UCI_SCHEMA
 
 
@@ -20,6 +21,7 @@ def _seed(tmp_path, seed: int):
     root.mkdir()
     games, pgns = [], []
     actors = ["fischer","tal","karpov","kasparov"]
+    real_names = {p.slug:p.name for p in load_roster()}
     for slug in actors:
         for arm in ("shadow","guided"):
             for color in ("white","black"):
@@ -30,6 +32,8 @@ def _seed(tmp_path, seed: int):
                     "NeuralMode":arm,"EngineSHA256":"a"*64,
                     "IndependentStockfishSHA256":"b"*64,
                     "OpeningSeed":str(seed),
+                    "White":real_names[slug] if color=="white" else "Rodent IV Simple",
+                    "Black":real_names[slug] if color=="black" else "Rodent IV Simple",
                     "BookMode":"historical-v09-exploratory",
                     "ExperimentalNeuralSourceSHA256":("0"*63+"1") if slug=="fischer" else
                         ("0"*63+"2") if slug=="tal" else
@@ -191,3 +195,15 @@ def test_crossover_executor_passes_each_precommitted_seed_without_tuning(tmp_pat
     assert result["total_complete_uci_games"]==32
     assert calls==[(seed,12,41,list(cross.DEFAULT_PLAYERS),25)
                    for seed in (2033,2041)]
+
+
+def test_forged_report_color_cannot_override_actual_pgn_player_color(tmp_path):
+    for seed in (2033,2041):
+        _seed(tmp_path,seed)
+    p=tmp_path/"seed-2041/games.pgn"
+    source=p.read_text()
+    # The nominal report is authentic, but the PGN header is forged.
+    p.write_text(source.replace('[White "Rodent IV Simple"]',
+                                '[White "Bobby Bogus"]',1))
+    with pytest.raises(ValueError,match="actor/color identity"):
+        cross.summarize(tmp_path,(2033,2041))
