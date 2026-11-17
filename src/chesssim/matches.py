@@ -181,7 +181,8 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
               on_progress: Callable[[chess.pgn.Game], None] | None = None,
               max_wall_seconds: float | None = None,
               experimental_policy: ExperimentalPolicyAdapter | None = None,
-              experimental_depths: dict[str, int] | None = None) -> tuple[chess.pgn.Game, dict]:
+              experimental_depths: dict[str, int] | None = None,
+              experimental_start_fen: str | None = None) -> tuple[chess.pgn.Game, dict]:
     if experimental_policy is not None:
         if clock is not None or use_books is not False:
             raise ValueError("Learned policy control is development-only: no clocks or internal books")
@@ -211,11 +212,31 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                 movetime is not None):
             raise ValueError("Real calibrated gate requires the same UCI search depth and no movetime")
     if experimental_depths is not None:
-        if clock is not None or movetime is not None or experimental_policy is not None or depth is None:
+        if clock is not None or movetime is not None or depth is None:
             raise ValueError("Per-player depth overrides require unclocked UCI-only experimental play")
+        if experimental_policy is not None:
+            from .real85_neural_guarded_uci import NeuralGuardedPolicy
+            if (type(experimental_policy) is not NeuralGuardedPolicy or
+                    experimental_policy.gate is not None or
+                    experimental_depths.get(experimental_policy.player) != depth):
+                raise ValueError("Depth-graded neural play requires fixed focal Rodent depth")
         if set(experimental_depths) != {white.slug, black.slug} or any(
                 type(v) is not int or not 1 <= v <= 12 for v in experimental_depths.values()):
             raise ValueError("Depth overrides must map exactly both players to integer 1..12")
+    if experimental_start_fen is not None:
+        from .real85_neural_guarded_uci import NeuralGuardedPolicy
+        if (type(experimental_start_fen) is not str or clock is not None or
+                use_books is not False or movetime is not None or
+                type(experimental_policy) is not NeuralGuardedPolicy or
+                experimental_depths is None):
+            raise ValueError("Historical FEN starts require experimental guarded UCI-only play")
+        try:
+            source_board = chess.Board(experimental_start_fen)
+        except ValueError as exc:
+            raise ValueError("Invalid authentic historic FEN opening") from exc
+        if (not source_board.is_valid() or source_board.ply() != 12 or
+                source_board.is_game_over(claim_draw=True)):
+            raise ValueError("Historic FIT starting board must be legal, live, after 12 plies")
     engines = []
     failed_engine_ids: set[int] = set()
     try:
@@ -223,8 +244,11 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
         engines.append(w)
         b = _open_engine(root, exe, black, book=use_books)
         engines.append(b)
-        board = chess.Board()
+        board = chess.Board(experimental_start_fen) if experimental_start_fen else chess.Board()
         game = chess.pgn.Game()
+        if experimental_start_fen is not None:
+            game.setup(board)
+            game.headers["ExperimentalOpeningSource"] = "REAL85_FIT_START_12_PLIES"
         game.headers.update({
             "Event": ("Copa dos Imortais - Oficial" if clock == (600, 2) else
                       "Copa dos Imortais - Ritmo Experimental" if clock else
