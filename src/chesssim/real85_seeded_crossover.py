@@ -47,7 +47,7 @@ def _focal_points(game: dict) -> float:
     return float((result == "1-0") == (game["color"] == "white"))
 
 
-def _pgn_identities(path: Path, expected_seed: int) -> list[tuple[str,str,str,str,str]]:
+def _pgn_identities(path: Path, expected_seed: int) -> list[tuple[str,str,str,str,str,str,str]]:
     games = []
     with path.open(encoding="utf-8") as stream:
         while (game := chess.pgn.read_game(stream)) is not None:
@@ -55,16 +55,23 @@ def _pgn_identities(path: Path, expected_seed: int) -> list[tuple[str,str,str,st
                     or game.headers.get("BookMode") != "historical-v09-exploratory"):
                 raise ValueError("Corrupt, wrong-seed or unbooked real UCI game in crossover PGN")
             identity_sha = game.headers.get("ExperimentalNeuralSourceSHA256")
-            if (not isinstance(identity_sha, str) or len(identity_sha) != 64
-                    or any(ch not in "0123456789abcdef" for ch in identity_sha)):
-                raise ValueError("Original UCI game lacks verified frozen neural model identity")
+            profile_white=game.headers.get("WhiteProfileSHA256","")
+            profile_black=game.headers.get("BlackProfileSHA256","")
+            def valid_sha(value):
+                return isinstance(value,str) and len(value)==64 and all(
+                    ch in "0123456789abcdef" for ch in value)
+            if (not valid_sha(identity_sha) or
+                    game.headers.get("PolicyModelSHA256") != identity_sha or
+                    not valid_sha(profile_white) or not valid_sha(profile_black)):
+                raise ValueError("Original UCI game lacks immutable neural/profile SHA identities")
             digest, _ = mainline_identity(game)
             # Opening variation directly observed in the genuine game,
             # not synthesized by the experimental runner.
             opening = " ".join(move.uci() for i,move in
                                enumerate(game.mainline_moves()) if i < 12)
             games.append((digest,opening,identity_sha,
-                          game.headers.get("White",""),game.headers.get("Black","")))
+                          game.headers.get("White",""),game.headers.get("Black",""),
+                          profile_white,profile_black))
     return games
 
 
@@ -83,6 +90,7 @@ def summarize(folder: Path, seeds: list[int] | tuple[int, ...] = DEFAULT_SEEDS,
     unique = defaultdict(lambda: defaultdict(set))
     openers = defaultdict(lambda: defaultdict(set))
     player_model_hashes = {}
+    player_personality_hashes = {}
     real_names = {p.slug:p.name for p in load_roster()}
     for seed in selected:
         root = Path(folder)/f"seed-{seed}"
@@ -118,13 +126,21 @@ def summarize(folder: Path, seeds: list[int] | tuple[int, ...] = DEFAULT_SEEDS,
         if len(ids) != len(document["games"]) or len(ids) != 16:
             raise ValueError("Real UCI game count and hashes do not reconcile")
         pairs = defaultdict(dict)
-        for record, (identity, opening, model_sha, white_name, black_name) in zip(
+        for record, (identity, opening, model_sha, white_name, black_name,
+                     white_profile_sha, black_profile_sha) in zip(
                 document["games"], ids):
             slug = record["player"]
             expected_white = real_names[slug] if record["color"]=="white" else "Rodent IV Simple"
             expected_black = real_names[slug] if record["color"]=="black" else "Rodent IV Simple"
             if white_name!=expected_white or black_name!=expected_black:
                 raise ValueError("Actual UCI PGN actor/color identity differs from scored report")
+            focal_sha = white_profile_sha if record["color"]=="white" else black_profile_sha
+            control_sha = black_profile_sha if record["color"]=="white" else white_profile_sha
+            for identity, profile_sha in ((slug,focal_sha),("control-simple",control_sha)):
+                if (identity in player_personality_hashes and
+                        player_personality_hashes[identity] != profile_sha):
+                    raise ValueError("Original Rodent personality file changed across arms")
+                player_personality_hashes[identity]=profile_sha
             if slug in player_model_hashes and player_model_hashes[slug] != model_sha:
                 raise ValueError("Historical neural weights changed across seed/color arms")
             player_model_hashes[slug] = model_sha
@@ -247,6 +263,7 @@ def summarize(folder: Path, seeds: list[int] | tuple[int, ...] = DEFAULT_SEEDS,
             "SHADOW/GUIDED matched by seed/color/opponent/depth, but diverging actual chess trajectories preclude per-position causal equivalence.",
         "source_binary_provenance":baseline,
         "per_player_frozen_model_sha256":player_model_hashes,
+        "frozen_original_rodent_personality_sha256":player_personality_hashes,
         "source_files":paths,
     }
     target = Path(folder)/"crossover-report.json"
