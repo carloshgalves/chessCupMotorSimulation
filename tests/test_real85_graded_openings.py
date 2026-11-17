@@ -158,3 +158,28 @@ def test_book_counterfactual_never_called_rodent_without_original_search():
     assert graded._points("1-0",False)==0.0
     with pytest.raises(ValueError,match="incomplete"):
         graded._points("*",True)
+
+
+def test_deep_original_fen_neural_confirmation_cannot_be_forged():
+    original={
+        "outcome":"EXTERNAL_POLICY_OVERRIDE",
+        "confirmation_depth":12,
+        "confirmation_original_cp":30,
+        "confirmation_proposed_cp":10,
+        "confirmation_neural_minus_rodent_cp":-20,
+        "confirmation_original_mate":None,
+        "confirmation_proposed_mate":None,
+    }
+    graded._verify_deep_override_event(original)
+    for tampered in (
+        {"confirmation_original_cp":200},
+        {"confirmation_proposed_cp":-100},
+        {"confirmation_neural_minus_rodent_cp":-101},
+        {"confirmation_original_mate":1},
+        {"confirmation_proposed_mate":-1},
+        {"confirmation_depth":8},
+        {"confirmation_original_cp":30.0},
+        {"outcome":"SHADOW_ONLY"},
+    ):
+        with pytest.raises(ValueError,match="Forged original-FEN"):
+            graded._verify_deep_override_event({**original,**tampered})
