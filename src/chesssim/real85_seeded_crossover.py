@@ -136,11 +136,14 @@ def summarize(folder: Path, seeds: list[int] | tuple[int, ...] = DEFAULT_SEEDS,
                 raise ValueError("Actual UCI PGN actor/color identity differs from scored report")
             focal_sha = white_profile_sha if record["color"]=="white" else black_profile_sha
             control_sha = black_profile_sha if record["color"]=="white" else white_profile_sha
-            for identity, profile_sha in ((slug,focal_sha),("control-simple",control_sha)):
-                if (identity in player_personality_hashes and
-                        player_personality_hashes[identity] != profile_sha):
+            # The game trajectory digest 'identity' must NEVER be
+            # shadowed by the unrelated personality/actor identifier.
+            for profile_key, profile_sha in ((slug,focal_sha),
+                                             ("control-simple",control_sha)):
+                if (profile_key in player_personality_hashes and
+                        player_personality_hashes[profile_key] != profile_sha):
                     raise ValueError("Original Rodent personality file changed across arms")
-                player_personality_hashes[identity]=profile_sha
+                player_personality_hashes[profile_key]=profile_sha
             if slug in player_model_hashes and player_model_hashes[slug] != model_sha:
                 raise ValueError("Historical neural weights changed across seed/color arms")
             player_model_hashes[slug] = model_sha
