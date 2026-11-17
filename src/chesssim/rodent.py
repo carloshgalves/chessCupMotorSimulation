@@ -103,6 +103,8 @@ def setup_official(root: Path, *, apply: bool = False, books: bool = False,
         if simple.is_symlink() or not simple.resolve().is_relative_to(
                 (root / "personalities").resolve()):
             raise RegistryError("Perfil Simple redirecionado")
+        if simple.exists() and not simple.is_file():
+            raise RegistryError("Caminho Simple não é um arquivo regular")
         if "Simple" not in aliases:
             additional["Simple"] = "simple.txt"
         if not simple.is_file():
