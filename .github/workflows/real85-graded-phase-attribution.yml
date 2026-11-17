@@ -1,0 +1,125 @@
+name: Real85 graded real-UCI openings and phase/source attribution
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/matches.py'
+      - 'src/chesssim/real85_graded_openings.py'
+      - 'src/chesssim/real85_graded_phase_attribution.py'
+      - 'tests/test_real85_graded_openings.py'
+      - '.github/workflows/real85-graded-phase-attribution.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real85-graded-phase-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-graded-phase:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Four-pilot historical opening and same-position safety regressions
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pytest -q \
+            tests/test_real85_graded_openings.py \
+            tests/test_real85_seeded_crossover.py \
+            tests/test_real85_safe_book_neural.py \
+            tests/test_real85_deep_confirmed_policy.py
+      - name: Rebuild genuine 85 percent source-locked historical repertoire
+        run: |
+          python -m chesssim.real85_playable fit --fetch \
+            --players fischer tal karpov kasparov \
+            --max-opening-plies 40 \
+            --out "$RUNNER_TEMP/graded-books"
+      - name: Preserve all eligible real FIT moves and train genuine original frozen residual
+        run: |
+          python -m chesssim.real85_neural_stream build --fetch \
+            --players fischer tal karpov kasparov \
+            --out "$RUNNER_TEMP/graded-input"
+          python -m chesssim.real85_neural_stream verify \
+            --dir "$RUNNER_TEMP/graded-input"
+          python -m chesssim.real85_online_residual \
+            --inputs "$RUNNER_TEMP/graded-input" \
+            --players fischer tal karpov kasparov \
+            --out "$RUNNER_TEMP/graded-weights"
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Compile original Rodent IV without changing personalities and install Stockfish
+        run: |
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac
+          make -C rodent-source/sources build
+          mkdir -p "$RUNNER_TEMP/rodent"
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          sudo apt-get update -qq
+          sudo apt-get install -y stockfish
+          test -x /usr/games/stockfish
+      - name: Play 96 genuine UCI continuations with two graded opponent strengths and 12 real FIT starts
+        run: |
+          python -m chesssim.real85_graded_openings \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --stockfish /usr/games/stockfish \
+            --weights "$RUNNER_TEMP/graded-weights" \
+            --profiles "$RUNNER_TEMP/graded-books" \
+            --inputs "$RUNNER_TEMP/graded-input" \
+            --out "$RUNNER_TEMP/graded-games"
+      - name: Recheck every genuine PGN and scored depth/color/arm/source block
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from chesssim.real85_graded_openings import validate
+          report=validate(Path(os.environ["RUNNER_TEMP"])/"graded-games")
+          assert report["status"]=="GRADED_AUTHENTIC_UCI_DESCRIPTIVE_NO_HUMAN_ELO"
+          assert report["total_complete_games"]==96
+          assert report["distinct_source_fit_positions"]==12
+          for slug, grades in report["players"].items():
+              for depth, rows in grades.items():
+                  assert rows["guided"]["games"]==rows["shadow"]["games"]==6
+                  assert rows["guided"]["unique_fit_start_positions"]==3
+                  assert rows["shadow"]["unique_fit_start_positions"]==3
+                  print("REAL_GRADED",slug,"opponent_depth",depth,
+                        "guided",rows["guided"]["points"],
+                        "shadow",rows["shadow"]["points"],
+                        "distinct_guided_games",rows["guided"]["unique_played_trajectories"],
+                        "real_book_plies",rows["guided"]["historical_book_plies"],
+                        "neural_overrides",rows["guided"]["neural_overrides"])
+          PY
+      - name: Independently distinguish book, Rodent and neural decisions by actual opening/midgame/endgame phase
+        run: |
+          python -m chesssim.real85_graded_phase_attribution \
+            --results "$RUNNER_TEMP/graded-games/results.json" \
+            --pgn "$RUNNER_TEMP/graded-games/games.pgn" \
+            --stockfish /usr/games/stockfish \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --depth 14 \
+            --out "$RUNNER_TEMP/graded-games/phase-attribution.json"
+      - name: Publish only real played PGNs, scores, model hashes and position-based attribution
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real85-graded-96-uci-complete-phase-diagnostic
+          path: |
+            ${{ runner.temp }}/graded-games/results.json
+            ${{ runner.temp }}/graded-games/summary.json
+            ${{ runner.temp }}/graded-games/games.pgn
+            ${{ runner.temp }}/graded-games/phase-attribution.json
+            ${{ runner.temp }}/graded-books/report.json
+            ${{ runner.temp }}/graded-weights/report.json
+          retention-days: 14
+          if-no-files-found: warn
