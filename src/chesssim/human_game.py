@@ -314,6 +314,7 @@ class HumanGame:
                 epoch = self._epoch
                 revision = self._data["revision"]
                 conf = self._data["config"].copy()
+                hashes = self._data["hashes"].copy()
                 board = self._board.copy(stack=True)
                 game = self._game
                 limits = self._data["clocks"]
@@ -326,8 +327,8 @@ class HumanGame:
             opponent = find_player(conf["opponent"])
             effective, exe, profiles, source = resolve_human_profile(self.root, opponent)
             if (source != conf.get("profile_source", "individual") or
-                    file_hash(exe) != self._data["hashes"]["engine"] or
-                    file_hash(profiles[opponent.slug]) != self._data["hashes"]["profile"]):
+                    file_hash(exe) != hashes["engine"] or
+                    file_hash(profiles[opponent.slug]) != hashes["profile"]):
                 raise ValueError("Motor ou perfil mudou durante a partida")
             engine = self.engine_factory(self.root, exe, effective,
                                          book=conf["opening_mode"] == "internal")
