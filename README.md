@@ -6,6 +6,18 @@ Motor local de simulação de partidas e torneios entre personalidades enxadrís
 
 O pacote Python/CLI, a Arena web local, o monitor `watch`, os modos **Duelo/Jogar (humano × UCI)**, Copas, Ligas, História dos 64 enxadristas e o **Elo interno experimental** estão implementados em `main`. A análise independente com Stockfish e o laboratório de representação histórica têm código e testes. O perfil experimental de Henrique Mecking e os demais perfis **não** têm validação definitiva de estilo/força histórica; `fast_statistical` ainda é um demonstrador **não calibrado** (#61), não previsão certificada. O Histórico dos **motores** inclui Arena/torneios/Copas/Ligas e **exclui deliberadamente partidas humanas**. O modo Jogar terá a área independente **Minhas Partidas** (#84, implementação em PR #86), com estatísticas e replay particulares, sem efeito no Elo ou nas estatísticas dos motores. A avaliação visual avançada #24, a importação legal ampliada #62 e a certificação experimental dos 64 continuam abertas. CI automatizada não equivale à homologação física com Rodent/Stockfish/Chrome (#83) nem ao gate de acessibilidade e direitos dos 16 retratos marcados PDM (#53).
 
+### Jogar com o elenco completo (experimental)
+
+O modo humano × UCI mantém os 21 aliases individuais existentes. Para os 43
+jogadores sem alias, utiliza o perfil genérico **Simple** já existente na
+instalação Rodent IV, sem criar novos arquivos por jogador. Os 64 ficam
+selecionáveis quando o executável, os 21 perfis e Simple estão instalados e
+registrados. O motor-base compartilhado utiliza a profundidade escolhida pelo
+usuário e não tem repertório individual, Elo histórico nem estilo calibrado.
+A interface e os PGNs identificam a origem do perfil; perfis faltantes não
+são falsamente anunciados. Copas, Ligas, duelos e Elo competitivo permanecem
+inalterados. A homologação física no Debian/Chrome continua separada.
+
 ## Requisitos
 
 - Python 3.11 ou superior e ambiente virtual.
