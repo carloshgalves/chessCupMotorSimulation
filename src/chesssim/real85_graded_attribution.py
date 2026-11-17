@@ -160,6 +160,45 @@ def _phase(board: chess.Board) -> str:
     return "middlegame_position"
 
 
+
+def _verify_source_event(board: chess.Board, move: chess.Move, event: dict,
+                         book: dict | None, *, owner: str, slug: str, arm: str,
+                         source_pgn_sha256: str, seed: int, round_number: int) -> None:
+    """Verify the actual chess move's origin, not just its PGN legality."""
+    original=event.get("rodent_move")
+    if not isinstance(original,str):
+        raise ValueError("Missing original UCI/book choice in policy trace")
+    try:
+        rodent=chess.Move.from_uci(original)
+    except ValueError as exc:
+        raise ValueError("Malformed original Rodent UCI decision") from exc
+    if rodent not in board.legal_moves:
+        raise ValueError("Original UCI decision illegal in actual move position")
+    override=event.get("outcome")=="EXTERNAL_POLICY_OVERRIDE"
+    if book is not None:
+        if (book.get("player") != slug or owner != slug or
+                book.get("move") != move.uci() or
+                book.get("seed") != seed or
+                book.get("round") != round_number or
+                book.get("book_source_sha256") != source_pgn_sha256 or
+                override or original != move.uci()):
+            raise ValueError("Historical book attribution or source provenance altered")
+    elif override:
+        if (arm != "guided" or owner != slug or rodent == move or
+                event.get("confirmation_depth") != 12 or
+                event.get("confirmation_original_mate") is not None or
+                event.get("confirmation_proposed_mate") is not None or
+                type(event.get("confirmation_original_cp")) is not int or
+                type(event.get("confirmation_proposed_cp")) is not int or
+                type(event.get("confirmation_neural_minus_rodent_cp")) is not int or
+                event["confirmation_neural_minus_rodent_cp"] !=
+                event["confirmation_proposed_cp"]-event["confirmation_original_cp"] or
+                event["confirmation_neural_minus_rodent_cp"] < -25):
+            raise ValueError("Forged or unsafe neural original-FEN override")
+    elif original != move.uci():
+        raise ValueError("Rodent baseline falsely attributed to an unplayed move")
+
+
 def inspect(out: Path) -> tuple[dict, list[dict]]:
     """Replay *all* PGNs, source decisions, actors and graded-depth commitments."""
     out = Path(out)
@@ -246,7 +285,12 @@ def inspect(out: Path) -> tuple[dict, list[dict]]:
                             if (arm not in ("shadow","guided") or
                                     record.get("color") != color or
                                     record.get("player") != slug or
-                                    record.get("opponent_depth") != opponent_depth):
+                                    record.get("opponent_depth") != opponent_depth or
+                                    record.get("opening_seed") !=
+                                    _opening_seed(color,index,opponent_depth) or
+                                    record.get("historical_start_fen") != root["fen"] or
+                                    record.get("historical_start_source_game_sha256") !=
+                                    root["historical_fit_game_sha256"]):
                                 raise ValueError("Detached UCI scorer identity")
                             blocks[(slug,color,index,opponent_depth,arm)] += 1
                             if blocks[(slug,color,index,opponent_depth,arm)] != 1:
@@ -276,6 +320,7 @@ def inspect(out: Path) -> tuple[dict, list[dict]]:
                                 raise ValueError("Incorrect original engine/position/result PGN evidence")
                             sha_model = game.headers.get("ExperimentalNeuralSourceSHA256")
                             if (not isinstance(sha_model,str) or len(sha_model) != 64 or
+                                    any(ch not in "0123456789abcdef" for ch in sha_model) or
                                     game.headers.get("PolicyModelSHA256") != sha_model):
                                 raise ValueError("Missing original neural provenance")
                             if slug in model_hashes and model_hashes[slug] != sha_model:
@@ -288,6 +333,7 @@ def inspect(out: Path) -> tuple[dict, list[dict]]:
                                     "BlackProfileSHA256" if color=="white" else
                                     "WhiteProfileSHA256"))):
                                 if (not isinstance(value,str) or len(value) != 64 or
+                                        any(ch not in "0123456789abcdef" for ch in value) or
                                         (key in profile_hashes and profile_hashes[key] != value)):
                                     raise ValueError("Original Rodent profile changed across trial")
                                 profile_hashes[key] = value
@@ -307,7 +353,11 @@ def inspect(out: Path) -> tuple[dict, list[dict]]:
                             by_book_ply = {event["ply"]: event for event in opening_traces}
                             if len(by_book_ply) != len(opening_traces):
                                 raise ValueError("Duplicate book turn attribution")
+                            if (record.get("focal_historical_book_plies") != len(opening_traces) or
+                                    record.get("simple_book_plies") != 0):
+                                raise ValueError("Historical book counts include unearned or control turns")
                             actual_overrides = 0
+                            observed_book_plies = set()
                             board = game.board()
                             for move,event in zip(played,traces):
                                 if (move not in board.legal_moves or
@@ -319,9 +369,13 @@ def inspect(out: Path) -> tuple[dict, list[dict]]:
                                 if event.get("player") != owner:
                                     raise ValueError("UCI move attributed to wrong player")
                                 book = by_book_ply.get(board.ply()+1)
-                                if book is not None and (book["move"] != move.uci() or
-                                                         owner != slug):
-                                    raise ValueError("Wrong historical book move attributed")
+                                _verify_source_event(
+                                    board,move,event,book,owner=owner,slug=slug,arm=arm,
+                                    source_pgn_sha256=root["historical_source_pgn_sha256"],
+                                    seed=_opening_seed(color,index,opponent_depth),
+                                    round_number=1 if color=="white" else 2)
+                                if book is not None:
+                                    observed_book_plies.add(board.ply()+1)
                                 kind = ("historical_book" if book is not None else
                                         "neural_override" if
                                         event.get("outcome") == "EXTERNAL_POLICY_OVERRIDE"
@@ -345,8 +399,9 @@ def inspect(out: Path) -> tuple[dict, list[dict]]:
                                         if kind=="neural_override" else None,
                                     })
                                 board.push(move)
-                            if actual_overrides != record.get("actual_overrides"):
-                                raise ValueError("Real guided style intervention count is forged")
+                            if (actual_overrides != record.get("actual_overrides") or
+                                    observed_book_plies != set(by_book_ply)):
+                                raise ValueError("Real guided overrides or book sources forged")
                             if board.outcome(claim_draw=True) is None or (
                                     board.outcome(claim_draw=True).result()!=record["result"]):
                                 raise ValueError("UCI game did not legally complete from historical root")
@@ -435,7 +490,7 @@ def _root_score(engine, board: chess.Board, move: chess.Move, depth: int) -> dic
                           root_moves=[move],
                           info=chess.engine.INFO_SCORE|chess.engine.INFO_PV,
                           game=object())
-    if info.get("pv",[])[0:1] != [move] or not info.get("score"):
+    if info.get("pv",[])[0:1] != [move] or info.get("score") is None:
         raise ValueError("Independent Stockfish did not confirm the forced root")
     if info.get("depth",0)<depth:
         raise ValueError("Independent Stockfish did not finish requested depth")
