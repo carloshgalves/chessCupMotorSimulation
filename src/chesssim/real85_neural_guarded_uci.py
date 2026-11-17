@@ -206,8 +206,25 @@ def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
          min_ply: int = 21, max_plies: int = 450,
          profiles: Path | None = None,
          confirmation_depth: int | None = None,
-         opening_seed: int = 2033) -> dict:
+         opening_seed: int = 2033,
+         opponent_depth: int | None = None,
+         start_fen: str | None = None,
+         start_source_game_sha256: str | None = None,
+         colors: tuple[str, ...] = ("white", "black")) -> dict:
     participants=list(players or ("fischer","tal","karpov","kasparov"))
+    if (opponent_depth is not None and (type(opponent_depth) is not int or
+            not 1 <= opponent_depth <= 12)):
+        raise ValueError("Graded control requires bounded original Rodent UCI depth")
+    if (not isinstance(colors, (tuple,list)) or not colors or
+            len(colors) != len(set(colors)) or
+            not set(colors) <= {"white","black"}):
+        raise ValueError("Invalid color slice")
+    if start_fen is not None and (
+            not isinstance(start_fen, str) or
+            not isinstance(start_source_game_sha256, str) or
+            len(start_source_game_sha256) != 64 or
+            any(ch not in "0123456789abcdef" for ch in start_source_game_sha256)):
+        raise ValueError("Historical start needs an authenticated FIT game reference")
     if type(opening_seed) is not int or not 0 <= opening_seed <= 2**31-1:
         raise ValueError("Historical book seed must be a bounded integer")
     if (not 1<=len(participants)<=8 or len(set(participants))!=len(participants) or
@@ -269,6 +286,9 @@ def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
                     confirmation_depth=confirmation_depth)
                 for round_number,(white,black) in enumerate(
                         ((focal,simple),(simple,focal)),1):
+                    color = "white" if white.slug == slug else "black"
+                    if color not in colors:
+                        continue
                     pgn,meta=_play_one(
                         root,executable,white,black,
                         depth=rodent_depth,movetime=None,max_plies=max_plies,
@@ -276,14 +296,23 @@ def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
                         historical_openings=({slug:original_books[slug]}
                                              if original_books else None),
                         opening_seed=opening_seed,opening_min_count=2,
-                        experimental_policy=policy)
+                        experimental_policy=policy,
+                        experimental_depths=({slug:rodent_depth,
+                                             simple.slug:opponent_depth}
+                                            if opponent_depth is not None else None),
+                        experimental_start_fen=start_fen)
                     pgn.headers["NeuralMode"]=arm
+                    if start_source_game_sha256 is not None:
+                        pgn.headers["HistoricalStartSourceGameSHA256"]=start_source_game_sha256
                     pgn.headers["IndependentStockfishSHA256"]=sf_hash
                     pgn.headers["ExperimentalNeuralSourceSHA256"]=policy.model["model_sha256"]
                     pgns.append(str(pgn))
                     records.append({
                         "player":slug,"arm":arm,"opening_seed":opening_seed,
-                        "color":"white" if white.slug==slug else "black",
+                        "color":color,
+                        "historical_start_fen":start_fen,
+                        "historical_start_source_game_sha256":start_source_game_sha256,
+                        "opponent_depth":opponent_depth,
                         "status":meta["status"],"result":meta["result"],
                         "termination":meta["termination"],"plies":meta["plies"],
                         "policy_trace":meta["policy_trace"],
@@ -324,6 +353,10 @@ def play(root: Path, stockfish: Path, weights: Path, out: Path, *,
         "rodent_depth":rodent_depth,"stockfish_depth":stockfish_depth,
         "cp_budget":cp_budget,"min_ply":min_ply,
         "opening_seed":opening_seed,
+        "opponent_depth":opponent_depth,
+        "historical_start_fen":start_fen,
+        "historical_start_source_game_sha256":start_source_game_sha256,
+        "colors":list(colors),
         "confirmation_depth":confirmation_depth,
         "deep_guard_enabled":confirmation_depth is not None,
         "historical_focal_book_enabled":bool(original_books),
