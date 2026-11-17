@@ -25,7 +25,7 @@ from .history_stats import player_stats
 from .history_archive import archive as player_archive, replay as archive_replay, export_page as archive_export, ArchiveInput
 from .representation import RepresentationLab, RepresentationInput
 from .competition_rating import rating_report, RATING_POOLS
-from .human_game import HumanGame, HumanInput, HumanBusy
+from .human_game import HumanGame, HumanInput, HumanBusy, shared_human_profile
 from .my_games import listing as personal_listing, replay as personal_replay, pgn as personal_pgn, MyGamesInput
 from .leagues import LeagueManager, LeagueInput, LeagueBusy
 from .cups import CupManager, CupBusy
@@ -159,6 +159,14 @@ def _profiles(root: Path) -> list[dict]:
                 available = True
             except (FileNotFoundError, ValueError, OSError):
                 pass
+        shared = False
+        if not p.rodent_alias:
+            try:
+                effective = shared_human_profile(root, p)
+                validate(root, effective, effective)
+                shared = True
+            except (FileNotFoundError, ValueError, OSError):
+                pass
         period = p.peak_period
         hypothesis = PROVISIONAL_PEAKS.get(p.slug)
         if period:
@@ -176,6 +184,9 @@ def _profiles(root: Path) -> list[dict]:
         players.append({
             "slug": p.slug, "name": p.name, "group": p.group,
             "alias": p.rodent_alias, "installed": available,
+            "human_playable": available or shared,
+            "human_profile_source": ("individual" if available else
+                                     "shared_simple" if shared else None),
             "model_status": ("RODENT_PROFILE_AVAILABLE_NOT_VALIDATED" if available else
                              "PROFILE_UNAVAILABLE"),
             "historically_validated": False,
