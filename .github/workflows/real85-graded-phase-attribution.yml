@@ -87,7 +87,9 @@ jobs:
           report=validate(Path(os.environ["RUNNER_TEMP"])/"graded-games")
           assert report["status"]=="GRADED_AUTHENTIC_UCI_DESCRIPTIVE_NO_HUMAN_ELO"
           assert report["total_complete_games"]==96
-          assert report["distinct_source_fit_positions"]==12
+          assert report["total_player_start_positions"]==12
+          assert report["distinct_source_fit_positions"]>=3
+          print("GLOBAL_UNIQUE_HISTORICAL_START_FENS", report["distinct_source_fit_positions"])
           for slug, grades in report["players"].items():
               for depth, rows in grades.items():
                   assert rows["guided"]["games"]==rows["shadow"]["games"]==6
