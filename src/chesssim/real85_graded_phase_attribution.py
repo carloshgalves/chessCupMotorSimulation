@@ -17,7 +17,7 @@ import chess
 import chess.engine
 import chess.pgn
 
-from .catalog import Player, load_roster
+from .catalog import load_roster
 from .matches import _open_engine, file_hash
 from .real85_graded_openings import SCHEMA as GAMES_SCHEMA, validate
 from .real85_playable import _material_endgame
