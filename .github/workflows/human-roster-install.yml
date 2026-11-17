@@ -1,0 +1,72 @@
+name: Human roster 64 real UCI installation
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/human_roster.py'
+      - 'src/chesssim/rodent.py'
+      - 'src/chesssim/cli.py'
+      - 'tests/test_human_roster_install.py'
+      - '.github/workflows/human-roster-install.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: human-roster-install-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: |
+          python -m pip install -e '.[dev]'
+          python -m pytest -q tests/test_human_roster_install.py tests/test_human_game.py tests/test_human_ui.py
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Compile pristine Rodent and simulate only missing Simple in isolated installation
+        run: |
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          rm "$RUNNER_TEMP/rodent/personalities/simple.txt"
+      - name: Preview, explicitly install, and probe all 22 unique aliases
+        run: |
+          root="$RUNNER_TEMP/rodent"
+          python -m chesssim setup --rodent "$root" --human-roster
+          test ! -e "$root/personalities/simple.txt"
+          python -m chesssim setup --rodent "$root" --human-roster --apply
+          cmp "$root/personalities/simple.txt" rodent-source/personalities/simple.txt
+          python -m chesssim check-human --rodent "$root" --probe > "$RUNNER_TEMP/human-roster.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = json.loads((Path(os.environ["RUNNER_TEMP"])/"human-roster.json").read_text())
+          assert report["status"] == "UCI_READY"
+          assert report["available"] == report["uci_verified"] == 64
+          assert report["distinct_uci_probes"] == 22
+          assert sum(p["profile_source"] == "shared_simple" for p in report["players"]) == 43
+          assert all(p["uci"] == "PASS" for p in report["players"])
+          assert not report["historically_validated"]
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: human-roster-install-audit
+          path: ${{ runner.temp }}/human-roster.json
+          retention-days: 14
+          if-no-files-found: warn

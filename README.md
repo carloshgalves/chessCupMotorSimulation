@@ -18,6 +18,18 @@ A interface e os PGNs identificam a origem do perfil; perfis faltantes não
 são falsamente anunciados. Copas, Ligas, duelos e Elo competitivo permanecem
 inalterados. A homologação física no Debian/Chrome continua separada.
 
+Para instalar/verificar esse elenco numa instalação existente do Rodent IV:
+
+```bash
+.venv/bin/python -m chesssim setup --rodent "$RODENT_IV_HOME" --human-roster
+.venv/bin/python -m chesssim setup --rodent "$RODENT_IV_HOME" --human-roster --apply
+.venv/bin/python -m chesssim check-human --rodent "$RODENT_IV_HOME" --probe
+```
+
+A prévia não modifica arquivos. O apply preserva perfis já existentes e baixa
+apenas o que faltar da origem fixada; o probe exige 22 aliases UCI distintos
+com um lance legal por alias. Veja [o guia Linux/WSL](docs/SETUP_LINUX_WSL.md).
+
 ## Requisitos
 
 - Python 3.11 ou superior e ambiente virtual.

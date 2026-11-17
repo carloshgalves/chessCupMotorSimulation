@@ -65,7 +65,8 @@ def _save_new(path: Path, content: bytes) -> None:
         stream.write(content)
 
 
-def setup_official(root: Path, *, apply: bool = False, books: bool = False) -> dict:
+def setup_official(root: Path, *, apply: bool = False, books: bool = False,
+                   human_roster: bool = False) -> dict:
     """Instala somente perfis ausentes, preserva arquivos atuais e faz backup do ini.
 
     Pré-baixa e valida os novos arquivos antes da primeira mutação.
@@ -94,13 +95,29 @@ def setup_official(root: Path, *, apply: bool = False, books: bool = False) -> d
         if not path.is_file():
             missing.append("personalities/" + name)
 
+    # Optional human-only shared profile; never materialize 43 copies.
+    if human_roster:
+        simple = root / "personalities" / "simple.txt"
+        if aliases.get("Simple") not in (None, "simple.txt"):
+            raise RegistryError("Alias Simple divergente; intervenção manual necessária")
+        if simple.is_symlink() or not simple.resolve().is_relative_to(
+                (root / "personalities").resolve()):
+            raise RegistryError("Perfil Simple redirecionado")
+        if simple.exists() and not simple.is_file():
+            raise RegistryError("Caminho Simple não é um arquivo regular")
+        if "Simple" not in aliases:
+            additional["Simple"] = "simple.txt"
+        if not simple.is_file():
+            missing.append("personalities/simple.txt")
+
     # A implementação do Rodent reserva um alias para '---' e suporta no máximo 100.
     if len(aliases) + len(additional) + 1 > 100:
         raise RegistryError("Limite de aliases UCI excedido; use conjuntos separados")
 
     report = {"source_commit": OFFICIAL_COMMIT, "missing_profiles": missing, "new_aliases": additional,
               "downloads": [], "books_missing": [], "book_source_aliases": {},
-              "books_preview_complete": apply or not missing}
+              "books_preview_complete": apply or not missing,
+              "human_roster_requested": human_roster}
     # Inspeção de livros dos perfis existentes e dos futuros perfis novos.
     books_re = re.compile(r"(?m)^setoption name (?:GuideBookFile|MainBookFile) value ((?:players|hist)/[\w.-]+\.bin)\s*$")
     download_payload: dict[str, bytes] = {}
