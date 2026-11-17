@@ -21,6 +21,11 @@ def _seed(tmp_path, seed: int):
     root.mkdir()
     games, pgns = [], []
     actors = ["fischer","tal","karpov","kasparov"]
+    # Two real, legal terminal sequences only as synthetic unit-test fixtures.
+    # Keeping result equality by color does NOT imply identical trajectories.
+    sequence = (("f2f3","e7e5","g2g4","d8h4") if seed==2033 else
+                ("e2e4","e7e5","d1h5","b8c6","f1c4","g8f6","h5f7"))
+    expected_result = "0-1" if seed==2033 else "1-0"
     real_names = {p.slug:p.name for p in load_roster()}
     for slug in actors:
         for arm in ("shadow","guided"):
@@ -32,7 +37,7 @@ def _seed(tmp_path, seed: int):
                 focal_profile = str(code)*64
                 control_profile = "f"*64
                 game.headers.update({
-                    "Result":"0-1","Termination":"CHECKMATE",
+                    "Result":expected_result,"Termination":"CHECKMATE",
                     "NeuralMode":arm,"EngineSHA256":"a"*64,
                     "IndependentStockfishSHA256":"b"*64,
                     "OpeningSeed":str(seed),
@@ -46,7 +51,7 @@ def _seed(tmp_path, seed: int):
                 })
                 node=game
                 trace=[]
-                for ply,text in enumerate(("f2f3","e7e5","g2g4","d8h4"),1):
+                for ply,text in enumerate(sequence,1):
                     move=chess.Move.from_uci(text)
                     assert move in board.legal_moves
                     side = slug if board.turn == (color=="white") else "control-simple"
@@ -60,12 +65,12 @@ def _seed(tmp_path, seed: int):
                     })
                     node=node.add_variation(move)
                     board.push(move)
-                assert board.outcome(claim_draw=True).result()=="0-1"
+                assert board.outcome(claim_draw=True).result()==expected_result
                 pgns.append(str(game))
                 games.append({
                     "player":slug,"arm":arm,"color":color,"opening_seed":seed,
-                    "status":"COMPLETED","result":"0-1",
-                    "termination":"CHECKMATE","plies":4,
+                    "status":"COMPLETED","result":expected_result,
+                    "termination":"CHECKMATE","plies":len(sequence),
                     "policy_trace":trace,"opening_trace":[],
                     "focal_historical_book_plies":0,"simple_book_plies":0,
                     "actual_overrides":0,
@@ -109,8 +114,8 @@ def test_seeded_crossover_exact_game_replay_and_paired_accounting(tmp_path):
         assert row["complete_games"]==8
         assert row["guided_points"]==row["shadow_points"]==2
         assert row["paired_mean_difference_per_game"]==0
-        assert row["unique_guided_game_trajectories"]==1
-        assert row["unique_guided_first12_uci_openings"]==1
+        assert row["unique_guided_game_trajectories"]==2
+        assert row["unique_guided_first12_uci_openings"]==2
         assert row["confidence_interval"] is None
         assert row["strength_inference"]=="INSUFFICIENT_INDEPENDENT_SEED_CLUSTERS_FOR_ELO_OR_CI"
         assert len(row["seed_clusters"])==2
