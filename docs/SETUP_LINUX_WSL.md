@@ -63,6 +63,36 @@ Para obter **somente os perfis**, use --apply-profiles sem --with-books. Os livr
 
 Esta etapa acessa a fonte upstream fixada no programa e não instala ou atualiza o executável Rodent. A alteração só ocorre mediante a opção --apply-profiles. A execução sem essa opção não modifica perfis ou livros. Recursos externos permanecem sujeitos às suas próprias licenças.
 
+## Elenco completo para Jogar (64 adversários)
+
+Atualize o checkout sem descartar alterações locais e indique a instalação existente
+do Rodent IV. Não é necessário instalar 43 arquivos individuais, nem baixar livros.
+
+~~~bash
+git pull --ff-only
+.venv/bin/python -m chesssim setup --human-roster --rodent "$RODENT_IV_HOME"
+.venv/bin/python -m chesssim setup --human-roster --apply --rodent "$RODENT_IV_HOME"
+.venv/bin/python -m chesssim check-human --probe --rodent "$RODENT_IV_HOME"
+~~~
+
+O primeiro comando de setup é apenas prévia. O segundo baixa o Simple original
+se ausente e registra o alias em conjunto ativo 0, além dos 21 perfis individuais,
+sem sobrescrever arquivos existentes. Divergência de alias exige revisão manual.
+O terceiro testa 22 aliases UCI distintos e retorna código 2 se não houver
+64/64 adversários verificáveis. Sem --probe, verifica somente arquivos/registro.
+A origem compartilhada de 43 nomes não representa calibração histórica.
+
+Após encerrar a Arena anterior (se houver), inicie novamente com o **mesmo**
+diretório de sessões que usava antes:
+
+~~~bash
+.venv/bin/python -m chesssim arena --rodent "$RODENT_IV_HOME" --out runs/arena
+~~~
+
+Use runs/arena somente se for o workspace já utilizado; não substitua nem apague
+partidas existentes. Abra o endereço local informado pelo terminal e escolha Jogar.
+A auditoria UCI não substitui a homologação visual em Chrome (#83).
+
 ## 3. Duelo curto real e verificação do PGN
 
 Com motor e perfis instalados:
