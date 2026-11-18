@@ -149,6 +149,8 @@ def play_case(case,root,engine,opponent,guard,book):
     book_trace=[]
     depth_reached=Counter()
     depth_missing=Counter()
+    nodes_missing=Counter()
+    nodes_exceeded=Counter()
     for _ in range(MAX_CONTINUATION_PLIES):
         if board.is_game_over(claim_draw=True):
             break
@@ -158,6 +160,9 @@ def play_case(case,root,engine,opponent,guard,book):
                               FOCAL_DEPTH if focal else case["opponent_depth"])
         depth_reached[role]+=int(telemetry["reached_requested"])
         depth_missing[role]+=int(telemetry["reported_depth"] is None)
+        nodes=telemetry["reported_nodes"]
+        nodes_missing[role]+=int(nodes is None)
+        nodes_exceeded[role]+=int(nodes is not None and nodes>NODE_CAP)
         move=base
         if focal and case["mode"]=="book" and board.ply()<40:
             move,reason=guard_book(board,base,book,guard)
@@ -172,7 +177,8 @@ def play_case(case,root,engine,opponent,guard,book):
             "termination":outcome.termination.name if outcome else "PLY_CAP_INCOMPLETE",
             "status":"COMPLETE" if outcome else "INCOMPLETE",
             "interventions":dict(interventions),"book_trace":book_trace,"depth_reached":dict(depth_reached),
-            "depth_missing":dict(depth_missing)}
+            "depth_missing":dict(depth_missing),"nodes_missing":dict(nodes_missing),
+            "nodes_exceeded":dict(nodes_exceeded)}
 
 
 def validate_case(record,case,root):
@@ -185,7 +191,10 @@ def validate_case(record,case,root):
     turns=Counter()
     focal_white=case["color"]=="white"
     focal_book_turns=0
+    if not isinstance(record["book_trace"],list):
+        raise ValueError("Invalid opening trace")
     trace=iter(record["book_trace"])
+    sentinel=object()
     observed=Counter()
     for index,encoded in enumerate(moves):
         if board.is_game_over(claim_draw=True):
@@ -222,14 +231,21 @@ def validate_case(record,case,root):
     events=record["interventions"]
     if (not set(events)<=allowed or any(type(v) is not int or v<0 for v in events.values()) or
             sum(events.values())!=focal_book_turns or dict(observed)!=events or
-            next(trace,None) is not None):
+            next(trace,sentinel) is not sentinel):
         raise ValueError("Invalid book intervention coverage")
-    if any(set(record[key])-set(turns) for key in ("depth_reached","depth_missing")):
+    for role,n in turns.items():
+        a=record["nodes_missing"].get(role,0)
+        b=record["nodes_exceeded"].get(role,0)
+        if type(a) is not int or type(b) is not int or min(a,b)<0 or a+b>n:
+            raise ValueError("Invalid node telemetry")
+    if any(set(record[key])-set(turns) for key in ("depth_reached","depth_missing","nodes_missing","nodes_exceeded")):
         raise ValueError("Unexpected telemetry role")
     return record
 
 
 def atomic_json(path,doc):
+    if path.exists() or path.is_symlink():
+        raise ValueError("Refusing to overwrite evidence")
     tmp=path.with_suffix(".tmp")
     if tmp.exists() or tmp.is_symlink():
         raise ValueError("Stale temporary output; inspect before resuming")
@@ -238,9 +254,15 @@ def atomic_json(path,doc):
         f.write("\n")
         f.flush()
         os.fsync(f.fileno())
-    if path.exists() or path.is_symlink():
-        raise ValueError("Refusing to overwrite evidence")
-    os.replace(tmp,path)
+    try:
+        os.link(tmp,path)  # atomic creation, refuses overwrite even under race
+    finally:
+        tmp.unlink()
+    directory=os.open(path.parent,os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
 
 
 def load_json(path):
@@ -340,11 +362,18 @@ def aggregate(shards, count, archive_dir=None):
     if seen!={c["id"] for c in cases(panel)}:
         raise ValueError("Incomplete crossover")
     scores=defaultdict(Counter)
+    telemetry=defaultdict(Counter)
     matched=defaultdict(dict)
     for rec in records:
         c=rec["case"]
         cell=scores[f'{c["arm"]}|{c["opponent_depth"]}|{c["color"]}|{c["mode"]}']
         cell["games"]+=1
+        tele=telemetry[f\'{c["arm"]}|{c["opponent_depth"]}|{c["color"]}|{c["mode"]}\']
+        for kind in ("depth_reached","depth_missing","nodes_missing","nodes_exceeded"):
+            for role,n in rec[kind].items():
+                tele[f"{role}:{kind}"]+=n
+        for reason,n in rec["interventions"].items():
+            tele[f"book:{reason}"]+=n
         if rec["status"]!="COMPLETE":
             cell["incomplete"]+=1
             continue
@@ -368,6 +397,7 @@ def aggregate(shards, count, archive_dir=None):
     return {**metadata,"hashes":hashes,"book_sha256":book_hash,
             "status":"ALL_CONTINUATIONS_COMPLETE" if not incomplete else "INCOMPLETE_DO_NOT_SCORE",
             "observed_cases":len(records),"incomplete":incomplete,
+            "search_and_book_telemetry":dict(telemetry),
             "scores":dict(scores) if not incomplete else None,
             "paired_book_minus_original":paired if not incomplete else None,
             "note":"Raw WDL descriptive; no human Elo or calibration promotion."}
