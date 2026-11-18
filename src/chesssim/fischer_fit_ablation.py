@@ -1,4 +1,4 @@
-"""Matched Fischer-only book/residual ablation on the fixed deep-calibration panel.
+"""Matched Fischer-only book/residual ablation on every development game (FIT/TUNE).
 
 Experimental position choices, not an Arena policy, Elo or promotion test.
 The reference and intervention guard run in separate Stockfish processes.
@@ -17,9 +17,10 @@ import chess.engine
 
 from .catalog import find_player
 from .fischer_deep_calibration import (
-    REFERENCE_DEPTH, NODE_CAP, COMPETENCIES, choose, select_panel, reference_choices, tags,
+    REFERENCE_DEPTH, NODE_CAP, COMPETENCIES, choose, reference_choices, tags,
 )
-from .fischer_position_calibration import cohort, sample, summarize, PHASES
+from .fischer_position_calibration import SALT as POSITION_SALT, summarize, PHASES
+from .fischer_baseline import BANDS, period, phase
 from .matches import _open_engine, file_hash
 from .opening_books import SCHEMA as BOOK_SCHEMA, position_token, select_book_move
 from .real85_graded_phase_attribution import _score
@@ -30,12 +31,56 @@ from .real_training_cohorts import (
 )
 from .registry import registered_aliases
 
-SCHEMA = "chesssim-fischer-fit-ablation-v1"
+SCHEMA = "chesssim-fischer-fit-ablation-v2"
+ARMS = ("fit", "tune")
 DEPTHS = (12,16)
 MODES = ("base","book","residual","both")
 CANDIDATES = tuple(f"d{d}_{mode}" for d in DEPTHS for mode in MODES)
 BOOK_SEED = 2033
 CP_BUDGET = 25
+
+
+def select_all_development(rows):
+    """Every accepted FIT/TUNE trajectory, no cap by year, number or order."""
+    chosen = [r for r in rows if neural_arm(r["mainline_sha256"]) in ARMS]
+    identities = [r["mainline_sha256"] for r in chosen]
+    if len(identities) != len(set(identities)):
+        raise ValueError("Duplicate development trajectory")
+    if {neural_arm(s) for s in identities} != set(ARMS):
+        raise ValueError("Both development arms are required")
+    return chosen
+
+
+def sample_game(game, row):
+    """Replay ALL focal decisions; audit one fixed nonforced root per phase.
+
+    Preserve the #193/#195 position salt for direct within-game comparisons.
+    Games with no nonforced decision are counted but not engine-scored.
+    """
+    digest = row["mainline_sha256"]
+    if neural_arm(digest) not in ARMS:
+        raise ValueError("Reserved source trajectory")
+    board = game.board()
+    if not board.is_valid() or row["color"] not in ("white", "black"):
+        raise ValueError("Invalid historical board or focal color")
+    chosen = {}
+    counts = Counter()
+    for move in game.mainline_moves():
+        if move not in board.legal_moves:
+            raise ValueError("Illegal historical move")
+        if board.turn == (row["color"] == "white"):
+            stage = phase(board)
+            counts["focal_decisions"] += 1
+            if board.legal_moves.count() == 1:
+                counts["forced"] += 1
+            else:
+                counts["nonforced"] += 1
+                counts[f"eligible_{stage}"] += 1
+                key = sha256(f"{POSITION_SALT}:{digest}:{board.ply()}".encode()).hexdigest()
+                if stage not in chosen or key < chosen[stage][0]:
+                    chosen[stage] = (key, board.copy(stack=True), move)
+        board.push(move)
+    return [(s,item[1],item[2]) for s,item in sorted(chosen.items())], counts
 
 
 def fit_book(pgn, rows, surname):
@@ -109,7 +154,7 @@ def evaluate(board,human,stage,engine,guard,reference,book,policy):
             decision=policy.select(board,slug="fischer",engine_move=base,
                                    round_number=1,ply=board.ply()+1)
             residual=decision.move
-            residual_reason=decision.event["outcome"]
+            residual_reason=decision.audit["outcome"]
             if residual not in board.legal_moves or ((residual!=base) !=
                     (residual_reason=="EXTERNAL_POLICY_OVERRIDE")):
                 raise ValueError("Residual decision and intervention trace disagree")
@@ -205,8 +250,10 @@ def run(rodent,stockfish,inputs,weights,archive_dir=None):
             cp["fit_shard_sha256"]!=summary["shards"]["fit"]["sha256"]):
         raise ValueError("Model not bound to verified input")
     book=fit_book(pgn,rows,conf["surname"])
-    selected=select_panel(rows)
-    expected={a:sum(cohort(r)==a for r in selected) for a in ("peak_fit","tune")}
+    selected=select_all_development(rows)
+    expected={a:sum(neural_arm(r["mainline_sha256"])==a for r in selected) for a in ARMS}
+    if expected != {"fit":summary["fit_games"],"tune":summary["tune_games"]}:
+        raise ValueError("Development game selection does not cover the verified manifest")
     panel_hash=sha256("\n".join(sorted(r["mainline_sha256"] for r in selected)).encode()).hexdigest()
     files={"rodent":exe,"stockfish":sf,"profile":root/"personalities"/fischer.profile_filename,
            "registry":root/"personalities/basic.ini","input_manifest":manifest_path,
@@ -215,6 +262,8 @@ def run(rodent,stockfish,inputs,weights,archive_dir=None):
            "tune_shard":inputs/summary["shards"]["tune"]["file"]}
     hashes={k:file_hash(v) for k,v in files.items()}
     data=defaultdict(list)
+    coverage={a:Counter() for a in ARMS}
+    period_coverage={a:{band:Counter() for band in BANDS} for a in ARMS}
     seen=set()
     with ExitStack() as stack:
         reference=stack.enter_context(chess.engine.SimpleEngine.popen_uci(str(sf),timeout=180.0))
@@ -225,18 +274,39 @@ def run(rodent,stockfish,inputs,weights,archive_dir=None):
         policy=NeuralGuardedPolicy("fischer",cp,FreshAnalysis(guard),depth=10,confirmation_depth=14,
                                    cp_budget=CP_BUDGET,min_ply=41)
         for game,row in _iter_verified_games(pgn,selected,conf["surname"]):
-            arm=cohort(row)
             digest=row["mainline_sha256"]
+            arm=neural_arm(digest)
+            band=period(row["date"])
             if digest in seen or arm not in expected:
                 raise ValueError("Duplicate or excluded position game")
             seen.add(digest)
-            for stage,board,human in sample(game,row):
+            observations,counts=sample_game(game,row)
+            for counter in (coverage[arm],period_coverage[arm][band]):
+                counter.update(counts)
+                counter["games_replayed"] += 1
+                counter["games_with_nonforced_choice"] += int(bool(observations))
+                counter["games_without_nonforced_choice"] += int(not observations)
+                counter["positions_scored"] += len(observations)
+            for stage,board,human in observations:
                 labels,values,outcomes,searches=evaluate(board,human,stage,engine,guard,reference,book,policy)
-                data[arm].append({"game":digest,"fen":board.fen(),"phase":stage,
+                data[arm].append({"game":digest,"fen":board.fen(),"phase":stage,"period":band,
                                   "tags":labels,"scores":values,"outcomes":outcomes,"searches":searches})
+            if len(seen)%25==0 or len(seen)==len(selected):
+                print(f"FISCHER_PROGRESS {len(seen)}/{len(selected)} games; "
+                      f"{sum(len(x) for x in data.values())} scored positions",flush=True)
     if seen!={r["mainline_sha256"] for r in selected} or hashes!={k:file_hash(v) for k,v in files.items()}:
         raise ValueError("Incomplete panel or changed files")
+    for a in ARMS:
+        cov=coverage[a]
+        if (cov["games_replayed"] != expected[a] or
+                cov["focal_decisions"] != summary[f"{a}_focal_decisions_all_phases"] or
+                cov["forced"] + cov["nonforced"] != cov["focal_decisions"] or
+                cov["positions_scored"] != len(data[a]) or
+                cov["games_with_nonforced_choice"] != len({r["game"] for r in data[a]}) or
+                cov["games_with_nonforced_choice"]+cov["games_without_nonforced_choice"] != expected[a]):
+            raise ValueError("Incomplete game/decision audit coverage")
     panels={a:{"all":cell(data[a]),"by_phase":{p:cell([r for r in data[a] if r["phase"]==p]) for p in PHASES},
+               "by_period":{band:cell([r for r in data[a] if r["period"]==band]) for band in BANDS},
                "competency_proxies":{c:cell([r for r in data[a] if c in r["tags"]]) for c in COMPETENCIES}}
             for a in expected}
     if any(not q["all"]["positions"] for q in panels.values()):
@@ -248,11 +318,15 @@ def run(rodent,stockfish,inputs,weights,archive_dir=None):
             "book_sha256":sha256(json.dumps(book,sort_keys=True).encode()).hexdigest(),
             "book_fit_games":book["source"]["accepted_games"],
             "book_positions":sum(len(v) for v in book["positions"].values()),
-            "expected_games":expected,"depth_caps":list(DEPTHS),"node_cap":NODE_CAP,
+            "expected_games":expected,"coverage":coverage,"coverage_by_period":period_coverage,
+            "all_source_games":len(rows),"excluded_test_games":len(rows)-len(selected),
+            "position_sampling":"one deterministic nonforced choice per available phase per EVERY development game",
+            "depth_caps":list(DEPTHS),"node_cap":NODE_CAP,
             "reference_depth":REFERENCE_DEPTH,"guard_depth":10,"confirmation_depth":14,
             "cp_budget":CP_BUDGET,"outer_test_decisions_evaluated":0,"historically_validated":False,
             "intrinsic_elo":None,"competency_values":dict.fromkeys(COMPETENCIES),"panels":panels,
-            "limitations":["Same previously inspected diagnostic FIT/TUNE panel, not validation.",
+            "limitations":["All FIT/TUNE games, one nonforced root per phase; not every focal decision engine-scored.",
+                           "FIT is in-sample; TUNE previously inspected; reserved TEST excluded from tuning.",
                            "Intervention guard is shallower than fixed d18 audit; violations disclosed.",
                            "Book and residual disjoint by ply; book min count 2, seed 2033.",
                            "Context labels are overlapping proxies, not calibrated competency scores.",
