@@ -24,6 +24,9 @@ def test_career_bands_and_material_not_ply():
     assert [baseline.period(y) for y in (1957,1958,1962,1963,1969,1970,1972,1973,1991,1992,None)] == [
         "through_1957","1958_1962","1958_1962","1963_1969","1963_1969",
         "1970_1972","1970_1972","1973_1991","1973_1991","1992_plus","unknown"]
+    assert baseline.period("1971") == "1970_1972"
+    with pytest.raises(ValueError,match="Invalid known"):
+        baseline.period("197?")
     assert baseline.phase(chess.Board()) == "opening"
     assert baseline.phase(chess.Board("8/8/4k3/8/8/4K3/4P3/8 w - - 0 1")) == "endgame"
 
@@ -81,7 +84,7 @@ def test_census_counts_global_arms_without_rating_inference():
         if len(ids)==3:
             break
     assert set(ids)=={"fit","tune","excluded_test"}
-    rows=[{"mainline_sha256":d,"date":1971,"color":"black",
+    rows=[{"mainline_sha256":d,"date":"1971","color":"black",
            "focal_elo":"","time_control":"?"} for d in ids.values()]
     inv=baseline.inventory(rows)
     assert inv["distinct_games"]==3
