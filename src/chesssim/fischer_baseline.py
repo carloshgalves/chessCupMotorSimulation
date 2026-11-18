@@ -89,9 +89,11 @@ def fit_observations(game, row: dict, style: dict, votes: dict | None = None) ->
             hist["castles"] += int(board.is_castling(move))
             hist["promotions"] += int(move.promotion is not None)
             hist["in_check"] += int(board.is_check())
-            hist["legal_moves_total"] += board.legal_moves.count()
+            legal_count = board.legal_moves.count()
+            hist["legal_moves_total"] += legal_count
+            hist["forced_only_move"] += int(legal_count == 1)
             key = sha256(f"{SALT}:{digest}:{board.ply()}".encode()).hexdigest()
-            if stage not in chosen or key < chosen[stage][0]:
+            if legal_count > 1 and (stage not in chosen or key < chosen[stage][0]):
                 chosen[stage] = (key, board.copy(stack=True), move)
         board.push(move)
     return [(stage, item[1], item[2]) for stage, item in sorted(chosen.items())]
@@ -186,8 +188,10 @@ def run(stockfish: Path, *, archive_dir: Path | None = None, depth: int = 12,
         "source_pgn_sha256":sha256(pgn).hexdigest(),"scan":scan,"inventory":census,
         "fit_games_audited":len(observed_games),"sample_protocol":SALT,
         "analysis":{"engine_id":engine_id,"engine_sha256":executable_hash,"depth":depth,
-                    "threads":1,"hash_mb":64,"sampling":"one min-hash focal position per game per phase",
+                    "threads":1,"hash_mb":64,"sampling":"one min-hash focal position with >1 legal move per game per phase",
                     "overall":summarize(total),
+                    "nonopening":summarize([r for (b,s),group in metrics.items()
+                                            if s!="opening" for r in group]),
                     "by_phase":{stage:summarize([r for (b,s),group in metrics.items()
                                                  if s==stage for r in group]) for stage in PHASES},
                     "by_period_phase":{f"{b}|{s}":summarize(metrics[(b,s)])
@@ -207,6 +211,7 @@ def run(stockfish: Path, *, archive_dir: Path | None = None, depth: int = 12,
             "Material endgame predicate and opening cutoff are proxies; tactical/positional/dynamic competence not yet isolated.",
             "Signed depth-limited forced-root gaps can be negative; mates separate; no CP-to-Elo conversion.",
             "Correlated positions and historical opening recall limit cross-era comparison.",
+            "Single-legal-move decisions count in style and book but not decision-quality sampling.",
             "No raw PGN, move sequence or FEN is included in the report.",
         ],
     }
