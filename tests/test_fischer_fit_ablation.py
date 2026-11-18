@@ -51,3 +51,18 @@ def test_mutually_exclusive_interventions_and_deep_audit(monkeypatch):
     assert v["d16_residual"]["changed"] and v["d16_both"]["changed"]
     assert not v["d16_book"]["changed"]
     assert e["16"]["book"]=="outside_book"
+
+
+def test_guard_analyses_use_fresh_game_identity():
+    received=[]
+    class Engine:
+        def analyse(self,board,limit,**kwargs):
+            received.append(kwargs)
+            return {}
+    engine=ab.FreshAnalysis(Engine())
+    board=chess.Board()
+    limit=chess.engine.Limit(depth=10)
+    engine.analyse(board,limit,multipv=4)
+    engine.analyse(board,limit,multipv=4)
+    assert received[0]["game"] is not received[1]["game"]
+    assert received[0]["multipv"]==received[1]["multipv"]==4
