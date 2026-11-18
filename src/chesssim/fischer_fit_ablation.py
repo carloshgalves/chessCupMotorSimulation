@@ -62,6 +62,17 @@ def fit_book(pgn, rows, surname):
             "positions":{side:dict(v) for side,v in votes.items()}}
 
 
+class FreshAnalysis:
+    """Avoid search-order effects from the guard's previous root analyses."""
+    def __init__(self, engine):
+        self.engine=engine
+
+    def analyse(self, board, limit, **kwargs):
+        # Includes initial MultiPV and forced-root confirmation.
+        kwargs["game"]=object()
+        return self.engine.analyse(board,limit,**kwargs)
+
+
 def guard_book(board, base, book, guard):
     proposed=select_book_move(book,board,seed=BOOK_SEED,game_number=1,min_count=2)
     if proposed is None:
@@ -211,7 +222,7 @@ def run(rodent,stockfish,inputs,weights,archive_dir=None):
         for sf_engine in (reference,guard):
             sf_engine.configure({"Threads":1,"Hash":64})
         engine=stack.enter_context(_open_engine(root,exe,fischer,book=False))
-        policy=NeuralGuardedPolicy("fischer",cp,guard,depth=10,confirmation_depth=14,
+        policy=NeuralGuardedPolicy("fischer",cp,FreshAnalysis(guard),depth=10,confirmation_depth=14,
                                    cp_budget=CP_BUDGET,min_ply=41)
         for game,row in _iter_verified_games(pgn,selected,conf["surname"]):
             arm=cohort(row)
