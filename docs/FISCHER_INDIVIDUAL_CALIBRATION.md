@@ -57,12 +57,14 @@ todos os jogos clássicos: tags de controle de tempo podem estar ausentes.
 Reusar a divisão global real85 por trajetória, aproximadamente
 82,45% FIT/2,55% TUNE/15% TEST. Computar todos os lances FIT para
 contagens comportamentais e repertório até ply40, independente por cor.
-Para Stockfish, selecionar uma posição min-hash por jogo e por fase
+Para Stockfish, selecionar uma posição min-hash com mais de um lance legal por jogo e por fase
 (prioridade material <=16 pontos não peões para final, senão ply<40
 abertura, senão meio-jogo). A amostra mede qualidade condicionada ao
 contexto histórico, não competência pura. Medir acerto top1, diferença
 assinada em CP na mesma posição raiz, distinguir mates, manter
-denominadores e FENs únicas. Stockfish d12 (Threads=1, Hash=64),
+denominadores e FENs únicas. Lances forçados contam no
+corpus/repertório, não entram na amostra de qualidade; publicar também
+agregado não-abertura, sem confundi-lo com Elo. Stockfish d12 (Threads=1, Hash=64),
 registrar versão e hash do executável; não comparar coortes com hash
 diferente. Sensibilidade d16 no futuro. Não há conversão CP-Elo ainda:
 o próximo passo é calibrar com grupos de rating e ritmo conhecidos,
