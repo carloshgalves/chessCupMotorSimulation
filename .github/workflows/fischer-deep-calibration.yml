@@ -1,0 +1,90 @@
+name: Fischer deep search and competency diagnostics
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/fischer_deep_calibration.py'
+      - 'tests/test_fischer_deep_calibration.py'
+      - 'src/chesssim/fischer_position_calibration.py'
+      - '.github/workflows/fischer-deep-calibration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fischer-deep-calibration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  paired-real:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Verify paired scoring and partitions
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pytest -q tests/test_fischer_deep_calibration.py tests/test_fischer_position_calibration.py tests/test_fischer_baseline.py
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Compile pinned Rodent and install independent Stockfish
+        run: |
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          sudo apt-get update -qq
+          sudo apt-get install -y stockfish
+      - name: Compare actual human decisions and six Rodent policies
+        run: |
+          python -m chesssim.fischer_deep_calibration --fetch \
+            --rodent-root "$RUNNER_TEMP/rodent" --stockfish /usr/games/stockfish \
+            --out "$RUNNER_TEMP/fischer-deep.json"
+      - name: Reconcile every matched denominator and report per phase
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from chesssim.fischer_deep_calibration import CANDIDATES, COMPETENCIES, NODE_CAP
+          report=json.loads((Path(os.environ["RUNNER_TEMP"])/"fischer-deep.json").read_text())
+          assert report["status"]=="DEEP_BUDGET_DIAGNOSTIC_NOT_COMPETENCY_CALIBRATION"
+          assert report["outer_test_decisions_evaluated"]==0
+          assert report["expected_games"]=={"peak_fit":24,"tune":23}
+          assert report["reference_depth"]==18 and report["book_enabled"] is False
+          assert report["candidate_depth_caps"]==[8,12,16] and report["candidate_node_cap"]==NODE_CAP
+          assert report["historically_validated"] is False and report["intrinsic_elo"] is None
+          assert report["competency_values"]==dict.fromkeys(COMPETENCIES)
+          for arm,panel in report["panels"].items():
+              total=panel["all"]
+              assert 0<total["games"]<=report["expected_games"][arm]
+              assert total["games"]<=total["positions"]<=3*report["expected_games"][arm]
+              assert sum(p["positions"] for p in panel["by_phase"].values())==total["positions"]
+              assert set(panel["competency_proxies"])==set(COMPETENCIES)
+              for cell in [total,*panel["by_phase"].values(),*panel["competency_proxies"].values()]:
+                  assert set(cell["policies"])=={"human",*CANDIDATES}
+                  assert set(cell["search"])==set(CANDIDATES)
+                  for label,stats in cell["policies"].items():
+                      assert stats["decisions"]==cell["positions"]
+                      assert stats["nonmate_count"]+stats["mate_sensitive_count"]==cell["positions"]
+                  for label,stats in cell["search"].items():
+                      assert stats["searches"]==cell["positions"]
+                      assert stats["reached_requested"]+stats["below_requested"]+stats["depth_missing"]==cell["positions"]
+              print("FISCHER_DEEP",arm,json.dumps(total,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fischer-deep-competency-aggregates
+          path: ${{ runner.temp }}/fischer-deep.json
+          retention-days: 14
+          if-no-files-found: warn
