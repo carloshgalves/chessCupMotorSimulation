@@ -35,6 +35,11 @@ def test_depth_cap_is_not_depth_attainment():
     stats=cal.telemetry_summary([row])
     assert stats["fischer_d16"]["below_requested"]==1
     assert stats["fischer_d16"]["reached_requested"]==0
+    assert stats["fischer_d16"]["node_cap_exceeded"]==0
+    assert stats["fischer_d16"]["median_elapsed_seconds"]>=0
+    exceeded={**meta,"reported_nodes":cal.NODE_CAP+1}
+    other={"telemetry":{label:exceeded for label in cal.CANDIDATES}}
+    assert cal.telemetry_summary([other])["fischer_d16"]["node_cap_exceeded"]==1
     assert cal.telemetry_summary([])["fischer_d16"]["median_reported_depth"] is None
 
 
