@@ -33,7 +33,7 @@ def test_capped_continuation_not_scored_and_trace_verified(monkeypatch):
     case=next(c for c in fg.cases([opening]) if c["color"]=="white" and c["mode"]=="book")
     monkeypatch.setattr(fg,"MAX_CONTINUATION_PLIES",1)
     monkeypatch.setattr(fg,"choose",lambda engine,board,depth:
-                        (board.parse_san("Bb3"),{"reached_requested":True,"reported_depth":depth}))
+                        (board.parse_san("Bb3"),{"reached_requested":True,"reported_depth":depth,"reported_nodes":100}))
     monkeypatch.setattr(fg,"guard_book",lambda board,*args:(board.parse_san("c3"),"book_override"))
     result=fg.play_case(case,opening,None,None,None,{})
     assert result["status"]=="INCOMPLETE" and result["result"]=="*"
@@ -53,3 +53,11 @@ def test_atomic_checkpoint_never_overwrites(tmp_path):
     with pytest.raises(ValueError,match="overwrite"):
         fg.atomic_json(path,{"value":2})
     assert fg.load_json(path)=={"value":1}
+
+
+def test_no_clobber_leaves_no_stale_temporary(tmp_path):
+    path=tmp_path/"case.json"
+    fg.atomic_json(path,{"value":1})
+    with pytest.raises(ValueError,match="overwrite"):
+        fg.atomic_json(path,{"value":2})
+    assert set(p.name for p in tmp_path.iterdir())=={"case.json"}
