@@ -101,6 +101,16 @@ def shard_cases(panel,index,count):
     return list(cases([root for i,root in enumerate(ordered) if i%count==index]))
 
 
+def protocol_hashes():
+    """Bind resume and aggregation to the actual implementation, not branch labels."""
+    directory=Path(__file__).resolve().parent
+    names=("fischer_full_games.py","fischer_fit_ablation.py","fischer_deep_calibration.py",
+           "fischer_position_calibration.py","fischer_baseline.py","real85_graded_phase_attribution.py",
+           "real85_neural_stream.py","real_training_cohorts.py","opening_books.py",
+           "matches.py","registry.py","catalog.py","game_diversity.py")
+    return {name:file_hash(directory/name) for name in names}
+
+
 def load_source(archive_dir=None):
     conf=_player_configuration(["fischer"],None,None)["fischer"]
     _,pgn,origin=_source_bytes(conf["source"],archive_dir)
@@ -108,6 +118,8 @@ def load_source(archive_dir=None):
     panel,excluded=source_panel(pgn,rows,conf["surname"])
     metadata={"schema":SCHEMA,"source":origin,"source_snapshot":MIRROR_COMMIT if archive_dir is None else None,
               "source_pgn_sha256":sha256(pgn).hexdigest(),"panel_sha256":digest(panel),
+              "protocol_code_hashes":protocol_hashes(),"chess_library_version":chess.__version__,
+              "guarded_book":{"max_plies":40,"seed":2033,"min_count":2,"guard_depth":14,"cp_budget":25},
               "all_source_games":len(rows),"development_games":dict(Counter(
                   neural_arm(r["mainline_sha256"]) for r in rows if neural_arm(r["mainline_sha256"]) in ("fit","tune"))),
               "excluded_test_games":sum(neural_arm(r["mainline_sha256"])=="excluded_test" for r in rows),
@@ -323,8 +335,9 @@ def run_shard(rodent,stockfish,out,index,count,archive_dir=None):
                 result["manifest_sha256"]=binding
                 atomic_json(path,validate_case(result,case,roots[case["root"]]))
             print(f"FISCHER_SHARD {index}/{count} {i}/{len(planned)}",flush=True)
-    if hashes!={k:file_hash(v) for k,v in files.items()}:
-        raise ValueError("Engine or profile changed during run")
+    if (hashes!={k:file_hash(v) for k,v in files.items()} or
+            metadata["protocol_code_hashes"]!=protocol_hashes()):
+        raise ValueError("Engine, profile or protocol changed during run")
     return spec
 
 
