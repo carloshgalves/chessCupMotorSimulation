@@ -24,7 +24,7 @@ concurrency:
 jobs:
   paired-real:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 330
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -75,7 +75,9 @@ jobs:
           manifest=json.loads((root/"fischer-input/manifest.json").read_text())
           training=json.loads((root/"fischer-weights/report.json").read_text())
           assert report["status"]=="FISCHER_ABLATION_DIAGNOSTIC_NOT_PROMOTION"
-          assert report["expected_games"]=={"peak_fit":24,"tune":23}
+          assert report["schema"]=="chesssim-fischer-fit-ablation-v2"
+          assert report["expected_games"]=={"fit":683,"tune":23}
+          assert report["all_source_games"]==827 and report["excluded_test_games"]==121
           assert report["outer_test_decisions_evaluated"]==0
           assert report["historically_validated"] is False and report["intrinsic_elo"] is None
           assert report["competency_values"]==dict.fromkeys(COMPETENCIES)
@@ -83,13 +85,23 @@ jobs:
           assert report["book_positions"]==9305
           assert report["source_pgn_sha256"]==manifest["players"]["fischer"]["source_pgn_sha256"]
           assert training["players"]["fischer"]["gradient_steps"]>0
+          assert set(report["panels"])=={"fit","tune"}
           for arm,panel in report["panels"].items():
               total=panel["all"]
-              assert 0<total["games"]<=report["expected_games"][arm]
+              coverage=report["coverage"][arm]
+              assert coverage["games_replayed"]==report["expected_games"][arm]
+              assert coverage["games_replayed"]==manifest["players"]["fischer"][f"{arm}_games"]
+              assert coverage["focal_decisions"]==manifest["players"]["fischer"][f"{arm}_focal_decisions_all_phases"]
+              assert coverage["forced"]+coverage["nonforced"]==coverage["focal_decisions"]
+              assert coverage["games_with_nonforced_choice"]+coverage.get("games_without_nonforced_choice",0)==coverage["games_replayed"]
+              assert total["games"]==coverage["games_with_nonforced_choice"]
+              assert total["positions"]==coverage["positions_scored"]
+              assert sum(c.get("games_replayed",0) for c in report["coverage_by_period"][arm].values())==coverage["games_replayed"]
+              assert sum(c["positions"] for c in panel["by_period"].values())==total["positions"]
               assert total["games"]<=total["positions"]<=3*report["expected_games"][arm]
               assert set(panel["competency_proxies"])==set(COMPETENCIES)
               assert sum(c["positions"] for c in panel["by_phase"].values())==total["positions"]
-              for cell in [total,*panel["by_phase"].values(),*panel["competency_proxies"].values()]:
+              for cell in [total,*panel["by_phase"].values(),*panel["by_period"].values(),*panel["competency_proxies"].values()]:
                   assert set(cell["policies"])=={"human",*CANDIDATES}
                   assert set(cell["interventions"])==set(CANDIDATES)
                   for label,stats in cell["policies"].items():
