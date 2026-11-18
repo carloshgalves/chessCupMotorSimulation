@@ -17,6 +17,7 @@ import chess
 import chess.engine
 
 from .matches import file_hash
+from .opening_books import SCHEMA as BOOK_SCHEMA, position_token
 from .real85_neural_stream import neural_arm
 from .real85_graded_phase_attribution import _score
 from .real85_playable import _material_endgame
@@ -64,7 +65,7 @@ def inventory(rows: list[dict]) -> dict:
             "coverage_note":"Pinned source only; not a count of every game ever played."}
 
 
-def fit_observations(game, row: dict, style: dict) -> list[tuple[str, chess.Board, chess.Move]]:
+def fit_observations(game, row: dict, style: dict, votes: dict | None = None) -> list[tuple[str, chess.Board, chess.Move]]:
     """All legal FIT decisions contribute style counts; one min-hash draw per phase/game."""
     digest = row["mainline_sha256"]
     if neural_arm(digest) != "fit":
@@ -80,6 +81,8 @@ def fit_observations(game, row: dict, style: dict) -> list[tuple[str, chess.Boar
         if board.turn == color:
             stage = phase(board)
             hist = style[stage]
+            if votes is not None and board.ply() < 40:
+                votes[row["color"]][position_token(board)][move.uci()] += 1
             hist["decisions"] += 1
             hist["captures"] += int(board.is_capture(move))
             hist["checks"] += int(board.gives_check(move))
@@ -118,7 +121,8 @@ def summarize(rows: list[dict]) -> dict:
             "negative_gap_count":sum(g < 0 for g in gaps)}
 
 
-def run(stockfish: Path, *, archive_dir: Path | None = None, depth: int = 12) -> dict:
+def run(stockfish: Path, *, archive_dir: Path | None = None, depth: int = 12,
+        book_out: Path | None = None) -> dict:
     if type(depth) is not int or depth not in (12, 16):
         raise ValueError("Depth must be 12 or 16")
     stockfish = Path(stockfish).resolve(strict=True)
@@ -135,6 +139,7 @@ def run(stockfish: Path, *, archive_dir: Path | None = None, depth: int = 12) ->
     metrics = defaultdict(list)
     style = defaultdict(lambda: defaultdict(Counter))
     observed_games = set()
+    votes = {side:defaultdict(Counter) for side in ("white","black")}
     engine = chess.engine.SimpleEngine.popen_uci(str(stockfish), timeout=120.0)
     try:
         if "Threads" in engine.options:
@@ -146,7 +151,7 @@ def run(stockfish: Path, *, archive_dir: Path | None = None, depth: int = 12) ->
             band = period(row["date"])
             digest = row["mainline_sha256"]
             observed_games.add(digest)
-            for stage, board, move in fit_observations(game,row,style[band]):
+            for stage, board, move in fit_observations(game,row,style[band],votes):
                 result = quality(engine,board,move,depth)
                 result.update(game=digest,fen=board.fen())
                 metrics[(band,stage)].append(result)
@@ -160,6 +165,20 @@ def run(stockfish: Path, *, archive_dir: Path | None = None, depth: int = 12) ->
     total = [r for group in metrics.values() for r in group]
     if not total:
         raise ValueError("No sampled legal FIT decisions")
+    book = {"schema":BOOK_SCHEMA,"player":SLUG,"match_name":config["name"],
+            "policy":{"max_plies":40,"never_engine_verified":True},
+            "source":{"pgn_sha256":sha256(pgn).hexdigest(),
+                      "snapshot_commit":MIRROR_COMMIT if archive_dir is None else None,
+                      "accepted_games":len(fit),"source_games_total":len(rows),
+                      "train_ratio":len(fit)/len(rows),
+                      "provenance":"REAL85_NEURAL_FIT_ONLY"},
+            "positions":{side:dict(votes[side]) for side in votes}}
+    book_hash = None
+    if book_out is not None:
+        with Path(book_out).open("x",encoding="utf-8") as handle:
+            json.dump(book,handle,sort_keys=True,allow_nan=False)
+            handle.write("\n")
+        book_hash = file_hash(book_out)
     competencies = {key:None for key in ("opening","tactics","dynamics","defense","positional","endgames")}
     return {
         "schema":SCHEMA,"status":"FISCHER_FIT_DIAGNOSTIC_NOT_ELO_OR_PROMOTION",
@@ -174,6 +193,9 @@ def run(stockfish: Path, *, archive_dir: Path | None = None, depth: int = 12) ->
                     "by_period_phase":{f"{b}|{s}":summarize(metrics[(b,s)])
                                        for b in BANDS for s in PHASES}},
         "fit_style_counts":{b:dict(style[b]) for b in BANDS},
+        "fit_repertoire":{"positions":{s:len(votes[s]) for s in votes},
+                          "decisions":sum(sum(c.values()) for v in votes.values() for c in v.values()),
+                          "book_sha256":book_hash,"tune_used":False,"test_used":False},
         "competencies":{"scale_proposed_max":110,"values":competencies,
                         "status":"UNSCALED_NO_REFERENCE_ANCHORS"},
         "gameplay_initial_rating":2500,"intrinsic_elo":None,"historical_validated":False,
@@ -198,10 +220,14 @@ def main(argv=None) -> int:
     parser.add_argument("--stockfish", type=Path, required=True)
     parser.add_argument("--depth", type=int, choices=(12,16), default=12)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--book-out", type=Path)
     args=parser.parse_args(argv)
     if args.out.exists() or args.out.is_symlink() or not args.out.parent.is_dir():
         raise ValueError("Output must be a new file in an existing directory")
-    report=run(args.stockfish,archive_dir=args.archive_dir,depth=args.depth)
+    if args.book_out is not None and (args.book_out.exists() or args.book_out.is_symlink() or
+            args.book_out.resolve() == args.out.resolve() or not args.book_out.parent.is_dir()):
+        raise ValueError("Book output must be distinct and new")
+    report=run(args.stockfish,archive_dir=args.archive_dir,depth=args.depth,book_out=args.book_out)
     with args.out.open("x",encoding="utf-8") as stream:
         json.dump(report,stream,sort_keys=True,indent=2,allow_nan=False)
         stream.write("\n")
