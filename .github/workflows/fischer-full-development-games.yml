@@ -1,0 +1,119 @@
+name: Fischer exhaustive development continuations
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/fischer_full_games.py'
+      - 'tests/test_fischer_full_games.py'
+      - 'src/chesssim/fischer_fit_ablation.py'
+      - 'src/chesssim/fischer_deep_calibration.py'
+      - '.github/workflows/fischer-full-development-games.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Test allocation, checkpoint and replay
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pytest -q tests/test_fischer_full_games.py
+      - name: Inventory every eligible historical opening
+        run: |
+          python -m chesssim.fischer_full_games plan --fetch | tee "$RUNNER_TEMP/fischer-full-plan.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=json.loads((Path(os.environ["RUNNER_TEMP"])/"fischer-full-plan.json").read_text())
+          assert p["all_source_games"]==827
+          assert p["development_games"]=={"fit":683,"tune":23}
+          assert p["excluded_test_games"]==121
+          assert p["eligible_source_games"]+sum(p["source_exclusions"].values())==706
+          assert p["expected_cases"]==8*sum(p["distinct_prefixes_by_arm"].values())
+          assert sum(p["distinct_prefixes_by_arm"].values())>=32
+          assert p["outer_test_decisions_evaluated"]==0
+          print("FISCHER_FULL_PLAN",json.dumps(p,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fischer-full-plan
+          path: ${{ runner.temp }}/fischer-full-plan.json
+          if-no-files-found: error
+  play:
+    # Never spend dozens of runner-hours on every edit to a PR.
+    if: github.event_name == 'workflow_dispatch'
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        index: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Compile pinned Rodent and install Stockfish
+        run: |
+          python -m pip install -e .
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          sudo apt-get update -qq
+          sudo apt-get install -y stockfish
+      - name: Play every assigned paired continuation
+        run: |
+          python -m chesssim.fischer_full_games play --fetch \
+            --rodent-root "$RUNNER_TEMP/rodent" --stockfish /usr/games/stockfish \
+            --count 32 --index ${{ matrix.index }} --out "$RUNNER_TEMP/shard-${{ matrix.index }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shard-${{ matrix.index }}
+          path: ${{ runner.temp }}/shard-${{ matrix.index }}/
+          if-no-files-found: warn
+          retention-days: 7
+  aggregate:
+    if: github.event_name == 'workflow_dispatch'
+    needs: play
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shard-*
+          path: ${{ runner.temp }}/shards
+      - name: Independently replay every continuation and score complete crossover only
+        run: |
+          python -m pip install -e .
+          python -m chesssim.fischer_full_games aggregate --fetch --count 32 \
+            --shards "$RUNNER_TEMP/shards" --out "$RUNNER_TEMP/fischer-full-summary.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fischer-full-summary
+          path: ${{ runner.temp }}/fischer-full-summary.json
+          if-no-files-found: warn
