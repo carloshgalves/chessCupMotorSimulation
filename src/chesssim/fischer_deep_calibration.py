@@ -13,6 +13,8 @@ from hashlib import sha256
 import json
 from pathlib import Path
 from statistics import median
+from time import perf_counter
+from math import isfinite
 
 import chess
 import chess.engine
@@ -95,10 +97,12 @@ def reference_choices(engine, board):
 
 
 def choose(engine, board, depth):
+    started=perf_counter()
     result=engine.play(board,chess.engine.Limit(depth=depth,nodes=NODE_CAP),
                        game=object(),info=chess.engine.INFO_ALL)
     if result.move is None or result.move not in board.legal_moves:
         raise RuntimeError("Illegal or missing UCI choice")
+    elapsed=perf_counter()-started
     info=result.info
     reached=info.get("depth")
     nodes=info.get("nodes")
@@ -107,11 +111,11 @@ def choose(engine, board, depth):
         reached=None
     if type(nodes) is not int or nodes < 0:
         nodes=None
-    if type(seconds) not in (float,int) or seconds < 0:
+    if type(seconds) not in (float,int) or not isfinite(seconds) or seconds < 0:
         seconds=None
     return result.move,{"requested_depth":depth,"reported_depth":reached,
                         "reached_requested":reached is not None and reached>=depth,
-                        "reported_nodes":nodes,"reported_seconds":seconds}
+                        "reported_nodes":nodes,"reported_seconds":seconds,"elapsed_seconds":elapsed}
 
 
 def evaluate(board,human,phase,reference,engines):
@@ -155,6 +159,9 @@ def telemetry_summary(rows):
                        "depth_missing":len(items)-len(depths),
                        "median_reported_depth":median(depths) if depths else None,
                        "nodes_reported":len(nodes),"median_reported_nodes":median(nodes) if nodes else None,
+                       "node_cap_exceeded":sum(n>NODE_CAP for n in nodes),
+                       "max_reported_nodes":max(nodes) if nodes else None,
+                       "median_elapsed_seconds":median([x["elapsed_seconds"] for x in items]) if items else None,
                        "seconds_reported":len(seconds),"median_reported_seconds":median(seconds) if seconds else None}
     return result
 
@@ -217,7 +224,8 @@ def run(rodent,stockfish,archive_dir=None):
             "outer_test_decisions_evaluated":0,"historically_validated":False,"intrinsic_elo":None,
             "competency_values":dict.fromkeys(COMPETENCIES),"panels":panels,
             "limitations":["Depth caps with node limits; incomplete/missing depth reported, not silently relabeled.",
-                           "Engine nodes/time are UCI-reported; budget enforcement depends on engine support.",
+                           "Engine nodes/time are UCI-reported; observed overshoots and missing counts disclosed.",
+                           "Wall-clock latency measured on the CI host, not the user laptop.",
                            "Pilot subset; TUNE exploratory, not confirmatory.",
                            "Overlapping heuristic competency tags, not validated skill labels or score anchors.",
                            "No book or neural intervention; no deployment or Elo claim.",
