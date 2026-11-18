@@ -1,0 +1,102 @@
+name: Fischer individual calibration baseline
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/fischer_baseline.py'
+      - 'tests/test_fischer_baseline.py'
+      - '.github/workflows/fischer-individual-baseline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fischer-individual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fischer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Test deterministic partition and quality measurement
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pytest -q tests/test_fischer_baseline.py
+      - name: Install independent Stockfish reference
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y stockfish
+          sha256sum /usr/games/stockfish
+          dpkg-query -W stockfish
+      - name: Inventory authentic Fischer games and measure FIT decisions
+        run: |
+          python -m chesssim.fischer_baseline --fetch \
+            --stockfish /usr/games/stockfish --depth 12 \
+            --out "$RUNNER_TEMP/fischer-baseline.json" \
+            --book-out "$RUNNER_TEMP/fischer-book.json"
+      - name: Train actual complete Fischer residual with all eligible FIT decisions
+        run: |
+          python -m chesssim.real85_neural_stream build --fetch --players fischer \
+            --out "$RUNNER_TEMP/fischer-input"
+          python -m chesssim.real85_neural_stream verify --dir "$RUNNER_TEMP/fischer-input"
+          python -m chesssim.real85_online_residual \
+            --inputs "$RUNNER_TEMP/fischer-input" --players fischer \
+            --out "$RUNNER_TEMP/fischer-residual"
+      - name: Reconcile corpus and independently check aggregate evidence
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from chesssim.matches import file_hash
+          from chesssim.opening_books import load_opening_book
+          root=Path(os.environ["RUNNER_TEMP"])
+          report=json.loads((root/"fischer-baseline.json").read_text())
+          manifest=json.loads((root/"fischer-input/manifest.json").read_text())
+          model=json.loads((root/"fischer-residual/report.json").read_text())
+          row=manifest["players"]["fischer"]
+          assert set(manifest["players"])==set(model["players"])=={"fischer"}
+          assert report["source_pgn_sha256"]==row["source_pgn_sha256"]
+          assert report["inventory"]["distinct_games"]==row["accepted_distinct_games"]
+          assert report["fit_games_audited"]==row["fit_games"]
+          assert sum(v.get("decisions",0) for band in report["fit_style_counts"].values()
+                     for v in band.values())==row["fit_focal_decisions_all_phases"]
+          assert report["outer_test_decisions_evaluated"]==report["tune_decisions_evaluated"]==0
+          quality=report["analysis"]["overall"]
+          assert 0 < quality["distinct_games"] <= row["fit_games"]
+          assert quality["distinct_games"] <= quality["sampled_decisions"] <= 3*quality["distinct_games"]
+          assert report["fit_repertoire"]["book_sha256"]==file_hash(root/"fischer-book.json")
+          assert load_opening_book(root/"fischer-book.json","fischer")["source"]["accepted_games"]==row["fit_games"]
+          trained=model["players"]["fischer"]
+          assert trained["fit_games_processed"]==row["fit_games"]
+          assert trained["focal_decisions_processed"]==row["fit_focal_decisions_all_phases"]
+          assert trained["gradient_steps"]+trained["forced_without_gradient"]==trained["focal_decisions_processed"]
+          assert trained["gradient_steps"]>0
+          assert set(report["competencies"]["values"].values())=={None}
+          assert report["intrinsic_elo"] is None and report["gameplay_initial_rating"]==2500
+          print("FISCHER_EVIDENCE",json.dumps({
+              "inventory_games":row["accepted_distinct_games"],"fit_games":row["fit_games"],
+              "tune_games":row["tune_games"],"excluded_test_games":row["excluded_test_games"],
+              "all_fit_decisions":row["fit_focal_decisions_all_phases"],
+              "sampled_stockfish":report["analysis"]["overall"],
+              "book":report["fit_repertoire"],"by_period":report["inventory"]["by_period"],
+              "residual_tune":trained["tune"],"gradient_steps":trained["gradient_steps"],
+              "forced_without_gradient":trained["forced_without_gradient"],
+          },sort_keys=True))
+          PY
+      - name: Publish aggregates only (not source PGNs, positions or trained book)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fischer-individual-baseline-aggregates
+          path: |
+            ${{ runner.temp }}/fischer-baseline.json
+            ${{ runner.temp }}/fischer-input/manifest.json
+            ${{ runner.temp }}/fischer-residual/report.json
+          retention-days: 14
+          if-no-files-found: warn
