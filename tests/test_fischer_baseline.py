@@ -88,3 +88,17 @@ def test_census_counts_global_arms_without_rating_inference():
     cell=inv["by_period"]["1970_1972"]
     assert cell["fit"]==cell["tune"]==cell["excluded_test"]==1
     assert cell["with_focal_elo_header"]==cell["with_time_control_header"]==0
+
+
+def test_forced_lance_counts_but_never_measures_choice(monkeypatch):
+    board=chess.Board("8/8/8/8/8/8/r1k5/K7 w - - 0 1")
+    assert board.is_valid() and board.legal_moves.count()==1
+    game=chess.pgn.Game()
+    game.setup(board)
+    game.add_variation(next(iter(board.legal_moves)))
+    digest,_=mainline_identity(game)
+    monkeypatch.setattr(baseline,"neural_arm",lambda _: "fit")
+    style=defaultdict(Counter)
+    result=baseline.fit_observations(game,{"mainline_sha256":digest,"color":"white"},style)
+    assert result==[]
+    assert style["endgame"]["decisions"]==style["endgame"]["forced_only_move"]==1
