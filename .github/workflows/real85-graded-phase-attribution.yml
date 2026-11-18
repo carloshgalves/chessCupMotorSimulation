@@ -6,6 +6,8 @@ on:
       - 'src/chesssim/matches.py'
       - 'src/chesssim/real85_graded_openings.py'
       - 'src/chesssim/real85_graded_phase_attribution.py'
+      - 'src/chesssim/real85_depth_calibration.py'
+      - 'tests/test_real85_depth_calibration.py'
       - 'tests/test_real85_graded_openings.py'
       - '.github/workflows/real85-graded-phase-attribution.yml'
   workflow_dispatch:
@@ -20,7 +22,7 @@ concurrency:
 jobs:
   real-graded-phase:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -30,6 +32,7 @@ jobs:
         run: |
           python -m pip install -e '.[dev]'
           python -m pytest -q \
+            tests/test_real85_depth_calibration.py \
             tests/test_real85_graded_openings.py \
             tests/test_real85_seeded_crossover.py \
             tests/test_real85_safe_book_neural.py \
@@ -111,12 +114,42 @@ jobs:
             --rodent-root "$RUNNER_TEMP/rodent" \
             --depth 14 \
             --out "$RUNNER_TEMP/graded-games/phase-attribution.json"
+      - name: Repeat the exact frozen FIT panel with focal depth six
+        run: |
+          python -m chesssim.real85_graded_openings \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --stockfish /usr/games/stockfish \
+            --weights "$RUNNER_TEMP/graded-weights" \
+            --profiles "$RUNNER_TEMP/graded-books" \
+            --inputs "$RUNNER_TEMP/graded-input" \
+            --focal-depth 6 \
+            --out "$RUNNER_TEMP/graded-games-d6"
+      - name: Independently audit depth-six decisions on original FEN
+        run: |
+          python -m chesssim.real85_graded_phase_attribution \
+            --results "$RUNNER_TEMP/graded-games-d6/results.json" \
+            --pgn "$RUNNER_TEMP/graded-games-d6/games.pgn" \
+            --stockfish /usr/games/stockfish \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --focal-depth 6 --depth 14 \
+            --out "$RUNNER_TEMP/graded-games-d6/phase-attribution.json"
+      - name: Compare both replay-validated protocols per player and opponent grade
+        run: |
+          python -m chesssim.real85_depth_calibration \
+            --depth4 "$RUNNER_TEMP/graded-games" \
+            --depth6 "$RUNNER_TEMP/graded-games-d6" \
+            --out "$RUNNER_TEMP/depth-comparison.json"
       - name: Publish only real played PGNs, scores, model hashes and position-based attribution
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: real85-graded-96-uci-complete-phase-diagnostic
+          name: real85-focal-depth-192-uci-comparison
           path: |
+            ${{ runner.temp }}/depth-comparison.json
+            ${{ runner.temp }}/graded-games-d6/results.json
+            ${{ runner.temp }}/graded-games-d6/summary.json
+            ${{ runner.temp }}/graded-games-d6/games.pgn
+            ${{ runner.temp }}/graded-games-d6/phase-attribution.json
             ${{ runner.temp }}/graded-games/results.json
             ${{ runner.temp }}/graded-games/summary.json
             ${{ runner.temp }}/graded-games/games.pgn
