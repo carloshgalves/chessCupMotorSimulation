@@ -99,6 +99,9 @@ def evaluate(board,human,stage,engine,guard,reference,book,policy):
                                    round_number=1,ply=board.ply()+1)
             residual=decision.move
             residual_reason=decision.event["outcome"]
+            if residual not in board.legal_moves or ((residual!=base) !=
+                    (residual_reason=="EXTERNAL_POLICY_OVERRIDE")):
+                raise ValueError("Residual decision and intervention trace disagree")
         choices[f"d{depth}_book"]=learned
         choices[f"d{depth}_residual"]=residual
         # Explicitly mutually exclusive: book window and neural window.
@@ -183,8 +186,12 @@ def run(rodent,stockfish,inputs,weights,archive_dir=None):
                   if neural_arm(r["mainline_sha256"])==arm}
         if actual!=expected:
             raise ValueError("Input identities or focal colors differ from source")
+    model_report_path=weights/"report.json"
+    model_report=json.loads(model_report_path.read_text())
+    checkpoint_path=weights/model_report["players"]["fischer"]["checkpoint_file"]
     cp=_load_player(weights,"fischer")
-    if cp["input_manifest_sha256"]!=file_hash(manifest_path):
+    if (cp["input_manifest_sha256"]!=file_hash(manifest_path) or
+            cp["fit_shard_sha256"]!=summary["shards"]["fit"]["sha256"]):
         raise ValueError("Model not bound to verified input")
     book=fit_book(pgn,rows,conf["surname"])
     selected=select_panel(rows)
@@ -192,7 +199,9 @@ def run(rodent,stockfish,inputs,weights,archive_dir=None):
     panel_hash=sha256("\n".join(sorted(r["mainline_sha256"] for r in selected)).encode()).hexdigest()
     files={"rodent":exe,"stockfish":sf,"profile":root/"personalities"/fischer.profile_filename,
            "registry":root/"personalities/basic.ini","input_manifest":manifest_path,
-           "model_report":weights/"report.json"}
+           "model_report":model_report_path,"checkpoint":checkpoint_path,
+           "fit_shard":inputs/summary["shards"]["fit"]["file"],
+           "tune_shard":inputs/summary["shards"]["tune"]["file"]}
     hashes={k:file_hash(v) for k,v in files.items()}
     data=defaultdict(list)
     seen=set()
