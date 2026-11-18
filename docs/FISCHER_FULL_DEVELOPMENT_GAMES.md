@@ -22,8 +22,9 @@ the residual. This is not promotion or equivalence evidence.
   Fischer, against Simple at depth cap 12 and 16. Fischer cap 16,
   five million requested nodes per search. Books disabled in Rodent,
   FIT empirical book min count 2, fixed seed 2033, d14 guard 25cp as in
-  #196. No neural intervention. No source continuation past ply 12 is
-  played or used to select moves. Each actual move is chosen by the UCI
+  #196. No neural intervention. No source continuation past ply 12 is fed to the
+  engine or forced as a sequence; the empirical book may contain FIT moves,
+  including those of the originating FIT game. Each actual move is chosen by the UCI
   engine or the guarded opening rule. The complete source opening is
   kept in the board history for repetition and draw adjudication.
 - Terminal legal outcomes only: claimable draws, checkmate, stalemate,
@@ -32,7 +33,8 @@ the residual. This is not promotion or equivalence evidence.
   **every** planned case is present and complete. Raw scores and paired
   book-minus-original results by arm/opponent depth, root-cluster
   bootstrap; no cross-arm pooling or human Elo estimate.
-- Engine and profile hashes, manifest and checkpoint bindings, replay
+- Engine, profile and protocol code hashes, chess library version,
+  manifest and checkpoint bindings, replay
   legality and opening trace are checked. These establish reproducibility
   and consistency, not a cryptographic proof of original UCI execution.
   Node cap is requested, not assumed enforced; report overshoot/missing
