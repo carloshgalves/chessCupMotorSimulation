@@ -32,9 +32,14 @@ PHASES = ("opening", "middlegame", "endgame")
 SALT = "fischer-baseline-191-v1"
 
 
-def period(year: int | None) -> str:
+def period(year: int | str | None) -> str:
     if year is None:
         return "unknown"
+    # The inherited PGN scanner returns the exact known year as a string.
+    if type(year) is str and len(year) == 4 and year.isascii() and year.isdigit():
+        year = int(year)
+    if type(year) is not int or not 1 <= year <= 9999:
+        raise ValueError("Invalid known career year")
     for stop, label in zip((1957, 1962, 1969, 1972, 1991), BANDS):
         if year <= stop:
             return label
