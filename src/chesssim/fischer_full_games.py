@@ -368,7 +368,7 @@ def aggregate(shards, count, archive_dir=None):
         c=rec["case"]
         cell=scores[f'{c["arm"]}|{c["opponent_depth"]}|{c["color"]}|{c["mode"]}']
         cell["games"]+=1
-        tele=telemetry[f\'{c["arm"]}|{c["opponent_depth"]}|{c["color"]}|{c["mode"]}\']
+        tele=telemetry[f'{c["arm"]}|{c["opponent_depth"]}|{c["color"]}|{c["mode"]}']
         for kind in ("depth_reached","depth_missing","nodes_missing","nodes_exceeded"):
             for role,n in rec[kind].items():
                 tele[f"{role}:{kind}"]+=n
