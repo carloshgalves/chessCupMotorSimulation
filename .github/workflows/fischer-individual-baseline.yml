@@ -73,7 +73,8 @@ jobs:
           trained=model["players"]["fischer"]
           assert trained["fit_games_processed"]==row["fit_games"]
           assert trained["focal_decisions_processed"]==row["fit_focal_decisions_all_phases"]
-          assert trained["gradient_steps"]==trained["focal_decisions_processed"]
+          assert trained["gradient_steps"]+trained["forced_without_gradient"]==trained["focal_decisions_processed"]
+          assert trained["gradient_steps"]>0
           assert set(report["competencies"]["values"].values())=={None}
           assert report["intrinsic_elo"] is None and report["gameplay_initial_rating"]==2500
           print("FISCHER_EVIDENCE",json.dumps({
@@ -82,7 +83,8 @@ jobs:
               "all_fit_decisions":row["fit_focal_decisions_all_phases"],
               "sampled_stockfish":report["analysis"]["overall"],
               "book":report["fit_repertoire"],"by_period":report["inventory"]["by_period"],
-              "residual_tune":trained["tune"],
+              "residual_tune":trained["tune"],"gradient_steps":trained["gradient_steps"],
+              "forced_without_gradient":trained["forced_without_gradient"],
           },sort_keys=True))
           PY
       - name: Publish aggregates only (not source PGNs, positions or trained book)
