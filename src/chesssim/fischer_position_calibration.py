@@ -120,10 +120,10 @@ def game_cluster_interval(pairs):
     return [draws[25],draws[974]]
 
 
-def summarize(rows):
+def summarize(rows, candidates=CANDIDATES):
     """Matched denominators and same-game cluster uncertainty not position IID."""
     result = {}
-    for label in ("human", *CANDIDATES):
+    for label in ("human", *candidates):
         entries = [r["scores"][label] for r in rows]
         gaps = [e["signed_gap_cp"] for e in entries if e["signed_gap_cp"] is not None]
         paired = [(r["scores"]["human"]["signed_gap_cp"], r["scores"][label]["signed_gap_cp"])
