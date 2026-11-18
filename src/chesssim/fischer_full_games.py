@@ -20,6 +20,7 @@ import chess.engine
 from .catalog import Player, find_player
 from .fischer_deep_calibration import NODE_CAP, choose
 from .fischer_fit_ablation import fit_book, guard_book, select_all_development
+from .fischer_position_calibration import game_cluster_interval
 from .matches import _open_engine, file_hash
 from .real85_neural_stream import neural_arm
 from .real_training_cohorts import (
@@ -140,12 +141,12 @@ def initial_board(root):
 
 def play_case(case,root,engine,opponent,guard,book):
     board=initial_board(root)
-    game_token=object()
     # choose() starts each turn with fresh UCI game identity; the verified
     # board still contains the full previous move stack for repetition.
     focal_white=case["color"]=="white"
     moves=[]
     interventions=Counter()
+    book_trace=[]
     depth_reached=Counter()
     depth_missing=Counter()
     for _ in range(MAX_CONTINUATION_PLIES):
@@ -161,6 +162,7 @@ def play_case(case,root,engine,opponent,guard,book):
         if focal and case["mode"]=="book" and board.ply()<40:
             move,reason=guard_book(board,base,book,guard)
             interventions[reason]+=1
+            book_trace.append({"index":len(moves),"base":base.uci(),"reason":reason})
         if move not in board.legal_moves:
             raise ValueError("Illegal continuation choice")
         moves.append(move.uci())
@@ -169,7 +171,7 @@ def play_case(case,root,engine,opponent,guard,book):
     return {"case":case,"moves":moves,"result":outcome.result() if outcome else "*",
             "termination":outcome.termination.name if outcome else "PLY_CAP_INCOMPLETE",
             "status":"COMPLETE" if outcome else "INCOMPLETE",
-            "interventions":dict(interventions),"depth_reached":dict(depth_reached),
+            "interventions":dict(interventions),"book_trace":book_trace,"depth_reached":dict(depth_reached),
             "depth_missing":dict(depth_missing)}
 
 
@@ -183,7 +185,9 @@ def validate_case(record,case,root):
     turns=Counter()
     focal_white=case["color"]=="white"
     focal_book_turns=0
-    for encoded in moves:
+    trace=iter(record["book_trace"])
+    observed=Counter()
+    for index,encoded in enumerate(moves):
         if board.is_game_over(claim_draw=True):
             raise ValueError("Moves after terminal position")
         move=chess.Move.from_uci(encoded)
@@ -191,7 +195,16 @@ def validate_case(record,case,root):
             raise ValueError("Illegal recorded move")
         focal=board.turn==focal_white
         turns["fischer" if focal else "simple"]+=1
-        focal_book_turns+=int(focal and board.ply()<40 and case["mode"]=="book")
+        if focal and board.ply()<40 and case["mode"]=="book":
+            focal_book_turns+=1
+            event=next(trace,None)
+            if (not isinstance(event,dict) or event.get("index")!=index or
+                    not isinstance(event.get("base"),str)):
+                raise ValueError("Missing matching opening trace")
+            base=chess.Move.from_uci(event["base"])
+            if base not in board.legal_moves or ((base!=move)!=(event["reason"]=="book_override")):
+                raise ValueError("Invalid recorded book intervention")
+            observed[event["reason"]]+=1
         board.push(move)
     outcome=board.outcome(claim_draw=True)
     wanted=(outcome.result(),outcome.termination.name,"COMPLETE") if outcome else (
@@ -208,7 +221,8 @@ def validate_case(record,case,root):
     allowed={"no_book_support","book_agreement","book_mate_guard","book_cp_guard","book_override"}
     events=record["interventions"]
     if (not set(events)<=allowed or any(type(v) is not int or v<0 for v in events.values()) or
-            sum(events.values())!=focal_book_turns):
+            sum(events.values())!=focal_book_turns or dict(observed)!=events or
+            next(trace,None) is not None):
         raise ValueError("Invalid book intervention coverage")
     if any(set(record[key])-set(turns) for key in ("depth_reached","depth_missing")):
         raise ValueError("Unexpected telemetry role")
@@ -262,6 +276,7 @@ def run_shard(rodent,stockfish,out,index,count,archive_dir=None):
         raise ValueError("Symbolic output")
     out.mkdir(parents=False,exist_ok=True)
     spec_path=out/"manifest.json"
+    binding=digest(spec)
     if spec_path.exists():
         if load_json(spec_path)!=spec:
             raise ValueError("Resume manifest differs")
@@ -277,9 +292,13 @@ def run_shard(rodent,stockfish,out,index,count,archive_dir=None):
         for i,case in enumerate(planned,1):
             path=out/(case["id"]+".json")
             if path.exists():
-                validate_case(load_json(path),case,roots[case["root"]])
+                record=load_json(path)
+                if record.get("manifest_sha256")!=binding:
+                    raise ValueError("Checkpoint not bound to current manifest")
+                validate_case(record,case,roots[case["root"]])
             else:
                 result=play_case(case,roots[case["root"]],engine,opponent,guard,book)
+                result["manifest_sha256"]=binding
                 atomic_json(path,validate_case(result,case,roots[case["root"]]))
             print(f"FISCHER_SHARD {index}/{count} {i}/{len(planned)}",flush=True)
     if hashes!={k:file_hash(v) for k,v in files.items()}:
@@ -303,16 +322,25 @@ def aggregate(shards, count, archive_dir=None):
         if manifest!=expected or (hashes is not None and manifest["hashes"]!=hashes):
             raise ValueError("Shard manifests differ")
         hashes=manifest["hashes"]
+        if set(hashes)!={"rodent","stockfish","fischer","simple","registry"} or any(
+                not isinstance(x,str) or len(x)!=64 or any(c not in "0123456789abcdef" for c in x)
+                for x in hashes.values()):
+            raise ValueError("Invalid shard engine provenance")
+        binding=digest(manifest)
         if set(p.name for p in directory.iterdir())!={"manifest.json",*(c["id"]+".json" for c in planned)}:
             raise ValueError("Missing, extra or partial case files")
         for case in planned:
             if case["id"] in seen:
                 raise ValueError("Duplicate case")
             seen.add(case["id"])
-            records.append(validate_case(load_json(directory/(case["id"]+".json")),case,roots[case["root"]]))
+            record=load_json(directory/(case["id"]+".json"))
+            if record.get("manifest_sha256")!=binding:
+                raise ValueError("Case not bound to exact shard manifest")
+            records.append(validate_case(record,case,roots[case["root"]]))
     if seen!={c["id"] for c in cases(panel)}:
         raise ValueError("Incomplete crossover")
     scores=defaultdict(Counter)
+    matched=defaultdict(dict)
     for rec in records:
         c=rec["case"]
         cell=scores[f'{c["arm"]}|{c["opponent_depth"]}|{c["color"]}|{c["mode"]}']
@@ -325,11 +353,23 @@ def aggregate(shards, count, archive_dir=None):
         cell["wins"]+=int(points==1)
         cell["draws"]+=int(points==0.5)
         cell["losses"]+=int(points==0)
+        matched[(c["arm"],c["root"],c["opponent_depth"],c["color"])][c["mode"]]=points
     incomplete=sum(r["status"]!="COMPLETE" for r in records)
+    pairs=defaultdict(list)
+    if not incomplete:
+        for (arm,root,depth,color),modes in matched.items():
+            if set(modes)!=set(MODES):
+                raise ValueError("Missing paired original/book case")
+            pairs[f"{arm}|{depth}"].append((root,modes["book"]-modes["original"]))
+    paired={key:{"pairs":len(values),"roots":len({root for root,_ in values}),
+                 "mean_score_delta":sum(v for _,v in values)/len(values),
+                 "root_cluster_ci95":game_cluster_interval(values)}
+            for key,values in pairs.items()}
     return {**metadata,"hashes":hashes,"book_sha256":book_hash,
             "status":"ALL_CONTINUATIONS_COMPLETE" if not incomplete else "INCOMPLETE_DO_NOT_SCORE",
             "observed_cases":len(records),"incomplete":incomplete,
             "scores":dict(scores) if not incomplete else None,
+            "paired_book_minus_original":paired if not incomplete else None,
             "note":"Raw WDL descriptive; no human Elo or calibration promotion."}
 
 
