@@ -11,6 +11,7 @@ from hashlib import sha256
 import json
 from pathlib import Path
 from statistics import mean, median
+import random
 from contextlib import ExitStack
 
 import chess
@@ -73,14 +74,14 @@ def evaluate(board, human, reference, engines):
     for profile, engine in engines.items():
         for depth in DEPTHS:
             result = engine.play(board, chess.engine.Limit(depth=depth), game=object())
-            if result.move not in board.legal_moves:
+            if result.move is None or result.move not in board.legal_moves:
                 raise ValueError("Illegal or absent Rodent move")
             choices[f"{profile}_d{depth}"] = result.move
     best = _score(reference, board, None, 16)
     # Use a forced-root search even for the reference's preferred move.
     # All candidates receive exactly the same scoring procedure.
     scores = {}
-    for move in {chess.Move.from_uci(best["move"]), *choices.values()}:
+    for move in sorted({chess.Move.from_uci(best["move"]), *choices.values()}, key=lambda m:m.uci()):
         scores[move] = _score(reference, board, move, 16)
     ref = scores[chess.Move.from_uci(best["move"])]
     context = ["all"]
@@ -102,6 +103,23 @@ def evaluate(board, human, reference, engines):
     return context, output
 
 
+def game_cluster_interval(pairs):
+    """Exploratory percentile bootstrap of game clusters, not independent FENs."""
+    groups = defaultdict(list)
+    for game, delta in pairs:
+        groups[game].append(delta)
+    if len(groups) < 20:
+        return None
+    blocks = [(sum(groups[g]),len(groups[g])) for g in sorted(groups)]
+    rng = random.Random(191)
+    draws = []
+    for _ in range(1000):
+        selected = rng.choices(blocks,k=len(blocks))
+        draws.append(sum(t for t,n in selected)/sum(n for t,n in selected))
+    draws.sort()
+    return [draws[25],draws[974]]
+
+
 def summarize(rows):
     """Matched denominators and same-game cluster uncertainty not position IID."""
     result = {}
@@ -112,6 +130,9 @@ def summarize(rows):
                   for r in rows if r["scores"]["human"]["signed_gap_cp"] is not None and
                   r["scores"][label]["signed_gap_cp"] is not None]
         delta = [b-a for a,b in paired]
+        clusters = [(r["game"],r["scores"][label]["signed_gap_cp"]-r["scores"]["human"]["signed_gap_cp"])
+                    for r in rows if r["scores"]["human"]["signed_gap_cp"] is not None and
+                    r["scores"][label]["signed_gap_cp"] is not None]
         n = len(entries)
         result[label] = {
             "decisions":n,"human_matches":sum(e["human_match"] for e in entries),
@@ -123,6 +144,8 @@ def summarize(rows):
             "gap_over_100cp":sum(g>100 for g in gaps),
             "paired_nonmate_count":len(paired),
             "mean_paired_excess_gap_vs_human_cp":mean(delta) if delta else None,
+            "paired_game_cluster_ci95_cp":game_cluster_interval(clusters),
+            "paired_distinct_games":len({g for g,d in clusters}),
             "paired_more_than_100cp_worse_than_human":sum(d>100 for d in delta),
             "paired_more_than_100cp_better_than_human":sum(d < -100 for d in delta),
             "lost_positive_mate":sum(e["reference_mate"] is not None and e["reference_mate"]>0
