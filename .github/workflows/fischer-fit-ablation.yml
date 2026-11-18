@@ -1,0 +1,126 @@
+name: Fischer FIT-only book and residual ablation
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/fischer_fit_ablation.py'
+      - 'tests/test_fischer_fit_ablation.py'
+      - 'src/chesssim/fischer_deep_calibration.py'
+      - 'src/chesssim/real85_neural_guarded_uci.py'
+      - 'src/chesssim/real85_online_residual.py'
+      - 'src/chesssim/real85_neural_stream.py'
+      - 'src/chesssim/opening_books.py'
+      - 'src/chesssim/fischer_position_calibration.py'
+      - '.github/workflows/fischer-fit-ablation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fischer-fit-ablation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  paired-real:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Verify paired scoring and partitions
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pytest -q tests/test_fischer_fit_ablation.py tests/test_fischer_position_calibration.py tests/test_fischer_baseline.py
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Compile pinned Rodent and install independent Stockfish
+        run: |
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          sudo apt-get update -qq
+          sudo apt-get install -y stockfish
+      - name: Build and train Fischer-only residual from pinned real FIT stream
+        run: |
+          python -m chesssim.real85_neural_stream build --fetch --players fischer \
+            --out "$RUNNER_TEMP/fischer-input"
+          python -m chesssim.real85_neural_stream verify --dir "$RUNNER_TEMP/fischer-input"
+          python -m chesssim.real85_online_residual \
+            --inputs "$RUNNER_TEMP/fischer-input" --players fischer \
+            --out "$RUNNER_TEMP/fischer-weights"
+      - name: Execute paired intervention ablation
+        run: |
+          python -m chesssim.fischer_fit_ablation --fetch \
+            --rodent-root "$RUNNER_TEMP/rodent" --stockfish /usr/games/stockfish \
+            --inputs "$RUNNER_TEMP/fischer-input" --weights "$RUNNER_TEMP/fischer-weights" \
+            --out "$RUNNER_TEMP/fischer-ablation.json"
+      - name: Reconcile every intervention and source denominator
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from chesssim.fischer_fit_ablation import CANDIDATES, DEPTHS, COMPETENCIES
+          root=Path(os.environ["RUNNER_TEMP"])
+          report=json.loads((root/"fischer-ablation.json").read_text())
+          manifest=json.loads((root/"fischer-input/manifest.json").read_text())
+          training=json.loads((root/"fischer-weights/report.json").read_text())
+          assert report["status"]=="FISCHER_ABLATION_DIAGNOSTIC_NOT_PROMOTION"
+          assert report["schema"]=="chesssim-fischer-fit-ablation-v2"
+          assert report["expected_games"]=={"fit":683,"tune":23}
+          assert report["all_source_games"]==827 and report["excluded_test_games"]==121
+          assert report["outer_test_decisions_evaluated"]==0
+          assert report["historically_validated"] is False and report["intrinsic_elo"] is None
+          assert report["competency_values"]==dict.fromkeys(COMPETENCIES)
+          assert report["book_fit_games"]==manifest["players"]["fischer"]["fit_games"]==683
+          assert report["book_positions"]==9305
+          assert report["source_pgn_sha256"]==manifest["players"]["fischer"]["source_pgn_sha256"]
+          assert training["players"]["fischer"]["gradient_steps"]>0
+          assert set(report["panels"])=={"fit","tune"}
+          for arm,panel in report["panels"].items():
+              total=panel["all"]
+              coverage=report["coverage"][arm]
+              assert coverage["games_replayed"]==report["expected_games"][arm]
+              assert coverage["games_replayed"]==manifest["players"]["fischer"][f"{arm}_games"]
+              assert coverage["focal_decisions"]==manifest["players"]["fischer"][f"{arm}_focal_decisions_all_phases"]
+              assert coverage["forced"]+coverage["nonforced"]==coverage["focal_decisions"]
+              assert coverage["games_with_nonforced_choice"]+coverage.get("games_without_nonforced_choice",0)==coverage["games_replayed"]
+              assert total["games"]==coverage["games_with_nonforced_choice"]
+              assert total["positions"]==coverage["positions_scored"]
+              assert sum(c.get("games_replayed",0) for c in report["coverage_by_period"][arm].values())==coverage["games_replayed"]
+              assert sum(c["positions"] for c in panel["by_period"].values())==total["positions"]
+              assert total["games"]<=total["positions"]<=3*report["expected_games"][arm]
+              assert set(panel["competency_proxies"])==set(COMPETENCIES)
+              assert sum(c["positions"] for c in panel["by_phase"].values())==total["positions"]
+              for cell in [total,*panel["by_phase"].values(),*panel["by_period"].values(),*panel["competency_proxies"].values()]:
+                  assert set(cell["policies"])=={"human",*CANDIDATES}
+                  assert set(cell["interventions"])==set(CANDIDATES)
+                  for label,stats in cell["policies"].items():
+                      assert stats["decisions"]==cell["positions"]
+                      assert stats["nonmate_count"]+stats["mate_sensitive_count"]==cell["positions"]
+                  for depth in DEPTHS:
+                      base,book,residual,both=(cell["interventions"][f"d{depth}_{m}"]["changed"]
+                                               for m in ("base","book","residual","both"))
+                      assert base==0 and both==book+residual<=cell["positions"]
+                      assert book==cell["outcomes"][str(depth)]["book"].get("book_override",0)
+                      assert residual==cell["outcomes"][str(depth)]["residual"].get("EXTERNAL_POLICY_OVERRIDE",0)
+              print("FISCHER_ABLATION",arm,json.dumps(total,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fischer-fit-ablation-aggregates
+          path: |
+            ${{ runner.temp }}/fischer-ablation.json
+            ${{ runner.temp }}/fischer-weights/report.json
+          retention-days: 14
+          if-no-files-found: warn
