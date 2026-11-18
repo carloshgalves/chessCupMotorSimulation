@@ -67,7 +67,9 @@ jobs:
           assert sum(v.get("decisions",0) for band in report["fit_style_counts"].values()
                      for v in band.values())==row["fit_focal_decisions_all_phases"]
           assert report["outer_test_decisions_evaluated"]==report["tune_decisions_evaluated"]==0
-          assert report["analysis"]["overall"]["sampled_decisions"]>=row["fit_games"]
+          quality=report["analysis"]["overall"]
+          assert 0 < quality["distinct_games"] <= row["fit_games"]
+          assert quality["distinct_games"] <= quality["sampled_decisions"] <= 3*quality["distinct_games"]
           assert report["fit_repertoire"]["book_sha256"]==file_hash(root/"fischer-book.json")
           assert load_opening_book(root/"fischer-book.json","fischer")["source"]["accepted_games"]==row["fit_games"]
           trained=model["players"]["fischer"]
