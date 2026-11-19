@@ -8,10 +8,19 @@ on:
       - 'src/chesssim/fischer_fit_ablation.py'
       - 'src/chesssim/fischer_deep_calibration.py'
       - '.github/workflows/fischer-full-development-games.yml'
+      - 'scripts/fischer_restore_shard.sh'
+      - 'tests/test_fischer_restore_shard.py'
   workflow_dispatch:
+    inputs:
+      resume_run_id:
+        description: 'Completed prior dispatch run ID (optional; restore its shard checkpoints)'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   plan:
@@ -25,7 +34,14 @@ jobs:
       - name: Test allocation, checkpoint and replay
         run: |
           python -m pip install -e '.[dev]'
-          python -m pytest -q tests/test_fischer_full_games.py
+          python -m pytest -q tests/test_fischer_full_games.py tests/test_fischer_restore_shard.py
+          bash -n scripts/fischer_restore_shard.sh
+      - name: Validate optional resume source
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESUME_RUN_ID: ${{ inputs.resume_run_id }}
+        run: bash scripts/fischer_restore_shard.sh validate
       - name: Inventory every eligible historical opening
         run: |
           python -m chesssim.fischer_full_games plan --fetch | tee "$RUNNER_TEMP/fischer-full-plan.json"
@@ -55,7 +71,7 @@ jobs:
     timeout-minutes: 330
     strategy:
       fail-fast: false
-      max-parallel: 4
+      max-parallel: 16
       matrix:
         index: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]
     steps:
@@ -80,7 +96,17 @@ jobs:
           cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
           sudo apt-get update -qq
           sudo apt-get install -y stockfish
+      - name: Restore committed checkpoints from prior attempt or dispatch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESUME_RUN_ID: ${{ inputs.resume_run_id }}
+          SHARD_INDEX: ${{ matrix.index }}
+          SHARD_OUT: ${{ runner.temp }}/shard-${{ matrix.index }}
+        run: bash scripts/fischer_restore_shard.sh restore
       - name: Play every assigned paired continuation
+        # Leave time in the 330 minute job for the always() upload even on
+        # step timeout. An incomplete matrix must never produce a score.
+        timeout-minutes: 300
         run: |
           python -m chesssim.fischer_full_games play --fetch \
             --rodent-root "$RUNNER_TEMP/rodent" --stockfish /usr/games/stockfish \
@@ -91,7 +117,8 @@ jobs:
           name: shard-${{ matrix.index }}
           path: ${{ runner.temp }}/shard-${{ matrix.index }}/
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 14
+          overwrite: true
   aggregate:
     if: github.event_name == 'workflow_dispatch'
     needs: play
