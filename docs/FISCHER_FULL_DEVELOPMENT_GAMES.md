@@ -46,12 +46,17 @@ the residual. This is not promotion or equivalence evidence.
 PR CI runs unit tests and the **complete real-source plan**, not a small
 game sample masquerading as a benchmark. Real continuation execution
 is explicitly dispatched after review: 32 deterministic root shards,
-four concurrent jobs at most, 330 minutes maximum per job. This could
+up to sixteen concurrent jobs (subject to GitHub runner availability),
+330 minutes maximum per job and a 300-minute play-step limit to reserve
+artifact upload time. This could
 consume many runner-hours. Do not automatically launch it on each push
 or claim its checks passed before real execution. A timeout or incomplete
 record denies scoring. Retain per-case continuation checkpoints for
-local resume; a failed hosted job is not automatically resumed from
-previous attempt artifacts. Any retained complete case can be reused
+local resume; hosted retries restore the same-run shard artifact when available, or a
+completed prior dispatch explicitly selected via `resume_run_id`. If no
+artifact exists for a shard, that shard starts fresh. No artifact is
+promised for a cancelled job; wait for uploads when preserving results.
+The original executor rejects mismatched protocol/source/engine hashes. Any retained complete case can be reused
 with exactly identical hashes, plan and shard configuration.
 
 Local commands (paths must refer to the actual installed binaries):
@@ -66,3 +71,26 @@ and aggregate. On GitHub Actions the workflow is
 Do not reduce the panel because the run is expensive. If it exceeds
 resources, resume or revise the execution infrastructure with the
 same full source coverage and protocol, documenting the failure.
+
+### Recover a previous hosted execution
+
+Only after the predecessor run has completed (successful, failed or
+cancelled):
+
+    gh workflow run fischer-full-development-games.yml --repo carloshgalves/chessCupMotorSimulation --ref main -f resume_run_id=44415124944
+
+The source dispatch must belong to this repository and workflow on main;
+active runs are refused to avoid a changing checkpoint snapshot. Each
+shard lists its own nonexpired artifact and restores only atomically
+committed JSON files; stale temporary files are discarded in the staging
+copy. Exact manifest verification and legal replay by the original
+executor are mandatory. Hosted artifacts are retained for 14 days in the
+new workflow; earlier runs may have shorter retention. Shards without
+artifacts are recomputed (never dropped). Retrying the same run prefers
+its own prior shard artifact. Aggregation still requires every case.
+
+This is infrastructure only: no changes to protocol source files,
+search budgets, candidate definitions or historical coverage. Parallelism
+can reduce wall time but does not reduce total CPU work. Do not mix
+warm-hash or cached search results with this frozen fresh-search protocol
+without a separate determinism/reproducibility qualification.
