@@ -7,6 +7,12 @@ on:
       - 'tests/test_fischer_cap_recovery.py'
       - '.github/workflows/fischer-cap-recovery.yml'
   workflow_dispatch:
+    inputs:
+      resume_recovery_run_id:
+        description: 'Optional completed previous recovery run to reuse its validated per-case checkpoints'
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -108,6 +114,39 @@ jobs:
           cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
           cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
           cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+      - name: Restore prior recovery checkpoints when explicitly requested
+        if: inputs.resume_recovery_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_RUN: ${{ inputs.resume_recovery_run_id }}
+          CURRENT_RUN: ${{ github.run_id }}
+          SHARD_INDEX: ${{ matrix.index }}
+        run: |
+          if ! [[ "$PREVIOUS_RUN" =~ ^[1-9][0-9]*$ ]] || [[ "$PREVIOUS_RUN" == "$CURRENT_RUN" ]]; then
+            echo "Invalid prior recovery run" >&2
+            exit 1
+          fi
+          identity="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/$PREVIOUS_RUN" \
+            --jq '[.event,.status,.head_branch,(.path|split("@")[0])]|@tsv')"
+          expected="$(printf 'workflow_dispatch\tcompleted\tmain\t.github/workflows/fischer-cap-recovery.yml')"
+          if [[ "$identity" != "$expected" ]]; then
+            echo "Checkpoint source must be a completed recovery dispatch on main" >&2
+            exit 1
+          fi
+          name="repair-shard-$SHARD_INDEX"
+          ids="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs/$PREVIOUS_RUN/artifacts?per_page=100" \
+            --jq ".artifacts[] | select(.name == \"$name\" and .expired == false) | .id")"
+          if [[ -z "$ids" ]]; then
+            echo "No prior checkpoint for $name; recover from original 450 moves"
+          else
+            if ! [[ "$ids" =~ ^[1-9][0-9]*$ ]]; then
+              echo "Ambiguous or invalid prior recovery artifact" >&2
+              exit 1
+            fi
+            gh run download "$PREVIOUS_RUN" --repo "$GITHUB_REPOSITORY" \
+              --name "$name" --dir "$RUNNER_TEMP/repairs/$name"
+            echo "Recovered prior $name; exact case and code hashes will be revalidated."
+          fi
       - name: Continue only original capped games at the same depth
         timeout-minutes: 300
         run: |
