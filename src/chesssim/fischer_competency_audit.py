@@ -399,8 +399,9 @@ def aggregate(shards,archive_dir=None):
             subset=[x for x in records if skill in x["competencies"]]
             group["by_competency"][skill]=summarize_group(subset)
             group["by_competency_stratum"][skill]={
-                key:summarize_group([v for v in subset if v["stratum"]==key])
-                for key in sorted({v["stratum"] for v in subset})}
+                key:summarize_group([v for v in subset if
+                                     v["phase"]+"::"+v["stratum"]==key])
+                for key in sorted({v["phase"]+"::"+v["stratum"] for v in subset})}
         for key,field,allowed in (("by_phase","phase",("opening","middlegame","endgame")),
                                   ("by_period","period",BANDS),
                                   ("by_stratum","stratum",sorted({x["stratum"] for x in records}))):
