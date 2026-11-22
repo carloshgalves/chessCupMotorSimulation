@@ -1,0 +1,182 @@
+name: Fischer all-decisions six-competency audit
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/fischer_competency_audit.py'
+      - 'src/chesssim/fischer_strength_calibration.py'
+      - 'src/chesssim/common_competency_scale.py'
+      - 'tests/test_fischer_competency_audit.py'
+      - 'tests/test_common_competency_scale.py'
+      - 'scripts/fischer_restore_audit.sh'
+      - '.github/workflows/fischer-all-competencies.yml'
+  workflow_dispatch:
+    inputs:
+      resume_run_id:
+        description: 'Optional previous completed run with compatible per-game checkpoints'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Unit tests and static compilation
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m compileall -q src tests
+          python -m ruff check src/chesssim/fischer_competency_audit.py \
+            src/chesssim/fischer_strength_calibration.py \
+            src/chesssim/common_competency_scale.py \
+            tests/test_fischer_competency_audit.py tests/test_common_competency_scale.py
+          python -m pytest -q tests/test_fischer_competency_audit.py \
+            tests/test_common_competency_scale.py
+          bash -n scripts/fischer_restore_audit.sh
+      - name: Inventory all historically eligible Fischer games without sampling
+        run: |
+          python -m chesssim.fischer_competency_audit plan --fetch \
+            > "$RUNNER_TEMP/fischer-all-decisions-plan.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=json.loads((Path(os.environ["RUNNER_TEMP"])/"fischer-all-decisions-plan.json").read_text())
+          assert p["games"]==827
+          assert p["arms"]=={"fit":683,"tune":23,"excluded_test":121}
+          assert p["shards"]==64
+          assert len(p["shard_game_counts"])==64
+          assert sum(p["shard_game_counts"].values())==827
+          assert p["candidate_depths"]==[16,18]
+          assert p["reference_depth"]==20
+          assert p["forced_decisions_scored"] is False
+          assert p["calibrated_0_110"] is False
+          print("FISCHER_ALL_DECISIONS_PLAN",json.dumps(p,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fischer-all-decisions-plan
+          path: ${{ runner.temp }}/fischer-all-decisions-plan.json
+          if-no-files-found: error
+
+  play:
+    if: github.event_name == 'workflow_dispatch'
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 16
+      matrix:
+        index: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Install pinned Rodent original and Stockfish
+        run: |
+          python -m pip install -e .
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          sudo apt-get update -qq
+          sudo apt-get install -y stockfish
+      - name: Restore exact original-game evidence from prior completed run
+        id: restore
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESUME_RUN_ID: ${{ inputs.resume_run_id }}
+          SHARD_INDEX: ${{ matrix.index }}
+          SHARD_OUT: ${{ runner.temp }}/shard-${{ matrix.index }}
+        run: bash scripts/fischer_restore_audit.sh
+      - name: Evaluate all nonforced decisions at fixed common depth
+        timeout-minutes: 300
+        run: |
+          python -m chesssim.fischer_competency_audit play --fetch \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --stockfish /usr/games/stockfish \
+            --index ${{ matrix.index }} \
+            --out "$RUNNER_TEMP/shard-${{ matrix.index }}"
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.restore.outcome == 'success'
+        with:
+          name: shard-${{ matrix.index }}
+          path: ${{ runner.temp }}/shard-${{ matrix.index }}/
+          retention-days: 30
+          overwrite: true
+          if-no-files-found: warn
+
+  aggregate:
+    if: github.event_name == 'workflow_dispatch'
+    needs: play
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shard-*
+          path: ${{ runner.temp }}/shards
+      - name: Reconcile every historical game and freeze budget using FIT only
+        run: |
+          python -m pip install -e .
+          python -m chesssim.fischer_competency_audit aggregate --fetch \
+            --shards "$RUNNER_TEMP/shards" \
+            --out "$RUNNER_TEMP/fischer-six-competencies.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          r=json.loads((Path(os.environ["RUNNER_TEMP"])/"fischer-six-competencies.json").read_text())
+          assert r["status"]=="ALL_FISCHER_DECISIONS_AUDITED_NOT_CALIBRATED"
+          assert r["games"]==827
+          assert {a:r["counted"][a+":games"] for a in r["arms"]}=={
+              "fit":683,"tune":23,"excluded_test":121}
+          for arm,group in r["arms"].items():
+              total=group["all"]
+              assert total["decisions"]==r["counted"][arm+":nonforced"]
+              assert total["decisions"]+r["counted"][arm+":forced"]>0
+              assert sum(x["decisions"] for x in group["by_phase"].values())==total["decisions"]
+              assert sum(x["decisions"] for x in group["by_period"].values())==total["decisions"]
+              assert sum(x["decisions"] for x in group["by_stratum"].values())==total["decisions"]
+              assert set(group["by_competency"])=={
+                  "opening","tactics","dynamics","defense","positional","endgames"}
+              for skill,c in group["by_competency_stratum"].items():
+                  assert sum(x["decisions"] for x in c.values())==group["by_competency"][skill]["decisions"]
+          assert r["skill_values_0_110"]==dict.fromkeys((
+              "opening","tactics","dynamics","defense","positional","endgames"))
+          assert r["career_levels_enabled"] is False
+          assert r["independent_blind_test_available"] is False
+          assert r["experimental_phase_budget"]["training_arm"]=="fit"
+          print("FISCHER_COMPLETE",json.dumps({
+              "counted":r["counted"],"search":r["engine_search_telemetry"],
+              "phase_budget":r["experimental_phase_budget"],
+              "test_disclosure":r["test_disclosure"]},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fischer-all-six-competencies-aggregate
+          path: ${{ runner.temp }}/fischer-six-competencies.json
+          retention-days: 30
+          if-no-files-found: warn
