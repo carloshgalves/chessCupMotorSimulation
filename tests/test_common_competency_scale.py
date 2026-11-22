@@ -9,12 +9,12 @@ def _anchors():
     records=[]
     for i in range(90):
         arm="train" if i<60 else "validation"
-        rating=1300+14*(i if i<60 else i-60)
+        rating=1300+22*(i%30)
         for j in range(20):
             # Deterministic synthetic online-like panel; never research data.
             difficult=j%2==0
             stratum=("many|balanced|close" if difficult else "few|advantage|clear")
-            good=rating> (1950 if difficult else 1650)
+            good=rating> (1700 if difficult else 1500)
             records.append({"source":scale.SOURCE,"license":"CC0-1.0",
                 "rating_system":scale.RATING_SYSTEM,"variant":"standard","speed":"rapid",
                 "game":f"{1000*i+j:064x}","player":f"player-{i}",
