@@ -6,9 +6,9 @@ No FIDE conversion, no guessing or per-player min/max rescaling.
 """
 from __future__ import annotations
 
-from collections import Counter, defaultdict
+from collections import defaultdict
 import json
-from math import exp, log
+from math import exp
 from pathlib import Path
 from statistics import median
 
