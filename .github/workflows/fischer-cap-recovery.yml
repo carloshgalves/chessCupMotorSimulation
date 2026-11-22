@@ -1,0 +1,198 @@
+name: Fischer terminal-only recovery of 450-ply cap
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/fischer_cap_recovery.py'
+      - 'tests/test_fischer_cap_recovery.py'
+      - '.github/workflows/fischer-cap-recovery.yml'
+  workflow_dispatch:
+    inputs:
+      resume_recovery_run_id:
+        description: 'Optional completed previous recovery run to reuse its validated per-case checkpoints'
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: fischer-cap-recovery-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      indices: ${{ steps.scan.outputs.indices }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Contract and checkpoint tests
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pytest -q tests/test_fischer_cap_recovery.py tests/test_fischer_full_games.py
+      - name: Verify source run identity and immutable scientific revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/carloshgalves/chessCupMotorSimulation/actions/runs/44415124944 \
+            --jq '[.event,.status,.head_sha,(.path | split("@")[0])] | @tsv' > "$RUNNER_TEMP/run-identity.txt"
+          test "$(cat "$RUNNER_TEMP/run-identity.txt")" = "$(printf 'workflow_dispatch\tcompleted\t227f9e86235f30493e39f700a0c17d8fea68a2a0\t.github/workflows/fischer-full-development-games.yml')"
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 44415124944
+          github-token: ${{ github.token }}
+          pattern: shard-*
+          path: ${{ runner.temp }}/source-shards
+      - name: Replay and account for every original case; identify only capped ones
+        id: scan
+        run: |
+          python -m chesssim.fischer_cap_recovery scan \
+            --shards "$RUNNER_TEMP/source-shards" > "$RUNNER_TEMP/fischer-censor-scan.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=json.loads((Path(os.environ["RUNNER_TEMP"])/"fischer-censor-scan.json").read_text())
+          assert p["schema"]=="chesssim-fischer-cap-recovery-v1"
+          assert p["source_run_id"]==44415124944
+          assert p["original_cases"]==3616
+          assert p["original_complete"]==3594
+          assert p["original_censored"]==22
+          assert p["indices"]==[3,7,11,14,15,16,19,20,22]
+          assert p["no_source_test_used"] is True
+          assert set(p["censored_paired_effect_bounds"])=={"fit|12","fit|16","tune|12","tune|16"}
+          print("FISCHER_CENSORED_REAL",json.dumps(p,sort_keys=True),flush=True)
+          with open(os.environ["GITHUB_OUTPUT"],"a") as f:
+              f.write("indices="+json.dumps(p["indices"],separators=(",",":"))+"\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fischer-censored-source-audit
+          path: ${{ runner.temp }}/fischer-censor-scan.json
+          if-no-files-found: error
+          retention-days: 30
+
+  repair:
+    if: github.event_name == 'workflow_dispatch'
+    needs: scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 9
+      matrix:
+        index: ${{ fromJson(needs.scan.outputs.indices) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 44415124944
+          github-token: ${{ github.token }}
+          name: shard-${{ matrix.index }}
+          path: ${{ runner.temp }}/original/shard-${{ matrix.index }}
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Build the exact original Rodent binary and profiles
+        run: |
+          python -m pip install -e .
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent" "$RUNNER_TEMP/repairs"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+      - name: Restore prior recovery checkpoints when explicitly requested
+        if: inputs.resume_recovery_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_RUN: ${{ inputs.resume_recovery_run_id }}
+          CURRENT_RUN: ${{ github.run_id }}
+          SHARD_INDEX: ${{ matrix.index }}
+        run: |
+          if ! [[ "$PREVIOUS_RUN" =~ ^[1-9][0-9]*$ ]] || [[ "$PREVIOUS_RUN" == "$CURRENT_RUN" ]]; then
+            echo "Invalid prior recovery run" >&2
+            exit 1
+          fi
+          identity="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/$PREVIOUS_RUN" \
+            --jq '[.event,.status,.head_branch,(.path|split("@")[0])]|@tsv')"
+          expected="$(printf 'workflow_dispatch\tcompleted\tmain\t.github/workflows/fischer-cap-recovery.yml')"
+          if [[ "$identity" != "$expected" ]]; then
+            echo "Checkpoint source must be a completed recovery dispatch on main" >&2
+            exit 1
+          fi
+          name="repair-shard-$SHARD_INDEX"
+          ids="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs/$PREVIOUS_RUN/artifacts?per_page=100" \
+            --jq ".artifacts[] | select(.name == \"$name\" and .expired == false) | .id")"
+          if [[ -z "$ids" ]]; then
+            echo "No prior checkpoint for $name; recover from original 450 moves"
+          else
+            if ! [[ "$ids" =~ ^[1-9][0-9]*$ ]]; then
+              echo "Ambiguous or invalid prior recovery artifact" >&2
+              exit 1
+            fi
+            gh run download "$PREVIOUS_RUN" --repo "$GITHUB_REPOSITORY" \
+              --name "$name" --dir "$RUNNER_TEMP/repairs/$name"
+            echo "Recovered prior $name; exact case and code hashes will be revalidated."
+          fi
+      - name: Continue only original capped games at the same depth
+        timeout-minutes: 300
+        run: |
+          python -m chesssim.fischer_cap_recovery repair \
+            --original-dir "$RUNNER_TEMP/original/shard-${{ matrix.index }}" \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --out "$RUNNER_TEMP/repairs/repair-shard-${{ matrix.index }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: repair-shard-${{ matrix.index }}
+          path: ${{ runner.temp }}/repairs/repair-shard-${{ matrix.index }}/
+          if-no-files-found: warn
+          retention-days: 30
+
+  finalize:
+    if: github.event_name == 'workflow_dispatch'
+    needs: repair
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 44415124944
+          github-token: ${{ github.token }}
+          pattern: shard-*
+          path: ${{ runner.temp }}/source-shards
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: repair-shard-*
+          path: ${{ runner.temp }}/repairs
+      - name: Replay all originals and repaired tails; certify terminal outcomes only
+        run: |
+          python -m pip install -e .
+          python -m chesssim.fischer_cap_recovery finalize \
+            --shards "$RUNNER_TEMP/source-shards" \
+            --repairs "$RUNNER_TEMP/repairs" \
+            --out "$RUNNER_TEMP/fischer-terminal-summary.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fischer-terminal-recovery-report
+          path: ${{ runner.temp }}/fischer-terminal-summary.json
+          if-no-files-found: warn
+          retention-days: 30
