@@ -80,5 +80,7 @@ def test_recovery_checkpoint_atomic_replacement(tmp_path):
     rec.atomic_replace(target,{"n":2})
     assert rec.original.load_json(target)=={"n":2}
     assert {p.name for p in tmp_path.iterdir()}=={"rec.json"}
-    with pytest.raises(ValueError):
-        rec.atomic_replace(tmp_path/"rec.json.tmp",{"n":1})
+    (tmp_path/"rec.tmp").write_text("uncommitted")
+    with pytest.raises(ValueError,match="Stale"):
+        rec.atomic_replace(target,{"n":3})
+    assert rec.original.load_json(target)=={"n":2}
