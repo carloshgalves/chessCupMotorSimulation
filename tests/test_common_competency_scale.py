@@ -10,16 +10,24 @@ def _anchors():
     for i in range(90):
         arm="train" if i<60 else "validation"
         rating=1300+22*(i%30)
-        for j in range(20):
-            # Deterministic synthetic online-like panel; never research data.
+        for j in range(24):
+            # Synthetic contexts stay phase-consistent and fully validated.
+            phase=("opening","middlegame","endgame")[j%3]
+            skills={"opening":["opening"],
+                    "middlegame":["tactics","dynamics","defense","positional"],
+                    "endgame":["endgames"]}[phase]
             difficult=j%2==0
             stratum=("many|balanced|close" if difficult else "few|advantage|clear")
-            good=rating> (1700 if difficult else 1500)
+            good=rating>(1700 if difficult else 1500)
             records.append({"source":scale.SOURCE,"license":"CC0-1.0",
                 "rating_system":scale.RATING_SYSTEM,"variant":"standard","speed":"rapid",
-                "game":f"{1000*i+j:064x}","player":f"player-{i}",
-                "arm":arm,"rating":rating,"competencies":list(audit.COMPETENCIES),
-                "stratum":stratum,"within_25cp":good})
+                "game":f"{1000*i+j:064x}","player":f"{i+1:064x}",
+                "arm":arm,"rating":rating,"competencies":skills,
+                "phase":phase,"stratum":stratum,
+                "classifier_schema":audit.SCHEMA,
+                "reference_depth":audit.REFERENCE_DEPTH,
+                "score_threshold_cp":25,"mate_sensitive":False,
+                "within_25cp":good})
     return records
 
 
@@ -39,7 +47,7 @@ def test_anchor_player_or_game_split_leakage_fails_closed():
         scale.fit_anchors([*rows,{**rows[0],"arm":"validation",
                                    "game":"f"*64}])
     with pytest.raises(ValueError,match="game"):
-        scale.fit_anchors([*rows,{**rows[0],"player":"external-player",
+        scale.fit_anchors([*rows,{**rows[0],"player":"f"*64,
                                    "arm":"validation"}])
     with pytest.raises(ValueError,match="leaked"):
         scale.fit_anchors(rows,forbidden_games={rows[0]["game"]})
@@ -57,8 +65,10 @@ def test_same_fixed_calibration_scores_human_and_engine_or_returns_null():
         aggregate={}
         for skill in audit.COMPETENCIES:
             cells={}
+            phase=("opening" if skill=="opening" else
+                   "endgame" if skill=="endgames" else "middlegame")
             for stratum in strata:
-                cells[stratum]={"policies":{
+                cells[phase+"::"+stratum]={"policies":{
                     "human":{"numeric":200,"within_25cp":175},
                     "d16":{"numeric":200,"within_25cp":170},
                     "d18":{"numeric":200,"within_25cp":180}}}
