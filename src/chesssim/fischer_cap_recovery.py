@@ -63,7 +63,7 @@ def originals(shards: Path, archive_dir=None):
             report["max_continuation_plies"]!=ORIGINAL_CAP or
             report["excluded_test_games"]!=121):
         raise ValueError("Unexpected or scored source benchmark")
-    panel,metadata,*_=original.load_source(archive_dir)
+    panel,metadata,pgn,rows,surname=original.load_source(archive_dir)
     roots={r["id"]:r for r in panel}
     censored=[]
     all_records=[]
@@ -134,11 +134,15 @@ def validate_patch(initial: dict, patch: dict, root: dict, digest: str):
         board.push(move)
     outcome=board.outcome(claim_draw=True)
     wanted=("COMPLETE",outcome.result(),outcome.termination.name) if outcome else (
-        "PARTIAL","*","EXTENDED_CAP_INCOMPLETE")
+        ("PARTIAL" if len(moves)==EXTENDED_CAP-ORIGINAL_CAP else "IN_PROGRESS"),
+        "*",("EXTENDED_CAP_INCOMPLETE" if len(moves)==EXTENDED_CAP-ORIGINAL_CAP
+             else "RECOVERY_IN_PROGRESS"))
     if (patch.get("status"),patch.get("result"),patch.get("termination"))!=wanted:
         raise ValueError("Incorrect recovery adjudication")
-    if not outcome and len(moves)!=EXTENDED_CAP-ORIGINAL_CAP:
-        raise ValueError("Partial must reach the extended cap")
+    if not outcome and len(moves)<EXTENDED_CAP-ORIGINAL_CAP and patch["status"]!="IN_PROGRESS":
+        raise ValueError("Unfinished continuation must remain IN_PROGRESS")
+    if not outcome and len(moves)==EXTENDED_CAP-ORIGINAL_CAP and patch["status"]!="PARTIAL":
+        raise ValueError("Extended cap must remain unscored")
     for name in ("reached","missing","nodes_exceeded"):
         counter=patch.get(name)
         if not isinstance(counter,dict) or not set(counter)<= {"fischer","simple"} or any(
@@ -147,13 +151,33 @@ def validate_patch(initial: dict, patch: dict, root: dict, digest: str):
     return patch
 
 
-def extend_case(initial,root,original_sha,fischer,simple):
+def extend_case(initial,root,original_sha,fischer,simple,prior=None,on_progress=None):
     board=reconstruct(root,initial)
     focal_white=initial["case"]["color"]=="white"
-    extra=[]
-    reached=Counter()
-    missing=Counter()
-    exceeded=Counter()
+    extra=list(prior["extra_moves"]) if prior else []
+    reached=Counter(prior["reached"]) if prior else Counter()
+    missing=Counter(prior["missing"]) if prior else Counter()
+    exceeded=Counter(prior["nodes_exceeded"]) if prior else Counter()
+    if prior:
+        validate_patch(initial,prior,root,original_sha)
+        for encoded in extra:
+            if board.is_game_over(claim_draw=True):
+                raise ValueError("Terminal checkpoint contains surplus moves")
+            board.push(chess.Move.from_uci(encoded))
+    def record():
+        outcome=board.outcome(claim_draw=True)
+        status=("COMPLETE" if outcome else
+                "PARTIAL" if ORIGINAL_CAP+len(extra)==EXTENDED_CAP else
+                "IN_PROGRESS")
+        return {"schema":SCHEMA,"source_run_id":SOURCE_RUN_ID,
+                "case":initial["case"],"original_sha256":original_sha,
+                "original_plies":ORIGINAL_CAP,"extended_cap":EXTENDED_CAP,
+                "extra_moves":list(extra),"status":status,
+                "result":outcome.result() if outcome else "*",
+                "termination":outcome.termination.name if outcome else
+                    ("EXTENDED_CAP_INCOMPLETE" if status=="PARTIAL" else "RECOVERY_IN_PROGRESS"),
+                "reached":dict(reached),"missing":dict(missing),
+                "nodes_exceeded":dict(exceeded)}
     while not board.is_game_over(claim_draw=True) and ORIGINAL_CAP+len(extra)<EXTENDED_CAP:
         focal=board.turn==focal_white
         role="fischer" if focal else "simple"
@@ -166,16 +190,9 @@ def extend_case(initial,root,original_sha,fischer,simple):
             raise ValueError("Illegal recovery UCI move")
         board.push(move)
         extra.append(move.uci())
-    outcome=board.outcome(claim_draw=True)
-    record={"schema":SCHEMA,"source_run_id":SOURCE_RUN_ID,
-            "case":initial["case"],"original_sha256":original_sha,
-            "original_plies":ORIGINAL_CAP,"extended_cap":EXTENDED_CAP,
-            "extra_moves":extra,"status":"COMPLETE" if outcome else "PARTIAL",
-            "result":outcome.result() if outcome else "*",
-            "termination":outcome.termination.name if outcome else "EXTENDED_CAP_INCOMPLETE",
-            "reached":dict(reached),"missing":dict(missing),
-            "nodes_exceeded":dict(exceeded)}
-    return validate_patch(initial,record,root,original_sha)
+        if on_progress and len(extra)%10==0:
+            on_progress(validate_patch(initial,record(),root,original_sha))
+    return validate_patch(initial,record(),root,original_sha)
 
 
 def repair(original_dir: Path, out: Path, rodent_root: Path, archive_dir=None):
@@ -191,10 +208,7 @@ def repair(original_dir: Path, out: Path, rodent_root: Path, archive_dir=None):
     roots={r["id"]:r for r in panel}
     manifest=original.load_json(Path(original_dir)/"manifest.json")
     expected={**metadata,"hashes":manifest["hashes"],
-              "book_sha256":original.digest(original.fit_book(
-                  original.load_source(archive_dir)[2],
-                  original.load_source(archive_dir)[3],
-                  original.load_source(archive_dir)[4])),
+              "book_sha256":original.digest(original.fit_book(pgn,rows,surname)),
               "shard_index":index,"shard_count":COUNT,
               "case_ids":[c["id"] for c in original.shard_cases(panel,index,COUNT)]}
     if manifest!=expected:
@@ -247,10 +261,13 @@ def repair(original_dir: Path, out: Path, rodent_root: Path, archive_dir=None):
         baseline=stack.enter_context(_open_engine(root,exe,simple,book=False))
         for i,(initial,position,old_hash) in enumerate(censored,1):
             file=out/(initial["case"]["id"]+".json")
-            if file.exists():
-                patch=validate_patch(initial,original.load_json(file),position,old_hash)
+            prior=(validate_patch(initial,original.load_json(file),position,old_hash)
+                   if file.exists() else None)
+            if prior is not None and prior["status"] in ("COMPLETE","PARTIAL"):
+                patch=prior
             else:
-                patch=extend_case(initial,position,old_hash,focal,baseline)
+                patch=extend_case(initial,position,old_hash,focal,baseline,prior,
+                                  lambda checkpoint:atomic_replace(file,checkpoint))
                 atomic_replace(file,patch)
             print("FISCHER_RECOVERY",index,i,len(censored),patch["status"],
                   len(patch["extra_moves"]),flush=True)
@@ -283,7 +300,8 @@ def finalize(shards: Path, repairs: Path, archive_dir=None):
                 or manifest.get("original_manifest_sha256")!=hash_bytes(old_manifest.read_bytes())
                 or manifest.get("original_protocol_hashes")!=source["protocol_code_hashes"]
                 or manifest.get("original_engine_hashes")!=source["hashes"] or
-                manifest.get("shard_index")!=i or manifest.get("extended_cap")!=EXTENDED_CAP):
+                manifest.get("shard_index")!=i or manifest.get("extended_cap")!=EXTENDED_CAP
+                or manifest.get("recovery_code_sha256")!=file_hash(Path(__file__))):
             raise ValueError("Recovery manifest does not bind original evidence")
         patch=validate_patch(base,original.load_json(directory/(case["id"]+".json")),
                              roots[case["root"]],old_hash)
