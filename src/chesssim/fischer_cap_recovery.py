@@ -73,7 +73,11 @@ def originals(shards: Path, archive_dir=None):
             path=directory/(case["id"]+".json")
             blob=path.read_bytes()
             rec=json.loads(blob)
-            original.validate_case(rec,case,roots[case["root"]])
+            # original.aggregate already replayed and validated ALL 3,616
+            # source files. Recheck every censored one, which is extended.
+            # Avoid replaying 3,594 terminal move histories a second time.
+            if rec["status"]!="COMPLETE":
+                original.validate_case(rec,case,roots[case["root"]])
             item=(i,case,rec,hash_bytes(blob))
             all_records.append(item)
             if rec["status"]=="INCOMPLETE":
