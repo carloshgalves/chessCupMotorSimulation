@@ -76,6 +76,7 @@ def _policy(excess,over=0,mates=0,negative=0):
     return {"decisions":400,"paired_numeric":400,
             "mean_excess_vs_human_cp":excess,"over_100cp":over,
             "lost_positive_mate":mates,"negative_mate_selected":negative,
+            "attained_requested_depth":400,"overshot_node_cap":0,
             "game_cluster_ci95_cp":[-3,3]}
 
 
