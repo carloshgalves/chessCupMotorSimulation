@@ -23,7 +23,9 @@ def _quality(data,depth):
     paired=policy["paired_numeric"]
     if (data["distinct_games"]<MIN_GAMES or paired<MIN_NUMERIC or
             total==0 or paired/total<.9 or
-            policy["mean_excess_vs_human_cp"] is None):
+            policy["mean_excess_vs_human_cp"] is None or
+            policy.get("attained_requested_depth",0)/total<MIN_ATTAINED or
+            policy.get("overshot_node_cap",1)>0):
         return None
     return policy
 
