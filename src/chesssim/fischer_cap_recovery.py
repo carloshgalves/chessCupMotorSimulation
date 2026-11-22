@@ -88,13 +88,40 @@ def originals(shards: Path, archive_dir=None):
 
 
 def scan(shards: Path, archive_dir=None):
-    report,_,_,_,censored=originals(shards,archive_dir)
+    report,_,_,records,censored=originals(shards,archive_dir)
     indices=sorted({i for i,_,_,_ in censored})
+    pairs=defaultdict(dict)
+    completed=defaultdict(Counter)
+    for _,case,record,_ in records:
+        key=f'{case["arm"]}|{case["opponent_depth"]}|{case["color"]}|{case["mode"]}'
+        if record["status"]=="COMPLETE":
+            score=points(case,record["result"])
+            completed[key]["games"]+=1
+            completed[key]["points_twice"]+=int(2*score)
+        else:
+            score=None
+            completed[key]["censored"]+=1
+        pairs[(case["arm"],case["opponent_depth"],case["root"],case["color"])][case["mode"]]=score
+    bounds=defaultdict(lambda:{"pairs":0,"censored_pairs":0,"lower_total":0.0,"upper_total":0.0})
+    for (arm,depth,root,color),modes in pairs.items():
+        if set(modes)!=set(original.MODES):
+            raise ValueError("Unpaired source records")
+        book,base=modes["book"],modes["original"]
+        entry=bounds[f"{arm}|{depth}"]
+        entry["pairs"]+=1
+        entry["censored_pairs"]+=int(book is None or base is None)
+        entry["lower_total"]+=(0.0 if book is None else book)-(1.0 if base is None else base)
+        entry["upper_total"]+=(1.0 if book is None else book)-(0.0 if base is None else base)
+    for entry in bounds.values():
+        entry["lower_mean"]=entry.pop("lower_total")/entry["pairs"]
+        entry["upper_mean"]=entry.pop("upper_total")/entry["pairs"]
     return {"schema":SCHEMA,"status":"ONLY_PLY_CAP_RECOVERY_REQUIRED",
             "source_run_id":SOURCE_RUN_ID,"original_cases":report["observed_cases"],
             "original_complete":report["observed_cases"]-len(censored),
             "original_censored":len(censored),"indices":indices,
             "extended_cap":EXTENDED_CAP,"no_source_test_used":True,
+            "descriptive_completed_cells":dict(completed),
+            "censored_paired_effect_bounds":dict(bounds),
             "original_panel_sha256":report["panel_sha256"],
             "original_protocol_hashes":report["protocol_code_hashes"]}
 
