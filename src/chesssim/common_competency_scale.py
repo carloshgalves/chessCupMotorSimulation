@@ -12,7 +12,8 @@ from math import exp
 from pathlib import Path
 from statistics import median
 
-from .fischer_competency_audit import COMPETENCIES
+from .fischer_competency_audit import (COMPETENCIES, REFERENCE_DEPTH,
+                                       SCHEMA as AUDIT_SCHEMA)
 
 SCHEMA="chesssim-common-six-skill-empirical-scale-v1"
 SOURCE="LICHESS_CC0_STANDARD_RAPID"
@@ -74,14 +75,26 @@ def validate_anchor_rows(records, forbidden_games=()):
         arm=r.get("arm")
         rating=r.get("rating")
         skills=r.get("competencies")
-        if (not isinstance(player,str) or not player or len(player)>128 or
+        if (not isinstance(player,str) or len(player)!=64 or
+                any(c not in "0123456789abcdef" for c in player) or
                 arm not in SPLITS or type(rating) is not int or not 1000<=rating<=3000 or
                 not isinstance(skills,list) or not skills or
                 not set(skills)<=set(COMPETENCIES) or
                 len(set(skills))!=len(skills) or
+                r.get("phase") not in ("opening","middlegame","endgame") or
                 not isinstance(r.get("stratum"),str) or
                 r["stratum"].count("|")!=2 or
+                (r["stratum"].split("|")[0] not in ("few","medium","many")) or
+                (r["stratum"].split("|")[1] not in
+                 ("balanced","advantage","disadvantage","mate")) or
+                (r["stratum"].split("|")[2] not in
+                 ("close","moderate","clear","mate")) or
+                r.get("classifier_schema")!=AUDIT_SCHEMA or
+                r.get("reference_depth")!=REFERENCE_DEPTH or
+                r.get("score_threshold_cp")!=25 or
+                r.get("mate_sensitive") is not False or
                 type(r.get("within_25cp")) is not bool):
+
             raise ValueError("Invalid anchored historical difficulty/label metadata")
         previous=by_player.setdefault(player,arm)
         if previous!=arm:
@@ -113,7 +126,10 @@ def fit_anchors(records,forbidden_games=()):
     validation=[r for r in rows if r["arm"]=="validation"]
     # Every player has equal weight in the rating-span transform, not every
     # prolific player's individual position.
-    players={r["player"]:r["rating"] for r in fit}
+    histories=defaultdict(list)
+    for row in fit:
+        histories[row["player"]].append(row["rating"])
+    players={name:median(values) for name,values in histories.items()}
     center=median(players.values())
     rating_min=min(players.values())
     rating_max=max(players.values())
@@ -138,7 +154,7 @@ def fit_anchors(records,forbidden_games=()):
             continue
         bins=defaultdict(list)
         for row in a:
-            bins[row["stratum"]].append(row)
+            bins[row["phase"]+"::"+row["stratum"]].append(row)
         offsets={}
         for cell,items in bins.items():
             if (len(items)<MIN_CELL_SUPPORT or
@@ -146,16 +162,18 @@ def fit_anchors(records,forbidden_games=()):
                     len({x["game"] for x in items})<10):
                 continue
             # Solve offset b: probability σ(theta-b) = σ(-b+theta)
-            vals=[(-theta[row["player"]],int(row["within_25cp"]),1) for row in items]
+            vals=[(-(row["rating"]-center)/400,int(row["within_25cp"]),1)
+                  for row in items]
             offsets[cell]=_solve(vals)
-        supported=[r for r in b if r["stratum"] in offsets]
+        supported=[r for r in b if r["phase"]+"::"+r["stratum"] in offsets]
         if not supported or len(supported)/len(b)<MIN_MODELED_COVERAGE:
             models[skill]={"status":"INSUFFICIENT_STRATUM_COVERAGE",
                            "modeled_validation":len(supported),"validation_decisions":len(b)}
             continue
         # A useful statistical calibration must predict an unseen player's
         # choices. Held-out player identities never contribute to offsets.
-        predictions=[(logistic((r["rating"]-center)/400+offsets[r["stratum"]]),
+        predictions=[(logistic((r["rating"]-center)/400+
+                               offsets[r["phase"]+"::"+r["stratum"]]),
                       int(r["within_25cp"])) for r in supported]
         brier=sum((p-y)**2 for p,y in predictions)/len(predictions)
         empirical=sum(y for _,y in predictions)/len(predictions)
