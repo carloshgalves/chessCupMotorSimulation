@@ -405,6 +405,8 @@ def main(argv=None):
             raise ValueError("Refusing to overwrite recovery summary")
         original.atomic_json(args.out,doc)
     print(json.dumps(doc,sort_keys=True,allow_nan=False),flush=True)
+    if args.command=="repair" and doc["completed"]!=doc["cases"]:
+        return 2
     return 0 if doc.get("status") not in ("PARTIAL","INCOMPLETE_DO_NOT_SCORE") else 2
 
 
