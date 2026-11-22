@@ -241,12 +241,14 @@ def run_shard(rodent,stockfish,out,index,archive_dir=None):
             pending.remove(gid)
             path=out/(gid+".json")
             decisions,forced=game_decisions(game,row)
-            expected_plies=[board.ply() for board,_,_,_ in decisions]
+            expected_positions=[(board.ply(),sha256(board.fen().encode()).hexdigest(),
+                                 stage,options) for board,_,stage,options in decisions]
             if path.exists():
                 doc=json.loads(path.read_text())
                 if (doc["game"]!=gid or doc["arm"]!=neural_arm(gid) or
                         doc["forced"]!=forced or
-                        [r["ply"] for r in doc["decisions"]]!=expected_plies or
+                        [(r["ply"],r["fen_sha256"],r["phase"],r["legal_moves"])
+                          for r in doc["decisions"]]!=expected_positions or
                         doc["nonforced"]!=len(decisions) or
                         doc["manifest_sha256"]!=digest(manifest)):
                     raise ValueError("Unverifiable checkpoint")
@@ -320,6 +322,16 @@ def summarize_group(records):
 def aggregate(shards,archive_dir=None):
     pgn,rows,scan,origin,surname=_source(archive_dir)
     data={r["mainline_sha256"]:r for r in rows}
+    # Independent source replay determines the exact full list of
+    # expected eligible decisions. A forged forced count cannot hide gaps.
+    expected_decisions={}
+    for game,meta in _iter_verified_games(pgn,rows,surname):
+        decisions,forced=game_decisions(game,meta)
+        expected_decisions[meta["mainline_sha256"]]=(
+            forced,[(board.ply(),sha256(board.fen().encode()).hexdigest(),
+                     stage,options) for board,_,stage,options in decisions])
+    if len(expected_decisions)!=len(rows):
+        raise ValueError("Incomplete independent source reconstruction")
     counts=Counter()
     collected=defaultdict(list)
     seen=set()
@@ -355,8 +367,11 @@ def aggregate(shards,archive_dir=None):
             counts[doc["arm"]+":games"]+=1
             counts[doc["arm"]+":nonforced"]+=doc["nonforced"]
             counts[doc["arm"]+":forced"]+=doc["forced"]
-            if doc["nonforced"]+doc["forced"] != (meta["plies"]+ (meta["color"]=="white"))//2:
-                raise ValueError("Focal decision denominator does not reconcile")
+            src_forced,src_positions=expected_decisions[gid]
+            if (doc["forced"]!=src_forced or doc["nonforced"]!=len(src_positions) or
+                    [(r["ply"],r["fen_sha256"],r["phase"],r["legal_moves"])
+                     for r in doc["decisions"]]!=src_positions):
+                raise ValueError("Game audit omitted or changed a real legal decision")
             prior=-1
             for decision in doc["decisions"]:
                 if (type(decision["ply"]) is not int or decision["ply"]<=prior or
