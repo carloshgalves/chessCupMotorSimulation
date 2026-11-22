@@ -74,11 +74,18 @@ in addition to actual WDL of completed games.
    and does not imply independent testing.
 
 Recovery artifacts with `IN_PROGRESS`/`PARTIAL` status must not be
-promoted or counted as draws. If a hosted runner exceeds its time limit,
-partial recovery artifacts may be reused only after verifying unchanged
-manifests and case provenance. Further resource/cap changes require
-an explicit new recovery version, not reclassification of a censored
-game.
+promoted or counted as draws. If a hosted runner exceeds its time limit, the `always()` artifact
+upload preserves committed recovery checkpoints. After that dispatch
+has finished, run a new dispatch with the optional
+`resume_recovery_run_id` input to reuse its immutable case prefix
+and completed tail checkpoints. The new workflow checks the prior run
+identity and the recovery code/manifest hashes; no case is silently
+replayed from the start. For example:
+
+    gh workflow run fischer-cap-recovery.yml --repo carloshgalves/chessCupMotorSimulation --ref main -f resume_recovery_run_id=<prior_recovery_run_id>
+
+Further resource/cap changes require an explicit new recovery version,
+not reclassification of a censored game.
 
 This is **not** a substitute for a fresh blind evaluation, direct
 historical Elo calibration or the six competence dimensions.
