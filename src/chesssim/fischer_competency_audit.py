@@ -30,6 +30,7 @@ from .real_training_cohorts import (
     MIRROR_COMMIT, _iter_verified_games, _player_configuration, _scan, _source_bytes,
 )
 from .registry import registered_aliases
+from .fischer_strength_calibration import choose_fit_depths, summarize_out_of_training
 
 SCHEMA="chesssim-fischer-all-decisions-six-competencies-v1"
 ARMS=("fit","tune","excluded_test")
@@ -299,6 +300,12 @@ def summarize_group(records):
                          "negative_mate_selected":sum(r["negative_mate_selected"] for r in records_m),
                          "historical_match":sum(r["historical_match"] for r in records_m)}
         if label!="human":
+            searches=[r["search"][label] for r in records]
+            policies[label].update({
+                "attained_requested_depth":sum(x["reached_requested"] for x in searches),
+                "missing_reported_depth":sum(x["reported_depth"] is None for x in searches),
+                "overshot_node_cap":sum(x["reported_nodes"] is not None and
+                                        x["reported_nodes"]>NODE_CAP for x in searches)})
             d=int(label[1:])
             delta=[t for _,t in paired[d]]
             policies[label].update({"paired_numeric":len(delta),
@@ -371,10 +378,14 @@ def aggregate(shards,archive_dir=None):
     for arm in ARMS:
         records=collected[arm]
         group={"all":summarize_group(records),"by_competency":{},
+               "by_competency_stratum":{},
                "by_phase":{},"by_period":{},"by_stratum":{}}
         for skill in COMPETENCIES:
             subset=[x for x in records if skill in x["competencies"]]
             group["by_competency"][skill]=summarize_group(subset)
+            group["by_competency_stratum"][skill]={
+                key:summarize_group([v for v in subset if v["stratum"]==key])
+                for key in sorted({v["stratum"] for v in subset})}
         for key,field,allowed in (("by_phase","phase",("opening","middlegame","endgame")),
                                   ("by_period","period",BANDS),
                                   ("by_stratum","stratum",sorted({x["stratum"] for x in records}))):
@@ -389,13 +400,17 @@ def aggregate(shards,archive_dir=None):
         incomplete_depth[k+":missing"]+=int(stats["reported_depth"] is None)
         incomplete_depth[k+":nodes_over"]+=int(
             stats["reported_nodes"] is not None and stats["reported_nodes"]>NODE_CAP)
+    experimental=choose_fit_depths(arms["fit"])
+    retrospective=summarize_out_of_training(experimental,{
+        "tune":arms["tune"],"excluded_test":arms["excluded_test"]})
     return {"schema":SCHEMA,"status":"ALL_FISCHER_DECISIONS_AUDITED_NOT_CALIBRATED",
             "source":origin,"source_pgn_sha256":sha256(pgn).hexdigest(),
             "games":len(rows),"counted":dict(counts),"shard_count":SHARDS,
             "engine_hashes":manifests[0]["hashes"],"protocol_hashes":manifests[0]["protocol"],
             "reference_depth":REFERENCE_DEPTH,"candidate_depths":list(DEPTHS),
             "engine_search_telemetry":dict(incomplete_depth),
-            "arms":arms,"skill_values_0_110":dict.fromkeys(COMPETENCIES),
+            "arms":arms,"experimental_phase_budget":experimental,
+            "out_of_training_retrospective_checks":retrospective,"skill_values_0_110":dict.fromkeys(COMPETENCIES),
             "test_disclosure":TEST_DISCLOSURE,
             "training_only_selection_allowed":"fit",
             "independent_blind_test_available":False,
