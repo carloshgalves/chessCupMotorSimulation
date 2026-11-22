@@ -63,13 +63,12 @@ def originals(shards: Path, archive_dir=None):
             report["max_continuation_plies"]!=ORIGINAL_CAP or
             report["excluded_test_games"]!=121):
         raise ValueError("Unexpected or scored source benchmark")
-    panel,metadata,pgn,rows,surname=original.load_source(archive_dir)
+    panel,_,*_=original.load_source(archive_dir)
     roots={r["id"]:r for r in panel}
     censored=[]
     all_records=[]
     for i in range(COUNT):
         directory=Path(shards)/f"shard-{i}"
-        manifest=original.load_json(directory/"manifest.json")
         for case in original.shard_cases(panel,i,COUNT):
             path=directory/(case["id"]+".json")
             blob=path.read_bytes()
@@ -225,7 +224,7 @@ def extend_case(initial,root,original_sha,fischer,simple,prior=None,on_progress=
 def repair(original_dir: Path, out: Path, rodent_root: Path, archive_dir=None):
     # This shard's all cases have exactly the same source protocol hashes
     # as the unchanged original module. It cannot be silently "updated".
-    panel,metadata,*_=original.load_source(archive_dir)
+    panel,metadata,pgn,rows,surname=original.load_source(archive_dir)
     name=Path(original_dir).name
     if not name.startswith("shard-") or not name[6:].isdigit():
         raise ValueError("Require original shard-N directory")
