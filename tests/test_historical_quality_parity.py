@@ -167,13 +167,17 @@ def test_input_checks_refuse_phase_and_root_tampering():
     metrics = {key: quality._policy_metric(raw[human], raw[human])
                for key in quality.POLICIES}
     evaluated = {
-        "phase": "opening", "tactical_pre_move": False, "pre_move_tags": [],
+        "phase": "opening", "tactical_pre_move": False, "pre_move_tags": ["opening"],
         "reference": {"best": human, "second": "d2d4",
+                      "ranked": [{"move": "e2e4", "cp": 35, "mate": None},
+                                 {"move": "d2d4", "cp": 15, "mate": None}],
                       "evals": raw, "inconsistent": False},
         "moves": mapping, "scores": metrics,
         "joint_numeric": True,
-        "search_telemetry": {key: {"reached_requested": True}
-                             for key in quality.POLICIES if key != "human"},
+        "search_telemetry": {
+            key: {"reached_requested": True, "requested_depth": 16,
+                  "reported_depth": 16, "reported_nodes": 500}
+            for key in quality.POLICIES if key != "human"},
     }
     doc = {"schema": quality.SCHEMA, "case": meta,
            "manifest_sha256": "c"*64, "measured": evaluated}
