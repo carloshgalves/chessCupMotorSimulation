@@ -1,10 +1,12 @@
-# Fischer d16 — product-asset release candidate (human sign-off required)
+# Fischer d16 — game asset frozen after maintainer sign-off
 
 ## Disposition
 
-**All four predeclared final product gates passed.** The existing, **unmodified**
-Rodent IV **Fischer d16** game personality is **eligible to be frozen as a stable
-game asset after explicit human release review**. This is a *product acceptance
+**All four predeclared final product gates passed.** The maintainer explicitly
+approved release on 2026-11-23. The existing, **unmodified** Rodent IV
+**Fischer d16** personality is now **FROZEN as a product game asset**, bound
+to the evidence below and the fixed-depth configuration. This status does
+not by itself change gameplay integration or the official Arena. This is a *product acceptance
 decision*, not a claim that engine Fischer has the real player's Elo or would
 choose exactly the same moves.
 
@@ -73,11 +75,13 @@ qualification. Other player models can now proceed on their own tracks.
 - [x] Legal completion, 10+2, style and repeatability metrics reconciled.
 - [x] Scientific limitations and Simple's greater exact move-match disclosed.
 - [x] Baseline and unmodified motor/profile SHA hashes pinned.
-- [ ] **Explicit maintainer approval to label Fischer d16 as frozen game asset.**
-- [ ] Post-approval: document stable release status in roster/asset manifest, without
-      changing Rodent binaries, original personality, career ratings or Arena
-      defaults; open the next player's qualification track.
+- [x] **Explicit maintainer approval to label Fischer d16 as frozen game asset** (2026-11-23).
+- [x] Post-approval: document stable release status in a dedicated asset manifest,
+      without changing Rodent binaries, original personality, career ratings or
+      Arena defaults; open Tal as the next qualification track.
 
-The status in `docs/evidence/fischer-d16-freeze-proposal.json` deliberately
-remains `REQUIRES_HUMAN_RELEASE_REVIEW`, not `FROZEN`. Approval must be
-performed consciously rather than inferred from a green CI.
+The status in `docs/evidence/fischer-d16-freeze-proposal.json` is
+`FROZEN_GAME_ASSET`, reflecting **explicit maintainer approval**, not inferred
+from green CI. The evidence report and hashes must stay immutable. Any future
+strength, style, binary, search-depth or opening-book changes are a **new,
+separately qualified candidate**. Existing Arena and roster remain unchanged.
