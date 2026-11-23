@@ -98,3 +98,6 @@ def test_historical_rates_not_confused_with_motor_fidelity(monkeypatch):
         "forcing":None,"check":None,"pawn_move":None,"kingward":None
     } for key,x in doc["observed_historical_move_preferences"].items() if not x["decisions"])
     assert doc["validation_test_games_opened_for_training"]==0
+    assert doc["test_style_frequency_published"] is False
+    assert all(doc["observed_historical_move_preferences"][f"excluded_test|{stage}"]
+               ["decisions"]==0 for stage in tal.STAGES)
