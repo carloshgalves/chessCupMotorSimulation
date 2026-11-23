@@ -120,9 +120,18 @@ def shard(value: str) -> int:
     return int(sha256(value.encode()).hexdigest()[:12],16)%SHARDS
 
 
+def case_shard(case, roots):
+    # Keep the exact white/black crossover together and balance clock work.
+    # The root ordering is fixed before any engine result is observed.
+    indexes={root["id"]:i%SHARDS for i,root in enumerate(roots)}
+    if case["root"] not in indexes:
+        raise ValueError("Unplanned historical root")
+    return indexes[case["root"]]
+
+
 def plan(archive_dir=None):
     source=source_cases(archive_dir)
-    games=Counter(shard(c["id"]) for c in source["cases"])
+    games=Counter(case_shard(c,source["roots"]) for c in source["cases"])
     positions=Counter(shard(x["game"]) for x in source["style"].values())
     if not games or not positions:
         raise ValueError("Empty game or style allocation")
@@ -347,7 +356,7 @@ def run_shard(rodent_root,out,index,archive_dir=None):
     subset=[r for r in rows if neural_arm(r["mainline_sha256"])=="excluded_test"]
     position_meta=source["style"]
     roots={r["id"]:r for r in source["roots"]}
-    cases=[case for case in source["cases"] if shard(case["id"])==index]
+    cases=[case for case in source["cases"] if case_shard(case,source["roots"])==index]
     styles=[s for s in position_meta.values() if shard(s["game"])==index]
     path=Path(out)
     if path.is_symlink():
@@ -525,7 +534,8 @@ def aggregate(shards,baseline,archive_dir=None):
         expected={"schema":SCHEMA,"shard":index,"source":source["pgn_sha256"],
                   "rodent":RODENT_HASHES,"protocol_sha256":file_hash(Path(__file__)),
                   "python_chess_version":chess.__version__,
-                  "case_ids":sorted(c["id"] for c in source["cases"] if shard(c["id"])==index),
+                  "case_ids":sorted(c["id"] for c in source["cases"] if
+                                    case_shard(c,source["roots"])==index),
                   "style_ids":sorted(s["id"] for s in styles.values() if shard(s["game"])==index),
                   "clock":[CLOCK_SECONDS,CLOCK_INCREMENT],"depth":FOCAL_DEPTH}
         if manifest!=expected:
