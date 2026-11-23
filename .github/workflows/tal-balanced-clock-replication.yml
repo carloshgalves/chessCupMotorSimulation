@@ -1,0 +1,152 @@
+name: Tal Balanced fresh FIT real-clock strength replication
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/tal_balanced_clock_replication.py'
+      - 'tests/test_tal_balanced_clock_replication.py'
+      - 'docs/TAL_BALANCED_FRESH_FIT_CLOCK.md'
+      - '.github/workflows/tal-balanced-clock-replication.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tal-fresh-fit-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Compile, lint and run adversarial focused tests
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m compileall -q src tests
+          python -m ruff check src/chesssim/tal_balanced_clock_replication.py tests/test_tal_balanced_clock_replication.py
+          python -m pytest -q tests/test_tal_balanced_clock_replication.py
+      - name: Audit full source and preregister never-used FIT opening starts
+        run: |
+          python -m chesssim.tal_balanced_clock_replication plan --fetch \
+            > "$RUNNER_TEMP/tal-fresh-fit-plan.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=json.loads((Path(os.environ["RUNNER_TEMP"])/"tal-fresh-fit-plan.json").read_text())
+          assert p["schema"]=="chesssim-tal-balanced-unseen-fit-10plus2-v1"
+          assert p["status"]=="PREDECLARED_FIT_CLOCK_REPLICATION_NOT_EXECUTED"
+          assert p["roots"]==48 and p["shards"]==24
+          assert p["games_planned"]==288
+          assert p["cases_per_shard"]==[12]*24
+          assert p["test_games_scored"]==0 and p["tune_games_scored"]==0
+          assert p["original_profiles_modified"] is False
+          assert p["tal_frozen"] is False
+          assert p["candidate_sha256"]=="c0f291047023a6f936fd337f11530e6fe886ca0f4f157a5d2f838086857c0897"
+          assert p["fischer_frozen"]["run"]==45097738965
+          print("TAL_FRESH_FIT_CLOCK_PLAN",json.dumps({
+              key:p[key] for key in (
+                  "roots_sha256","roots","shards","games_planned",
+                  "fresh_fit_frame","previous_fit_roots","tune_roots_excluded"
+              )},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tal-fresh-fit-clock-plan
+          path: ${{ runner.temp }}/tal-fresh-fit-plan.json
+          if-no-files-found: error
+
+  play:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 16
+      matrix:
+        index: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Compile original SHA-locked Rodent IV
+        run: |
+          python -m pip install -e .
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+      - name: Play 12 real clocked games per runner (three opponent configurations)
+        timeout-minutes: 300
+        run: |
+          python -m chesssim.tal_balanced_clock_replication play --fetch \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --index ${{ matrix.index }} \
+            --out "$RUNNER_TEMP/shard-${{ matrix.index }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shard-${{ matrix.index }}
+          path: ${{ runner.temp }}/shard-${{ matrix.index }}/
+          if-no-files-found: warn
+          retention-days: 30
+
+  aggregate:
+    needs: play
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shard-*
+          path: ${{ runner.temp }}/shards
+      - name: Independently replay all 288 real clocks and gate relative strength
+        run: |
+          python -m pip install -e .
+          python -m chesssim.tal_balanced_clock_replication aggregate --fetch \
+            --shards "$RUNNER_TEMP/shards" \
+            --out "$RUNNER_TEMP/tal-fresh-fit-results.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=json.loads((Path(os.environ["RUNNER_TEMP"])/"tal-fresh-fit-results.json").read_text())
+          assert p["schema"]=="chesssim-tal-balanced-unseen-fit-10plus2-v1"
+          assert p["games_expected"]==288 and p["games_observed"]==288
+          assert p["censored"]==0
+          assert p["tal_official_untouched"] and p["fischer_untouched"]
+          assert p["do_not_auto_promote"] is True
+          assert set(p["clock"])=={
+              "original_vs_simple","balanced_vs_simple","balanced_vs_original"}
+          assert all(c["games"]==96 for c in p["clock"].values())
+          assert p["status"] in (
+              "ELIGIBLE_FOR_TAL_BALANCED_FURTHER_RELEASE_REVIEW",
+              "NO_CONFIRMED_TAL_BALANCED_CLOCK_STRENGTH_DO_NOT_FREEZE")
+          print("TAL_FRESH_FIT_REAL_STRENGTH",json.dumps({
+              "status":p["status"],"clock":p["clock"],
+              "gates":p["strength_gates"]},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tal-fresh-fit-clock-results
+          path: ${{ runner.temp }}/tal-fresh-fit-results.json
+          retention-days: 30
+          if-no-files-found: warn
