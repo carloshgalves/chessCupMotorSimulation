@@ -38,6 +38,7 @@ MAX_PLIES = 1800
 ROOT_SALT = "tal-strength-fit-unseen-root-design-2026-11-23-v1"
 BOOTSTRAP_SALT = 8301297
 PREVIOUS_GAME_RUN = 45167232903
+EXPECTED_GAMES = 2431
 TAL_ORIGINAL_SHA = "f6b58d7cc9e7d2fcdbbc24a20ea72035d05ca5ed5e3401bda240b1b298ce149d"
 
 # Only values which already occur in Rodent IV's documented original
@@ -69,7 +70,7 @@ def design(archive_dir=None):
     """All historical games scanned. Training panel excludes earlier 608 roots."""
     old_roots, prior = old_panel(archive_dir)
     pgn, rows, _, source, surname = load_source(archive_dir)
-    if len(rows) != 2431 or sha256(pgn).hexdigest() != prior["source_pgn_sha256"]:
+    if len(rows) != EXPECTED_GAMES or sha256(pgn).hexdigest() != prior["source_pgn_sha256"]:
         raise ValueError("The Tal historical source is no longer the audited snapshot")
     previous_fit = {tuple(root["prefix"]) for root in old_roots if root["arm"] == "fit"}
     groups = defaultdict(set)
