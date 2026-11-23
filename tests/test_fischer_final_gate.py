@@ -58,7 +58,6 @@ def test_features_predecision_legal_and_reproducible():
 
 def test_clock_game_replays_real_checkmate_and_rejects_fabricated_result(monkeypatch):
     # Scholar's mate from the start, no engine in the unit-test fixture.
-    board=chess.Board()
     monkeypatch.setattr(gate,"initial_board",lambda root:chess.Board())
     legal=[chess.Move.from_uci(x) for x in
            ("e2e4","e7e5","d1h5","b8c6","f1c4","g8f6","h5f7")]
