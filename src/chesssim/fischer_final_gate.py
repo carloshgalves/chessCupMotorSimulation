@@ -11,7 +11,6 @@ from collections import Counter, defaultdict
 from contextlib import ExitStack
 from hashlib import sha256
 import json
-import os
 from pathlib import Path
 import random
 from statistics import mean
