@@ -4,6 +4,19 @@ Motor local de simulação de partidas e torneios entre personalidades enxadrís
 
 ## Estado do projeto
 
+**Fischer d16 — personalidade de produto homologada e congelada.** O Rodent IV
+original de Bobby Fischer, sem repertório adicional ou orçamento de busca
+adaptativo, passou nos quatro critérios do benchmark final
+([execução #45097738965](https://github.com/carloshgalves/chessCupMotorSimulation/actions/runs/45097738965)):
+12 vitórias, 8 empates e 4 derrotas em 24 partidas 10+2 contra Simple d16;
+284 posições históricas de estilo e 43/43 repetições idênticas. A identidade
+imutável está em `src/chesssim/data/qualified_game_assets.json` e a decisão em
+`docs/FISCHER_D16_RELEASE_REVIEW.md`. Isso é homologação de *jogabilidade*,
+não equivalência comprovada ao Elo humano de Fischer, e não muda
+automaticamente a Arena ou os atributos de XP. **Tal** é o próximo jogador
+em avaliação independente ([issue #204](https://github.com/carloshgalves/chessCupMotorSimulation/issues/204));
+os outros perfis não herdam a homologação de Fischer.
+
 O pacote Python/CLI, a Arena web local, o monitor `watch`, os modos **Duelo/Jogar (humano × UCI)**, Copas, Ligas, História dos 64 enxadristas e o **Elo interno experimental** estão implementados em `main`. A análise independente com Stockfish e o laboratório de representação histórica têm código e testes. O perfil experimental de Henrique Mecking e os demais perfis **não** têm validação definitiva de estilo/força histórica; `fast_statistical` ainda é um demonstrador **não calibrado** (#61), não previsão certificada. O Histórico dos **motores** inclui Arena/torneios/Copas/Ligas e **exclui deliberadamente partidas humanas**. O modo Jogar terá a área independente **Minhas Partidas** (#84, implementação em PR #86), com estatísticas e replay particulares, sem efeito no Elo ou nas estatísticas dos motores. A avaliação visual avançada #24, a importação legal ampliada #62 e a certificação experimental dos 64 continuam abertas. CI automatizada não equivale à homologação física com Rodent/Stockfish/Chrome (#83) nem ao gate de acessibilidade e direitos dos 16 retratos marcados PDM (#53).
 
 ### Jogar com o elenco completo (experimental)

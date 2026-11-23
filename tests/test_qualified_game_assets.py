@@ -1,6 +1,8 @@
 """Immutable Fischer product-release attestation; distinct from human Elo."""
 import json
 from importlib.resources import files
+from pathlib import Path
+import tomllib
 
 from chesssim.catalog import find_player
 from chesssim.fischer_final_gate import FOCAL_DEPTH, RODENT_HASHES
@@ -28,3 +30,9 @@ def test_only_explicitly_qualified_original_fischer_is_frozen():
     assert f["phase_adaptive_depth"] is False
     assert f["neural_override"] is False
     assert not any("Elo human" in x for x in f["restrictions"])
+
+
+def test_frozen_manifest_is_explicitly_packaged_in_distribution():
+    project=tomllib.loads((Path(__file__).resolve().parents[1]/"pyproject.toml").read_text())
+    package_data=project["tool"]["setuptools"]["package-data"]["chesssim.data"]
+    assert "qualified_game_assets.json" in package_data
