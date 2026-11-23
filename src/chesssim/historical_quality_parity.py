@@ -22,7 +22,7 @@ import chess.engine
 from .catalog import find_player
 from .fischer_baseline import phase
 from .fischer_competency_audit import _reference_top2
-from .fischer_deep_calibration import NODE_CAP, choose, tags
+from .fischer_deep_calibration import choose, tags
 from .fischer_full_games import atomic_json, digest, load_json
 from .matches import _open_engine, file_hash
 from .real85_graded_phase_attribution import _score
@@ -31,7 +31,7 @@ from .real_training_cohorts import _iter_verified_games
 from .fischer_competency_audit import _source as fischer_source
 from .tal_product_plan import load_source as tal_source
 from .tal_strength_doe import make_isolated_profiles, TAL_ORIGINAL_SHA
-from .tal_full_games import frozen_fischer, _profiles as original_paths
+from .tal_full_games import frozen_fischer
 from .tal_balanced_clock_replication import BALANCED_SHA
 from .tal_balanced_validation import _profiles as policy_players
 
