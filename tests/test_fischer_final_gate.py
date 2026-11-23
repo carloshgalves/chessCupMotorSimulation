@@ -158,7 +158,7 @@ def test_baseline_gate_rejects_wrong_or_incomplete_historical_corpus():
         gate.source_baseline({**source,"recovered":21})
     with pytest.raises(ValueError,match="incomplete"):
         gate.source_baseline({**source,"source_panel_sha256":"bad"})
-    with pytest.raises(ValueError,match="denominators"):
+    with pytest.raises(ValueError,match="denominator"):
         mutant=json.loads(json.dumps(source))
         mutant["scores"]["fit|16|white|original"]["games"]=5
         gate.source_baseline(mutant)
