@@ -36,6 +36,9 @@ BALANCED_SHA = "c0f291047023a6f936fd337f11530e6fe886ca0f4f157a5d2f838086857c0897
 ROOT_SALT = "tal-balanced-fresh-fit-clock-2026-11-24-v1"
 ROOTS = 48
 SHARDS = 24
+EXPECTED_GAMES = 2431
+EXPECTED_FIT = 2024
+EXPECTED_TEST = 341
 CLOCK = [600, 2]
 GAME_TYPES = ("original_vs_simple", "balanced_vs_simple", "balanced_vs_original")
 MAX_ROOT_CI_ITERATIONS = 3000
@@ -50,10 +53,10 @@ def fixed_roots(archive_dir=None):
     } | {tuple(x["prefix"]) for x in doe}
     tune_prefixes = {tuple(x["prefix"]) for x in prior if x["arm"] == "tune"}
     pgn, rows, _, origin, surname = load_source(archive_dir)
-    if len(rows) != 2431 or sha256(pgn).hexdigest() != HISTORICAL_SHA:
+    if len(rows) != EXPECTED_GAMES or sha256(pgn).hexdigest() != HISTORICAL_SHA:
         raise ValueError("Historical Tal source SHA or census drift")
     training = [r for r in rows if neural_arm(r["mainline_sha256"]) == "fit"]
-    if len(training) != 2024 or graded["reserved_test_games"] != 341:
+    if len(training) != EXPECTED_FIT or graded["reserved_test_games"] != EXPECTED_TEST:
         raise ValueError("FIT source population or excluded TEST has changed")
     grouped = defaultdict(list)
     seen = set()
