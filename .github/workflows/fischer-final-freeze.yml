@@ -1,0 +1,169 @@
+name: Fischer final practical-strength and style freeze gate
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/fischer_final_gate.py'
+      - 'tests/test_fischer_final_gate.py'
+      - '.github/workflows/fischer-final-freeze.yml'
+      - 'docs/FISCHER_FINAL_FREEZE.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+# Cancel superseded PR-only plans; never interrupt a deliberate manual
+# Fischer tournament after a later documentation or test commit.
+concurrency:
+  group: fischer-final-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Compile, lint and unit-test the frozen acceptance criteria
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m compileall -q src tests
+          python -m ruff check src/chesssim/fischer_final_gate.py tests/test_fischer_final_gate.py
+          python -m pytest -q tests/test_fischer_final_gate.py
+      - name: Inventory separate TEST games and frozen historical roots
+        run: |
+          python -m chesssim.fischer_final_gate plan --fetch \
+            > "$RUNNER_TEMP/fischer-final-plan.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=json.loads((Path(os.environ["RUNNER_TEMP"])/"fischer-final-plan.json").read_text())
+          assert p["historical_test_games"]==121
+          assert p["roots"]==12
+          assert p["clock_games"]==24
+          assert p["style_probes"]>=100
+          assert p["shards"]==8
+          assert sum(p["game_shards"].values())==24
+          assert sum(p["style_shards"].values())==p["style_probes"]
+          assert p["time_control"]=="10+2"
+          assert p["historical_test_is_blind"] is False
+          assert p["original_profile_modified"] is False
+          print("FISCHER_FINAL_PLAN",json.dumps(p,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fischer-final-plan
+          path: ${{ runner.temp }}/fischer-final-plan.json
+          if-no-files-found: error
+
+  play:
+    if: github.event_name == 'workflow_dispatch'
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        index: [0,1,2,3,4,5,6,7]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Compile and hash-check original unmodified Fischer and Simple
+        run: |
+          python -m pip install -e .
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          python -c 'from chesssim.fischer_final_gate import _profile; import os; print(_profile(os.environ["RUNNER_TEMP"]+"/rodent")[-1])'
+      - name: Real 10+2 tournament and same-position historical style probes
+        timeout-minutes: 300
+        run: |
+          python -m chesssim.fischer_final_gate play --fetch \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --index ${{ matrix.index }} \
+            --out "$RUNNER_TEMP/shard-${{ matrix.index }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shard-${{ matrix.index }}
+          path: ${{ runner.temp }}/shard-${{ matrix.index }}/
+          retention-days: 30
+          if-no-files-found: warn
+
+  aggregate:
+    if: github.event_name == 'workflow_dispatch'
+    needs: play
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shard-*
+          path: ${{ runner.temp }}/shards
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 44970751726
+          github-token: ${{ github.token }}
+          name: fischer-terminal-recovery-report
+          path: ${{ runner.temp }}/historical
+      - name: Replay 10+2 game history and every style probe, check fixed gate
+        run: |
+          python -m pip install -e .
+          python -m chesssim.fischer_final_gate aggregate --fetch \
+            --shards "$RUNNER_TEMP/shards" \
+            --baseline "$RUNNER_TEMP/historical/fischer-terminal-summary.json" \
+            --out "$RUNNER_TEMP/fischer-final-report.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path(os.environ["RUNNER_TEMP"])/"fischer-final-report.json"
+          doc=json.loads(p.read_text())
+          assert doc["status"]=="ELIGIBLE_FOR_FISCHER_GAME_ASSET_FREEZE_REVIEW"
+          assert all(doc["gates"].values())
+          assert doc["clock"]["games"]==24 and doc["clock"]["completed"]==24
+          assert doc["style"]["positions"]>=100
+          assert doc["blind_historical_test"] is False
+          assert doc["official_profile_modified"] is False
+          # A signed-off human review must still confirm release on main.
+          frozen={"schema":"chesssim-fischer-game-asset-freeze-proposal-v1",
+                  "status":"REQUIRES_HUMAN_RELEASE_REVIEW",
+                  "identity":"fischer","profile_hashes":doc["frozen_profile_hashes"],
+                  "final_evidence_sha256":__import__("hashlib").sha256(p.read_bytes()).hexdigest(),
+                  "original_motor_modified":False,
+                  "historical_human_elo_claimed":False}
+          (Path(os.environ["RUNNER_TEMP"])/"fischer-freeze-proposal.json").write_text(
+               json.dumps(frozen,sort_keys=True,indent=2)+"\n")
+          print("FISCHER_FINAL_GATE_PASSED",json.dumps({
+              "gates":doc["gates"],"style":doc["style"]["historical_agreement"],
+              "clock_score":doc["clock"]["points_ratio"],
+              "clock_games":doc["clock"]["games"]},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fischer-final-freeze-evidence
+          path: |
+            ${{ runner.temp }}/fischer-final-report.json
+            ${{ runner.temp }}/fischer-freeze-proposal.json
+          retention-days: 30
+          if-no-files-found: warn
