@@ -45,6 +45,11 @@ def test_selection_uses_121_heldout_games_and_deduplicates_roots(monkeypatch):
     assert p["historical_test_games"]==121
     assert p["clock_games"]==24
     assert sum(p["game_shards"].values())==24
+    assert sorted(p["game_shards"].values())==[2,2,2,2,4,4,4,4]
+    for root in panel["roots"]:
+        assigned={gate.case_shard(c,panel["roots"]) for c in panel["cases"]
+                  if c["root"]==root["id"]}
+        assert len(assigned)==1
 
 
 def test_features_predecision_legal_and_reproducible():
