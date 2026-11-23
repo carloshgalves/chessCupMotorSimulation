@@ -1,0 +1,146 @@
+name: Tal strength repair DOE (original profile untouched)
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/tal_strength_doe.py'
+      - 'tests/test_tal_strength_doe.py'
+      - 'docs/TAL_STRENGTH_REPAIR_DOE.md'
+      - '.github/workflows/tal-strength-doe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tal-repair-doe-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Test strict variant model, no false wins and isolation
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m compileall -q src tests
+          python -m ruff check src/chesssim/tal_strength_doe.py tests/test_tal_strength_doe.py
+          python -m pytest -q tests/test_tal_strength_doe.py
+      - name: Audit pinned historical source and allocate independent FIT roots
+        run: |
+          python -m chesssim.tal_strength_doe plan --fetch > "$RUNNER_TEMP/tal-repair-plan.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          doc=json.loads((Path(os.environ["RUNNER_TEMP"])/"tal-repair-plan.json").read_text())
+          assert doc["schema"]=="chesssim-tal-strength-profile-doe-v1"
+          assert doc["source_counts"]=={"fit":2024,"tune":66}
+          assert doc["reserved_test_games"]==341
+          assert doc["roots_pilot"]==12 and doc["roots_confirm"]==12
+          assert doc["cases"]==240 and doc["shards"]==12
+          assert doc["previous_game_run"]==45167232903
+          assert doc["outer_test_decisions_evaluated"]==0
+          assert doc["original_personalities_modified"] is False
+          assert doc["tal_frozen"] is False
+          assert doc["fischer"]["run"]==45097738965
+          assert len(doc["roots_sha256"])==64
+          print("TAL_REPAIR_PLAN",json.dumps({k:doc[k] for k in
+              ("fresh_fit_frame","roots_pilot","roots_confirm","cases","shards",
+               "profile_source_sha256","roots_sha256")},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tal-repair-plan
+          path: ${{ runner.temp }}/tal-repair-plan.json
+          if-no-files-found: error
+
+  play:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        index: [0,1,2,3,4,5,6,7,8,9,10,11]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Compile SHA-pinned original Rodent
+        run: |
+          python -m pip install -e .
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+      - name: Real source-locked paired games on immutable ephemeral profiles
+        timeout-minutes: 300
+        run: |
+          python -m chesssim.tal_strength_doe play --fetch \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --index ${{ matrix.index }} \
+            --out "$RUNNER_TEMP/shard-${{ matrix.index }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shard-${{ matrix.index }}
+          path: ${{ runner.temp }}/shard-${{ matrix.index }}/
+          retention-days: 30
+          if-no-files-found: warn
+
+  aggregate:
+    needs: play
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shard-*
+          path: ${{ runner.temp }}/shards
+      - name: Replay all 240 legal chess games and compare matched pilot/confirmation
+        run: |
+          python -m pip install -e .
+          python -m chesssim.tal_strength_doe aggregate --fetch \
+            --shards "$RUNNER_TEMP/shards" \
+            --out "$RUNNER_TEMP/tal-strength-repair-result.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          x=json.loads((Path(os.environ["RUNNER_TEMP"])/"tal-strength-repair-result.json").read_text())
+          assert x["observed_games"]==240 and x["terminal_games"]==240
+          assert x["censored_games"]==0 and x["official_tal_modified"] is False
+          assert x["official_fischer_modified"] is False
+          assert x["status"] in (
+              "PROMISING_STRENGTH_REPAIR_STYLE_GATE_PENDING",
+              "NO_VALIDATED_STRENGTH_GAIN_DO_NOT_PROMOTE")
+          assert set(x["trial"])==set(x["variants"])==set(x["confirmation"])
+          print("TAL_REPAIR_REAL_RESULT",json.dumps({
+              "status":x["status"],"selected":x["selected_candidate"],
+              "pilot":x["trial"],"confirm":x["confirmation"]},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tal-strength-repair-report
+          path: ${{ runner.temp }}/tal-strength-repair-result.json
+          if-no-files-found: warn
+          retention-days: 30
