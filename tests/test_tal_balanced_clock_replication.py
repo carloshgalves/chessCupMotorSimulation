@@ -30,38 +30,45 @@ def synthetic_corpus(monkeypatch):
         arms[gid] = "fit" if i < 70 else "tune" if i < 75 else "excluded_test"
     monkeypatch.setattr(gate,"ROOTS",6)
     monkeypatch.setattr(gate,"SHARDS",3)
+    monkeypatch.setattr(gate,"EXPECTED_GAMES",82)
+    monkeypatch.setattr(gate,"EXPECTED_FIT",70)
+    monkeypatch.setattr(gate,"EXPECTED_TEST",7)
     monkeypatch.setattr(gate,"load_source",lambda archive_dir=None:
                         (b"fixture",rows,{}, "FIXTURE","Tal"))
     monkeypatch.setattr(gate,"HISTORICAL_SHA",sha256(b"fixture").hexdigest())
     monkeypatch.setattr(gate,"neural_arm",lambda gid:arms[gid])
     monkeypatch.setattr(gate,"_iter_verified_games",lambda pgn,subset,surname:
                         ((games[r["mainline_sha256"]],r) for r in subset))
+    first=games[rows[0]["mainline_sha256"]]
+    second=games[rows[1]["mainline_sha256"]]
+    used=[{"id":"prior","arm":"fit",
+           "prefix":[m.uci() for _,m in zip(range(12),first.mainline_moves())]}]
+    prior_doe=[{"prefix":[m.uci() for _,m in zip(range(12),second.mainline_moves())]}]
     monkeypatch.setattr(gate,"initial_panel",lambda archive_dir=None:(
-        [],{"reserved_test_games":7}))
-    monkeypatch.setattr(gate,"doe_design",lambda archive_dir=None:([],{}))
+        used,{"reserved_test_games":7}))
+    monkeypatch.setattr(gate,"doe_design",lambda archive_dir=None:(prior_doe,{}))
     monkeypatch.setattr(gate,"frozen_fischer",lambda:{
         "run":45097738965,"hashes":{
             "rodent":"a"*64,"fischer_profile":"b"*64,
             "simple_control":"c"*64}})
-    # Limit constants are production invariants, monkeypatched ONLY on
-    # these explicit fixtures.
-    original = gate.fixed_roots
-    def smaller(archive_dir=None):
-        # Fixture contains real legal synthetic positions, no user-supplied PGN.
-        return original(archive_dir)
-    monkeypatch.setattr(gate,"fixed_roots",smaller)
-    return rows,games,arms
+    return rows,games,arms,used,prior_doe
 
 
 def test_distinct_unseen_fit_panel_and_all_pairings(monkeypatch):
-    # A fixture replaces the exact source census to test allocation.
-    rows,games,arms=synthetic_corpus(monkeypatch)
-    monkeypatch.setattr(gate,"fixed_roots",gate.fixed_roots)
-    # These constants intentionally remain pinned in production.
-    # Instead use an explicit shadow of the source rows with the census
-    # requirement satisfied through a 2,431-entry fixture in another test.
-    assert len(rows)==82 and len(games)==82
-    roots=[{"id":f"{i:064x}","prefix":[],"arm":"fit"} for i in range(6)]
+    rows,games,arms,prior,doe=synthetic_corpus(monkeypatch)
+    roots,metadata=gate.fixed_roots()
+    assert len(roots)==6
+    assert metadata["roots"]==6 and metadata["games_planned"]==36
+    assert metadata["test_games_scored"]==0
+    assert metadata["tune_games_scored"]==0
+    assert metadata["previous_fit_roots"]==2
+    assert metadata["fresh_fit_frame"]>=6
+    previously={tuple(x["prefix"]) for x in prior+doe}
+    assert all(tuple(root["prefix"]) not in previously for root in roots)
+    assert all(root["arm"]=="fit" for root in roots)
+    assert len({tuple(root["prefix"]) for root in roots})==6
+    assert [x["id"] for x in gate.fixed_roots()[0]]==[x["id"] for x in roots]
+    assert gate.plan()["cases_per_shard"]==[12]*3
     cases=list(gate.matchups(roots))
     assert len(cases)==36
     assert len({x["id"] for x in cases})==36
@@ -73,6 +80,9 @@ def test_distinct_unseen_fit_panel_and_all_pairings(monkeypatch):
         x["id"] for x in cases)
     with pytest.raises(ValueError,match="shard"):
         gate.cases_by_shard(roots,3)
+    arms[rows[0]["mainline_sha256"]]="excluded_test"
+    with pytest.raises(ValueError,match="FIT source"):
+        gate.fixed_roots()
 
 
 def test_clock_slots_include_direct_balanced_vs_original():
@@ -107,7 +117,7 @@ def test_terminal_time_replay_and_pairing_hash_cannot_be_faked(monkeypatch):
         gate.validate_game(altered,case,{},"c"*64)
 
 
-def test_root_cluster_bootstrap_is_not_ply_independent(monkeypatch):
+def test_root_cluster_bootstrap_is_not_ply_independent():
     assert gate.ci_cluster({"one":[1.,0.]}) is None
     flat={f"{i:064x}":[.5,.5] for i in range(48)}
     assert gate.ci_cluster(flat)==[.5,.5]
