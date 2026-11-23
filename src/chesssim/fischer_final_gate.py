@@ -189,6 +189,8 @@ def play_clock(case,root,fischer,simple):
     white=case["color"]=="white"
     clocks=[float(CLOCK_SECONDS),float(CLOCK_SECONDS)]
     moves=[]
+    move_elapsed=[]
+    flag_spent=None
     reached=Counter()
     missed=Counter()
     flag=None
@@ -201,6 +203,7 @@ def play_clock(case,root,fischer,simple):
         clocks[idx]-=spent
         if clocks[idx]<=0:
             # The move is never pushed after time has expired.
+            flag_spent=spent
             flag=label
             break
         if move is None or move not in board.legal_moves:
@@ -209,6 +212,7 @@ def play_clock(case,root,fischer,simple):
         reached[label]+=int(type(info.get("depth")) is int and info["depth"]>=FOCAL_DEPTH)
         missed[label]+=int(type(info.get("depth")) is not int)
         moves.append(move.uci())
+        move_elapsed.append(spent)
         board.push(move)
     outcome=board.outcome(claim_draw=True)
     if flag:
@@ -223,7 +227,8 @@ def play_clock(case,root,fischer,simple):
     else:
         result="*"
         term="PLY_CAP_INCOMPLETE"
-    return {"schema":SCHEMA,"case":case,"moves":moves,"result":result,
+    return {"schema":SCHEMA,"case":case,"moves":moves,"move_elapsed":move_elapsed,
+            "flag_spent":flag_spent,"result":result,
             "termination":term,"status":"COMPLETE" if term!="PLY_CAP_INCOMPLETE" else "INCOMPLETE",
             "time_forfeit":flag,"depth_reached":dict(reached),"depth_missing":dict(missed),
             "clock_remaining":clocks}
@@ -237,29 +242,50 @@ def validate_clock(record,case,root):
     if not isinstance(moves,list) or len(moves)>MAX_GAME_PLIES-START_PLIES:
         raise ValueError("Invalid move list length")
     turns=Counter()
-    for encoded in moves:
+    observed_clocks=[float(CLOCK_SECONDS),float(CLOCK_SECONDS)]
+    spent=record.get("move_elapsed")
+    if (not isinstance(spent,list) or len(spent)!=len(moves) or
+            any(type(x) not in (float,int) or not 0<=x<=90 for x in spent)):
+        raise ValueError("Invalid clock history")
+    for encoded,elapsed in zip(moves,spent):
         if board.is_game_over(claim_draw=True):
             raise ValueError("Moves after terminal")
         move=chess.Move.from_uci(encoded)
         if move not in board.legal_moves:
             raise ValueError("Illegal chess move")
         turns["fischer" if board.turn==(case["color"]=="white") else "simple"]+=1
+        side=0 if board.turn else 1
+        observed_clocks[side]-=elapsed
+        if observed_clocks[side]<=0:
+            raise ValueError("Time-expired move was illegally accepted")
+        observed_clocks[side]+=CLOCK_INCREMENT
         board.push(move)
     outcome=board.outcome(claim_draw=True)
     flag=record.get("time_forfeit")
     if flag not in ("fischer","simple",None):
         raise ValueError("Unknown time forfeit")
     if flag:
-        if outcome or not moves:
+        if outcome:
             raise ValueError("Invalid time forfeit position")
+        flag_elapsed=record.get("flag_spent")
+        if type(flag_elapsed) not in (int,float) or not 0<=flag_elapsed<=90:
+            raise ValueError("Missing flag move clock evidence")
         loser_white=(flag=="fischer")== (case["color"]=="white")
+        side=0 if loser_white else 1
+        observed_clocks[side]-=flag_elapsed
+        if observed_clocks[side]>0:
+            raise ValueError("Claimed time loss without clock expiration")
         wanted=("0-1" if loser_white else "1-0")
         if board.has_insufficient_material(not loser_white):
             wanted="1/2-1/2"
         expected=(wanted,"TIME_FORFEIT","COMPLETE")
     elif outcome:
+        if record.get("flag_spent") is not None:
+            raise ValueError("Unexpected flag clock data")
         expected=(outcome.result(),outcome.termination.name,"COMPLETE")
     else:
+        if record.get("flag_spent") is not None:
+            raise ValueError("Unexpected flag clock data")
         expected=("*","PLY_CAP_INCOMPLETE","INCOMPLETE")
         if board.ply()!=MAX_GAME_PLIES:
             raise ValueError("Unexplained partial game")
@@ -272,8 +298,9 @@ def validate_clock(record,case,root):
             raise ValueError("Invalid UCI telemetry")
     clocks=record.get("clock_remaining")
     if (not isinstance(clocks,list) or len(clocks)!=2 or any(
-        type(x) not in (float,int) or x>600+2*len(moves) or x< -90 for x in clocks)):
-        raise ValueError("Invalid time telemetry")
+            type(x) not in (float,int) or not abs(x-y)<.001
+            for x,y in zip(clocks,observed_clocks))):
+        raise ValueError("Unverifiable recorded time usage")
     return record
 
 
@@ -416,6 +443,8 @@ def validate_style(doc,expected,board,msha):
 
 def source_baseline(doc):
     if (doc.get("schema")!="chesssim-fischer-cap-recovery-v1" or
+            doc.get("source_panel_sha256")!=
+            "5f186aefaa7728ae44f150ca8f1e6f399cfb7cdaeaf07ea71e78fd5e9b5eb8cb" or
             doc.get("source_run_id")!=SOURCE_GAME_RUN or
             doc.get("status")!=SOURCE_RESULT or doc.get("observed_cases")!=3616 or
             doc.get("original_complete")!=3594 or doc.get("recovered")!=22 or
