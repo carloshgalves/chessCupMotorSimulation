@@ -458,13 +458,21 @@ def source_baseline(doc):
         for mode in ("original","book"):
             cells=[doc["scores"][f"{arm}|{depth}|{color}|{mode}"]
                    for color in ("white","black")]
+            if any(set(cell)!={"games","wins","draws","losses"} or
+                   any(type(v) is not int or v<0 for v in cell.values()) or
+                   cell["games"]!=cell["wins"]+cell["draws"]+cell["losses"]
+                   for cell in cells):
+                raise ValueError("Historically scored WDL denominator inconsistent")
             games=sum(x["games"] for x in cells)
             points=sum(x["wins"]+x["draws"]/2 for x in cells)
             sub[mode]={"games":games,"points":points,"score":points/games}
         totals[f"{arm}|{depth}"]=sub
     if (totals["fit|12"]["original"]["games"]!=858 or
             totals["fit|16"]["original"]["games"]!=858 or
-            totals["tune|12"]["original"]["games"]!=46):
+            totals["tune|12"]["original"]["games"]!=46 or
+            totals["tune|16"]["original"]["games"]!=46 or
+            any(totals[k]["original"]["games"]!=totals[k]["book"]["games"]
+                for k in totals)):
         raise ValueError("Unexpected baseline denominators")
     return totals
 
@@ -574,6 +582,10 @@ def aggregate(shards,baseline,archive_dir=None):
                abs(rates["simple"][name]-rates["human"][name])+.025]
     agreement={role:sum(x[role]==x["human"] for x in style_records)/len(style_records)
                for role in ("fischer","simple")}
+    profile_difference=sum(x["fischer"]!=x["simple"] for x in style_records)/len(style_records)
+    fischer_wdl=Counter("draw" if x["result"]=="1/2-1/2" else
+                       "win" if _score(x["result"],x["case"]["color"])==1 else "loss"
+                       for x in match if x["status"]=="COMPLETE")
     reps=[x for x in style_records if x["repeat_fischer"] is not None]
     exact=sum(x["repeat_fischer"]==x["fischer"] for x in reps)
     stability={"retested":len(reps),"repeat_agreement":exact/len(reps) if reps else None,
@@ -581,7 +593,8 @@ def aggregate(shards,baseline,archive_dir=None):
                    len(style_records)}
     style_pass=(len(style_records)>=100 and
                 len({x["game"] for x in style_records})>=100 and
-                len(closer)>=2 and agreement["fischer"]>=.40 and
+                len(closer)>=2 and profile_difference>=.05 and
+                agreement["fischer"]>=.40 and
                 agreement["fischer"]>=agreement["simple"]-.03)
     stable_pass=(len(reps)>=12 and stability["repeat_agreement"]>=.95 and
                  stability["fischer_depth_met"]>=.90)
@@ -597,12 +610,14 @@ def aggregate(shards,baseline,archive_dir=None):
             "clock":{"control":"10+2","games":len(match),"completed":sum(
                 x["status"]=="COMPLETE" for x in match),
                 "points_ratio":score,"game_cluster_ci95":root_ci(paired),
-                "results":dict(results),"time_forfeits":dict(forfeits)},
+                "results":dict(results),"fischer_wdl":dict(fischer_wdl),
+                "time_forfeits":dict(forfeits)},
             "historical_fixed_depth":previous_check,
             "historical_recovery_verified":True,
             "style":{"positions":len(style_records),
                      "source_games":len({x["game"] for x in style_records}),
                      "rates":rates,"historical_agreement":agreement,
+                     "fischer_vs_simple_move_disagreement":profile_difference,
                      "close_to_human_vs_simple":closer},
             "stability":stability,
             "frozen_profile_hashes":RODENT_HASHES,
