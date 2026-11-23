@@ -1,0 +1,157 @@
+name: Tal vs Fischer historical human move-quality parity
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/historical_quality_parity.py'
+      - 'tests/test_historical_quality_parity.py'
+      - 'docs/TAL_FISCHER_HUMAN_MOVE_QUALITY.md'
+      - '.github/workflows/historical-move-quality-parity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tal-fischer-quality-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Unit contracts, compilation and lint
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m compileall -q src tests
+          python -m ruff check src/chesssim/historical_quality_parity.py tests/test_historical_quality_parity.py
+          python -m pytest -q tests/test_historical_quality_parity.py
+      - name: Audit full historical source, select 384 FIT games and source-locked positions
+        run: |
+          python -m chesssim.historical_quality_parity plan --fetch > "$RUNNER_TEMP/historical-quality-plan.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=json.loads((Path(os.environ["RUNNER_TEMP"])/"historical-quality-plan.json").read_text())
+          assert p["schema"]=="chesssim-historical-human-move-quality-parity-v1"
+          assert p["status"]=="QUALITY_PARITY_DESIGN_ONLY_NOT_MEASURED"
+          assert p["selected_games"]=={
+              "fischer":{"peak":96,"other":96},
+              "tal":{"peak":96,"other":96}}
+          assert p["source_arm"]=="fit" and p["tune_or_test_choices_scored"]==0
+          assert p["positions"]>=384 and len(p["per_shard"])==32
+          assert sum(p["per_shard"])==p["positions"]
+          assert p["engine_depth"]==16 and p["reference_depth"]==20
+          assert not p["human_elo_estimated"]
+          assert not p["sacrifice_quality_automatically_inferred"]
+          assert p["fischer"]["run"]==45097738965
+          print("TAL_FISCHER_HUMAN_QUALITY_PLAN",json.dumps({
+              "selected_games":p["selected_games"],"case_counts":p["case_counts"],
+              "positions":p["positions"],"per_shard":p["per_shard"]},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: historical-quality-plan
+          path: ${{ runner.temp }}/historical-quality-plan.json
+          if-no-files-found: error
+
+  audit:
+    if: github.event_name == 'workflow_dispatch'
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 16
+      matrix:
+        index: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Reconstruct immutable Rodent and install Stockfish reference
+        run: |
+          python -m pip install -e .
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          sudo apt-get update -qq
+          sudo apt-get install -y stockfish
+      - name: Compare human moves and both personalities against identical Stockfish d20
+        timeout-minutes: 300
+        run: |
+          python -m chesssim.historical_quality_parity play --fetch \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --stockfish /usr/games/stockfish \
+            --index ${{ matrix.index }} \
+            --out "$RUNNER_TEMP/shard-${{ matrix.index }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shard-${{ matrix.index }}
+          path: ${{ runner.temp }}/shard-${{ matrix.index }}/
+          retention-days: 30
+          if-no-files-found: warn
+
+  aggregate:
+    if: github.event_name == 'workflow_dispatch'
+    needs: audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shard-*
+          path: ${{ runner.temp }}/shards
+      - name: Reconstruct all historical source decisions and bootstrap by game
+        run: |
+          python -m pip install -e .
+          python -m chesssim.historical_quality_parity aggregate --fetch \
+            --shards "$RUNNER_TEMP/shards" \
+            --out "$RUNNER_TEMP/human-move-quality-parity.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=json.loads((Path(os.environ["RUNNER_TEMP"])/"human-move-quality-parity.json").read_text())
+          assert p["observed_decisions"]==p["verified_decisions"]==p["positions"]
+          assert p["fischer_asset_unchanged"] and p["tal_official_unchanged"]
+          assert not p["no_elo_claim"] is False
+          assert p["status"] in (
+            "INCONCLUSIVE_NEEDS_HUMAN_QUALITY_SUPPORT",
+            "HISTORICAL_MOVE_QUALITY_PARITY_PROXY_PASSED_REVIEW_REQUIRED",
+            "HISTORICAL_MOVE_QUALITY_PARITY_NOT_DEMONSTRATED")
+          assert not p["sacrifices_certified_by_derivation"]
+          print("HUMAN_MOVE_QUALITY_PARITY_RESULT",json.dumps({
+              "status":p["status"],"by_cohort":p["by_cohort"],
+              "gap":p["parity_gap_cp"],"ci95":p["parity_ci95_cp"],
+              "tactical_gap":p["tactical_gap_cp"],
+              "tactical_ci95":p["tactical_ci95_cp"],
+              "severe":p["severe_gap_rate"],
+              "severe_ci95":p["severe_ci95_rate"]},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: historical-quality-parity-report
+          path: ${{ runner.temp }}/human-move-quality-parity.json
+          retention-days: 30
+          if-no-files-found: warn
