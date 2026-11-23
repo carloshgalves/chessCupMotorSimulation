@@ -18,7 +18,7 @@ def fake_rows(name):
         rows.append({
             "mainline_sha256": sha256(f"{name}:{i}".encode()).hexdigest(),
             "date": year,
-            "color": "white" if i % 2 else "black",
+            "color": "white" if i % 2 else "black", "plies": 60,
         })
     return rows
 
