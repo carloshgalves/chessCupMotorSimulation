@@ -161,7 +161,7 @@ def render_tal_variant(original_text, overrides):
         if (not re.fullmatch(r"[A-Za-z][A-Za-z0-9]+", key)
                 or type(value) is not int or not 0 <= value <= 1200):
             raise ValueError("Invalid candidate parameter")
-        regex = rf"(?m)^(setoption name {re.escape(key)} value )(-?\d+)\s*$"
+        regex = rf"(?m)^(setoption name {re.escape(key)} value )(-?\d+)[ \t]*$"
         result, count = re.subn(regex, lambda m: m.group(1) + str(value), result)
         if count != 1:
             raise ValueError(f"Tal personality lacks exactly one {key}")
