@@ -23,7 +23,10 @@ in the project roster but **is not prequalified by existing Fischer data**.
   source arm. Historical move feature frequencies (checks, forcing moves,
   pawn moves, nonpawn moves closer to opposing king) are diagnostics only.
   They do not establish Tal's psychological traits, tactical competence,
-  or similarity of Rodent Tal to historical Tal.
+  or similarity of Rodent Tal to historical Tal. The **excluded TEST arm**
+  receives only coverage/decision counts; its feature frequencies are
+  withheld until the policy is frozen to avoid opening a test-based
+  tuning signal.
 - Save every source exclusion/replay count, source SHA, by-arm/by-phase
   counts, historical year distribution and distinct legal twelve-ply
   opening prefixes.
