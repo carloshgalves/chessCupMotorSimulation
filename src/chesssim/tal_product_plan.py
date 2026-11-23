@@ -76,10 +76,13 @@ def inventory_games(pgn, rows, surname):
                 elif board.legal_moves.count() > 1:
                     by_arm[arm]["nonforced"] += 1
                     by_phase[(arm, stage)]["nonforced"] += 1
-                    measurements = features(board, move)
-                    for kind in FEATURES:
-                        style[(arm, stage)][kind] += int(measurements[kind])
-                    style[(arm, stage)]["decisions"] += 1
+                    # Blind-style feature summaries must not be exposed for
+                    # the reserved TEST arm before a Tal policy is frozen.
+                    if arm != "excluded_test":
+                        measurements = features(board, move)
+                        for kind in FEATURES:
+                            style[(arm, stage)][kind] += int(measurements[kind])
+                        style[(arm, stage)]["decisions"] += 1
                 else:
                     raise ValueError("Historical game continues with no legal move")
             board.push(move)
@@ -172,6 +175,7 @@ def plan(archive_dir=None):
         "development_roots_12_ply": selected,
         "pilot_clock_games_planned": len(selected) * 2,
         "validation_test_games_opened_for_training": 0,
+        "test_style_frequency_published": False,
         "reference_depth": 16,
         "competitive_rating_or_elo": None,
         "frozen": False,
