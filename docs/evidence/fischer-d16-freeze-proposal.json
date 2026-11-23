@@ -1,0 +1,34 @@
+{
+  "schema": "chesssim-fischer-game-asset-freeze-proposal-v1",
+  "identity": "fischer",
+  "status": "FROZEN_GAME_ASSET",
+  "evidence_workflow_run": 45097738965,
+  "evidence_artifact_id": 14784309307,
+  "final_evidence_sha256": "913952622395d3910dc4084e772a18fa07e95db6833aa54d5812846d918d213c",
+  "profile_hashes": {
+    "fischer": "ee2ab4e175f0dbee88f2f12595393d14001915670e086198139d15ad86eae577",
+    "rodent": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+    "simple": "19f83fb05f96039a34e0e9a36bf66fc841693f70d73ee2a243df42e90caf1613"
+  },
+  "gates": {
+    "clock_play": true,
+    "historical_practical_strength": true,
+    "reproducibility": true,
+    "style_preferences": true
+  },
+  "original_motor_modified": false,
+  "historical_human_elo_claimed": false,
+  "approved_for_release": true,
+  "human_release_signoff_required": false,
+  "release_approval": {
+    "decision": "APPROVED_BY_MAINTAINER",
+    "channel": "explicit user approval in task conversation",
+    "scope": "unchanged Rodent IV Fischer personality at fixed depth16 as stable game asset",
+    "approved_at_utc_date": "2026-11-23",
+    "limitations": [
+      "Product-level freeze; no claimed Fischer human FIDE-Elo equivalence",
+      "Not automatic Arena or career integration",
+      "Any binary/profile/depth changes require requalification"
+    ]
+  }
+}
