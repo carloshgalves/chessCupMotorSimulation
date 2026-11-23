@@ -154,18 +154,6 @@ def source_cases(archive_dir=None):
     }
 
 
-def shard(item, source):
-    if source == "clock":
-        root = item["root"]
-        roots = [r["id"] for r in source_cases_cached_roots(item)]
-        return roots.index(root) % SHARDS
-    return int(sha256(item["game"].encode()).hexdigest()[:12], 16) % SHARDS
-
-
-def source_cases_cached_roots(item):
-    """Unused by execution; keep root mapping explicit in clock_shard."""
-    raise RuntimeError(f"Use clock_shard with the frozen root panel: {item['root']}")
-
 
 def clock_shard(case, roots):
     order = {root["id"]: i % SHARDS for i, root in enumerate(roots)}
