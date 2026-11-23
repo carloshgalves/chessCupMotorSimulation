@@ -90,9 +90,13 @@ def choose_games(sources):
         _, rows, _, _, _ = sources[player]
         selected = []
         for interval in ("peak", "other"):
+            # A black player in a source game ending after white's first
+            # ply has made NO historical choice. Exclude this by pre-move
+            # source length, never by a quality or engine evaluation.
             eligible = [r for r in rows if neural_arm(r["mainline_sha256"]) == "fit"
                         and era(player, r["date"]) == interval
-                        and r["mainline_sha256"] not in taken]
+                        and r["mainline_sha256"] not in taken
+                        and r["plies"] >= (1 if r["color"] == "white" else 2)]
             eligible.sort(key=lambda r: (
                 sha256(f"{SALT}:{player}:{interval}:{r['mainline_sha256']}".encode()
                        ).hexdigest(), r["mainline_sha256"]))
