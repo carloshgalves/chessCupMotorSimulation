@@ -1,0 +1,62 @@
+name: Tal complete historical corpus and product protocol
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/tal_product_plan.py'
+      - 'tests/test_tal_product_plan.py'
+      - '.github/workflows/tal-product-plan.yml'
+      - 'docs/TAL_PRODUCT_PLAN.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  complete-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Compile, lint, focused Tal unit tests
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m compileall -q src tests
+          python -m ruff check src/chesssim/tal_product_plan.py tests/test_tal_product_plan.py
+          python -m pytest -q tests/test_tal_product_plan.py
+      - name: Scan every pinned Tal source trajectory and every focal decision
+        run: |
+          python -m chesssim.tal_product_plan --fetch \
+            --out "$RUNNER_TEMP/tal-product-inventory.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=json.loads((Path(os.environ["RUNNER_TEMP"])/"tal-product-inventory.json").read_text())
+          assert p["schema"]=="chesssim-tal-complete-source-and-product-plan-v1"
+          assert p["player"]=="tal"
+          assert p["status"]=="FULL_SOURCE_INVENTORY_ONLY_STRENGTH_NOT_TESTED"
+          assert p["accepted_games"]==sum(x["games"] for x in p["arms"].values())
+          assert all(p["arms"][a]["games"]>0 for a in ("fit","tune","excluded_test"))
+          assert len(p["development_roots_12_ply"])==12
+          assert p["pilot_clock_games_planned"]==24
+          assert len({x["id"] for x in p["development_roots_12_ply"]})==12
+          assert p["competitive_rating_or_elo"] is None
+          assert p["fischer_asset_untouched"] is True and p["frozen"] is False
+          for a,c in p["arms"].items():
+              assert c["focal_decisions"]==c["forced"]+c["nonforced"]
+              assert c["games"]==c["eligible_root_games"]+c["root_exclusions"]
+              assert c["nonforced"]==sum(p["phases"][f"{a}|{stage}"].get("nonforced",0)
+                      for stage in ("opening","middlegame","endgame"))
+          print("TAL_INVENTORY_VERIFIED",json.dumps({
+              "accepted_games":p["accepted_games"],"arms":p["arms"],
+              "root_count":len(p["development_roots_12_ply"])},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tal-complete-source-inventory
+          path: ${{ runner.temp }}/tal-product-inventory.json
+          retention-days: 30
+          if-no-files-found: error
