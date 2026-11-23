@@ -101,7 +101,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: full-shard-${{ matrix.index }}
+          name: shard-${{ matrix.index }}
           path: ${{ runner.temp }}/shard-${{ matrix.index }}/
           retention-days: 30
           if-no-files-found: warn
@@ -118,7 +118,7 @@ jobs:
           python-version: '3.13'
       - uses: actions/download-artifact@v4
         with:
-          pattern: full-shard-*
+          pattern: shard-*
           path: ${{ runner.temp }}/shards
       - name: Reconstruct all historical source decisions and bootstrap by game
         run: |
