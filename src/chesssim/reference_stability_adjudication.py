@@ -20,7 +20,7 @@ import chess.engine
 
 from .fischer_full_games import atomic_json, digest, load_json
 from .historical_quality_parity import (
-    panel, shard_cases, validate_measurement, POLICIES,
+    panel, shard_cases, validate_measurement,
 )
 from .matches import file_hash
 from .real85_graded_phase_attribution import _score
