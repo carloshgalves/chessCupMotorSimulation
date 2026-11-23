@@ -13,6 +13,12 @@ permissions:
   contents: read
   actions: read
 
+# Cancel superseded PR-only plans; never interrupt a deliberate manual
+# Fischer tournament after a later documentation or test commit.
+concurrency:
+  group: fischer-final-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   plan:
     runs-on: ubuntu-latest
