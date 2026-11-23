@@ -20,7 +20,7 @@ import shutil
 
 import chess
 
-from .catalog import Player, find_player
+from .catalog import Player
 from .fischer_deep_calibration import NODE_CAP, choose
 from .fischer_full_games import atomic_json, digest, initial_board, load_json
 from .matches import _open_engine, file_hash
@@ -28,7 +28,6 @@ from .real85_neural_stream import neural_arm
 from .real_training_cohorts import _iter_verified_games
 from .tal_full_games import _profiles, frozen_fischer, source_panel as old_panel
 from .tal_product_plan import load_source
-from . import tal_full_games as original
 
 SCHEMA = "chesssim-tal-strength-profile-doe-v1"
 PILOT_ROOTS = 12
