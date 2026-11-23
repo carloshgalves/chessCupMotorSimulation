@@ -1,0 +1,106 @@
+name: One-shot Tal Fischer human move-quality smoke
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - '.github/workflows/historical-quality-smoke-once.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tal-fischer-quality-smoke-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    if: github.head_ref == 'science/quality-parity-smoke-once' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Validate completed methodology and immutable source cases
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m ruff check src/chesssim/historical_quality_parity.py tests/test_historical_quality_parity.py
+          python -m pytest -q tests/test_historical_quality_parity.py
+          python -m chesssim.historical_quality_parity plan --fetch > "$RUNNER_TEMP/plan.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=json.loads((Path(os.environ["RUNNER_TEMP"])/"plan.json").read_text())
+          assert p["positions"]==887 and p["shards"]==32
+          assert p["selected_games"]=={"fischer":{"peak":96,"other":96},
+                                       "tal":{"peak":96,"other":96}}
+          assert p["per_shard"][0]>0
+          print("PARITY_SMOKE_PLAN",json.dumps({
+              "positions":p["positions"],"shards":p["shards"],
+              "shard_zero_positions":p["per_shard"][0]},sort_keys=True))
+          PY
+
+  smoke:
+    if: github.head_ref == 'science/quality-parity-smoke-once'
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 210
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Compile SHA-pinned original Rodent and install Stockfish
+        run: |
+          python -m pip install -e .
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+          sudo apt-get update -qq
+          sudo apt-get install -y stockfish
+      - name: Run one full real Stockfish d20 shard to verify reproducibility
+        timeout-minutes: 180
+        run: |
+          python -m chesssim.historical_quality_parity play --fetch \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --stockfish /usr/games/stockfish \
+            --index 0 \
+            --out "$RUNNER_TEMP/shard-0"
+          python - <<'PY'
+          from pathlib import Path
+          import json,os
+          root=Path(os.environ["RUNNER_TEMP"])/"shard-0"
+          manifest=json.loads((root/"manifest.json").read_text())
+          files=list(root.glob("*.json"))
+          assert len(files)==len(manifest["case_ids"])+1
+          assert len(manifest["case_ids"])>0
+          counts={}
+          for path in files:
+              if path.name=="manifest.json":
+                  continue
+              row=json.loads(path.read_text())
+              assert row["schema"]=="chesssim-historical-human-move-quality-parity-v1"
+              assert set(row["measured"]["scores"])=={
+                  "human","fischer","tal_balanced","tal_original","simple"}
+              for k in (row["case"]["player"],row["case"]["era"]):
+                  counts[k]=counts.get(k,0)+1
+          print("QUALITY_SMOKE_REAL_POSITIONS",len(files)-1,counts)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tal-fischer-historical-quality-shard-zero-smoke
+          path: ${{ runner.temp }}/shard-0/
+          retention-days: 30
+          if-no-files-found: warn
