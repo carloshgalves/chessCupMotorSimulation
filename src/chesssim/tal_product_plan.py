@@ -96,6 +96,9 @@ def inventory_games(pgn, rows, surname):
         raise ValueError("Historical Tal scan does not reconcile with PGN replay")
     result = {"by_arm": {}, "by_phase": {}, "style": {}, "by_year": dict(by_year)}
     for arm in ARMS:
+        for metric in ("games", "white", "black", "focal_decisions", "forced",
+                       "nonforced", "eligible_root_games", "root_exclusions"):
+            by_arm[arm].setdefault(metric, 0)
         if by_arm[arm]["focal_decisions"] != (
             by_arm[arm]["forced"] + by_arm[arm]["nonforced"]
         ):
