@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections import Counter
 from hashlib import sha256
+import json
 
 import chess
 import pytest
