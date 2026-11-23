@@ -19,6 +19,7 @@ from statistics import mean
 import chess
 import chess.engine
 
+from .catalog import find_player
 from .fischer_baseline import phase
 from .fischer_competency_audit import _reference_top2
 from .fischer_deep_calibration import NODE_CAP, choose, tags
@@ -266,12 +267,10 @@ def engines_from_original(rodent_root, sandbox):
     if hashes != orig_hashes or variants.get("TalBalanced") != BALANCED_SHA:
         raise ValueError("Tal candidate or frozen binary hash differs")
     players = policy_players()
-    players["fischer"] = __import__("chesssim.catalog", fromlist=["find_player"]
-                                   ).find_player("fischer")
+    players["fischer"] = find_player("fischer")
     names = {"fischer": players["fischer"], "tal_balanced": players["balanced16"],
              "tal_original": players["original16"], "simple": players["simple16"]}
-    return overlay, names, {"originals": hashes, "variants": variants,
-                            "rodent_root": str(orig_root)}
+    return overlay, names, {"originals": hashes, "variants": variants}
 
 
 def plan(archive_dir=None):
@@ -378,6 +377,12 @@ def _severe_excess(records, role):
 
 
 def _macro(records, role, metric="cp", tactical=False):
+    if tactical:
+        matching = [r for r in records if r["joint_numeric"] and r["tactical_pre_move"]]
+        if not matching:
+            return None
+        return (_phase_mean(matching, role) if metric == "cp"
+                else _severe_excess(matching, role))
     per_phase = {}
     for stage in PHASES:
         matching = [r for r in records if r["phase"] == stage and
