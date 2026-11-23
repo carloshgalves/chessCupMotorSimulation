@@ -87,7 +87,8 @@ def test_same_source_game_all_models_always_same_position(monkeypatch):
     monkeypatch.setattr(quality, "_score", lambda sf, b, move, depth: {
         "move": move.uci(), "cp": scores[move.uci()], "mate": None,
     })
-    result = quality.measure(board, human, move_map, object())
+    result = quality.measure(board, human,
+                             {key: key for key in move_map}, object())
     assert result["scores"]["human"]["cp_loss"] == 0
     assert result["scores"]["fischer"]["cp_loss"] == 15
     assert result["scores"]["tal_balanced"]["cp_loss"] == 25
