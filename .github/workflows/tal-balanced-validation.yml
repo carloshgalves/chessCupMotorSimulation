@@ -1,0 +1,143 @@
+name: Tal Balanced retrospective style and 10+2 qualification
+
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/tal_balanced_validation.py'
+      - 'tests/test_tal_balanced_validation.py'
+      - 'docs/TAL_BALANCED_VALIDATION.md'
+      - '.github/workflows/tal-balanced-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tal-balanced-validation-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Compile, lint, test legal 10+2 and no-test-leak protocols
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m compileall -q src tests
+          python -m ruff check src/chesssim/tal_balanced_validation.py tests/test_tal_balanced_validation.py
+          python -m pytest -q tests/test_tal_balanced_validation.py
+      - name: Preregister exact retrospective source positions and clock roots
+        run: |
+          python -m chesssim.tal_balanced_validation plan --fetch \
+            > "$RUNNER_TEMP/tal-balanced-validation-plan.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=json.loads((Path(os.environ["RUNNER_TEMP"])/"tal-balanced-validation-plan.json").read_text())
+          assert p["schema"]=="chesssim-tal-balanced-retrospective-style-clock-v1"
+          assert p["prior_doe_run"]==45197012079
+          assert p["clock_roots"]==12 and p["clock_games"]==48
+          assert p["style_positions"]>=100 and p["style_source_games"]>=50
+          assert p["tune_games"]==66 and p["test_games_unopened"]==341
+          assert p["shards"]==12 and p["clock_shards"]==[4]*12
+          assert p["official_profiles_modified"] is False
+          assert p["blind_holdout"] is False
+          print("TAL_BALANCED_VALIDATION_PLAN",json.dumps(p,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tal-balanced-validation-plan
+          path: ${{ runner.temp }}/tal-balanced-validation-plan.json
+          if-no-files-found: error
+
+  play:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        index: [0,1,2,3,4,5,6,7,8,9,10,11]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Build unchanged SHA-locked Rodent IV
+        run: |
+          python -m pip install -e .
+          test "$(git -C rodent-source rev-parse HEAD)" = e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities "$RUNNER_TEMP/rodent/"
+          cp -R rodent-source/books "$RUNNER_TEMP/rodent/"
+      - name: Run real 10+2 paired clocks and same-position historical style
+        timeout-minutes: 300
+        run: |
+          python -m chesssim.tal_balanced_validation play --fetch \
+            --rodent-root "$RUNNER_TEMP/rodent" \
+            --index ${{ matrix.index }} \
+            --out "$RUNNER_TEMP/shard-${{ matrix.index }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shard-${{ matrix.index }}
+          path: ${{ runner.temp }}/shard-${{ matrix.index }}/
+          if-no-files-found: warn
+          retention-days: 30
+
+  aggregate:
+    needs: play
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shard-*
+          path: ${{ runner.temp }}/shards
+      - name: Replay all clocks, original positions, style and preregistered gates
+        run: |
+          python -m pip install -e .
+          python -m chesssim.tal_balanced_validation aggregate --fetch \
+            --shards "$RUNNER_TEMP/shards" \
+            --out "$RUNNER_TEMP/tal-balanced-validation-report.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=json.loads((Path(os.environ["RUNNER_TEMP"])/"tal-balanced-validation-report.json").read_text())
+          assert p["schema"]=="chesssim-tal-balanced-retrospective-style-clock-v1"
+          assert p["clock_games"]==48 and p["style_positions"]>=100
+          assert p["fischer_untouched"] and p["tal_official_untouched"]
+          assert p["clock_censored"]==0 and p["clock_complete"]==48
+          assert p["status"] in ("ELIGIBLE_FOR_TAL_BALANCED_ASSET_RELEASE_REVIEW",
+                                 "DO_NOT_FREEZE_TAL_BALANCED")
+          assert p["do_not_auto_promote"] is True
+          print("TAL_BALANCED_REAL_VALIDATION",json.dumps({
+              "status":p["status"],"gates":p["gates"],
+              "clock":p["clock"],"style":p["style"],
+              "candidate_hash_sha256":p["candidate_hash_sha256"]},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tal-balanced-validation-report
+          path: ${{ runner.temp }}/tal-balanced-validation-report.json
+          retention-days: 30
+          if-no-files-found: warn
