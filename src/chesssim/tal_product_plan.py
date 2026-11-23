@@ -61,6 +61,7 @@ def inventory_games(pgn, rows, surname):
         board = game.board()
         focal_is_white = row["color"] == "white"
         prefix = []
+        recorded_moves = 0
         for move in game.mainline_moves():
             if move not in board.legal_moves:
                 raise ValueError("Invalid historical Tal move")
@@ -82,7 +83,8 @@ def inventory_games(pgn, rows, surname):
                 else:
                     raise ValueError("Historical game continues with no legal move")
             board.push(move)
-        if board.ply() != row["plies"]:
+            recorded_moves += 1
+        if recorded_moves != row["plies"]:
             raise ValueError("Historical trajectory length mismatch")
         if game.board().fen() == chess.STARTING_FEN and len(prefix) == START_PLIES:
             root = tuple(prefix)
