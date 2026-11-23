@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 from hashlib import sha256
-from pathlib import Path
+from collections import defaultdict
 import random
 
 import chess
@@ -52,20 +52,17 @@ def _fake_corpus(monkeypatch):
 
 def test_unseen_root_selection_shards_and_test_exclusion(monkeypatch):
     rows,games,arms=_fake_corpus(monkeypatch)
-    monkeypatch.setattr(doe, "design", doe.design)
-    # The real audit requires exactly 2431 accepted games. Patch for fixture.
-    # Do not silently relax it in production.
-    old=doe.design
-    class CountedRows(list):
-        def __len__(self):
-            # A deliberately artificial source fixture bypasses the census
-            # check ONLY in this isolated test; iteration remains real.
-            return 2431
-    # Cleaner: require expected count to be a named constant in production.
-    monkeypatch.setattr(doe, "EXPECTED_GAMES", 65, raising=False)
-    with pytest.raises(ValueError,match="source"):
-        old()
-    assert len(rows)==65
+    monkeypatch.setattr(doe,"EXPECTED_GAMES",65)
+    panel,meta=doe.design()
+    assert len(panel)==8
+    assert meta["cases"]==8*2*len(doe.VARIANTS)
+    assert {x["stage"] for x in panel}=={"pilot","confirm"}
+    assert meta["outer_test_decisions_evaluated"]==0
+    assert all(all(x["id"]!=gid for gid in arms) for x in panel)
+    assert all(x["arm"]=="fit" for x in panel)
+    assert [x["id"] for x in doe.design()[0]]==[x["id"] for x in panel]
+    assert len({tuple(x["prefix"]) for x in panel})==8
+
 
 
 def test_original_tal_variants_rewrite_only_explicit_existing_options():
@@ -188,7 +185,6 @@ def test_shards_keep_all_crossovers_on_same_root():
     assert len(all_cases)==240
     assert len(set(x["id"] for x in all_cases))==240
     assigned=defaultdict(set)
-    from collections import defaultdict
     for index in range(12):
         for c in doe.shard_cases(roots,index):
             assigned[c["root"]].add(index)
