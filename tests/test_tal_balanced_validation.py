@@ -48,10 +48,13 @@ def fixture_source(monkeypatch):
     for i in range(56):
         root = chess.Board()
         randomizer = random.Random(i + 2027)
+        prefix = []
         for _ in range(12):
-            root.push(randomizer.choice(list(root.legal_moves)))
+            move = randomizer.choice(list(root.legal_moves))
+            prefix.append(move.uci())
+            root.push(move)
         roots.append({
-            "id": f"root-{i}", "prefix": [],
+            "id": f"root-{i}", "prefix": prefix,
             "arm": "tune",
         })
     monkeypatch.setattr(gate, "graded_panel", lambda archive_dir=None:
