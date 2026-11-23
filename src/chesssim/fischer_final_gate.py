@@ -270,6 +270,8 @@ def validate_clock(record,case,root):
         if type(flag_elapsed) not in (int,float) or not 0<=flag_elapsed<=90:
             raise ValueError("Missing flag move clock evidence")
         loser_white=(flag=="fischer")== (case["color"]=="white")
+        if loser_white!=board.turn:
+            raise ValueError("Time forfeit assigned to the side not to move")
         side=0 if loser_white else 1
         observed_clocks[side]-=flag_elapsed
         if observed_clocks[side]>0:
@@ -417,6 +419,7 @@ def run_shard(rodent_root,out,index,archive_dir=None):
 def validate_style(doc,expected,board,msha):
     if (doc.get("schema")!=SCHEMA or doc.get("id")!=expected["id"] or
         doc.get("fen_sha256")!=expected["fen_sha256"] or
+        doc.get("game")!=expected["game"] or
         doc.get("human")!=expected["human"] or
         doc.get("manifest_sha256")!=msha or
         doc.get("phase")!=expected["phase"] or
