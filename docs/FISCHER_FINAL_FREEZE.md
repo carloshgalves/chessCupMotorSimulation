@@ -77,7 +77,8 @@ psychological labels. Record exact historical move agreement for both
 motor profiles, frequencies per role, and whether Fischer is at least
 as close to historical frequencies as Simple (tolerance 2.5
 percentage points). Require >=100 observations from >=100 historical
-games, >=2/4 such descriptive proxy comparisons, and >=40%
+games, >=2/4 such descriptive proxy comparisons, >=5% distinct move choices
+between Fischer and Simple, and >=40%
 historical move agreement (not worse than Simple by >3 percentage
 points). One position may contribute to several features; no
 pseudo-independent significance test is made. *TEST was previously
