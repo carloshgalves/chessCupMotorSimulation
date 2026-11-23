@@ -107,8 +107,10 @@ def test_style_checks_bind_original_fen_and_premove_features():
     expected={"id":"a"*64,"game":"b"*64,"phase":"opening","ply":0,
               "fen_sha256":"c"*64,"human":human}
     # This position does not require an extra repetition probe.
-    while int(expected["id"][:12],16)%gate.REPEAT_MODULUS==0:
-        expected["id"]=f"{int(expected['id'],16)+1:064x}"
+    # The original all-a prefix is divisible by seven. Change the
+    # prefix itself: incrementing only the last hex digit never exits.
+    expected["id"]="b"+expected["id"][1:]
+    assert int(expected["id"][:12],16)%gate.REPEAT_MODULUS!=0
     move=chess.Move.from_uci(human)
     data={"schema":gate.SCHEMA,"id":expected["id"],"game":expected["game"],
           "phase":"opening","ply":0,"human":human,"fischer":human,
