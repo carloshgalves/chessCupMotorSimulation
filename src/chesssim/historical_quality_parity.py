@@ -255,6 +255,10 @@ def measure(board, human_move, engines, stockfish):
         "pre_move_tags": context,
         "reference": {"best": best["move"].uci(),
                       "second": second["move"].uci(),
+                      "ranked": [
+                          {**item, "move": item["move"].uci()}
+                          for item in (best, second)
+                      ],
                       "evals": evaluations,
                       "inconsistent": inconsistent},
         "moves": {name: move.uci() for name, move in moves.items()},
@@ -359,14 +363,52 @@ def validate_measurement(doc, original, board, manifest_hash):
     best = reference.get("best")
     if not isinstance(raw, dict) or best not in raw or not set(moves.values()) <= set(raw):
         raise ValueError("Lost reference root score")
+    rankings = reference.get("ranked")
+    if (not isinstance(rankings, list) or len(rankings) != 2 or
+            not all(isinstance(item, dict) and
+                    set(item) == {"move", "cp", "mate"} and
+                    item["move"] in ("", *[m.uci() for m in board.legal_moves])
+                    for item in rankings) or
+            [item["move"] for item in rankings] !=
+            [best, reference.get("second")]):
+        raise ValueError("Reference pre-move ranking invalid")
+    if (result.get("pre_move_tags") != tags(
+            board, original["phase"], rankings[0], rankings[1])):
+        raise ValueError("Reference pre-choice tactical tags tampered")
+    computed_inconsistency = any(
+        raw[best]["mate"] is None and row["mate"] is None and
+        row["cp"] > raw[best]["cp"] + 35 for row in raw.values())
+    if reference.get("inconsistent") != computed_inconsistency:
+        raise ValueError("Stockfish root search disagreement concealed")
+    for key, row in raw.items():
+        if (row.get("move") != key or
+                (row.get("mate") is None and type(row.get("cp")) is not int) or
+                (row.get("mate") is not None and
+                 (type(row["mate"]) is not int or row.get("cp") is not None))):
+            raise ValueError("Invalid Stockfish exact-root evaluation")
     for name, move in moves.items():
         if scores[name] != _policy_metric(raw[best], raw[move]):
             raise ValueError("Manipulated reference loss or mate outcome")
     if result["joint_numeric"] != all(scores[k]["numeric"] for k in
                                      ("human", "fischer", "tal_balanced")):
         raise ValueError("Selected away an unfavorable numeric outcome")
-    if set(result.get("search_telemetry", {})) != set(POLICIES) - {"human"}:
+    search = result.get("search_telemetry", {})
+    if set(search) != set(POLICIES) - {"human"}:
         raise ValueError("Missing Rodent search depth compliance")
+    for name, metadata in search.items():
+        if (not isinstance(metadata, dict) or
+                metadata.get("requested_depth") != ENGINE_DEPTH or
+                type(metadata.get("reached_requested")) is not bool or
+                (metadata.get("reported_depth") is not None and
+                 (type(metadata["reported_depth"]) is not int or
+                  metadata["reported_depth"] < 1)) or
+                metadata["reached_requested"] != (
+                    metadata.get("reported_depth") is not None and
+                    metadata["reported_depth"] >= ENGINE_DEPTH) or
+                (metadata.get("reported_nodes") is not None and
+                 (type(metadata["reported_nodes"]) is not int or
+                  metadata["reported_nodes"] < 0))):
+            raise ValueError(f"Invalid achieved depth/telemetry for {name}")
     return result
 
 
