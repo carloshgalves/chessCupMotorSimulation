@@ -1,0 +1,121 @@
+name: Karpov focused product repair and peak repertoires
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/product_karpov_repair.py'
+      - '.github/workflows/karpov-product-repair.yml'
+      - 'tests/test_product_karpov_repair.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: karpov-repair-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        index: [0,1,2,3,4,5,6,7,8,9,10,11]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - run: |
+          python -m pip install -e '.[dev]'
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities rodent-source/books "$RUNNER_TEMP/rodent/"
+      - run: |
+          python -m ruff check src/chesssim/product_karpov_repair.py tests/test_product_karpov_repair.py
+          python -m pytest -q tests/test_product_karpov_repair.py
+          mkdir "$RUNNER_TEMP/screen"
+          python -m chesssim.product_karpov_repair screen --rodent "$RUNNER_TEMP/rodent" --index ${{ matrix.index }} --out "$RUNNER_TEMP/screen/report.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: repair-${{ matrix.index }}
+          path: ${{ runner.temp }}/screen/
+          if-no-files-found: error
+  select:
+    needs: screen
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - run: |
+          python -m pip install -e '.[dev]'
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities rodent-source/books "$RUNNER_TEMP/rodent/"
+      - uses: actions/download-artifact@v4
+        with:
+          name: selection-karpov
+          run-id: 45408582198
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/prior
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: repair-*
+          path: ${{ runner.temp }}/shards
+      - run: |
+          python -m chesssim.product_karpov_repair select --rodent "$RUNNER_TEMP/rodent" --prior "$RUNNER_TEMP/prior" --shards "$RUNNER_TEMP/shards" --out "$RUNNER_TEMP/selection"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: repaired-karpov-selection
+          path: ${{ runner.temp }}/selection/
+          if-no-files-found: error
+  duel:
+    needs: select
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - run: |
+          python -m pip install -e '.[dev]'
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities rodent-source/books "$RUNNER_TEMP/rodent/"
+      - uses: actions/download-artifact@v4
+        with:
+          name: repaired-karpov-selection
+          path: ${{ runner.temp }}/selection
+      - run: |
+          python -m chesssim.product_karpov_repair duel --rodent "$RUNNER_TEMP/rodent" --selection "$RUNNER_TEMP/selection" --out "$RUNNER_TEMP/peak-duel"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: peak-duel
+          path: ${{ runner.temp }}/peak-duel/
+          if-no-files-found: warn
