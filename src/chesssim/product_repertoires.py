@@ -28,7 +28,7 @@ def build(player, source, *, through_year=None):
                 and neural_arm(r["mainline_sha256"]) == "fit"]
     counts = {c: defaultdict(Counter) for c in ("white", "black")}
     accepted = Counter()
-    excluded = Counter()
+    excluded = Counter({"outside_period_or_not_fit": len(rows) - len(eligible)})
     for game, row in _iter_verified_games(pgn, eligible, surname):
         board = game.board()
         color = row["color"]
@@ -66,6 +66,11 @@ def build(player, source, *, through_year=None):
 def audit(book):
     """Replay all stored states; ensure every weighted entry is legal."""
     totals = {}
+    if set(book["positions"]) != {"white", "black"}:
+        # Fail closed, but inspect illegal entries before completeness checks.
+        incomplete = True
+    else:
+        incomplete = False
     for color, entries in book["positions"].items():
         moves = 0
         for fen, choices in entries.items():
@@ -81,6 +86,8 @@ def audit(book):
             if select_book_move(book, board) not in board.legal_moves:
                 raise ValueError("Book selector failed")
         totals[color] = {"positions": len(entries), "observations": moves}
+    if incomplete or not all(t["positions"] for t in totals.values()):
+        raise ValueError("Incomplete historical book")
     return totals
 
 
