@@ -12,6 +12,7 @@ import chess.engine
 from .fischer_final_gate import play_clock, validate_clock
 from .fischer_full_games import atomic_json, digest
 from .matches import _open_engine
+from .fischer_final_gate import RODENT_HASHES
 from .tal_full_games import _profiles
 from .tal_balanced_clock_replication import fixed_roots
 
@@ -32,7 +33,7 @@ class DepthControl:
         adjusted = chess.engine.Limit(**{**vars(limit), "depth": self.depth})
         reply = self.engine.play(board, adjusted, **kwargs)
         self.reported["searches"] += 1
-        self.reported["reached"] += int(reply.info.get("depth", 0) >= self.depth)
+        self.reported["reached"] += int((reply.info.get("depth") or 0) >= self.depth)
         return reply
 
     def close(self):
@@ -76,6 +77,8 @@ def aggregate(folder, out, archive_dir=None):
         doc = json.loads((Path(folder) / f"ladder-{i}" / "report.json").read_text())
         if doc["index"] != i or len(doc["records"]) != 2 * len(PAIRS):
             raise ValueError("Incomplete ladder shard")
+        if any(doc["hashes"].get(k) != RODENT_HASHES[k] for k in ("rodent", "simple", "fischer")):
+            raise ValueError("Control asset mismatch")
         if hashes is None:
             hashes = doc["hashes"]
         if doc["hashes"] != hashes:
@@ -102,6 +105,8 @@ def aggregate(folder, out, archive_dir=None):
                 for k in ("searches", "reached"):
                     row[f"{role}_{k}"] += record["telemetry"][role].get(k, 0)
     for row in rows.values():
+        for key in ("wins", "draws", "losses", "incomplete", "flags"):
+            row.setdefault(key, 0)
         n = row["wins"] + row["draws"] + row["losses"]
         row["score"] = (row["wins"] + row["draws"] / 2) / n if n else None
     report = {"scope": "internal competitive control, not human Elo",
