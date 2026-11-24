@@ -31,6 +31,49 @@
         "Any profile/binary/depth/opening book change requires a new gate and version",
         "No automatic changes to Arena, roster ratings, XP, or shared engines"
       ]
+    },
+    "tal": {
+      "status": "FROZEN_GAME_ASSET",
+      "profile": "Rodent IV Tal Balanced",
+      "alias": "TalBalanced",
+      "depth": 16,
+      "uci_node_cap": 5000000,
+      "internal_opening_book": false,
+      "phase_adaptive_depth": false,
+      "neural_override": false,
+      "time_control_benchmark": "10+2",
+      "qualification_run_id": 45229239851,
+      "qualification_artifact_id": 14852677791,
+      "qualification_report_sha256": "c86e151b1cb0c5c98a39d5c5c6adaa28afce9d828d06d0b549b37d6c0a0fe22b",
+      "hashes": {
+        "rodent": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+        "tal_original_profile": "f6b58d7cc9e7d2fcdbbc24a20ea72035d05ca5ed5e3401bda240b1b298ce149d",
+        "tal_balanced_profile": "c0f291047023a6f936fd337f11530e6fe886ca0f4f157a5d2f838086857c0897",
+        "simple_control": "19f83fb05f96039a34e0e9a36bf66fc841693f70d73ee2a243df42e90caf1613"
+      },
+      "overrides": {
+        "OwnAttack": 260,
+        "OppAttack": 135,
+        "OwnMobility": 105,
+        "OppMobility": 90,
+        "KingTropism": 60,
+        "PiecePressure": 150,
+        "PawnShield": 150,
+        "PawnStorm": 145
+      },
+      "gates": {
+        "historical_practical_strength": true,
+        "clock_play": true,
+        "style_preferences": true,
+        "reproducibility": true
+      },
+      "decision": "Explicit maintainer product approval 2026-11-24",
+      "release_scope": "Motor-base only; historical opening policy separately versioned; no human Elo or exact-choice equivalence",
+      "restrictions": [
+        "Any profile/binary/depth/opening book change requires a new gate and version",
+        "No automatic changes to Arena, roster ratings, XP, or shared engines"
+      ],
+      "research_status": "INCONCLUSIVE_NEEDS_HUMAN_QUALITY_SUPPORT"
     }
   }
 }

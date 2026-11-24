@@ -8,10 +8,10 @@ from chesssim.catalog import find_player
 from chesssim.fischer_final_gate import FOCAL_DEPTH, RODENT_HASHES
 
 
-def test_only_explicitly_qualified_original_fischer_is_frozen():
+def test_explicitly_qualified_motor_bases_are_frozen():
     manifest=json.loads(files("chesssim.data").joinpath("qualified_game_assets.json").read_text())
     assert manifest["schema"]=="chesssim-qualified-game-assets-v1"
-    assert set(manifest["players"])=={"fischer"}
+    assert set(manifest["players"])=={"fischer", "tal"}
     f=manifest["players"]["fischer"]
     assert f["status"]=="FROZEN_GAME_ASSET"
     assert f["depth"]==FOCAL_DEPTH==16

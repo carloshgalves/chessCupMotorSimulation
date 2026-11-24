@@ -1,0 +1,144 @@
+{
+  "schema": "chesssim-tal-product-release-review-v1",
+  "identity": "tal-balanced-d16",
+  "status": "APPROVED_PRODUCT_MOTOR_BASE",
+  "release_decision": "EXPLICIT_MAINTAINER_PRODUCT_APPROVAL",
+  "official_roster_changed": false,
+  "official_tal_profile_modified": false,
+  "fischer_frozen_asset_unchanged": true,
+  "human_fide_elo_equivalence_claimed": false,
+  "original_tal_profile_sha256": "f6b58d7cc9e7d2fcdbbc24a20ea72035d05ca5ed5e3401bda240b1b298ce149d",
+  "candidate": {
+    "alias": "TalBalanced",
+    "depth": 16,
+    "profile_sha256": "c0f291047023a6f936fd337f11530e6fe886ca0f4f157a5d2f838086857c0897",
+    "generated_from": "nescitus/rodent-iv@e8d84c8c8c189a1cf4eb27c578fc573af3b916d2/personalities/tal.txt",
+    "overrides": {
+      "OwnAttack": 260,
+      "OppAttack": 135,
+      "OwnMobility": 105,
+      "OppMobility": 90,
+      "KingTropism": 60,
+      "PiecePressure": 150,
+      "PawnShield": 150,
+      "PawnStorm": 145
+    },
+    "fixed_depth": 16,
+    "uci_node_cap": 5000000,
+    "book_override": false
+  },
+  "source_pgn_sha256": "586aac4613e170474f12893679ab992d3999ca5109df7df77c634a76846d2687",
+  "experiments": {
+    "selection": {
+      "run_id": 45197012079,
+      "artifact_id": 14837141120,
+      "report_sha256": "71fdb87ed3fadba868431ea1108f291e4cc79a8ed799c0a7483c0bf5b4125081",
+      "source_arm": "fit",
+      "selected_candidate": "balanced16",
+      "pilot_roots": 12,
+      "confirmation_roots": 12,
+      "confirmation_games_per_variant": 24,
+      "confirmation_gain_pp": 22.916666666666668,
+      "confirmation_gain_ci95_pp": [
+        4.166666666666666,
+        39.58333333333333
+      ],
+      "status": "PROMISING_STRENGTH_REPAIR_STYLE_GATE_PENDING"
+    },
+    "style_retrospective": {
+      "run_id": 45216462418,
+      "artifact_id": 14840262340,
+      "report_sha256": "e2e815fff6057adcf05a8538e7d68d5fb420a4577ac4ba9e29e9cf2b5ccb0f00",
+      "source_arm": "tune",
+      "nonblind": true,
+      "positions": 138,
+      "historical_games": 66,
+      "balanced_historical_move_match": 0.5797101449275363,
+      "original_historical_move_match": 0.5144927536231884,
+      "simple_historical_move_match": 0.5289855072463768,
+      "balanced_simple_move_difference": 0.34782608695652173,
+      "repeats": 20,
+      "repeat_match": 1,
+      "style_gate": true,
+      "repeatability_gate": true,
+      "retrospective_clock_original_score": 0.2708333333333333,
+      "retrospective_clock_balanced_score": 0.3541666666666667,
+      "retrospective_clock_gain_pp": 8.333333333333332,
+      "retrospective_clock_gain_ci95_pp": [
+        -10.416666666666668,
+        27.08333333333333
+      ],
+      "retrospective_clock_gate": false,
+      "status": "DO_NOT_FREEZE_TAL_BALANCED"
+    },
+    "fresh_fit_clock_replication": {
+      "run_id": 45229239851,
+      "artifact_id": 14852677791,
+      "report_sha256": "c86e151b1cb0c5c98a39d5c5c6adaa28afce9d828d06d0b549b37d6c0a0fe22b",
+      "source_arm": "fit",
+      "new_roots": 48,
+      "previous_fit_roots_excluded": 120,
+      "clock": "10+2",
+      "planned_games": 288,
+      "completed_games": 288,
+      "censored_games": 0,
+      "original_vs_simple": {
+        "games": 96,
+        "wins": 16,
+        "draws": 9,
+        "losses": 71,
+        "score": 0.21354166666666666
+      },
+      "balanced_vs_simple": {
+        "games": 96,
+        "wins": 34,
+        "draws": 24,
+        "losses": 38,
+        "score": 0.4791666666666667,
+        "ci95": [
+          0.4010416666666667,
+          0.5625
+        ]
+      },
+      "balanced_vs_original": {
+        "games": 96,
+        "wins": 67,
+        "draws": 12,
+        "losses": 17,
+        "score": 0.7604166666666666,
+        "ci95": [
+          0.6666666666666666,
+          0.84375
+        ]
+      },
+      "paired_gain_pp": 26.5625,
+      "paired_gain_ci95_pp": [
+        15.625,
+        36.97916666666667
+      ],
+      "focal_clock_forfeits": 0,
+      "all_five_strength_gates_passed": true,
+      "status": "ELIGIBLE_FOR_TAL_BALANCED_FURTHER_RELEASE_REVIEW"
+    }
+  },
+  "important_limitations": [
+    "Original historical TUNE time-control gate failed: confidence interval includes zero and Balanced scored below 40%. This evidence must remain visible.",
+    "The 48 new clock roots were selected from FIT development corpus, not untouched independent outer TEST.",
+    "Style is descriptive and retrospective nonblind; checked move-frequency proxies are not a validated Tal-style classifier.",
+    "Relative Rodent-versus-Rodent performance is not a human Elo or FIDE equivalence.",
+    "No production integration, official Tal replacement or frozen-asset claim without explicit maintainer approval."
+  ],
+  "recommended_action": "FREEZE_EXACT_MOTOR_BASE; retain original Tal; repertoire separately versioned",
+  "release_approval": {
+    "date": "2026-11-24",
+    "scope": "exact Tal Balanced d16 motor-base; no automatic roster or opening changes"
+  },
+  "research_followup": {
+    "run_id": 45307610940,
+    "fit_positions": 887,
+    "test_positions": 978,
+    "fit_status": "INCONCLUSIVE_NEEDS_HUMAN_QUALITY_SUPPORT",
+    "test_status": "INCONCLUSIVE_NEEDS_HUMAN_QUALITY_SUPPORT",
+    "confirmatory_noninferiority": false
+  }
+}
