@@ -14,7 +14,7 @@ from .historical_quality_parity import source_rows
 from .tal_strength_doe import make_isolated_profiles
 
 
-def play(root, output, books, *, archive_dir=None, seed=2029, max_plies=400):
+def play(root, output, books, *, archive_dir=None, seed=2029, max_plies=600):
     manifest = json.loads(files("chesssim.data").joinpath("qualified_game_assets.json").read_text())
     assets = manifest["players"]
     for slug in PERIODS:
@@ -41,7 +41,8 @@ def play(root, output, books, *, archive_dir=None, seed=2029, max_plies=400):
                       rodent_file="talbalanced.txt")
         return play_duel(overlay, output, fischer, tal, depth=16,
                          reverse=True, max_plies=max_plies, use_books=False,
-                         historical_openings=selected, opening_seed=seed)
+                         historical_openings=selected, opening_seed=seed,
+                         max_wall_seconds=3600, node_cap=5_000_000)
 
 
 def main(argv=None):
