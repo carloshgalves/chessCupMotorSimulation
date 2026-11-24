@@ -42,11 +42,17 @@ def load_roster() -> tuple[Player, ...]:
     return result
 
 
+RETIRED_PLAYERS = (Player(60, "Vera Menchik", "menchik", "rainhas"),)
+
+
 def find_player(query: str) -> Player:
     roster = load_roster()
     key = query.casefold().strip()
     hits = [p for p in roster if key in (p.slug.casefold(), p.name.casefold()) or
             (p.rodent_alias and key == p.rodent_alias.casefold())]
+    if not hits:
+        # Keep exact historical identities resolvable for persisted competition records.
+        hits = [p for p in RETIRED_PLAYERS if key in (p.slug, p.name.casefold())]
     if not hits:
         raise ValueError(f"Jogador não encontrado: {query}. Use 'roster' para listar.")
     return hits[0]

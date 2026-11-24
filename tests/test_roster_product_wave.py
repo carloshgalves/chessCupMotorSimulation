@@ -51,3 +51,22 @@ def test_product_split_preserves_every_original_test_trajectory():
     assert 6200 < counts["fit"] < 6800
     assert 1800 < counts["tune"] < 2200
     assert MIN_PER_PHASE == 12 and TARGET_PER_PHASE == 20
+
+
+def test_kosteniuk_replaces_menchik_in_active_roster():
+    from chesssim.catalog import find_player
+    from chesssim.cup_rules import FEMALE_ROSTER, LEGACY_FEMALE_ROSTER, normalize
+    from chesssim.leagues import normalize_config
+    from chesssim.real_training_cohorts import source_file_for_slug
+    assert "kosteniuk" in remaining() and "menchik" not in remaining()
+    assert source_file_for_slug("kosteniuk") == "Kosteniuk"
+    assert find_player("menchik").name == "Vera Menchik"
+    assert "kosteniuk" in FEMALE_ROSTER and "menchik" not in FEMALE_ROSTER
+    old = {"name": "Copa antiga", "preset": "women", "participants": list(LEGACY_FEMALE_ROSTER)}
+    with pytest.raises(ValueError):
+        normalize(old)
+    assert normalize(old, allow_retired=True)["participants"] == list(LEGACY_FEMALE_ROSTER)
+    league = {"name": "Liga antiga", "participants": ["menchik", "tal", "fischer", "karpov"]}
+    with pytest.raises(ValueError):
+        normalize_config(league)
+    assert normalize_config(league, allow_retired=True)["participants"] == league["participants"]

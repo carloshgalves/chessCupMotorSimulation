@@ -37,3 +37,9 @@ still required before full release. No holdout predictions or age segmentation.
 Run via `Remaining roster inventory and product wave 01` in GitHub Actions.
 Artifacts contain source and profile hashes, raw probes, paired clock games,
 book, and final reports. No automatic runtime promotion.
+
+Roster v2 replaces Vera Menchik (missing pinned source) with Alexandra
+Kosteniuk (Kosteniuk.pgn exists in the pinned mirror). The retired historical
+biography and portrait remain available, and stored Cup/League manifests may
+retain her identity. New competitions use the active roster only. Portrait
+acquisition for Kosteniuk is deferred pending licensed-source verification.

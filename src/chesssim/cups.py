@@ -118,7 +118,7 @@ class CupManager:
                        "armageddon_max_black_seconds" if k == "max_black_seconds" else k):v
                       for k,v in config["armageddon"].items()
                       if k in ("white_seconds","increment_seconds",
-                               "min_black_seconds","max_black_seconds")}) != config:
+                               "min_black_seconds","max_black_seconds")}, allow_retired=True) != config:
             raise ValueError("Regras congeladas foram alteradas")
         resources = data.get("resources")
         if resources is not None and (not isinstance(resources,dict) or
