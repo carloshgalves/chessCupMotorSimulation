@@ -52,7 +52,7 @@ def source(slug):
 
 
 def in_period(row, period):
-    return type(row["date"]) is int and period[0] <= row["date"] <= period[1]
+    return str(row["date"]).isdigit() and period[0] <= int(row["date"]) <= period[1]
 
 
 def readiness(slug):
@@ -220,8 +220,17 @@ def eligible_quality(q):
 
 def measure(slug, root, stockfish, out):
     data = source(slug)
-    fit, roots = sample(slug, data, "fit")
-    tune, _ = sample(slug, data, "tune")
+    try:
+        fit, roots = sample(slug, data, "fit")
+        tune, _ = sample(slug, data, "tune")
+    except ValueError as exc:
+        if not str(exc).startswith("Insufficient "):
+            raise
+        out.mkdir(parents=True, exist_ok=False)
+        atomic_json(out / "measure.json", {"slug": slug, "status": "INSUFFICIENT_PEAK_SUPPORT",
+                                           "reason": str(exc), "source_sha256": sha256(data[0]).hexdigest()})
+        print("WAVE_BLOCKED", slug, str(exc), flush=True)
+        return
     if {r[3] for r in fit} & {r[3] for r in tune}:
         raise ValueError("FIT/TUNE trajectory overlap")
     book = build(slug, data, period=WAVE[slug])
@@ -255,7 +264,13 @@ def measure(slug, root, stockfish, out):
 
 def bound_measure(slug, selection, data):
     doc = json.loads((selection / "measure.json").read_text())
-    _, roots = sample(slug, data, "fit")
+    probes, roots = sample(slug, data, "fit")
+    if len(doc["fit_records"]) != len(probes):
+        raise ValueError("Missing FIT positions")
+    for record, (_, board, human, gid) in zip(doc["fit_records"], probes):
+        if (record["game"] != gid or record["fen"] != board.fen()
+                or record["values"]["human"]["move"] != human.uci()):
+            raise ValueError("FIT position binding mismatch")
     if (doc["slug"] != slug or doc["period"] != list(WAVE[slug])
             or doc["source_sha256"] != sha256(data[0]).hexdigest()
             or doc["book_sha256"] != digest(build(slug, data, period=WAVE[slug]))
@@ -268,6 +283,10 @@ def bound_measure(slug, selection, data):
 
 
 def screen(slug, root, selection, index, out):
+    prior = json.loads((selection / "measure.json").read_text())
+    if prior.get("status") == "INSUFFICIENT_PEAK_SUPPORT":
+        atomic_json(out, {"slug": slug, "index": index, "status": "INSUFFICIENT_PEAK_SUPPORT"})
+        return
     doc, roots = bound_measure(slug, selection, source(slug))
     start = roots[index]
     records = []
@@ -328,6 +347,12 @@ def scores(slug, doc, roots, shards):
 
 
 def finish(slug, root, stockfish, selection, shards, out):
+    prior = json.loads((selection / "measure.json").read_text())
+    if prior.get("status") == "INSUFFICIENT_PEAK_SUPPORT":
+        out.mkdir(parents=True, exist_ok=False)
+        atomic_json(out / "report.json", {**prior, "promotion": "DENIED_PENDING_REVIEW"})
+        print("WAVE_RESULT", json.dumps(prior, sort_keys=True), flush=True)
+        return
     data = source(slug)
     doc, roots = bound_measure(slug, selection, data)
     rows = scores(slug, doc, roots, shards)
