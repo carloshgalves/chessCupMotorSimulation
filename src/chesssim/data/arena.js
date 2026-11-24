@@ -186,11 +186,23 @@ function updateForm() {
       "Sem livro externo ou interno. Semente desabilitada.";
   displayProfile("white", $("white").value);
   displayProfile("black", $("black").value);
-  $("launch").disabled = busy || !token || !player($("white").value)?.installed ||
+  const qualified = $("duel-personality").value === "qualified";
+  if (qualified) {
+    for (const id of ["mode", "depth", "movetime", "preset", "opening", "custom-minutes", "custom-increment"]) $(id).disabled = true;
+    $("opening-note").textContent = "Repertórios homologados; seed 2029 e busca individual.";
+    $("search-note").textContent = "Fischer, Tal e Karpov d16; Kasparov d20; 5 milhões de nós.";
+  }
+  $("launch").disabled = qualified ? (busy || !token || $("white").value === $("black").value ||
+    !["fischer","tal","karpov","kasparov"].includes($("white").value) ||
+    !["fischer","tal","karpov","kasparov"].includes($("black").value)) : busy || !token || !player($("white").value)?.installed ||
     !player($("black").value)?.installed || $("white").value === $("black").value;
   $("stop").disabled = !duelBusy || !token;
 }
 function configFromForm() {
+  if ($("duel-personality").value === "qualified") {
+    return {white:$("white").value, black:$("black").value, personality_mode:"qualified",
+      reverse:$("reverse").checked, max_plies:Number($("max-plies").value), seed:2029};
+  }
   const clock = $("preset").value;
   const mode = clock === "official" ? "preset" : $("mode").value;
   const config = {
@@ -224,7 +236,8 @@ function renderSession() {
   const pieces = [
     ["Brancas", player(config.white)?.name || config.white],
     ["Pretas", player(config.black)?.name || config.black],
-    ["Busca", config.mode === "preset" ? "Protocolo oficial sem teto extra" :
+    ["Personalidades", config.personality_mode === "qualified" ? "Homologadas" : "Legado"],
+    ["Busca", config.mode === "qualified" ? "Profundidade individual · 5M nós" : config.mode === "preset" ? "Protocolo oficial sem teto extra" :
       config.mode === "depth" ? "Profundidade máxima " + config.depth :
       config.movetime + " s/lance"],
     ["Relógio", config.preset === "custom" ?
@@ -332,3 +345,5 @@ $("launch").disabled = true;
 if (!token) setFeedback("Inicie chesssim arena e abra a URL com token informada no terminal.", true);
 refresh();
 setInterval(refresh, 1500);
+
+$("duel-personality").addEventListener("change", () => $("mode").dispatchEvent(new Event("change")));

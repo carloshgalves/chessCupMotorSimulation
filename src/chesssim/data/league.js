@@ -155,6 +155,7 @@
       modality:$("league-create-modality").value,
       format:$("league-create-format").value,
       execution_mode:$("league-create-execution").value,
+      ...($("league-personality").value === "qualified" ? {personality_mode:"qualified"} : {}),
       participants:selectedIds(),
       depth:Number($("league-create-depth").value),
       points:{

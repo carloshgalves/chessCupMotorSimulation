@@ -844,6 +844,7 @@
       seed_method:$("cup-seed-method").value,
       depth:num($("cup-depth").value),
       execution_mode:$("cup-execution").value,
+      ...($("cup-personality").value === "qualified" ? {personality_mode:"qualified"} : {}),
       armageddon_white_seconds:num($("cup-white-seconds").value),
       armageddon_increment_seconds:num($("cup-increment").value),
       armageddon_min_black_seconds:num($("cup-bid-min").value),
