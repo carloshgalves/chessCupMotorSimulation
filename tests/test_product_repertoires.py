@@ -37,6 +37,7 @@ def test_dated_fit_books_and_fallback(monkeypatch):
     board.push_uci("e2e4")
     assert select_book_move(book, board) == chess.Move.from_uci("c7c5")
     board.push_uci("e7e6")
+    board.push_uci("d2d4")
     assert select_book_move(book, board) is None
     with pytest.raises(ValueError, match="Cutoff"):
         p.build("tal", (b"pgn", rows, {}, "fixture", "Tal"), through_year=1962)
