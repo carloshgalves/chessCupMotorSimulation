@@ -1,8 +1,8 @@
 {
   "schema": "chesssim-tal-product-release-review-v1",
   "identity": "tal-balanced-d16",
-  "status": "ELIGIBLE_FOR_HUMAN_PRODUCT_RELEASE_REVIEW",
-  "release_decision": "PENDING_EXPLICIT_MAINTAINER_SIGNOFF",
+  "status": "APPROVED_PRODUCT_MOTOR_BASE",
+  "release_decision": "EXPLICIT_MAINTAINER_PRODUCT_APPROVAL",
   "official_roster_changed": false,
   "official_tal_profile_modified": false,
   "fischer_frozen_asset_unchanged": true,
@@ -128,6 +128,17 @@
     "Relative Rodent-versus-Rodent performance is not a human Elo or FIDE equivalence.",
     "No production integration, official Tal replacement or frozen-asset claim without explicit maintainer approval."
   ],
-  "recommended_action": "REVIEW_AND_APPROVE_OR_REJECT_FIXED_TAL_BALANCED_PRODUCT_PROFILE; retain original Tal as historical control",
-  "release_approval": null
+  "recommended_action": "FREEZE_EXACT_MOTOR_BASE; retain original Tal; repertoire separately versioned",
+  "release_approval": {
+    "date": "2026-11-24",
+    "scope": "exact Tal Balanced d16 motor-base; no automatic roster or opening changes"
+  },
+  "research_followup": {
+    "run_id": 45307610940,
+    "fit_positions": 887,
+    "test_positions": 978,
+    "fit_status": "INCONCLUSIVE_NEEDS_HUMAN_QUALITY_SUPPORT",
+    "test_status": "INCONCLUSIVE_NEEDS_HUMAN_QUALITY_SUPPORT",
+    "confirmatory_noninferiority": false
+  }
 }
