@@ -258,13 +258,14 @@ def summarize(records):
 
 def strength(slug, root, selection, index, out):
     doc = json.loads((selection / "selection.json").read_text())
-    if doc["player"] != slug or doc["source_sha256"] != sha256(source(slug)[0]).hexdigest():
+    data = source(slug)
+    if doc["player"] != slug or doc["source_sha256"] != sha256(data[0]).hexdigest():
         raise ValueError("Selection/source mismatch")
     name, depth = split_label(doc["selected"])
     if name not in VARIANTS[slug] or depth != doc["depth"]:
         raise ValueError("Unknown candidate")
     start = doc["roots"][index]
-    if start != panel(slug, source(slug))[1][index]:
+    if start != panel(slug, data)[1][index]:
         raise ValueError("Root mismatch")
     records = []
     with TemporaryDirectory() as temp, ExitStack() as stack:
@@ -352,7 +353,7 @@ def main():
         for slug in PEAKS:
             data = source(slug)
             docs[slug] = inventory(slug, data)
-            book = build(slug, data)
+            book = build(slug, data, period=PEAKS[slug])
             docs[slug]["book_audit"] = audit(book)
             atomic_json(a.out / f"{slug}.json", book)
         overlap = set(docs["karpov"]["trajectory_ids"]) & set(docs["kasparov"]["trajectory_ids"])
