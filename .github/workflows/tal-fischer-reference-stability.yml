@@ -73,58 +73,11 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-  adjudicate:
-    if: github.head_ref == 'science/tal-fischer-reference-stability-adjudication' && github.event.pull_request.head.repo.full_name == github.repository
-    needs: plan
-    runs-on: ubuntu-latest
-    timeout-minutes: 240
-    strategy:
-      fail-fast: false
-      max-parallel: 4
-      matrix:
-        index: [0,1,2,3]
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
-      - name: Prepare the same validated chess corpus and Stockfish reference
-        run: |
-          python -m pip install -e .
-          sudo apt-get update -qq
-          sudo apt-get install -y stockfish
-      - uses: actions/download-artifact@v4
-        with:
-          run-id: 45258562373
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          pattern: shard-*
-          path: ${{ runner.temp }}/original-shards
-      - uses: actions/download-artifact@v4
-        with:
-          run-id: 45258562373
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          name: full-historical-quality-parity-report
-          path: ${{ runner.temp }}/original-report
-      - name: Re-evaluate all assigned anomalous and matched-control boards at fixed d24
-        timeout-minutes: 220
-        run: |
-          python -m chesssim.reference_stability_adjudication play --fetch \
-            --shards "$RUNNER_TEMP/original-shards" \
-            --prior-report "$RUNNER_TEMP/original-report/human-move-quality-parity.json" \
-            --stockfish /usr/games/stockfish \
-            --index ${{ matrix.index }} \
-            --out "$RUNNER_TEMP/adjudication-${{ matrix.index }}"
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: adjudication-${{ matrix.index }}
-          path: ${{ runner.temp }}/adjudication-${{ matrix.index }}/
-          retention-days: 30
-          if-no-files-found: warn
-
+  # Recovery of run 45269725854: all four d24 search jobs succeeded.
+  # Reuse their immutable artifacts; only the aggregate transport failed.
   aggregate:
     if: github.head_ref == 'science/tal-fischer-reference-stability-adjudication' && github.event.pull_request.head.repo.full_name == github.repository
-    needs: adjudicate
+    needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
@@ -148,8 +101,20 @@ jobs:
           path: ${{ runner.temp }}/original-report
       - uses: actions/download-artifact@v4
         with:
+          run-id: 45269725854
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           pattern: adjudication-*
           path: ${{ runner.temp }}/adjudication
+      - name: Normalize the four completed artifact directories for strict aggregation
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/adjudication"
+          for index in 0 1 2 3; do
+            test -f "$root/adjudication-$index/manifest.json"
+            test ! -e "$root/shard-$index"
+            mv -- "$root/adjudication-$index" "$root/shard-$index"
+          done
+          test "$(find "$root" -mindepth 1 -maxdepth 1 | wc -l)" -eq 4
       - name: Verify 42 depth24 positions against untouched source; never override release gate
         run: |
           python -m chesssim.reference_stability_adjudication aggregate --fetch \
