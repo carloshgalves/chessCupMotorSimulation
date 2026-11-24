@@ -16,9 +16,11 @@ PERIODS = {"fischer": (1955, 1972), "tal": (1957, 1961)}
 MAX_PLIES = 16
 
 
-def build(player, source, *, through_year=None):
+def build(player, source, *, through_year=None, period=None):
     pgn, rows, _, origin, surname = source
-    start, end = PERIODS[player]
+    start, end = PERIODS[player] if period is None else period
+    if type(start) is not int or type(end) is not int or start > end:
+        raise ValueError("Invalid historical period")
     if through_year is not None:
         if not start <= through_year <= end:
             raise ValueError("Cutoff outside personality period")
