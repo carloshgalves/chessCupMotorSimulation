@@ -87,6 +87,13 @@ jobs:
           path: rodent-source
           persist-credentials: false
 
+      - name: Build pinned Rodent
+        run: |
+          python -m pip install -e .
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities rodent-source/books "$RUNNER_TEMP/rodent/"
       - run: |
           mkdir "$RUNNER_TEMP/ladder-${{ matrix.index }}"
           python -m chesssim.product_strength_ladder --rodent "$RUNNER_TEMP/rodent" --index ${{ matrix.index }} --out "$RUNNER_TEMP/ladder-${{ matrix.index }}/report.json"
