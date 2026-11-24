@@ -492,6 +492,9 @@ class LeagueManager:
                     pgn.headers.get("Result") != result or
                     pgn.headers.get("Termination") != termination):
                 raise ValueError("Resultado ou jogadores divergentes do PGN")
+            if state["config"].get("personality_mode") == MODE:
+                verify_headers(pgn, match["white"], match["black"], state["resources"],
+                               state["config"]["seed"], match["round"])
             game_file = directory / relative
             if game_file.parent.is_symlink() or game_file.is_symlink():
                 raise ValueError("Arquivo PGN redirecionado")
@@ -911,7 +914,8 @@ def verified_league_games(workspace: Path) -> tuple[list[dict], list[dict], int]
                     } if evidence else None),
                     "evidence_pgn_sha256": entry["pgn_sha256"],
                     "receipt_sha256": entry["sha256"],
-                    "rating_eligible": not is_projection,
+                    "rating_eligible": not is_projection and state["config"].get("personality_mode") != MODE,
+                    "personality_mode": state["config"].get("personality_mode", "legacy"),
                 }
                 (season_projections if is_projection else season_games).append(record)
             games.extend(season_games)

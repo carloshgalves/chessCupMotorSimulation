@@ -123,6 +123,8 @@ def play_cup_game(root, spec: dict, config: dict, resources: dict,
                          ) if winner_has_material else "1/2-1/2"
                 game.headers["Result"] = score
                 game.headers["Termination"] = "TimeForfeit"
+                if books is not None:
+                    verify_openings(game, white.slug, black.slug, books, config["seed"], spec["round"])
                 return game, {
                     "status": "COMPLETED", "result": score,
                     "termination": "TimeForfeit",

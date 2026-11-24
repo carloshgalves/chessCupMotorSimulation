@@ -137,6 +137,7 @@ function displayProfile(slot, slug) {
   el.append(title, provenance, windowNote, warning);
 }
 function updateForm() {
+  for (const id of ["depth", "movetime", "preset", "custom-minutes", "custom-increment"]) $(id).disabled = false;
   const clock = $("preset").value;
   const official = clock === "official";
   // A fixed per-move time and a game clock are different limits; avoid
@@ -189,6 +190,9 @@ function updateForm() {
   const qualified = $("duel-personality").value === "qualified";
   if (qualified) {
     for (const id of ["mode", "depth", "movetime", "preset", "opening", "custom-minutes", "custom-increment"]) $(id).disabled = true;
+    $("reverse").disabled = false;
+    $("max-plies").disabled = false;
+    $("clock-note").textContent = "Duelo homologado sem relógio; fora do Elo legado.";
     $("opening-note").textContent = "Repertórios homologados; seed 2029 e busca individual.";
     $("search-note").textContent = "Fischer, Tal e Karpov d16; Kasparov d20; 5 milhões de nós.";
   }
@@ -346,4 +350,4 @@ if (!token) setFeedback("Inicie chesssim arena e abra a URL com token informada 
 refresh();
 setInterval(refresh, 1500);
 
-$("duel-personality").addEventListener("change", () => $("mode").dispatchEvent(new Event("change")));
+$("duel-personality").addEventListener("change", updateForm);

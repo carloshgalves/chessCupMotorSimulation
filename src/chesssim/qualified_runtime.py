@@ -87,6 +87,8 @@ def prepare(root, *, archive_dir=None):
         folder.mkdir()
         shutil.copy2(root / "rodent-iv-plain.exe", folder / "rodent-iv-plain.exe")
         shutil.copytree(root / "personalities", folder / "personalities")
+        if (root / "books").is_dir():
+            shutil.copytree(root / "books", folder / "books")
         directory = folder / "personalities"
         books = folder / "qualified-books"
         books.mkdir()
@@ -162,6 +164,17 @@ def headers(game, white, black, resources, seed, number):
 
 def verify_headers(game, white, black, resources, seed, number):
     import chess.pgn
+    registry = assets()
+    if (resources.get("personality_mode") != MODE or resources.get("version") != VERSION
+            or resources.get("node_cap") != NODE_CAP):
+        raise ValueError("Snapshot homologado inválido")
+    for slug in (white, black):
+        asset = registry[slug]
+        if (resources["engine_sha256"] != asset["hashes"]["rodent"]
+                or resources["profile_sha256"][slug] != asset["hashes"][PROFILE_KEYS[slug]]
+                or resources["book_sha256"][slug] != BOOKS[slug][0]
+                or resources["depths"][slug] != asset["depth"]):
+            raise ValueError("Snapshot homologado divergente")
     expected = chess.pgn.Game()
     headers(expected, white, black, resources, seed, number)
     for key in ("PersonalityMode", "WhiteBookSHA256", "BlackBookSHA256",

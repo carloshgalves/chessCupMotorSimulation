@@ -108,17 +108,19 @@
     if(!state.players.length)return;
     const n=Number($("league-create-count").value);
     if(![4,8,16,32,64].includes(n))return;
+    const qualified=$("league-personality").value==="qualified";
+    const players=qualified?state.players.filter(p=>["fischer","tal","karpov","kasparov"].includes(p.slug)):state.players;
     const box=$("league-participant-options");
     const chosen=reset||!box.children.length
-      ?state.players.filter(p=>p.installed).slice(0,n).map(p=>p.slug)
+      ?players.filter(p=>qualified||p.installed).slice(0,n).map(p=>p.slug)
       :selectedIds();
-    for(const player of state.players){
+    for(const player of players){
       if(chosen.length>=n)break;
       if(!chosen.includes(player.slug))chosen.push(player.slug);
     }
     const current=new Set(chosen.slice(0,n));
     box.replaceChildren();
-    for(const player of state.players){
+    for(const player of players){
       const label=el("label");
       const checkbox=document.createElement("input");
       checkbox.type="checkbox";checkbox.value=player.slug;
@@ -141,9 +143,21 @@
     const need=Number($("league-create-count").value);
     $("league-participant-caption").textContent=n+" de "+need+
       " jogadores selecionados. O catálogo histórico não garante motor instalado.";
-    $("league-create-submit").disabled=state.pending||n!==need||!token;
+    const qualified=$("league-personality").value==="qualified";
+    $("league-create-depth").disabled=qualified;
+    $("league-create-submit").disabled=state.pending||n!==need||!token||
+      (qualified&&($("league-create-execution").value!=="engine_full"||need!==4||
+        selectedIds().some(s=>!["fischer","tal","karpov","kasparov"].includes(s))));
   }
   $("league-create-count").addEventListener("change",()=>selectCount(true));
+  $("league-personality").addEventListener("change",()=>{
+    if($("league-personality").value==="qualified"){
+      $("league-create-count").value="4";
+      $("league-create-execution").value="engine_full";
+    }
+    selectCount(true);
+  });
+  $("league-create-execution").addEventListener("change",updateParticipantNote);
   $("league-new-shortcut").addEventListener("click",()=>{
     $("league-create-panel").scrollIntoView({behavior:"smooth",block:"nearest"});
     $("league-create-name").focus();
@@ -304,7 +318,7 @@
     $("league-progress-games").textContent=g.completed_games+"/"+g.total_games;
     $("league-progress-complete").textContent=String(g.completed_games);
     $("league-progress-running").textContent=String(g.running_games);
-    const missingProfiles=g.execution_mode==="engine_full" ?
+    const missingProfiles=g.execution_mode==="engine_full" && g.config?.personality_mode!=="qualified" ?
       g.config.participants.filter(slug=>
         !state.players.find(p=>p.slug===slug)?.installed):[];
     const next=g.games.find(m=>m.status!=="COMPLETED");
@@ -494,7 +508,8 @@
       ["Controle de tempo",modes[g.modality]],
       ["Execução",executions[g.execution_mode]],
       ["Motor","Rodent IV (apenas no modo UCI real)"],
-      ["Profundidade",config.depth+" níveis"],
+      ["Personalidades",config.personality_mode==="qualified"?"Homologadas":"Legado"],
+      ["Profundidade",config.personality_mode==="qualified"?"Individual · 5M nós":config.depth+" níveis"],
       ["Pontuação","Vitória "+config.points.win+
                     ", empate "+config.points.draw+
                     ", derrota "+config.points.loss],

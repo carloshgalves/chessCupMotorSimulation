@@ -259,6 +259,8 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
                                 "duel_id": "arena:" + sid, "white": white, "black": black,
                                 "status": status, "result": result,
                                 "origin": "arena", "recorded_utc": when,
+                                **({"rating_eligible": False, "personality_mode": "qualified"}
+                                   if config.get("personality_mode") == "qualified" else {}),
                                 "time_control": (
                                     config.get("preset") if session_clock is not None
                                     else "unclassified"
@@ -615,7 +617,8 @@ def _cup_games(root: Path, names: dict[str, str], slug: str | None,
                     "source_kind": "engine_full",
                     "receipt_sha256": row["sha256"],
                     "time_control": modality, "clock": clock,
-                    "rating_eligible": eligible,
+                    "rating_eligible": eligible and cfg.get("personality_mode") != "qualified",
+                    **({"personality_mode": "qualified"} if cfg.get("personality_mode") == "qualified" else {}),
                     "engine_strength_config": {
                         "engine_sha256": snapshot["engine_sha256"],
                         "white_profile_sha256":

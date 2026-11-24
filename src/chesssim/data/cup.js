@@ -250,7 +250,7 @@
       pill(data.edition+" · Simulação local"),
       pill(data.participants_count+" participantes"),
       pill(data.format==="double_round_robin"?"Duplo turno":"Eliminatória com byes"),
-      pill(data.execution_mode==="engine_full"?"Motor Rodent IV":"Projeção sintética"),
+      pill(data.config.personality_mode==="qualified"?"Personalidades homologadas":data.execution_mode==="engine_full"?"Motor Rodent IV":"Projeção sintética"),
     );
     $("cup-status-pill").textContent=labels[data.status]||data.status;
     const percentage=data.total_matches
@@ -268,7 +268,7 @@
     $("cup-progress-running").textContent=String(data.status==="RUNNING"?1:0);
     $("cup-export-json").disabled=state.commandPending;
     $("cup-export-pgn").disabled=state.commandPending||data.available_pgn===0;
-    const missingProfiles=data.execution_mode==="engine_full"?
+    const missingProfiles=data.execution_mode==="engine_full"&&data.config.personality_mode!=="qualified"?
       data.config.participants.filter(slug=>!player(slug)?.installed):[];
     const mayRun=Boolean(data.next_game)&&!state.commandPending&&
       data.status!=="RUNNING"&&!state.busy&&Boolean(token)&&
@@ -739,7 +739,8 @@
   }
   function fillParticipants(reset=false){
     if(!state.players.length)return;
-    const eligible=state.seedFromPreset;
+    const qualified=$("cup-personality").value==="qualified";
+    const eligible=qualified?state.seedFromPreset.filter(s=>["fischer","tal","karpov","kasparov"].includes(s)):state.seedFromPreset;
     const n=num($("cup-count").value)||8;
     const selected=new Set(reset?eligible.slice(0,n):state.selection);
     if(selected.size<n){
@@ -802,9 +803,20 @@
     $("cup-summary-note").textContent=women?
       "Folga explícita por rodada; 20 confrontos sem desempate eliminatório.":
       "Byes explícitos quando a quantidade não é potência de 2.";
-    $("cup-save").disabled=state.commandPending||selected!==n||!token;
+    const qualified=$("cup-personality").value==="qualified";
+    $("cup-depth").disabled=qualified;
+    $("cup-save").disabled=state.commandPending||selected!==n||!token||
+      (qualified&&(!engine||state.selection.some(s=>!["fischer","tal","karpov","kasparov"].includes(s))));
   }
   $("cup-execution").addEventListener("change",updateSummary);
+  $("cup-personality").addEventListener("change",()=>{
+    if($("cup-personality").value==="qualified"){
+      $("cup-execution").value="engine_full";
+      setPreset("custom");
+      $("cup-count").value="4";
+    }
+    fillParticipants(true);
+  });
   for(const button of $("cup-creation-presets").querySelectorAll("button")){
     button.addEventListener("click",()=>setPreset(button.dataset.cupPreset));
   }

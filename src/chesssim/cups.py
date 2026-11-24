@@ -533,6 +533,9 @@ class CupManager:
         if method=="engine_full":
             if game is None or game.errors or game.headers.get("Result")!=result:
                 raise ValueError("Jogo UCI não apresenta resultado comprovado")
+            if state["config"].get("personality_mode") == MODE:
+                verify_headers(game, spec["white"], spec["black"], state["resources"],
+                               state["config"]["seed"], spec["round"])
             pgn_rel="games/"+spec["id"]+".pgn"
             pgn_file=directory/pgn_rel
             if pgn_file.parent.is_symlink() or pgn_file.is_symlink():
