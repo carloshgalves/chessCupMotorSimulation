@@ -1,6 +1,6 @@
-"""Scientific/release contract for the Tal Balanced review proposal.
+"""Product release contract for Tal Balanced.
 
-This proposal must NEVER silently freeze Tal or alter Fischer.
+Explicit approval freezes only the identified motor-base.
 """
 import json
 from pathlib import Path
@@ -18,19 +18,21 @@ def read_json(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def test_tal_candidate_is_sha_bound_and_not_yet_promoted():
+def test_tal_candidate_is_sha_bound_and_explicitly_approved():
     p = read_json(PROPOSAL)
     frozen = read_json(FROZEN)
     assert p["schema"] == "chesssim-tal-product-release-review-v1"
     assert p["identity"] == "tal-balanced-d16"
-    assert p["status"] == "ELIGIBLE_FOR_HUMAN_PRODUCT_RELEASE_REVIEW"
-    assert p["release_decision"] == "PENDING_EXPLICIT_MAINTAINER_SIGNOFF"
-    assert p["release_approval"] is None
+    assert p["status"] == "APPROVED_PRODUCT_MOTOR_BASE"
+    assert p["release_decision"] == "EXPLICIT_MAINTAINER_PRODUCT_APPROVAL"
+    assert p["release_approval"]["date"] == "2026-11-24"
+    assert p["research_followup"]["confirmatory_noninferiority"] is False
+    assert frozen["players"]["tal"]["hashes"]["tal_balanced_profile"] == BALANCED_SHA
     assert p["official_roster_changed"] is False
     assert p["official_tal_profile_modified"] is False
     assert p["fischer_frozen_asset_unchanged"] is True
     assert p["human_fide_elo_equivalence_claimed"] is False
-    assert set(frozen["players"]) == {"fischer"}
+    assert set(frozen["players"]) == {"fischer", "tal"}
     assert frozen["players"]["fischer"]["status"] == "FROZEN_GAME_ASSET"
     assert frozen["players"]["fischer"]["qualification_run_id"] == 45097738965
     assert p["original_tal_profile_sha256"] == TAL_ORIGINAL_SHA
