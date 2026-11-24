@@ -16,8 +16,10 @@ PERIODS = {"fischer": (1955, 1972), "tal": (1957, 1961)}
 MAX_PLIES = 16
 
 
-def build(player, source, *, through_year=None, period=None, arm_selector=neural_arm,
+def build(player, source, *, through_year=None, period=None, arm_selector=None,
           partition_version=None):
+    if arm_selector is None:
+        arm_selector = neural_arm
     pgn, rows, _, origin, surname = source
     start, end = PERIODS[player] if period is None else period
     if type(start) is not int or type(end) is not int or start > end:
