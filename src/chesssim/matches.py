@@ -182,7 +182,8 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
               max_wall_seconds: float | None = None,
               experimental_policy: ExperimentalPolicyAdapter | None = None,
               experimental_depths: dict[str, int] | None = None,
-              experimental_start_fen: str | None = None) -> tuple[chess.pgn.Game, dict]:
+              experimental_start_fen: str | None = None,
+              node_cap: int | None = None) -> tuple[chess.pgn.Game, dict]:
     if experimental_policy is not None:
         if clock is not None or use_books is not False:
             raise ValueError("Learned policy control is development-only: no clocks or internal books")
@@ -293,6 +294,8 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                     f"depth={depth};time={experimental_policy.gate['engine_seconds_per_position']}s")
                 game.headers["PolicyGateSHA256"] = experimental_policy.gate["gate_sha256"]
                 game.headers["PolicyGateMechanism"] = "GAME_DISJOINT_CALIBRATED_EXTERNAL_OVERRIDE"
+        if node_cap is not None:
+            game.headers["NodeCap"] = str(node_cap)
         if historical_openings:
             game.headers["OpeningSeed"] = str(opening_seed)
             game.headers["OpeningMinCount"] = str(opening_min_count)
@@ -334,6 +337,8 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                          chess.engine.Limit(depth=experimental_depths[
                              white.slug if board.turn == chess.WHITE else black.slug])
                          if experimental_depths is not None else limit)
+            if node_cap is not None:
+                turn_limit.nodes = node_cap
             opening_move = None
             opening_source = None
             if historical_openings:
@@ -444,6 +449,7 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                              "policy_trace": policy_trace,
                              "policy_counts": trace_summary(policy_trace),
                             "opening_seed": opening_seed if historical_openings else None,
+               "node_cap": node_cap,
                             "opening_mode": game.headers["BookMode"],
                             "color_order": f"{white.slug}|{black.slug}"}
                     return game, meta
@@ -534,7 +540,10 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
               opening_min_count: int = 1,
               stop_check: Callable[[], bool] | None = None,
               max_wall_seconds: float | None = None,
-              experimental_policy: ExperimentalPolicyAdapter | None = None) -> Path:
+              experimental_policy: ExperimentalPolicyAdapter | None = None,
+              node_cap: int | None = None) -> Path:
+    if node_cap is not None and (type(node_cap) is not int or node_cap < 1 or experimental_policy is not None):
+        raise ValueError("Invalid standalone UCI node cap")
     root = root.expanduser().resolve()
     exe, profile_paths = validate(root, white, black)
     if (movetime is not None and (depth is not None or clock is not None)) or (
@@ -621,7 +630,7 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
                                    opening_seed=opening_seed, opening_min_count=opening_min_count,
                                    stop_check=stop_check, on_progress=checkpoint,
                                    max_wall_seconds=max_wall_seconds,
-                                   experimental_policy=experimental_policy)
+                                   experimental_policy=experimental_policy, node_cap=node_cap)
             digest, plies = mainline_identity(game)
             if plies != meta["plies"]:
                 raise RuntimeError("PGN/mainline ply count disagrees with engine record")
