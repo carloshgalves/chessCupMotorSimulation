@@ -312,8 +312,14 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
             game.headers["OpeningSeed"] = str(opening_seed)
             game.headers["OpeningMinCount"] = str(opening_min_count)
         if qualified_resources is not None:
-            from .qualified_runtime import headers, VERSION
+            from .qualified_runtime import headers, VERSION, verify_headers, book_digest
             headers(game, white.slug, black.slug, qualified_resources, opening_seed, round_number)
+            verify_headers(game, white.slug, black.slug, qualified_resources, opening_seed, round_number)
+            for p in (white, black):
+                if (book_digest(historical_openings[p.slug], p.slug) != qualified_resources["book_sha256"][p.slug]
+                        or hashes[p.slug] != qualified_resources["profile_sha256"][p.slug]
+                        or hashes["exe"] != qualified_resources["engine_sha256"]):
+                    raise ValueError("Qualified game assets mismatch")
             game.headers["Event"] = "ChessSim - Personalidades homologadas"
             game.headers["ProtocolSHA256"] = VERSION
             game.headers["BookMode"] = VERSION
@@ -667,6 +673,9 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
                                    max_wall_seconds=max_wall_seconds,
                                    experimental_policy=experimental_policy, node_cap=node_cap,
                                    product_depths=product_depths, qualified_resources=qualified_resources)
+            if qualified_resources is not None:
+                from .qualified_runtime import verify_openings
+                verify_openings(game, w.slug, b.slug, historical_openings, opening_seed, i)
             digest, plies = mainline_identity(game)
             if plies != meta["plies"]:
                 raise RuntimeError("PGN/mainline ply count disagrees with engine record")

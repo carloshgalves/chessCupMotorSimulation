@@ -25,7 +25,8 @@ function fillPlayer(select, preferred) {
   for (const p of roster) {
     const option = document.createElement("option");
     option.value = p.slug;
-    option.disabled = !p.installed;
+    const qualified = $("duel-personality").value === "qualified";
+    option.disabled = qualified ? !["fischer","tal","karpov","kasparov"].includes(p.slug) : !p.installed;
     option.textContent = p.name + (p.installed ? "" : " · perfil indisponível");
     select.appendChild(option);
   }
@@ -350,4 +351,9 @@ if (!token) setFeedback("Inicie chesssim arena e abra a URL com token informada 
 refresh();
 setInterval(refresh, 1500);
 
-$("duel-personality").addEventListener("change", updateForm);
+$("duel-personality").addEventListener("change", () => {
+  fillPlayer($("white"), "fischer");
+  fillPlayer($("black"), "tal");
+  if ($("white").value === $("black").value && $("duel-personality").value === "qualified") $("black").value = "tal";
+  updateForm();
+});

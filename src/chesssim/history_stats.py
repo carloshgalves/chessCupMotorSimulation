@@ -250,6 +250,14 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
                                 raise InvalidCatalogue("Relógio do PGN diverge da sessão")
                             white, black = (participants if idx == 1
                                             else participants[::-1])
+                            if config.get("personality_mode") == "qualified":
+                                from .qualified_runtime import verify_headers
+                                resources = session["qualified_resources"]
+                                if summary.get("qualified_resources") != resources:
+                                    raise InvalidCatalogue("Recursos homologados divergentes")
+                                verify_headers(game, white, black, resources, config["seed"], idx)
+                            elif game.headers.get("PersonalityMode") == "qualified-product-v1":
+                                raise InvalidCatalogue("Modo homologado não declarado na sessão")
                             result = meta.get("result") if status == "COMPLETED" else None
                             _validated_result(game, white, black, names, status, result, meta)
                             if status == "INCOMPLETE" and meta.get("result") not in (None, "*"):

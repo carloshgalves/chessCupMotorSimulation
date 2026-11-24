@@ -37,7 +37,7 @@ def assets():
 
 def validate_mode(raw, slugs, *, real=True):
     mode = raw.get("personality_mode", "legacy")
-    if mode not in ("legacy", MODE):
+    if type(mode) is not str or mode not in ("legacy", MODE):
         raise ValueError("Modo de personalidade inválido")
     if mode == MODE and (not real or not slugs or not set(slugs) <= SLUGS):
         raise ValueError("Modo homologado exige apenas motores homologados e execução real")
@@ -64,7 +64,7 @@ def player_for(slug, asset):
     return replace(p, rodent_alias=alias, rodent_file=alias.lower() + ".txt")
 
 
-def prepare(root, *, archive_dir=None):
+def prepare(root):
     """Build once from pinned corpora and exact Rodent build; never edit legacy files."""
     from .historical_quality_parity import source_rows
     from .product_peak_profiles import PEAKS, source, render
@@ -77,10 +77,8 @@ def prepare(root, *, archive_dir=None):
     registry = assets()
     if file_hash(root / "rodent-iv-plain.exe") != registry["fischer"]["hashes"]["rodent"]:
         raise ValueError("Rodent executável não homologado")
-    sources = source_rows(archive_dir)
+    sources = source_rows()
     for slug in PEAKS:
-        if archive_dir is not None:
-            raise ValueError("Local archive for peak sources not supported; use pinned remote")
         sources[slug] = source(slug)
     with TemporaryDirectory(prefix=".qualified-", dir=root) as tmp:
         folder = Path(tmp) / VERSION
