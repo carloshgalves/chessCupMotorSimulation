@@ -21,13 +21,14 @@ function setFeedback(message, bad=false) {
 function player(slug) { return roster.find(p => p.slug === slug); }
 function fillPlayer(select, preferred) {
   const prior = select.value || preferred;
+  const qualified = $("duel-personality").value === "qualified";
+  const eligible = p => qualified ? ["fischer","tal","karpov","kasparov"].includes(p.slug) : p.installed;
   select.replaceChildren();
   for (const p of roster) {
     const option = document.createElement("option");
     option.value = p.slug;
-    const qualified = $("duel-personality").value === "qualified";
-    option.disabled = qualified ? !["fischer","tal","karpov","kasparov"].includes(p.slug) : !p.installed;
-    option.textContent = p.name + (p.installed ? "" : " · perfil indisponível");
+    option.disabled = !eligible(p);
+    option.textContent = p.name + (eligible(p) ? "" : " · perfil indisponível");
     select.appendChild(option);
   }
   if (customPlayers.length) {
@@ -44,8 +45,8 @@ function fillPlayer(select, preferred) {
     }
     select.appendChild(group);
   }
-  select.value = player(prior) && player(prior).installed ? prior :
-    (roster.find(p => p.installed)?.slug || "");
+  select.value = player(prior) && eligible(player(prior)) ? prior :
+    (player(preferred) && eligible(player(preferred)) ? preferred : roster.find(eligible)?.slug || "");
 }
 function applyCustomCatalog(data) {
   if (!data || data.schema !== "chesssim-custom-arena-catalog-v1" ||

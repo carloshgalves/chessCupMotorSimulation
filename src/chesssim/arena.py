@@ -501,6 +501,8 @@ class ArenaManager:
             if not output.resolve().is_relative_to(folder.resolve()):
                 raise RuntimeError("Saída do duelo fora da sessão autorizada")
             summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
+            if config.get("personality_mode") == MODE and summary.get("qualified_resources") != session["qualified_resources"]:
+                raise ValueError("Resultado não vinculado às personalidades homologadas")
             if summary.get("status") not in {"COMPLETED", "INCOMPLETE", "FAILED"}:
                 raise RuntimeError("Estado final do duelo não reconhecido")
             session["status"] = summary["status"]

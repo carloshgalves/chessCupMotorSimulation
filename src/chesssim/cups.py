@@ -268,6 +268,8 @@ class CupManager:
             raise ValueError("Cabeçalhos ou trajetória de PGN inválidos")
         if cfg.get("personality_mode") == MODE:
             verify_headers(pg, spec["white"], spec["black"], snapshot, cfg["seed"], spec["round"])
+        elif pg.headers.get("PersonalityMode") == "qualified-product-v1":
+            raise ValueError("PGN homologado não pertence à Copa legado")
         if spec.get("color_draw") and (
                 pg.headers.get("ColorDrawSHA256") !=
                 spec["color_draw"]["sha256"] or

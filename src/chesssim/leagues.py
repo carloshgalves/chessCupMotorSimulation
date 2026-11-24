@@ -448,6 +448,8 @@ class LeagueManager:
                     if state["config"].get("personality_mode") == MODE:
                         verify_headers(game, match["white"], match["black"], resources,
                                        state["config"]["seed"], match["round"])
+                    elif game.headers.get("PersonalityMode") == "qualified-product-v1":
+                        raise ValueError("PGN homologado não pertence à liga legado")
                     position = game.end().board()
                     if entry["termination"] == "TimeForfeit":
                         clock_left = entry.get("clock_left")
@@ -915,7 +917,7 @@ def verified_league_games(workspace: Path) -> tuple[list[dict], list[dict], int]
                     "evidence_pgn_sha256": entry["pgn_sha256"],
                     "receipt_sha256": entry["sha256"],
                     "rating_eligible": not is_projection and state["config"].get("personality_mode") != MODE,
-                    "personality_mode": state["config"].get("personality_mode", "legacy"),
+                    **({"personality_mode": MODE} if state["config"].get("personality_mode") == MODE else {}),
                 }
                 (season_projections if is_projection else season_games).append(record)
             games.extend(season_games)

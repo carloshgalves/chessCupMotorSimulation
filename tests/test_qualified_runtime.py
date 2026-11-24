@@ -6,7 +6,7 @@ from pathlib import Path
 import chess.pgn
 import pytest
 
-from chesssim.arena import normalize_config
+from chesssim.arena import ArenaManager, normalize_config
 from chesssim.cup_games import play_cup_game
 from chesssim.cup_rules import normalize, stage_game
 from chesssim.leagues import default_engine_runner, normalize_config as league_config
@@ -82,6 +82,24 @@ def test_real_qualified_three_execution_paths(tmp_path, monkeypatch):
     verify_headers(game, *pair, res, 2029, 1)
     verify_openings(game, *pair, books, 2029, 1)
     assert len(list(game.mainline_moves())) > 16
+
+    # Exercise the actual Arena session/preflight path with a bounded real runner.
+    def arena_runner(root, output, white, black, **kwargs):
+        assert kwargs["product_depths"] == d
+        kwargs["max_plies"] = 24
+        return play_duel(root, output, white, black, **kwargs)
+
+    manager = ArenaManager(root, tmp_path / "arena", runner=arena_runner)
+    try:
+        manager.launch({"white": pair[0], "black": pair[1], "personality_mode": MODE,
+                        "reverse": False})
+        manager._thread.join(timeout=180)
+        assert not manager._thread.is_alive()
+        session = manager.status()["session"]
+        assert session["status"] in ("COMPLETED", "INCOMPLETE")
+        assert session["config"]["personality_mode"] == MODE
+    finally:
+        manager.shutdown()
 
     cfg = normalize({"name": "Copa homologada", "preset": "custom",
                      "participants": sorted(SLUGS), "personality_mode": MODE})
