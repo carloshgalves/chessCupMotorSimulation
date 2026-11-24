@@ -216,7 +216,8 @@ def measure(slug, root, stockfish, out):
                     "profile_sha256": file_hash(profile), "stats": stats,
                     "repeat_matches": sum(repeated), "repeat_total": len(repeated),
                     "roots": starts, "records": records,
-                    "source_sha256": sha256(data[0]).hexdigest()})
+                    "source_sha256": sha256(data[0]).hexdigest(),
+                    "book_sha256": digest(build(slug, data, period=PEAKS[slug]))})
         print("PEAK_SELECTION", slug, selected, json.dumps(stats[selected]), flush=True)
 
 
@@ -228,7 +229,7 @@ def split_label(label):
 
 
 def summarize(records):
-    """Joint stable numeric loss and descriptive behavior; no significance gate."""
+    """Joint numeric loss and descriptive behavior; report residual instability."""
     labels = sorted(set(records[0]["values"]) - {"human"})
     result = {}
     for label in labels:
@@ -259,8 +260,11 @@ def summarize(records):
 def strength(slug, root, selection, index, out):
     doc = json.loads((selection / "selection.json").read_text())
     data = source(slug)
-    if doc["player"] != slug or doc["source_sha256"] != sha256(data[0]).hexdigest():
+    if (doc["player"] != slug or doc["source_sha256"] != sha256(data[0]).hexdigest()
+            or doc["book_sha256"] != digest(build(slug, data, period=PEAKS[slug]))):
         raise ValueError("Selection/source mismatch")
+    if file_hash(selection / "candidate.txt") != doc["profile_sha256"]:
+        raise ValueError("Selection candidate bytes mismatch")
     name, depth = split_label(doc["selected"])
     if name not in VARIANTS[slug] or depth != doc["depth"]:
         raise ValueError("Unknown candidate")
@@ -292,7 +296,12 @@ def strength(slug, root, selection, index, out):
 
 def aggregate(slug, selection, shards, out):
     doc = json.loads((selection / "selection.json").read_text())
-    roots = panel(slug, source(slug))[1]
+    data = source(slug)
+    if (doc["player"] != slug or doc["source_sha256"] != sha256(data[0]).hexdigest()
+            or doc["book_sha256"] != digest(build(slug, data, period=PEAKS[slug]))
+            or file_hash(selection / "candidate.txt") != doc["profile_sha256"]):
+        raise ValueError("Aggregate selection binding mismatch")
+    roots = panel(slug, data)[1]
     rows = {str(d): Counter() for d in CONTROLS}
     for i, start in enumerate(roots):
         shard = json.loads((shards / f"{slug}-{i}" / "report.json").read_text())
@@ -328,6 +337,7 @@ def aggregate(slug, selection, shards, out):
              and doc["repeat_matches"] == doc["repeat_total"])
     report = {"player": slug, "selected": doc["selected"], "depth": doc["depth"],
               "profile_sha256": doc["profile_sha256"], "overrides": doc["overrides"],
+              "source_sha256": doc["source_sha256"], "book_sha256": doc["book_sha256"],
               "quality": stats, "repeat_matches": doc["repeat_matches"],
               "repeat_total": doc["repeat_total"], "controls": rows,
               "status": "PRODUCT_REVIEW_READY" if ready else "NEEDS_PRODUCT_REVIEW",
