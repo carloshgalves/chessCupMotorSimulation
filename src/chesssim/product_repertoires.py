@@ -16,7 +16,8 @@ PERIODS = {"fischer": (1955, 1972), "tal": (1957, 1961)}
 MAX_PLIES = 16
 
 
-def build(player, source, *, through_year=None, period=None):
+def build(player, source, *, through_year=None, period=None, arm_selector=neural_arm,
+          partition_version=None):
     pgn, rows, _, origin, surname = source
     start, end = PERIODS[player] if period is None else period
     if type(start) is not int or type(end) is not int or start > end:
@@ -27,7 +28,7 @@ def build(player, source, *, through_year=None, period=None):
         end = through_year
     eligible = [r for r in rows if str(r["date"]).isdigit()
                 and start <= int(r["date"]) <= end
-                and neural_arm(r["mainline_sha256"]) == "fit"]
+                and arm_selector(r["mainline_sha256"]) == "fit"]
     counts = {c: defaultdict(Counter) for c in ("white", "black")}
     accepted = Counter()
     excluded = Counter({"outside_period_or_not_fit": len(rows) - len(eligible)})
@@ -59,7 +60,9 @@ def build(player, source, *, through_year=None, period=None):
                        "from_year": start, "to_year": end,
                        "accepted_games": sum(accepted.values()),
                        "by_color": dict(accepted), "rejected": dict(excluded),
-                       "provenance": {"status": "PINNED_PRODUCT_FIT_ONLY"}},
+                       "provenance": {"status": "PINNED_PRODUCT_FIT_ONLY",
+                                      **({"partition_version": partition_version}
+                                         if partition_version is not None else {})}},
             "positions": {c: {fen: dict(sorted(moves.items()))
                               for fen, moves in sorted(counts[c].items())}
                           for c in counts}}

@@ -24,7 +24,7 @@ from .matches import _open_engine, file_hash, validate
 from .product_peak_profiles import render, summarize, split_label
 from .product_repertoires import build, audit
 from .product_strength_ladder import DepthControl
-from .real85_neural_stream import neural_arm
+from .real85_playable import game_arm
 from .real_training_cohorts import _player_configuration, _source_bytes, _scan, _iter_verified_games
 from .registry import add_to_first_set
 
@@ -34,10 +34,26 @@ WAVE = {"alekhine": (1927, 1934), "botvinnik": (1948, 1958),
 DEPTHS = (12, 16, 20)
 PHASES = ("opening", "middlegame", "endgame")
 ROOTS = 12
-PER_PHASE = 12
+MIN_PER_PHASE = 12
+TARGET_PER_PHASE = 20
+PARTITION_VERSION = "product-development-v2"
+# Preserve the exact global TEST arm. Of the remaining 85%, assign 20/85 to TUNE.
+TUNE_THRESHOLD = 2353
 CONTROL = 16
 MIN_SCORE = .40
 SHARDS = 10
+
+
+def product_arm(trajectory):
+    if game_arm(trajectory) == "test":
+        return "excluded_test"
+    bucket = int(sha256(f"{PARTITION_VERSION}:{trajectory}".encode()).hexdigest()[:16], 16) % 10000
+    return "tune" if bucket < TUNE_THRESHOLD else "fit"
+
+
+def product_book(slug, data):
+    return build(slug, data, period=WAVE[slug], arm_selector=product_arm,
+                 partition_version=PARTITION_VERSION)
 
 
 def remaining():
@@ -68,13 +84,13 @@ def readiness(slug):
         return {**base, "status": "SOURCE_MISSING_404"}
     rows = data[1]
     years = Counter(str(r["date"]) for r in rows if r["date"] is not None)
-    by_arm = Counter(neural_arm(r["mainline_sha256"]) for r in rows)
+    by_arm = Counter(product_arm(r["mainline_sha256"]) for r in rows)
     peak = [r for r in rows if slug in WAVE and in_period(r, WAVE[slug])]
-    peak_arms = Counter(neural_arm(r["mainline_sha256"]) for r in peak)
+    peak_arms = Counter(product_arm(r["mainline_sha256"]) for r in peak)
     status = ("EMPTY_OR_UNRESOLVED_SOURCE" if not rows else
               "NEEDS_INDIVIDUAL_BASE" if not p.rodent_alias else
               "NEEDS_PEAK_WINDOW" if slug not in WAVE else
-              "INSUFFICIENT_PEAK_GAMES" if min(peak_arms["fit"], peak_arms["tune"]) < PER_PHASE else
+              "INSUFFICIENT_PEAK_GAMES" if min(peak_arms["fit"], peak_arms["tune"]) < MIN_PER_PHASE else
               "WAVE_CANDIDATE")
     return {**base, "status": status, "source": data[3], "sha256": sha256(data[0]).hexdigest(),
             "games": len(rows), "scan": data[2], "years": dict(years),
@@ -106,7 +122,7 @@ def inventory_total(shards, out):
         raise ValueError("Incomplete roster")
     report = {"players": result, "count": 60, "statuses": dict(Counter(r["status"] for r in result.values())),
               "unique_trajectories": len(owners), "shared_trajectories": sum(len(x) > 1 for x in owners.values()),
-              "wave": WAVE, "promotions": []}
+              "wave": WAVE, "partition_version": PARTITION_VERSION, "promotions": []}
     atomic_json(out, report)
     print("ROSTER_TOTAL", json.dumps(report["statuses"], sort_keys=True), flush=True)
 
@@ -116,7 +132,7 @@ def sample(slug, data, arm):
         raise ValueError("Only development arms allowed")
     period = WAVE[slug]
     pgn, rows, _, _, surname = data
-    eligible = [r for r in rows if in_period(r, period) and neural_arm(r["mainline_sha256"]) == arm]
+    eligible = [r for r in rows if in_period(r, period) and product_arm(r["mainline_sha256"]) == arm]
     positions = defaultdict(list)
     roots = {}
     for game, row in _iter_verified_games(pgn, eligible, surname):
@@ -141,9 +157,9 @@ def sample(slug, data, arm):
     probes = []
     for stage in PHASES:
         candidates = sorted(positions[stage], key=lambda x: x[0])
-        if len(candidates) < PER_PHASE:
+        if len(candidates) < MIN_PER_PHASE:
             raise ValueError(f"Insufficient {slug} {arm} {stage} evidence: {len(candidates)}")
-        probes.extend(candidates[:PER_PHASE])
+        probes.extend(candidates[:TARGET_PER_PHASE])
     starts = sorted(roots.values(), key=lambda x: x["id"])[:ROOTS]
     if len(starts) != ROOTS:
         raise ValueError("Insufficient distinct roots")
@@ -171,6 +187,11 @@ def overlay(root, dest, slug):
             or file_hash(root / "personalities/simple.txt") != RODENT_HASHES["simple"]):
         raise ValueError("Unpinned Rodent build")
     original = find_player(slug)
+    generic_seed = original.rodent_alias is None
+    if generic_seed:
+        if slug != "smyslov":
+            raise ValueError("Individual base not authorized for this wave")
+        original = replace(original, rodent_alias="Simple", rodent_file="simple.txt")
     validate(root, original, original)
     shutil.copytree(root, dest)
     directory = dest / "personalities"
@@ -178,7 +199,7 @@ def overlay(root, dest, slug):
     params = parameters(raw)
     candidates, additions = {"original": original}, {}
     for name in ("initiative", "restriction"):
-        alias = original.rodent_alias + "Wave" + name.capitalize()
+        alias = ("Smyslov" if generic_seed else original.rodent_alias) + "Wave" + name.capitalize()
         filename = alias.lower() + ".txt"
         (directory / filename).write_text(render(raw, params[name]), encoding="utf-8")
         candidates[name] = replace(original, rodent_alias=alias, rodent_file=filename)
@@ -233,7 +254,7 @@ def measure(slug, root, stockfish, out):
         return
     if {r[3] for r in fit} & {r[3] for r in tune}:
         raise ValueError("FIT/TUNE trajectory overlap")
-    book = build(slug, data, period=WAVE[slug])
+    book = product_book(slug, data)
     book_stats = audit(book)
     if file_hash(stockfish) != STOCKFISH_SHA:
         raise ValueError("Unpinned Stockfish")
@@ -250,10 +271,13 @@ def measure(slug, root, stockfish, out):
         stats = summarize(records)
         # Advance the best FIT candidate at each depth, even if it fails quality;
         # final screening never promotes an ineligible candidate.
-        shortlist = [min((f"{n}{d}" for n in players), key=lambda k: (
+        selectable = [n for n in players if n != "original" or find_player(slug).rodent_alias]
+        shortlist = [min((f"{n}{d}" for n in selectable), key=lambda k: (
             not eligible_quality(stats[k]), stats[k]["objective"], k)) for d in DEPTHS]
         hashes = {n: file_hash(location / "personalities" / p.profile_filename) for n, p in players.items()}
-        doc = {"slug": slug, "period": WAVE[slug], "source_sha256": sha256(data[0]).hexdigest(),
+        doc = {"slug": slug, "period": WAVE[slug], "partition_version": PARTITION_VERSION,
+               "base_source": "individual" if find_player(slug).rodent_alias else "generic_seed_not_qualified",
+               "fit_phase_support": dict(Counter(r["phase"] for r in records)), "source_sha256": sha256(data[0]).hexdigest(),
                "book_sha256": digest(book), "book_audit": book_stats, "params": params,
                "hashes": hashes, "roots": roots, "shortlist": shortlist,
                "fit_stats": stats, "fit_records": records}
@@ -272,8 +296,9 @@ def bound_measure(slug, selection, data):
                 or record["values"]["human"]["move"] != human.uci()):
             raise ValueError("FIT position binding mismatch")
     if (doc["slug"] != slug or doc["period"] != list(WAVE[slug])
+            or doc.get("partition_version") != PARTITION_VERSION
             or doc["source_sha256"] != sha256(data[0]).hexdigest()
-            or doc["book_sha256"] != digest(build(slug, data, period=WAVE[slug]))
+            or doc["book_sha256"] != digest(product_book(slug, data))
             or doc["roots"] != roots or len(doc["shortlist"]) != 3
             or {split_label(k)[1] for k in doc["shortlist"]} != set(DEPTHS)):
         raise ValueError("Measurement binding mismatch")
@@ -360,6 +385,8 @@ def finish(slug, root, stockfish, selection, shards, out):
                 and r["score"] >= MIN_SCORE and eligible_quality(doc["fit_stats"][k])]
     selected = min(eligible, key=lambda k: (doc["fit_stats"][k]["objective"], -rows[k]["score"], k)) if eligible else None
     report = {"slug": slug, "period": WAVE[slug], "source_sha256": doc["source_sha256"],
+              "partition_version": PARTITION_VERSION, "base_source": doc["base_source"],
+              "fit_phase_support": doc["fit_phase_support"],
               "book_sha256": doc["book_sha256"], "book_audit": doc["book_audit"],
               "fit_stats": doc["fit_stats"], "strength": rows, "selected": selected,
               "screen_control": CONTROL, "screen_min_score": MIN_SCORE,
@@ -383,15 +410,20 @@ def finish(slug, root, stockfish, selection, shards, out):
             ref = stack.enter_context(chess.engine.SimpleEngine.popen_uci(str(stockfish)))
             ref.configure({"Threads": 1, "Hash": 64})
             tune = evaluate(probes, {name: engine}, [selected], ref)
-            indices = list(range(0, len(probes), 3))[:10]
+            indices = []
+            for stage, count in zip(PHASES, (4, 3, 3)):
+                group = [i for i, row in enumerate(tune) if row["phase"] == stage]
+                indices.extend(group[j * len(group) // count] for j in range(count))
             repeats = sum(choose(engine, probes[i][1], depth)[0].uci() == tune[i]["values"][selected]["move"]
                           for i in indices)
             stats = summarize(tune)[selected]
             shutil.copyfile(candidate, out / "candidate.txt")
             atomic_json(out / "tune.json", tune)
-            report.update({"tune": stats, "repeat_matches": repeats, "repeat_total": len(indices),
+            report.update({"tune": stats, "tune_phase_support": dict(Counter(r["phase"] for r in tune)),
+                           "repeat_matches": repeats, "repeat_total": len(indices),
                            "profile_sha256": doc["hashes"][name], "overrides": params[name], "depth": depth,
-                           "status": "MOTOR_BASE_REVIEW_READY" if eligible_quality(stats) and repeats == 10
+                           "status": ("INDIVIDUAL_CANDIDATE_REVIEW_READY" if doc["base_source"] == "generic_seed_not_qualified"
+                                      else "MOTOR_BASE_REVIEW_READY") if eligible_quality(stats) and repeats == 10
                            else "TUNE_OR_STABILITY_FAILED"})
     atomic_json(out / "report.json", report)
     print("WAVE_RESULT", json.dumps(report, sort_keys=True), flush=True)

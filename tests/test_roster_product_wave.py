@@ -1,7 +1,8 @@
 import pytest
 
 from chesssim.roster_product_wave import (
-    FROZEN, WAVE, SHARDS, remaining, in_period, parameters, eligible_quality,
+    FROZEN, WAVE, SHARDS, remaining, in_period, parameters, eligible_quality, product_arm,
+    MIN_PER_PHASE, TARGET_PER_PHASE,
 )
 
 
@@ -34,3 +35,19 @@ def test_quality_gate_requires_numeric_support():
     assert eligible_quality({"numeric": 20, "excess_cp": 35, "severe_excess": .15})
     assert not eligible_quality({"numeric": 19, "excess_cp": 0, "severe_excess": 0})
     assert not eligible_quality({"numeric": 36, "excess_cp": 36, "severe_excess": 0})
+
+
+def test_product_split_preserves_every_original_test_trajectory():
+    from collections import Counter
+    from hashlib import sha256
+    from chesssim.real85_playable import game_arm
+    counts = Counter()
+    for i in range(10000):
+        gid = sha256(str(i).encode()).hexdigest()
+        arm = product_arm(gid)
+        assert (arm == "excluded_test") == (game_arm(gid) == "test")
+        assert arm == product_arm(gid)
+        counts[arm] += 1
+    assert 6200 < counts["fit"] < 6800
+    assert 1800 < counts["tune"] < 2200
+    assert MIN_PER_PHASE == 12 and TARGET_PER_PHASE == 20
