@@ -74,6 +74,48 @@
         "No automatic changes to Arena, roster ratings, XP, or shared engines"
       ],
       "research_status": "INCONCLUSIVE_NEEDS_HUMAN_QUALITY_SUPPORT"
+    },
+    "kasparov": {
+      "status": "FROZEN_GAME_ASSET",
+      "profile": "Rodent IV Kasparov Initiative",
+      "alias": "KasparovInitiative",
+      "depth": 20,
+      "uci_node_cap": 5000000,
+      "internal_opening_book": false,
+      "phase_adaptive_depth": false,
+      "neural_override": false,
+      "time_control_benchmark": "10+2",
+      "qualification_run_id": 45408582198,
+      "qualification_artifact_id": 14936846062,
+      "selection_artifact_id": 14929943162,
+      "hashes": {
+        "rodent": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+        "kasparov_profile": "ff687985e8e2faa000365aba515e2f5b1f3bb517c029da321fa62874546f1d58",
+        "simple_control": "19f83fb05f96039a34e0e9a36bf66fc841693f70d73ee2a243df42e90caf1613"
+      },
+      "overrides": {
+        "KingTropism": 65,
+        "OwnAttack": 265,
+        "PiecePressure": 160
+      },
+      "gates": {
+        "historical_practical_strength": true,
+        "clock_play": true,
+        "style_preferences": true,
+        "reproducibility": true
+      },
+      "decision": "Explicit maintainer product approval 2026-11-24",
+      "release_scope": "Motor-base only; peak 1993–2000; repertoire integration separately validated; no human Elo equivalence",
+      "restrictions": [
+        "Any profile/binary/depth/opening book change requires a new gate and version",
+        "No automatic changes to Arena, roster ratings, XP, or shared engines"
+      ],
+      "limitations": [
+        "36 retrospective FIT probes; defense support one position; 3 unresolved reference disagreements",
+        "Requested depth reached in 22/36 probes; 5M node budget applies"
+      ],
+      "historical_source_sha256": "6f6cdfe8e8dd09323ad8b324d2beac9326c155ce8020768a0995c24b018564e1",
+      "historical_book_digest": "cb415b7b928ade70572a5084d968ed17d9ccca451f60614a38d0fd5379a098ba"
     }
   }
 }

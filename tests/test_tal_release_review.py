@@ -32,7 +32,7 @@ def test_tal_candidate_is_sha_bound_and_explicitly_approved():
     assert p["official_tal_profile_modified"] is False
     assert p["fischer_frozen_asset_unchanged"] is True
     assert p["human_fide_elo_equivalence_claimed"] is False
-    assert set(frozen["players"]) == {"fischer", "tal"}
+    assert set(frozen["players"]) == {"fischer", "tal", "kasparov"}
     assert frozen["players"]["fischer"]["status"] == "FROZEN_GAME_ASSET"
     assert frozen["players"]["fischer"]["qualification_run_id"] == 45097738965
     assert p["original_tal_profile_sha256"] == TAL_ORIGINAL_SHA
