@@ -449,7 +449,6 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                              "policy_trace": policy_trace,
                              "policy_counts": trace_summary(policy_trace),
                             "opening_seed": opening_seed if historical_openings else None,
-               "node_cap": node_cap,
                             "opening_mode": game.headers["BookMode"],
                             "color_order": f"{white.slug}|{black.slug}"}
                     return game, meta
@@ -599,6 +598,7 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
                "book_hashes": book_hashes,
                "historical_opening_policy": ("EXPLORATORY_POSITION_CONDITIONED" if historical_openings else "DISABLED"),
                "opening_seed": opening_seed if historical_openings else None,
+               "node_cap": node_cap,
                "experimental_learned_policy": (
                     experimental_policy.manifest() if experimental_policy is not None
                     else {"status": "DISABLED"}),
