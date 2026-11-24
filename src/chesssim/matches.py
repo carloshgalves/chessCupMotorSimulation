@@ -184,7 +184,8 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
               experimental_depths: dict[str, int] | None = None,
               experimental_start_fen: str | None = None,
               node_cap: int | None = None,
-              product_depths: dict[str, int] | None = None) -> tuple[chess.pgn.Game, dict]:
+              product_depths: dict[str, int] | None = None,
+              qualified_resources: dict | None = None) -> tuple[chess.pgn.Game, dict]:
     if experimental_policy is not None:
         if clock is not None or use_books is not False:
             raise ValueError("Learned policy control is development-only: no clocks or internal books")
@@ -239,6 +240,13 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
         if (not source_board.is_valid() or source_board.ply() != 12 or
                 source_board.is_game_over(claim_draw=True)):
             raise ValueError("Historic FIT starting board must be legal, live, after 12 plies")
+    if qualified_resources is not None:
+        from .qualified_runtime import MODE, NODE_CAP
+        if (qualified_resources["personality_mode"] != MODE or node_cap != NODE_CAP
+                or product_depths != {p.slug: qualified_resources["depths"][p.slug] for p in (white, black)}
+                or set(historical_openings or {}) != {white.slug, black.slug}
+                or use_books is not False or experimental_policy is not None):
+            raise ValueError("Invalid qualified game binding")
     engines = []
     failed_engine_ids: set[int] = set()
     try:
@@ -303,6 +311,20 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
         if historical_openings:
             game.headers["OpeningSeed"] = str(opening_seed)
             game.headers["OpeningMinCount"] = str(opening_min_count)
+        if qualified_resources is not None:
+            from .qualified_runtime import headers, VERSION, verify_headers, book_digest
+            headers(game, white.slug, black.slug, qualified_resources, opening_seed, round_number)
+            verify_headers(game, white.slug, black.slug, qualified_resources, opening_seed, round_number)
+            for p in (white, black):
+                if (book_digest(historical_openings[p.slug], p.slug) != qualified_resources["book_sha256"][p.slug]
+                        or hashes[p.slug] != qualified_resources["profile_sha256"][p.slug]
+                        or hashes["exe"] != qualified_resources["engine_sha256"]):
+                    raise ValueError("Qualified game assets mismatch")
+            game.headers["Event"] = "ChessSim - Personalidades homologadas"
+            game.headers["ProtocolSHA256"] = VERSION
+            game.headers["BookMode"] = VERSION
+            game.headers["SearchLimit"] = (f"depth-white={product_depths[white.slug]};"
+                                           f"depth-black={product_depths[black.slug]};nodes={node_cap}")
         opening_trace = []
         policy_trace: list[dict] = []
         node = game
@@ -547,10 +569,12 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
               max_wall_seconds: float | None = None,
               experimental_policy: ExperimentalPolicyAdapter | None = None,
               node_cap: int | None = None,
-              product_depths: dict[str, int] | None = None) -> Path:
+              product_depths: dict[str, int] | None = None,
+              qualified_resources: dict | None = None) -> Path:
     if product_depths is not None and (set(product_depths) != {white.slug, black.slug}
             or any(type(v) is not int or not 1 <= v <= 20 for v in product_depths.values())
-            or clock is not None or movetime is not None or experimental_policy is not None
+            or (clock is not None and qualified_resources is None)
+            or movetime is not None or experimental_policy is not None
             or use_books is not False or node_cap != 5_000_000):
         raise ValueError("Invalid product depth configuration")
     if node_cap is not None and (type(node_cap) is not int or node_cap < 1 or experimental_policy is not None):
@@ -574,7 +598,7 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
         raise ValueError("max_wall_seconds deve ser finito e positivo")
     if not 1 <= opening_min_count <= 100:
         raise ValueError('Opening min_count must be 1..100')
-    if historical_openings and (use_books is True or clock == (600, 2)):
+    if historical_openings and (use_books is True or (clock == (600, 2) and qualified_resources is None)):
         raise ValueError('Aberturas condicionadas não integram protocolo oficial; execute como desenvolvimento')
     if historical_openings and not all(k in (white.slug, black.slug) for k in historical_openings):
         raise ValueError('Opening book is not bound to a participating player')
@@ -623,6 +647,10 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
                                "internal engine book/engine search randomness is not controlled by this seed."),
                },
                "games": [], "diversity": audit_mainlines([])[1]}
+    if qualified_resources is not None:
+        summary["protocol"] = {"version": "qualified-product-v1", "historical_mode_strength_verified": False}
+        summary["qualified_resources"] = qualified_resources
+        summary["historical_opening_policy"] = "QUALIFIED_PRODUCT_V1"
     _atomic_text(folder / "summary.json", json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
                  durable=os.name == "posix")
     lineups = [(white, black)] + ([(black, white)] if reverse else [])
@@ -644,7 +672,10 @@ def play_duel(root: Path, output_dir: Path, white: Player, black: Player,
                                    stop_check=stop_check, on_progress=checkpoint,
                                    max_wall_seconds=max_wall_seconds,
                                    experimental_policy=experimental_policy, node_cap=node_cap,
-                                   product_depths=product_depths)
+                                   product_depths=product_depths, qualified_resources=qualified_resources)
+            if qualified_resources is not None:
+                from .qualified_runtime import verify_openings
+                verify_openings(game, w.slug, b.slug, historical_openings, opening_seed, i)
             digest, plies = mainline_identity(game)
             if plies != meta["plies"]:
                 raise RuntimeError("PGN/mainline ply count disagrees with engine record")

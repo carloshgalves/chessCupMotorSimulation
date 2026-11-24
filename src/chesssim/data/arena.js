@@ -21,12 +21,14 @@ function setFeedback(message, bad=false) {
 function player(slug) { return roster.find(p => p.slug === slug); }
 function fillPlayer(select, preferred) {
   const prior = select.value || preferred;
+  const qualified = $("duel-personality").value === "qualified";
+  const eligible = p => qualified ? ["fischer","tal","karpov","kasparov"].includes(p.slug) : p.installed;
   select.replaceChildren();
   for (const p of roster) {
     const option = document.createElement("option");
     option.value = p.slug;
-    option.disabled = !p.installed;
-    option.textContent = p.name + (p.installed ? "" : " · perfil indisponível");
+    option.disabled = !eligible(p);
+    option.textContent = p.name + (eligible(p) ? "" : " · perfil indisponível");
     select.appendChild(option);
   }
   if (customPlayers.length) {
@@ -43,8 +45,8 @@ function fillPlayer(select, preferred) {
     }
     select.appendChild(group);
   }
-  select.value = player(prior) && player(prior).installed ? prior :
-    (roster.find(p => p.installed)?.slug || "");
+  select.value = player(prior) && eligible(player(prior)) ? prior :
+    (player(preferred) && eligible(player(preferred)) ? preferred : roster.find(eligible)?.slug || "");
 }
 function applyCustomCatalog(data) {
   if (!data || data.schema !== "chesssim-custom-arena-catalog-v1" ||
@@ -137,6 +139,7 @@ function displayProfile(slot, slug) {
   el.append(title, provenance, windowNote, warning);
 }
 function updateForm() {
+  for (const id of ["depth", "movetime", "preset", "custom-minutes", "custom-increment"]) $(id).disabled = false;
   const clock = $("preset").value;
   const official = clock === "official";
   // A fixed per-move time and a game clock are different limits; avoid
@@ -186,11 +189,26 @@ function updateForm() {
       "Sem livro externo ou interno. Semente desabilitada.";
   displayProfile("white", $("white").value);
   displayProfile("black", $("black").value);
-  $("launch").disabled = busy || !token || !player($("white").value)?.installed ||
+  const qualified = $("duel-personality").value === "qualified";
+  if (qualified) {
+    for (const id of ["mode", "depth", "movetime", "preset", "opening", "custom-minutes", "custom-increment"]) $(id).disabled = true;
+    $("reverse").disabled = false;
+    $("max-plies").disabled = false;
+    $("clock-note").textContent = "Duelo homologado sem relógio; fora do Elo legado.";
+    $("opening-note").textContent = "Repertórios homologados; seed 2029 e busca individual.";
+    $("search-note").textContent = "Fischer, Tal e Karpov d16; Kasparov d20; 5 milhões de nós.";
+  }
+  $("launch").disabled = qualified ? (busy || !token || $("white").value === $("black").value ||
+    !["fischer","tal","karpov","kasparov"].includes($("white").value) ||
+    !["fischer","tal","karpov","kasparov"].includes($("black").value)) : busy || !token || !player($("white").value)?.installed ||
     !player($("black").value)?.installed || $("white").value === $("black").value;
   $("stop").disabled = !duelBusy || !token;
 }
 function configFromForm() {
+  if ($("duel-personality").value === "qualified") {
+    return {white:$("white").value, black:$("black").value, personality_mode:"qualified",
+      reverse:$("reverse").checked, max_plies:Number($("max-plies").value), seed:2029};
+  }
   const clock = $("preset").value;
   const mode = clock === "official" ? "preset" : $("mode").value;
   const config = {
@@ -224,7 +242,8 @@ function renderSession() {
   const pieces = [
     ["Brancas", player(config.white)?.name || config.white],
     ["Pretas", player(config.black)?.name || config.black],
-    ["Busca", config.mode === "preset" ? "Protocolo oficial sem teto extra" :
+    ["Personalidades", config.personality_mode === "qualified" ? "Homologadas" : "Legado"],
+    ["Busca", config.mode === "qualified" ? "Profundidade individual · 5M nós" : config.mode === "preset" ? "Protocolo oficial sem teto extra" :
       config.mode === "depth" ? "Profundidade máxima " + config.depth :
       config.movetime + " s/lance"],
     ["Relógio", config.preset === "custom" ?
@@ -332,3 +351,10 @@ $("launch").disabled = true;
 if (!token) setFeedback("Inicie chesssim arena e abra a URL com token informada no terminal.", true);
 refresh();
 setInterval(refresh, 1500);
+
+$("duel-personality").addEventListener("change", () => {
+  fillPlayer($("white"), "fischer");
+  fillPlayer($("black"), "tal");
+  if ($("white").value === $("black").value && $("duel-personality").value === "qualified") $("black").value = "tal";
+  updateForm();
+});

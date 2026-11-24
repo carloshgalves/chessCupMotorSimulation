@@ -27,4 +27,4 @@ def test_kasparov_exact_product_registry():
     assert k["uci_node_cap"] == 5_000_000
     assert k["hashes"]["kasparov_profile"] == "ff687985e8e2faa000365aba515e2f5b1f3bb517c029da321fa62874546f1d58"
     assert k["overrides"] == {"KingTropism": 65, "OwnAttack": 265, "PiecePressure": 160}
-    assert "karpov" not in assets["players"]
+    assert assets["players"]["karpov"]["hashes"]["karpov_profile"] == "0ad16301bf986f2eff29cd182db8544546a617d511d2646b57cd1d9a169335e1"

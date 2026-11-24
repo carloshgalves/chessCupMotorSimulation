@@ -21,6 +21,7 @@ from .cup_rules import (
 )
 from .cup_games import play_cup_game
 from .matches import _atomic_text, file_hash, validate
+from .qualified_runtime import MODE, resolve as resolve_qualified, verify_headers
 
 SCHEMA = "chesssim-cup-v1"
 RECEIPT_SCHEMA = "chesssim-cup-game-v1"
@@ -265,6 +266,10 @@ class CupManager:
                 pg.headers.get("BlackProfileSHA256") !=
                 snapshot["profile_sha256"][spec["black"]]):
             raise ValueError("Cabeçalhos ou trajetória de PGN inválidos")
+        if cfg.get("personality_mode") == MODE:
+            verify_headers(pg, spec["white"], spec["black"], snapshot, cfg["seed"], spec["round"])
+        elif pg.headers.get("PersonalityMode") == "qualified-product-v1":
+            raise ValueError("PGN homologado não pertence à Copa legado")
         if spec.get("color_draw") and (
                 pg.headers.get("ColorDrawSHA256") !=
                 spec["color_draw"]["sha256"] or
@@ -491,6 +496,8 @@ class CupManager:
         return {**computed,"game_receipts":rows}
 
     def _preflight(self,config:dict) -> dict:
+        if config.get("personality_mode") == MODE:
+            return resolve_qualified(self.root, config["participants"])[-1]
         engine_sha=None
         profiles={}
         for slug in config["participants"]:
@@ -528,6 +535,9 @@ class CupManager:
         if method=="engine_full":
             if game is None or game.errors or game.headers.get("Result")!=result:
                 raise ValueError("Jogo UCI não apresenta resultado comprovado")
+            if state["config"].get("personality_mode") == MODE:
+                verify_headers(game, spec["white"], spec["black"], state["resources"],
+                               state["config"]["seed"], spec["round"])
             pgn_rel="games/"+spec["id"]+".pgn"
             pgn_file=directory/pgn_rel
             if pgn_file.parent.is_symlink() or pgn_file.is_symlink():

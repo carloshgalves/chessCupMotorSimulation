@@ -250,6 +250,14 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
                                 raise InvalidCatalogue("Relógio do PGN diverge da sessão")
                             white, black = (participants if idx == 1
                                             else participants[::-1])
+                            if config.get("personality_mode") == "qualified":
+                                from .qualified_runtime import verify_headers
+                                resources = session["qualified_resources"]
+                                if summary.get("qualified_resources") != resources:
+                                    raise InvalidCatalogue("Recursos homologados divergentes")
+                                verify_headers(game, white, black, resources, config["seed"], idx)
+                            elif game.headers.get("PersonalityMode") == "qualified-product-v1":
+                                raise InvalidCatalogue("Modo homologado não declarado na sessão")
                             result = meta.get("result") if status == "COMPLETED" else None
                             _validated_result(game, white, black, names, status, result, meta)
                             if status == "INCOMPLETE" and meta.get("result") not in (None, "*"):
@@ -259,6 +267,8 @@ def _arena_games(root: Path, names: dict[str, str], slug: str,
                                 "duel_id": "arena:" + sid, "white": white, "black": black,
                                 "status": status, "result": result,
                                 "origin": "arena", "recorded_utc": when,
+                                **({"rating_eligible": False, "personality_mode": "qualified"}
+                                   if config.get("personality_mode") == "qualified" else {}),
                                 "time_control": (
                                     config.get("preset") if session_clock is not None
                                     else "unclassified"
@@ -615,7 +625,8 @@ def _cup_games(root: Path, names: dict[str, str], slug: str | None,
                     "source_kind": "engine_full",
                     "receipt_sha256": row["sha256"],
                     "time_control": modality, "clock": clock,
-                    "rating_eligible": eligible,
+                    "rating_eligible": eligible and cfg.get("personality_mode") != "qualified",
+                    **({"personality_mode": "qualified"} if cfg.get("personality_mode") == "qualified" else {}),
                     "engine_strength_config": {
                         "engine_sha256": snapshot["engine_sha256"],
                         "white_profile_sha256":

@@ -11,6 +11,8 @@ import chess.pgn
 
 from .catalog import find_player
 from .matches import _open_engine
+from .qualified_runtime import MODE, NODE_CAP, resolve, headers, verify_openings
+from .opening_books import select_book_move
 
 
 def play_cup_game(root, spec: dict, config: dict, resources: dict,
@@ -25,6 +27,13 @@ def play_cup_game(root, spec: dict, config: dict, resources: dict,
     factory = factory or _open_engine
     white = find_player(spec["white"])
     black = find_player(spec["black"])
+    books = None
+    depths = None
+    if config.get("personality_mode") == MODE:
+        root, players, books, depths, current = resolve(root, config["participants"])
+        if current != resources:
+            raise ValueError("Recursos homologados da Copa mudaram")
+        white, black = players[white.slug], players[black.slug]
     exe = root / "rodent-iv-plain.exe"
     clock = spec["clock"]
     if len(clock) == 3:
@@ -58,6 +67,10 @@ def play_cup_game(root, spec: dict, config: dict, resources: dict,
             "RulesVersion": config["rules_version"],
             "SearchLimit": f"depth={config['depth']}",
         })
+        if books is not None:
+            headers(game, white.slug, black.slug, resources, config["seed"], spec["round"])
+            game.headers["SearchLimit"] = (f"depth-white={depths[white.slug]};"
+                                           f"depth-black={depths[black.slug]};nodes={NODE_CAP}")
         if spec.get("color_draw"):
             game.headers["ColorDrawSHA256"] = spec["color_draw"]["sha256"]
             game.headers["ColorDrawPolicy"] = spec["color_draw"]["policy"]
@@ -86,14 +99,19 @@ def play_cup_game(root, spec: dict, config: dict, resources: dict,
                 break
             idx = 0 if board.turn else 1
             limit = chess.engine.Limit(
-                depth=config["depth"],
+                depth=depths[white.slug if idx == 0 else black.slug] if depths else config["depth"],
+                nodes=NODE_CAP if books is not None else None,
                 white_clock=max(0.001, clocks[0]),
                 black_clock=max(0.001, clocks[1]),
                 white_inc=inc, black_inc=inc,
             )
             before = monotonic()
-            move = engines[idx].play(
-                board, limit, game=game, info=chess.engine.INFO_NONE).move
+            move = (select_book_move(books[white.slug if idx == 0 else black.slug], board,
+                                     seed=config["seed"], game_number=spec["round"])
+                    if books is not None else None)
+            if move is None:
+                move = engines[idx].play(
+                    board, limit, game=game, info=chess.engine.INFO_NONE).move
             spent = monotonic() - before
             elapsed[idx] += spent
             clocks[idx] -= spent
@@ -105,6 +123,8 @@ def play_cup_game(root, spec: dict, config: dict, resources: dict,
                          ) if winner_has_material else "1/2-1/2"
                 game.headers["Result"] = score
                 game.headers["Termination"] = "TimeForfeit"
+                if books is not None:
+                    verify_openings(game, white.slug, black.slug, books, config["seed"], spec["round"])
                 return game, {
                     "status": "COMPLETED", "result": score,
                     "termination": "TimeForfeit",
@@ -129,6 +149,8 @@ def play_cup_game(root, spec: dict, config: dict, resources: dict,
             term = outcome.termination.name
         game.headers["Result"] = score
         game.headers["Termination"] = term
+        if books is not None:
+            verify_openings(game, white.slug, black.slug, books, config["seed"], spec["round"])
         return game, {
             "status": status, "result": score, "termination": term,
             "clock_left": clocks.copy(), "plies": board.ply(),
