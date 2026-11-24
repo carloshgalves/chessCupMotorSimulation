@@ -21,6 +21,7 @@ from .cup_rules import (
 )
 from .cup_games import play_cup_game
 from .matches import _atomic_text, file_hash, validate
+from .qualified_runtime import MODE, resolve as resolve_qualified, verify_headers
 
 SCHEMA = "chesssim-cup-v1"
 RECEIPT_SCHEMA = "chesssim-cup-game-v1"
@@ -265,6 +266,8 @@ class CupManager:
                 pg.headers.get("BlackProfileSHA256") !=
                 snapshot["profile_sha256"][spec["black"]]):
             raise ValueError("Cabeçalhos ou trajetória de PGN inválidos")
+        if cfg.get("personality_mode") == MODE:
+            verify_headers(pg, spec["white"], spec["black"], snapshot, cfg["seed"], spec["round"])
         if spec.get("color_draw") and (
                 pg.headers.get("ColorDrawSHA256") !=
                 spec["color_draw"]["sha256"] or
@@ -491,6 +494,8 @@ class CupManager:
         return {**computed,"game_receipts":rows}
 
     def _preflight(self,config:dict) -> dict:
+        if config.get("personality_mode") == MODE:
+            return resolve_qualified(self.root, config["participants"])[-1]
         engine_sha=None
         profiles={}
         for slug in config["participants"]:

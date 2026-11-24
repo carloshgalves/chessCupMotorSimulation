@@ -19,6 +19,7 @@ import chess.pgn
 
 from .catalog import find_player, load_roster
 from .matches import _play_one, _atomic_text, file_hash, validate
+from .qualified_runtime import MODE, NODE_CAP, resolve as resolve_qualified, validate_mode, verify_headers, verify_openings
 from .peak_windows import CLOCK_PRESETS
 
 SCHEMA = "chesssim-league-v1"
@@ -91,7 +92,7 @@ def schedule(participants: list[str], format: str = "single") -> list[list[dict]
 
 def normalize_config(raw: object) -> dict:
     allowed = {"name", "season", "format", "modality", "participants",
-               "execution_mode", "depth", "points", "seed"}
+               "execution_mode", "depth", "points", "seed", "personality_mode"}
     if type(raw) is not dict or set(raw) - allowed:
         raise LeagueInput("Configuração desconhecida de liga")
     name, season = raw.get("name"), raw.get("season", "Temporada 1")
@@ -115,6 +116,10 @@ def normalize_config(raw: object) -> dict:
     execution = raw.get("execution_mode", "engine_full")
     if type(execution) is not str or execution not in EXECUTIONS:
         raise LeagueInput("Tipo de execução inválido")
+    try:
+        personality = validate_mode(raw, participants, real=execution == "engine_full")
+    except ValueError as exc:
+        raise LeagueInput(str(exc)) from exc
     depth = raw.get("depth", 6)
     if type(depth) is not int or not 1 <= depth <= 16:
         raise LeagueInput("Profundidade deve estar entre 1 e 16")
@@ -130,7 +135,7 @@ def normalize_config(raw: object) -> dict:
     return {"name": name.strip(), "season": season.strip(), "format": fmt,
             "modality": modality, "clock": list(CLOCK_PRESETS[modality]),
             "participants": participants.copy(), "execution_mode": execution,
-            "depth": depth, "points": points.copy(), "seed": seed}
+            "depth": depth, "points": points.copy(), "seed": seed, **personality}
 
 
 def _row_result(result: str, who: str, match: dict) -> tuple[int, int, int]:
@@ -213,6 +218,12 @@ def projected_result(config: dict, match: dict) -> str:
 def default_engine_runner(root: Path, match: dict, config: dict,
                           stop_check: Callable[[], bool]) -> tuple:
     white, black = find_player(match["white"]), find_player(match["black"])
+    kwargs = {}
+    if config.get("personality_mode") == MODE:
+        root, players, books, depths, resources = resolve_qualified(root, (white.slug, black.slug))
+        white, black = players[white.slug], players[black.slug]
+        kwargs.update(historical_openings=books, opening_seed=config["seed"], node_cap=NODE_CAP,
+                      product_depths=depths, qualified_resources=resources)
     exe, paths = validate(root, white, black)
     hashes = {"exe": file_hash(exe), white.slug: file_hash(paths[white.slug]),
               black.slug: file_hash(paths[black.slug])}
@@ -221,7 +232,9 @@ def default_engine_runner(root: Path, match: dict, config: dict,
                            400, match["round"], hashes, clock=clock,
                            use_books=False, stop_check=stop_check,
                            max_wall_seconds=min(86400, 2 * clock[0] +
-                                                400 * clock[1] + 600))
+                                                400 * clock[1] + 600), **kwargs)
+    if kwargs:
+        verify_openings(game, white.slug, black.slug, books, config["seed"], match["round"])
     return game, meta
 
 
@@ -432,6 +445,9 @@ class LeagueManager:
                             game.headers.get("TimeControl") !=
                             f"{state['config']['clock'][0]}+{state['config']['clock'][1]}"):
                         raise ValueError("PGN da liga não comprova o resultado")
+                    if state["config"].get("personality_mode") == MODE:
+                        verify_headers(game, match["white"], match["black"], resources,
+                                       state["config"]["seed"], match["round"])
                     position = game.end().board()
                     if entry["termination"] == "TimeForfeit":
                         clock_left = entry.get("clock_left")
@@ -644,6 +660,8 @@ class LeagueManager:
                     } for r in page]}
 
     def _resources(self, config: dict) -> dict:
+        if config.get("personality_mode") == MODE:
+            return resolve_qualified(self.root, config["participants"])[-1]
         profiles = {}
         executable = None
         for slug in config["participants"]:

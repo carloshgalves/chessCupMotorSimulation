@@ -119,7 +119,7 @@ def normalize(raw: Any) -> dict:
         "name", "edition", "preset", "participants", "seed", "depth",
         "execution_mode", "armageddon_white_seconds",
         "armageddon_increment_seconds", "armageddon_min_black_seconds",
-        "armageddon_max_black_seconds", "seed_method",
+        "armageddon_max_black_seconds", "seed_method", "personality_mode",
     }
     if set(raw) - allowed:
         raise CupInput("Campos desconhecidos na configuração de Copa")
@@ -159,6 +159,11 @@ def normalize(raw: Any) -> dict:
     method = raw.get("execution_mode", "engine_full")
     if type(method) is not str or method not in METHODS:
         raise CupInput("Método de execução desconhecido")
+    from .qualified_runtime import validate_mode
+    try:
+        personality = validate_mode(raw, participants, real=method == "engine_full")
+    except ValueError as exc:
+        raise CupInput(str(exc)) from exc
     seed_method = raw.get("seed_method", "deterministic_draw")
     if seed_method != "deterministic_draw":
         raise CupInput("Apenas sorteio com semente verificável é suportado")
@@ -181,7 +186,7 @@ def normalize(raw: Any) -> dict:
             "policy": "chesssim-deterministic-sealed-bid-v1",
             "fide_reference": FIDE_CUP_2025,
         },
-        "rules_version": RULES_VERSION,
+        "rules_version": RULES_VERSION, **personality,
     }
 
 

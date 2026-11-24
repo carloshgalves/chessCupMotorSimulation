@@ -35,12 +35,13 @@ from .event_journal import EventJournal
 from .live_events import MAX_EVENT_CLIENTS, same_origin, stream_events, stream_events_v2
 from .matches import _atomic_text, official_book_hashes, play_duel, validate
 from .peak_windows import CLOCK_PRESETS, PROVISIONAL_PEAKS
+from .qualified_runtime import MODE, NODE_CAP, resolve as resolve_qualified, validate_mode
 
 MAX_JSON_BYTES = 4096
 PRESETS = {"official": (600, 2), **CLOCK_PRESETS}
 ALLOWED_KEYS = {"white", "black", "mode", "preset", "depth", "movetime",
                 "reverse", "opening_mode", "seed", "max_plies",
-                "initial_seconds", "increment_seconds"}
+                "initial_seconds", "increment_seconds", "personality_mode"}
 STATUSES = {"STARTING", "RUNNING", "COMPLETED", "INCOMPLETE", "FAILED", "INTERRUPTED"}
 
 
@@ -81,6 +82,20 @@ def normalize_config(raw: object) -> dict:
     slugs = {p.slug for p in load_roster()}
     if white not in slugs or black not in slugs or white == black:
         raise BadLaunch("Jogadores diferentes e cadastrados são obrigatórios")
+    try:
+        personality = validate_mode(raw, (white, black))
+    except ValueError as exc:
+        raise BadLaunch(str(exc)) from exc
+    if personality.get("personality_mode") == MODE:
+        if set(raw) & {"depth", "movetime", "preset", "initial_seconds", "increment_seconds", "opening_mode", "mode"}:
+            raise BadLaunch("Modo homologado possui política de busca e abertura próprias")
+        reverse = raw.get("reverse", True)
+        if type(reverse) is not bool:
+            raise BadLaunch("Inversão de cores inválida")
+        return {"white": white, "black": black, "mode": MODE, "reverse": reverse,
+                "opening_mode": "historical", "depth": None, "movetime": None, "preset": None,
+                "max_plies": _integer(raw.get("max_plies", 600), 40, 600, "max_plies"),
+                "seed": _integer(raw.get("seed", 2029), 0, 2147483647, "seed"), **personality}
     mode = raw.get("mode")
     if mode not in ("depth", "movetime", "preset"):
         raise BadLaunch("Limite de busca inválido")
@@ -146,7 +161,7 @@ def normalize_config(raw: object) -> dict:
         result["seed"] = _integer(raw.get("seed"), 0, 2_147_483_647, "seed")
     elif "seed" in raw:
         raise BadLaunch("Semente só é efetiva com abertura externa histórica")
-    return result
+    return {**result, **personality}
 
 
 def _profiles(root: Path) -> list[dict]:
@@ -421,11 +436,16 @@ class ArenaManager:
                 raise ArenaBusy("Já existe execução de motor em andamento")
             white, black = (find_player(config[x]) for x in ("white", "black"))
             try:
-                _, files = validate(self.root, white, black)
-                if config["opening_mode"] == "internal":
-                    official_book_hashes(self.root, files)
-                opening = (_validated_books(self.opening_books, white.slug, black.slug)
-                           if config["opening_mode"] == "historical" else None)
+                qualified = None
+                if config.get("personality_mode") == MODE:
+                    qualified = resolve_qualified(self.root, (white.slug, black.slug))
+                    opening = None
+                else:
+                    _, files = validate(self.root, white, black)
+                    if config["opening_mode"] == "internal":
+                        official_book_hashes(self.root, files)
+                    opening = (_validated_books(self.opening_books, white.slug, black.slug)
+                               if config["opening_mode"] == "historical" else None)
             except (FileNotFoundError, OSError, ValueError) as exc:
                 raise BadLaunch("Perfis ou livros do duelo não estão prontos") from exc
             ident = "session-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:12]
@@ -436,6 +456,8 @@ class ArenaManager:
                 "id": ident, "created_utc": datetime.now(timezone.utc).isoformat(),
                 "status": "STARTING", "config": config,
             }
+            if qualified is not None:
+                state["qualified_resources"] = qualified[-1]
             self._save(folder, state)
             self._selected = folder
             self._active = True
@@ -466,7 +488,16 @@ class ArenaManager:
             if opening is not None:
                 kwargs.update({"historical_openings": opening,
                                "opening_seed": config["seed"], "opening_min_count": 1})
-            output = self.runner(self.root, folder / "duels", white, black, **kwargs)
+            root = self.root
+            if config.get("personality_mode") == MODE:
+                root, players, books, depths, resources = resolve_qualified(root, (white.slug, black.slug))
+                if resources != session["qualified_resources"]:
+                    raise ValueError("Recursos homologados mudaram")
+                white, black = players[white.slug], players[black.slug]
+                kwargs.update(depth=max(depths.values()), historical_openings=books,
+                              opening_seed=config["seed"], node_cap=NODE_CAP,
+                              product_depths=depths, qualified_resources=resources)
+            output = self.runner(root, folder / "duels", white, black, **kwargs)
             if not output.resolve().is_relative_to(folder.resolve()):
                 raise RuntimeError("Saída do duelo fora da sessão autorizada")
             summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
