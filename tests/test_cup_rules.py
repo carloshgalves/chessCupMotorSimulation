@@ -79,7 +79,7 @@ def test_five_women_double_round_robin_has_one_bye_each_round():
         assert len(players)==len(set(players))==4
         assert r["bye"] not in players
     with pytest.raises(CupInput,match="cinco perfis"):
-        setup("women",["menchik","gaprindashvili","chiburdanidze",
+        setup("women",["kosteniuk","gaprindashvili","chiburdanidze",
                         "hou-yifan","fischer"])
 
 

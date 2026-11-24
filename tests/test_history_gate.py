@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 import pytest
 
 from chesssim import arena
-from chesssim.catalog import load_roster
+from chesssim.catalog import load_roster, RETIRED_PLAYERS
 from chesssim.history_profiles import load_history_profile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -78,10 +78,14 @@ def test_64_portraits_integrity_attribution_and_known_legal_review_blocker():
     assert len(roster) == 64
     packages = files("chesssim.data")
     licenses = Counter()
-    for player in roster:
+    pending = []
+    for player in (*roster, *RETIRED_PLAYERS):
         profile = load_history_profile(player.slug)
         photo = profile["portrait"]
-        assert photo is not None
+        if photo is None:
+            pending.append(player.slug)
+            assert not packages.joinpath("history", "portraits", player.slug + ".jpg").is_file()
+            continue
         assert photo["approval_status"] == "approved"
         assert photo["local_asset"] == f"history/portraits/{player.slug}.jpg"
         binary = packages.joinpath("history", "portraits", player.slug + ".jpg")
@@ -95,6 +99,9 @@ def test_64_portraits_integrity_attribution_and_known_legal_review_blocker():
         assert photo["source_url"].startswith("https://")
         assert photo["license_url"].startswith("https://")
         licenses[photo["license"]] += 1
+    # All 64 previously approved photos (including retired Menchik) remain verified.
+    # Kosteniuk alone has no photo until a licensed source is curated.
+    assert pending == ["kosteniuk"]
     assert sum(licenses.values()) == 64
     assert licenses["Public Domain Mark 1.0"] == 16
     assert licenses["CC BY-SA 4.0"] == 1
