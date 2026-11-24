@@ -116,6 +116,43 @@
       ],
       "historical_source_sha256": "6f6cdfe8e8dd09323ad8b324d2beac9326c155ce8020768a0995c24b018564e1",
       "historical_book_digest": "cb415b7b928ade70572a5084d968ed17d9ccca451f60614a38d0fd5379a098ba"
+    },
+    "karpov": {
+      "status": "FROZEN_GAME_ASSET",
+      "profile": "Rodent IV Karpov Restriction",
+      "alias": "KarpovRestriction",
+      "depth": 16,
+      "uci_node_cap": 5000000,
+      "internal_opening_book": false,
+      "phase_adaptive_depth": false,
+      "neural_override": false,
+      "time_control_benchmark": "10+2",
+      "qualification_run_id": 45439726540,
+      "qualification_artifact_id": 14948526872,
+      "hashes": {
+        "rodent": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+        "karpov_profile": "0ad16301bf986f2eff29cd182db8544546a617d511d2646b57cd1d9a169335e1",
+        "simple_control": "19f83fb05f96039a34e0e9a36bf66fc841693f70d73ee2a243df42e90caf1613"
+      },
+      "overrides": {
+        "OppMobility": 110,
+        "Outposts": 135,
+        "PawnStructure": 160
+      },
+      "gates": {
+        "historical_practical_strength": true,
+        "clock_play": true,
+        "style_preferences": true,
+        "reproducibility": true
+      },
+      "decision": "Maintainer approved consolidation after merging PR 219",
+      "release_scope": "Motor-base; peak 1975–1985; no human Elo equivalence",
+      "restrictions": [
+        "Any profile/binary/depth/opening book change requires a new gate and version",
+        "No automatic changes to legacy Arena, roster ratings or XP"
+      ],
+      "historical_source_sha256": "1efbbb6bc364b08647d42ad99c1493d8098f6971b388615a98ef9896f75e78c1",
+      "historical_book_digest": "89903c23be426fa7e151117d026588273b9601e682f217b4955dc57e3584d191"
     }
   }
 }
