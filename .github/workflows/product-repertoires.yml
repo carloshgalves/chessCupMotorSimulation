@@ -1,0 +1,125 @@
+name: Product historical repertoires and strength ladder
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/product_*.py'
+      - 'src/chesssim/matches.py'
+      - 'tests/test_product_*.py'
+      - '.github/workflows/product-repertoires.yml'
+      - 'docs/PRODUCT_PERSONALITY_PROTOCOL.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: product-historical-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+jobs:
+  books:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: |
+          python -m pip install -e '.[dev]'
+          python -m ruff check src/chesssim/product_*.py tests/test_product_*.py
+          python -m pytest -q tests/test_product_repertoires.py tests/test_product_strength_ladder.py
+          python -m chesssim.product_repertoires --out "$RUNNER_TEMP/product-books"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: product-historical-books
+          path: ${{ runner.temp }}/product-books/
+          if-no-files-found: error
+  play:
+    needs: books
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: product-historical-books
+          path: ${{ runner.temp }}/product-books
+      - name: Build pinned Rodent
+        run: |
+          python -m pip install -e .
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities rodent-source/books "$RUNNER_TEMP/rodent/"
+      - run: |
+          python -m chesssim.product_play --rodent "$RUNNER_TEMP/rodent" --books "$RUNNER_TEMP/product-books" --out "$RUNNER_TEMP/product-duel"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: product-duel
+          path: ${{ runner.temp }}/product-duel/
+          if-no-files-found: warn
+  ladder:
+    needs: books
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        index: [0,1,2,3,4,5,6,7,8,9,10,11]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+
+      - name: Build pinned Rodent
+        run: |
+          python -m pip install -e .
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities rodent-source/books "$RUNNER_TEMP/rodent/"
+      - run: |
+          mkdir "$RUNNER_TEMP/ladder-${{ matrix.index }}"
+          python -m chesssim.product_strength_ladder --rodent "$RUNNER_TEMP/rodent" --index ${{ matrix.index }} --out "$RUNNER_TEMP/ladder-${{ matrix.index }}/report.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ladder-${{ matrix.index }}
+          path: ${{ runner.temp }}/ladder-${{ matrix.index }}/
+          if-no-files-found: error
+  aggregate:
+    needs: ladder
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ladder-*
+          path: ${{ runner.temp }}/shards
+      - run: |
+          python -m pip install -e .
+          python -m chesssim.product_strength_ladder --shards "$RUNNER_TEMP/shards" --out "$RUNNER_TEMP/ladder.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: product-strength-ladder-report
+          path: ${{ runner.temp }}/ladder.json
+          if-no-files-found: error
