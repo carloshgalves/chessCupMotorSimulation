@@ -2,7 +2,7 @@
 
 ## Disposition
 
-**CANDIDATE QUALIFIED FOR EXPLICIT HUMAN PRODUCT REVIEW, NOT YET FROZEN.**
+**APPROVED FOR PRODUCT MOTOR-BASE FREEZE BY MAINTAINER (2026-11-24).**
 The original Mikhail Tal Rodent IV personality did not meet the
 preregistered strength requirement against the Simple d16 control.
 The independently generated, fully identified **Tal Balanced d16** variant
@@ -78,8 +78,7 @@ blind external claim should not be made.
 
 ### Exact product identity
 
-This evidence qualifies only one candidate, with **no automatic** changes
-to the shipped game:
+This evidence qualifies only one candidate, with no automatic changes to Arena or rating settings:
 
 | Property | Fixed value |
 | --- | --- |
@@ -105,16 +104,11 @@ optimizations are required for ordinary play.
 - [x] Earlier failed TUNE clock result preserved prominently.
 - [x] Candidate identity and original/Fischer SHA hashes bound to immutable evidence.
 - [x] No historical FIDE Elo, exact-human-play or blankly independent TEST claim.
-- [ ] **Explicit maintainer decision to accept Tal Balanced as a stable game personality.**
-- [ ] On approval only: preserve this exact SHA candidate as a versioned game
+- [x] **Explicit maintainer decision to accept Tal Balanced as a stable game personality.**
+- [x] In this release proposal: preserve this exact SHA candidate as a versioned game
       asset and add it to the qualified-asset manifest without removing
       original Tal or changing Fischer, Arena, XP or the rating system.
 
-**Release gate policy:** Never silently mark the green Actions workflows
-as a product approval. Until sign-off, this review is a read-only proposal;
-`src/chesssim/data/qualified_game_assets.json` must continue to list
-**only Fischer** as frozen.
+## Product decision, 2026-11-24
 
-The remaining external strength/Elo and shared skill attribute work,
-if pursued, belongs in dedicated scientific issues rather than being
-invented in a product freeze announcement.
+The maintainer explicitly approves this exact motor-base under product criteria: practical competitive strength, descriptive historical behavior, legal play and repeatability. Historical parity research is optional, not a release blocker. Run 45307610940 (#216) completed 887 FIT and 978 TEST positions; both reports were INCONCLUSIVE_NEEDS_HUMAN_QUALITY_SUPPORT (residual reference instability and reserved peak sample insufficiency). No confirmatory noninferiority claim is made. Preserve the failed TUNE clock result above. The opening repertoire and full personality integration are separately versioned; this freeze does not enable either automatically. No FIDE Elo equivalence is claimed.
