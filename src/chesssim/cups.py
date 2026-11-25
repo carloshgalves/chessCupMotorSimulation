@@ -770,15 +770,19 @@ class CupManager:
                       "status": "COMPLETED", "result": v["result"], "pgn": bool(v["pgn"])}
                      for k,v in sorted(rows.items())]
             pending = []
-            for rd in summary["rounds"]:
+            for rd in summary.get("bracket", summary.get("rounds", [])):
                 if "matches" in rd:
                     pending.extend(m["next_game"] for m in rd["matches"] if m["next_game"])
                 else:
                     pending.extend(g for g in rd.get("games", []) if g["id"] not in rows)
+            live = self.observer.ids(ident)
             for spec in pending:
                 if spec["id"] not in rows:
-                    games.append({**spec, "status": "RUNNING" if self.observer.get(ident,spec["id"]) else "PENDING"})
-            return {"games": games, "live": self.observer.ids(ident)}
+                    games.append({**spec, "status": "RUNNING" if spec["id"] in live else "PENDING"})
+            games.sort(key=lambda g: g["id"])
+            for g in games:
+                g.update(white_name=find_player(g["white"]).name, black_name=find_player(g["black"]).name)
+            return {"games": games, "live": live}
 
     def replay(self,ident:str,game_id:str) -> dict:
         with self._lock:

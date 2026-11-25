@@ -667,7 +667,9 @@ class LeagueManager:
                     games.append({**m, "status": "COMPLETED" if entry else
                                   "RUNNING" if m["id"] in live else "PENDING",
                                   "pgn": bool(entry and entry["pgn"]),
-                                  "result": entry["result"] if entry else None})
+                                  "result": entry["result"] if entry else None,
+                                  "white_name": find_player(m["white"]).name,
+                                  "black_name": find_player(m["black"]).name})
             return {"games": games, "live": live}
 
     def history(self, ident: str, *, player: str | None = None,
