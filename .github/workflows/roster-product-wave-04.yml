@@ -1,10 +1,5 @@
 name: Historical product wave 04
 on:
-  pull_request:
-    paths:
-      - 'src/chesssim/roster_product_wave.py'
-      - 'tests/test_roster_product_wave.py'
-      - '.github/workflows/roster-product-wave-04.yml'
   workflow_dispatch:
 permissions:
   contents: read
