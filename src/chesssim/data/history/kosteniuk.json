@@ -1,0 +1,65 @@
+{
+  "schema": "history-profile-v1",
+  "slug": "kosteniuk",
+  "review_status": "reviewed",
+  "narrative_voice": "first_person_editorial",
+  "short_bio": "Fui campeã mundial feminina entre 2008 e 2010 e conquistei o título mundial feminino de xadrez rápido em 2021.",
+  "era_label": "2008–2010 (campeã mundial feminina); 2021 (campeã mundial rápida)",
+  "portrait": null,
+  "highlights": [
+    {
+      "id": "achievement-1",
+      "year": 2008,
+      "text": "Conquistei o Campeonato Mundial Feminino e mantive o título até 2010.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "id": "achievement-2",
+      "year": 2021,
+      "text": "Venci a Copa do Mundo Feminina e o Campeonato Mundial Feminino de Xadrez Rápido.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "year": 2008,
+      "title": "Campeonato Mundial Feminino",
+      "summary": "Conquistei o Campeonato Mundial Feminino e mantive o título até 2010.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    },
+    {
+      "year": 2021,
+      "title": "Copa do Mundo e Mundial rápido",
+      "summary": "Venci a Copa do Mundo Feminina e o Campeonato Mundial Feminino de Xadrez Rápido.",
+      "source_ids": [
+        "source-1",
+        "audit-2"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "FIDE — Alexandra Kosteniuk, perfil oficial",
+      "publisher": "FIDE",
+      "url": "https://womenscandidates.fide.com/profile/alexandra-kosteniuk",
+      "accessed_at": "2026-11-24"
+    },
+    {
+      "id": "audit-2",
+      "title": "FIDE — Mundial rápido de 2021",
+      "publisher": "FIDE",
+      "url": "https://www.fide.com/nodirbek-abdusattorov-and-alexandra-kosteniuk-win-world-rapid-championship/",
+      "accessed_at": "2026-11-24"
+    }
+  ]
+}

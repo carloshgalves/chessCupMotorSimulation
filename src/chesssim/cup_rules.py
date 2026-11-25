@@ -25,7 +25,7 @@ CLASSICAL = (
 SPLIT_FIDE = ("karpov", "anand", "topalov")
 SPLIT_CLASSICAL = ("kasparov", "kramnik")
 FEMALE_ROSTER = (
-    "menchik", "gaprindashvili", "chiburdanidze", "judit-polgar",
+    "kosteniuk", "gaprindashvili", "chiburdanidze", "judit-polgar",
     "hou-yifan",
 )
 # Country filters use separately sourced federation facts, not roster groups.
@@ -53,6 +53,7 @@ STAGES = (
      "clock": None, "extra_after_40": 0},
 )
 VALID_SLUGS = frozenset(p.slug for p in load_roster())
+LEGACY_FEMALE_ROSTER = ("menchik", *FEMALE_ROSTER[1:])
 
 
 class CupInput(ValueError):
@@ -111,7 +112,7 @@ def _int(value: Any, name: str, low: int, high: int) -> int:
     return value
 
 
-def normalize(raw: Any) -> dict:
+def normalize(raw: Any, *, allow_retired: bool = False) -> dict:
     """All controls frozen at creation, never changed after games start."""
     if type(raw) is not dict:
         raise CupInput("Configuração de Copa deve ser um objeto JSON")
@@ -141,14 +142,16 @@ def normalize(raw: Any) -> dict:
     if (type(participants) is not list or
             any(type(x) is not str for x in participants) or
             len(set(participants)) != len(participants) or
-            not all(x in VALID_SLUGS for x in participants)):
+            not all(x in (VALID_SLUGS | {"menchik"} if allow_retired else VALID_SLUGS)
+                    for x in participants)):
         raise CupInput("Participantes inválidos ou repetidos")
     if preset == "world_champions":
         qualified = set(champion_eligibility())
         if not set(participants) <= qualified:
             raise CupInput("A Copa de Campeões exige título mundial documentado")
     if preset == "women":
-        if tuple(participants) != FEMALE_ROSTER:
+        if tuple(participants) != FEMALE_ROSTER and not (
+                allow_retired and tuple(participants) == LEGACY_FEMALE_ROSTER):
             raise CupInput("Preset feminino exige os cinco perfis do catálogo, sem substituições")
     elif not 2 <= len(participants) <= 64:
         raise CupInput("Copa eliminatória exige de 2 a 64 jogadores")

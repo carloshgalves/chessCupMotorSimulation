@@ -38,7 +38,7 @@ NAMES = {
     "kortchnoi":"Kortchnoi", "shirov":"Shirov", "timman":"Timman",
     "smyslov":"Smyslov", "euwe":"Euwe", "tal":"Tal", "spassky":"Spassky",
     "petrosian":"Petrosian", "kramnik":"Kramnik", "anand":"Anand",
-    "carlsen":"Carlsen", "menchik":"Menchik", "svidler":"Svidler",
+    "carlsen":"Carlsen", "kosteniuk":"Kosteniuk", "svidler":"Svidler",
     "short":"Short", "leko":"Leko", "larsen":"Larsen",
     "morphy":"Morphy", "anderssen":"Anderssen", "zukertort":"Zukertort",
     "pillsbury":"Pillsbury", "chigorin":"Chigorin", "tarrasch":"Tarrasch",

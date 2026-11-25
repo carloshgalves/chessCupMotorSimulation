@@ -39,7 +39,7 @@ class V6PeaksAndModes(unittest.TestCase):
         p=default_peak_registry()
         self.assertEqual(len(p['players']),64)
         self.assertEqual(p['players']['mequinho']['status'],'PROVISIONAL')
-        self.assertEqual(p['players']['menchik']['status'],'UNREVIEWED')
+        self.assertEqual(p['players']['kosteniuk']['status'],'UNREVIEWED')
         self.assertIsNone(p['players']['carlsen']['from_year'])
 
     def test_provisional_gate_and_unreviewed(self):
@@ -224,21 +224,21 @@ class V6Seals(unittest.TestCase):
 
     def test_fresh_player_requires_ack_and_cohort_immutable(self):
         data=default_peak_registry()
-        data['players']['menchik'].update(status='APPROVED',from_year=1929,to_year=1937,
+        data['players']['kosteniuk'].update(status='APPROVED',from_year=2008,to_year=2010,
                                          justification='example independently verified',references=['reference for test'])
         self.peak.write_text(json.dumps(data))
-        with patch('chesssim.research_peak.extract_decisions_v5',return_value=(self.raw,{})):
+        with patch('chesssim.research_peak.extract_decisions_v5',return_value=(rows(year=2009),{})):
             with self.assertRaisesRegex(ValueError,'fresh-cohort-ack'):
-                prepare_peak_training(self.pgn,self.peak,slug='menchik',match_name='Menchik',
+                prepare_peak_training(self.pgn,self.peak,slug='kosteniuk',match_name='Kosteniuk',
                      allow_provisional=False,annotations=None,mode='classical')
-            ds,info=prepare_peak_training(self.pgn,self.peak,slug='menchik',match_name='Menchik',
+            ds,info=prepare_peak_training(self.pgn,self.peak,slug='kosteniuk',match_name='Kosteniuk',
                      allow_provisional=False,annotations=None,mode='classical',include_unknown=True,
                      fresh_cohort_ack=True,cohort_ledger=self.home/'fresh.json')
             self.assertEqual(info['embargo']['origin'],'NEW_V6_SEALED_COHORT')
             self.assertTrue((self.home/'fresh.json').exists())
             self.assertTrue(ds)
             with self.assertRaisesRegex(ValueError,'CONFLICT'):
-                prepare_peak_training(self.pgn,self.peak,slug='menchik',match_name='Menchik',
+                prepare_peak_training(self.pgn,self.peak,slug='kosteniuk',match_name='Kosteniuk',
                     allow_provisional=False,annotations=None,mode='classical',include_unknown=True,
                     fresh_cohort_ack=True,cohort_ledger=self.home/'fresh.json',partition_seed=33)
 

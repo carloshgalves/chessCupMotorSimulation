@@ -130,14 +130,20 @@ jobs:
               history_packs = sorted(name for name in names
                                      if name.startswith(root) and name.endswith(".json")
                                      and name != root + "portrait_candidates.json")
-              assert len(history_packs) == 64, f"Expected 64 biographies, got {len(history_packs)}"
-              assert len(history_packs) <= 64, "More packs than canonical players"
+              roster = json.loads(archive.read("chesssim/data/roster.json"))["players"]
+              active = {player["slug"] for player in roster}
+              retired = {"menchik"}
+              assert len(roster) == len(active) == 64
+              assert "kosteniuk" in active and not active & retired
+              expected_packs = {root + slug + ".json" for slug in active | retired}
+              assert set(history_packs) == expected_packs, "Missing or orphan biography in wheel"
               assert root + "portrait_candidates.json" in names
               baseline = {"anand", "bronstein", "carlsen", "euwe", "karpov",
                           "larsen", "mequinho", "najdorf", "petrosian", "smyslov",
                           "spassky", "timman", "topalov"}
               seen_slugs = set()
               referenced_photos = set()
+              pending_photos = set()
               for biography in history_packs:
                   pack = json.loads(archive.read(biography))
                   slug = biography.removeprefix(root).removesuffix(".json")
@@ -145,6 +151,7 @@ jobs:
                   seen_slugs.add(slug)
                   portrait = pack["portrait"]
                   if portrait is None:
+                      pending_photos.add(slug)
                       continue
                   photograph = root + f"portraits/{slug}.jpg"
                   referenced_photos.add(photograph)
@@ -155,7 +162,8 @@ jobs:
                   assert portrait["license"] in ("CC0 1.0", "CC BY-SA 3.0", "CC BY-SA 2.0", "CC BY-SA 4.0", "CC BY 2.0", "Public Domain Mark 1.0")
               assert baseline.issubset(seen_slugs), "Baseline photo biographies missing"
               assert len(referenced_photos) >= len(baseline), "Baseline portraits missing"
-              assert len(referenced_photos) == 64, "All 64 documented portraits must ship in the wheel"
+              assert pending_photos == {"kosteniuk"}, "Unexpected missing or unreviewed portrait"
+              assert len(referenced_photos) == 64, "All 64 previously documented portraits must ship in the wheel"
               assert {root + f"portraits/{slug}.jpg" for slug in baseline}.issubset(referenced_photos)
               actual_photos = {n for n in names if n.startswith(root + "portraits/") and n.endswith(".jpg")}
               assert actual_photos == referenced_photos, "Orphan portraits or undisclosed photos in wheel"

@@ -7,7 +7,7 @@ import json
 import re
 from urllib.parse import urlsplit
 
-from .catalog import load_roster
+from .catalog import load_roster, RETIRED_PLAYERS
 
 SCHEMA = "history-profile-v1"
 INDEX_SCHEMA = "history-index-v1"
@@ -175,7 +175,7 @@ def _check_sources(ids: object, valid_ids: set[str]) -> None:
 def _player(slug: str):
     if not isinstance(slug, str) or not re.fullmatch(r"[a-z0-9-]{2,48}", slug):
         raise ValueError("Slug inválido")
-    player = next((p for p in load_roster() if p.slug == slug), None)
+    player = next((p for p in (*load_roster(), *RETIRED_PLAYERS) if p.slug == slug), None)
     if player is None:
         raise ValueError("Jogador fora do elenco")
     return player

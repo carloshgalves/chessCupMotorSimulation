@@ -90,7 +90,7 @@ def schedule(participants: list[str], format: str = "single") -> list[list[dict]
             for r, pairs in enumerate(legs, 1)]
 
 
-def normalize_config(raw: object) -> dict:
+def normalize_config(raw: object, *, allow_retired: bool = False) -> dict:
     allowed = {"name", "season", "format", "modality", "participants",
                "execution_mode", "depth", "points", "seed", "personality_mode"}
     if type(raw) is not dict or set(raw) - allowed:
@@ -110,6 +110,8 @@ def normalize_config(raw: object) -> dict:
     if type(participants) is not list:
         raise LeagueInput("Selecione explicitamente os participantes")
     all_slugs = {p.slug for p in load_roster()}
+    if allow_retired:
+        all_slugs.add("menchik")
     if any(type(slug) is not str or slug not in all_slugs for slug in participants):
         raise LeagueInput("Liga contém enxadrista fora do catálogo")
     schedule(participants, fmt)
@@ -293,7 +295,7 @@ class LeagueManager:
         if (type(data) is not dict or data.get("schema") != SCHEMA or
                 data.get("id") != ident or type(data.get("config")) is not dict or
                 normalize_config({k: v for k,v in data["config"].items()
-                                  if k != "clock"}) != data["config"] or
+                                  if k != "clock"}, allow_retired=True) != data["config"] or
                 data.get("status") not in {"READY", "RUNNING", "PAUSED", "COMPLETED", "FAILED"}):
             raise ValueError("Manifesto de liga incompatível")
         return data

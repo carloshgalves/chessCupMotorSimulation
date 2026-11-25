@@ -1,6 +1,6 @@
 {
   "name": "Copa dos Imortais — Edição histórica 64",
-  "revision": "roster-v1-2026-10-09",
+  "revision": "roster-v2-2026-11-24",
   "rules": "Curadoria histórica; numeração não representa ranking nem cabeças de chave. Personalidades ausentes devem ser calibradas antes de competir.",
   "players": [
     {"name":"Wilhelm Steinitz","slug":"steinitz","group":"mundiais_e_convites","rodent_alias":"Steinitz"},
@@ -66,7 +66,7 @@
     {"name":"Ian Nepomniachtchi","slug":"nepomniachtchi","group":"modernos"},
     {"name":"Wesley So","slug":"wesley-so","group":"modernos"},
 
-    {"name":"Vera Menchik","slug":"menchik","group":"rainhas"},
+    {"name":"Alexandra Kosteniuk","slug":"kosteniuk","group":"rainhas"},
     {"name":"Nona Gaprindashvili","slug":"gaprindashvili","group":"rainhas"},
     {"name":"Maia Chiburdanidze","slug":"chiburdanidze","group":"rainhas"},
     {"name":"Judit Polgár","slug":"judit-polgar","group":"rainhas"},
