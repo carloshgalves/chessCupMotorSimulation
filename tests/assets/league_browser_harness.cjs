@@ -63,6 +63,7 @@ const defaults={
   "league-create-format":"double",
   "league-create-execution":"fast_statistical",
   "league-create-depth":"6",
+  "league-scope":"round","league-workers":"1",
   "league-points-win":"3","league-points-draw":"1",
   "league-points-loss":"0",
 };
@@ -129,7 +130,7 @@ const fetch=async(path,request={})=>{
       return reply({id,status:"READY"});
     }
     if(path==="/api/leagues/"+id+"/run"){
-      assert.deepEqual(payload,{});
+      assert.deepEqual(payload,{scope:"round",workers:1});
       started=true;runCount++;
       league.status="PAUSED";return reply({id,status:"RUNNING",round:1});
     }

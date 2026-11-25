@@ -291,7 +291,7 @@
       data.format==="double_round_robin"
        ?selectedWomen?.result
        :selectedMatch()?.games?.length);
-    $("cup-open-match").disabled=!selectedHasGame;
+    $("cup-open-match").disabled=!selectedHasGame&&data.status!=="RUNNING";
     $("cup-open-match").textContent=data.execution_mode==="fast_statistical"
       ?"▦ Ver placares (sem tabuleiro)"
       :"▣ Abrir confronto / replay";
@@ -913,6 +913,9 @@
   function viewMatch(){
     const data=state.detail;
     if(!data)return;
+    if(data.status==="RUNNING"&&data.execution_mode==="engine_full"){
+      window.CompetitionObserver.open("cups",state.id);return;
+    }
     if(data.format==="double_round_robin"){
       const game=data.rounds.flatMap(r=>r.games).find(
         x=>x.id===state.selectedWomanGameId)||

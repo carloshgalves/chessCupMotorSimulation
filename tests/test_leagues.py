@@ -253,6 +253,10 @@ def test_engine_provenance_true_pgn_and_cannot_change_profiles(manager,monkeypat
     assert payload.count(b'[Result "0-1"]')==2
     items=manager.history(ident)["games"]
     assert all(x["pgn_sha256"] and x["engine"] for x in items)
+    observed=manager.observe(ident,items[0]["match_id"])
+    assert observed["status"]=="COMPLETED"
+    assert len(observed["states"])==5
+    assert observed["moves"][-1]["san"].endswith("#")
     # A dashboard poll reuses verified PGNs; JSON export performs a full audit.
     original_read=chess.pgn.read_game
     reads=[]

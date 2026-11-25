@@ -358,6 +358,10 @@ def test_verified_uci_cup_round_trip_pgn_replay_and_tamper_detection(manager,mon
     assert len(details["moves"])==4
     assert details["moves"][-1]["san"].endswith("#")
     assert details["game"]["result"]=="0-1"
+    observed=manager.observe(ident,game_id)
+    assert observed["status"]=="COMPLETED"
+    assert len(observed["states"])==5
+    assert observed["moves"][-1]["san"].endswith("#")
     pgn,kind=manager.export(ident,"pgn")
     assert "chess-pgn" in kind and b'[Termination "CHECKMATE"]' in pgn
     json_export,kind=manager.export(ident,"json")
