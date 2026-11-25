@@ -35,7 +35,7 @@ from .event_journal import EventJournal
 from .live_events import MAX_EVENT_CLIENTS, same_origin, stream_events, stream_events_v2
 from .matches import _atomic_text, official_book_hashes, play_duel, validate
 from .peak_windows import CLOCK_PRESETS, PROVISIONAL_PEAKS
-from .qualified_runtime import MODE, NODE_CAP, resolve as resolve_qualified, validate_mode
+from .qualified_runtime import MODE, NODE_CAP, SLUGS as QUALIFIED_SLUGS, resolve as resolve_qualified, validate_mode
 
 MAX_JSON_BYTES = 4096
 PRESETS = {"official": (600, 2), **CLOCK_PRESETS}
@@ -199,6 +199,7 @@ def _profiles(root: Path) -> list[dict]:
         players.append({
             "slug": p.slug, "name": p.name, "group": p.group,
             "alias": p.rodent_alias, "installed": available,
+            "qualified": p.slug in QUALIFIED_SLUGS,
             "human_playable": available or shared,
             "human_profile_source": ("individual" if available else
                                      "shared_simple" if shared else None),

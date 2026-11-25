@@ -740,7 +740,7 @@
   function fillParticipants(reset=false){
     if(!state.players.length)return;
     const qualified=$("cup-personality").value==="qualified";
-    const eligible=qualified?state.seedFromPreset.filter(s=>["fischer","tal","karpov","kasparov"].includes(s)):state.seedFromPreset;
+    const eligible=qualified?state.seedFromPreset.filter(s=>(player(s)?.qualified === true)):state.seedFromPreset;
     const n=num($("cup-count").value)||8;
     const selected=new Set(reset?eligible.slice(0,n):state.selection);
     if(selected.size<n){
@@ -806,7 +806,7 @@
     const qualified=$("cup-personality").value==="qualified";
     $("cup-depth").disabled=qualified;
     $("cup-save").disabled=state.commandPending||selected!==n||!token||
-      (qualified&&(!engine||state.selection.some(s=>!["fischer","tal","karpov","kasparov"].includes(s))));
+      (qualified&&(!engine||state.selection.some(s=>!(player(s)?.qualified === true))));
   }
   $("cup-execution").addEventListener("change",updateSummary);
   $("cup-personality").addEventListener("change",()=>{

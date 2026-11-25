@@ -109,7 +109,7 @@
     const n=Number($("league-create-count").value);
     if(![4,8,16,32,64].includes(n))return;
     const qualified=$("league-personality").value==="qualified";
-    const players=qualified?state.players.filter(p=>["fischer","tal","karpov","kasparov"].includes(p.slug)):state.players;
+    const players=qualified?state.players.filter(p=>p.qualified === true):state.players;
     const box=$("league-participant-options");
     const chosen=reset||!box.children.length
       ?players.filter(p=>qualified||p.installed).slice(0,n).map(p=>p.slug)
@@ -146,8 +146,8 @@
     const qualified=$("league-personality").value==="qualified";
     $("league-create-depth").disabled=qualified;
     $("league-create-submit").disabled=state.pending||n!==need||!token||
-      (qualified&&($("league-create-execution").value!=="engine_full"||need!==4||
-        selectedIds().some(s=>!["fischer","tal","karpov","kasparov"].includes(s))));
+      (qualified&&($("league-create-execution").value!=="engine_full"||need>state.players.filter(p=>p.qualified===true).length||
+        selectedIds().some(s=>!(state.players.find(p=>p.slug===s)?.qualified === true))));
   }
   $("league-create-count").addEventListener("change",()=>selectCount(true));
   $("league-personality").addEventListener("change",()=>{
