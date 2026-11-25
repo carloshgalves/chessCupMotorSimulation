@@ -32,8 +32,14 @@ FROZEN = frozenset(("fischer", "tal", "karpov", "kasparov"))
 WAVE = {"alekhine": (1927, 1934), "botvinnik": (1948, 1958),
         "smyslov": (1953, 1958), "petrosian": (1963, 1969),
         "spassky": (1965, 1972), "lasker": (1894, 1907),
-        "rubinstein": (1907, 1914), "anand": (2007, 2013)}
+        "rubinstein": (1907, 1914), "anand": (2007, 2013),
+        "steinitz": (1866, 1894), "anderssen": (1851, 1870),
+        "tarrasch": (1890, 1908), "marshall": (1904, 1915),
+        "nimzowitsch": (1925, 1931), "reti": (1919, 1929),
+        "larsen": (1964, 1971), "topalov": (2005, 2010)}
 WAVE2 = ("spassky", "lasker", "rubinstein", "anand")
+WAVE3 = ("steinitz", "anderssen", "tarrasch", "marshall",
+         "nimzowitsch", "reti", "larsen", "topalov")
 DEPTHS = (12, 16, 20)
 PHASES = ("opening", "middlegame", "endgame")
 ROOTS = 12

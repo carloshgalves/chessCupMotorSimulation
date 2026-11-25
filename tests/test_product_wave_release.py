@@ -3,8 +3,8 @@ import chess.pgn
 import pytest
 
 from chesssim.fischer_full_games import atomic_json
-from chesssim.product_wave_release import PRIOR, read_candidate, replay
-from chesssim.roster_product_wave import repair_blank_search, WAVE2, WAVE
+from chesssim.product_wave_release import PRIOR, WAVE2_PRIOR, WAVE2_RUN, prior_binding, read_candidate, replay
+from chesssim.roster_product_wave import repair_blank_search, WAVE2, WAVE3, WAVE
 from chesssim.catalog import find_player
 
 
@@ -43,3 +43,18 @@ def test_replay_rejects_incomplete_and_fake_terminal(tmp_path):
         (tmp_path / f"jogo_{i}.pgn").write_text(str(game))
     with pytest.raises(ValueError, match="Unverified terminal"):
         replay(tmp_path, {}, "botvinnik", "fischer", 2029)
+
+
+def test_wave_two_exact_artifact_bindings_and_wave_three_disjoint():
+    from chesssim.qualified_runtime import SLUGS
+    assert set(WAVE2_PRIOR) == set(WAVE2)
+    assert WAVE2_RUN == 45597119316
+    assert len({row[0] for row in WAVE2_PRIOR.values()}) == 4
+    for slug, row in WAVE2_PRIOR.items():
+        assert prior_binding(slug) == (WAVE2_RUN, row)
+        assert row[1].endswith("20")
+        assert all(len(h) == 64 and set(h) <= set("0123456789abcdef") for h in row[2:])
+    assert len(set(WAVE3)) == 8
+    assert not set(WAVE3) & (SLUGS | set(WAVE2))
+    assert all(find_player(slug).rodent_alias and WAVE[slug][0] < WAVE[slug][1] for slug in WAVE3)
+    assert all(prior_binding(slug) == (None, None) for slug in WAVE3)

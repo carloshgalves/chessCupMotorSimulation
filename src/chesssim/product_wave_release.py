@@ -18,7 +18,7 @@ from .product_peak_profiles import split_label, summarize
 from .qualified_runtime import NODE_CAP, prepare, resolve
 from .registry import add_to_first_set
 from .roster_product_wave import (
-    PARTITION_VERSION, WAVE, PHASES, MIN_PER_PHASE, MIN_SCORE, ROOTS,
+    PARTITION_VERSION, WAVE, WAVE2, PHASES, MIN_PER_PHASE, MIN_SCORE, ROOTS,
     bound_measure, eligible_quality, overlay, product_book, sample, source,
 )
 from .product_repertoires import audit
@@ -33,7 +33,26 @@ PRIOR = {
     "petrosian": (14988291153, "original16", "e4558a9035d0e21afa9bbd453f5ded76d22fb274ca39889cf2163d7472879ef4",
                   "96d467f8919afa0130ecc151abc87df4620a1ef89a28bf6cd9f055f6eedd4e22"),
 }
+WAVE2_RUN = 45597119316
+WAVE2_PRIOR = {
+    "spassky": (15027934275, "original20", "000da9c591c8e63fe5e4b11c812c42d3e700032e034f75934d67faba089b4bbd",
+                "4927d40a8fa8e9062152ecba3bcac937ccc813c606de7164d91f6ab1391b549d"),
+    "lasker": (15027405259, "restriction20", "d68f959d9995d01c715b85063298e881cc7ce1720c279e4fcc32aea706522784",
+               "1969384c06f21ecb4228ca1ba7454627843acb130059173aac54958d598420ff"),
+    "rubinstein": (15027357055, "initiative20", "fd6b301c42ec24253dcf55cc197ce4fd4df5be5d6e4f94905247fdd57762f76e",
+                   "5ae4caff36ace33baac6c1b8d46778ae502c4a05477290f7559b0d0c5437e453"),
+    "anand": (15028321226, "restriction20", "7a8ccf830762f23adb2486bf633ba992b487b8d1dc23744d675cc7281a08a456",
+              "db483b709ddd45363c84f57e83f7e33c26bfbb77efab8bca0b5b0f79203c8198"),
+}
 READY = {"MOTOR_BASE_REVIEW_READY", "INDIVIDUAL_CANDIDATE_REVIEW_READY"}
+
+
+def prior_binding(slug):
+    if slug in PRIOR:
+        return PRIOR_RUN, PRIOR[slug]
+    if slug in WAVE2_PRIOR:
+        return WAVE2_RUN, WAVE2_PRIOR[slug]
+    return None, None
 
 
 def read_candidate(slug, selection, final):
@@ -45,10 +64,11 @@ def read_candidate(slug, selection, final):
     data = source(slug)
     doc, _ = bound_measure(slug, selection, data)
     name, depth = split_label(report["selected"])
-    if slug in PRIOR:
-        _, label, profile, book_hash = PRIOR[slug]
+    _, binding = prior_binding(slug)
+    if binding is not None:
+        _, label, profile, book_hash = binding
         if (report["selected"], report["profile_sha256"], report["book_sha256"]) != (label, profile, book_hash):
-            raise ValueError("Wave-01 candidate changed")
+            raise ValueError("Prior candidate changed")
     book = product_book(slug, data)
     if (report["period"] != list(WAVE[slug]) or report["partition_version"] != PARTITION_VERSION
             or report["source_sha256"] != sha256(data[0]).hexdigest()
@@ -128,6 +148,7 @@ def replay(folder, books, candidate, anchor, seed):
 
 def validate_release(slug, root, selection, final, out, seed):
     report, book, variant = read_candidate(slug, selection, final)
+    prior_run, binding = prior_binding(slug)
     out.mkdir(parents=True, exist_ok=False)
     if book is None:
         atomic_json(out / "release.json", {"slug": slug, "status": "BLOCKED_BY_CALIBRATION",
@@ -173,8 +194,8 @@ def validate_release(slug, root, selection, final, out, seed):
                   "calibration": report, "alias": alias, "profile_filename": p.profile_filename,
                   "seed": seed, "games": games, "anchor": "fischer",
                   "engine_sha256": resources["engine_sha256"],
-                  "prior_run": PRIOR_RUN if slug in PRIOR else None,
-                  "prior_artifact": PRIOR[slug][0] if slug in PRIOR else None}
+                  "prior_run": prior_run,
+                  "prior_artifact": binding[0] if binding else None}
         atomic_json(out / "release.json", result)
         print("WAVE_RELEASE_RESULT", json.dumps({k: v for k, v in result.items() if k != "calibration"},
                                                sort_keys=True), flush=True)
@@ -224,9 +245,9 @@ def release_recipe(first, second):
                             "Descriptive FIT/TUNE metrics; reserved TEST not scored"]}
 
 
-def aggregate(shards, out):
+def aggregate(shards, out, wave=1):
     proposals, blocked = {}, {}
-    for slug in (*PRIOR, "alekhine"):
+    for slug in ((*PRIOR, "alekhine") if wave == 1 else WAVE2):
         docs = [json.loads((shards / f"release-{slug}-{seed}" / "release.json").read_text())
                 for seed in (2029, 2030)]
         if all(d.get("status") == "BLOCKED_BY_CALIBRATION" for d in docs):
@@ -241,6 +262,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--player", choices=sorted(WAVE))
     parser.add_argument("--aggregate", type=Path)
+    parser.add_argument("--wave", type=int, choices=(1, 2), default=1)
     parser.add_argument("--rodent", type=Path)
     parser.add_argument("--selection", type=Path)
     parser.add_argument("--final", type=Path)
@@ -250,7 +272,7 @@ def main():
     if args.out is None:
         parser.error("--out is required")
     if args.aggregate:
-        aggregate(args.aggregate, args.out)
+        aggregate(args.aggregate, args.out, args.wave)
     else:
         if not all((args.player, args.rodent, args.selection, args.final)):
             parser.error("validation requires --player, --rodent, --selection and --final")
