@@ -927,6 +927,7 @@
     setPane("matches");
   }
   $("cup-open-match").addEventListener("click",viewMatch);
+  $("cup-observe").addEventListener("click",()=>{if(state.id)window.CompetitionObserver.open("cups",state.id);});
   $("cup-performance-link").addEventListener("click",()=>{
     const slug=$("cup-performance-link").dataset.player;
     if(slug&&/^[a-z0-9-]+$/.test(slug)){

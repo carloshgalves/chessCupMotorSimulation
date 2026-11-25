@@ -446,6 +446,7 @@
     state.round=Number($("league-round-selector").value);
     state.lastRoundKey=null;drawRounds();
   });
+  $("league-observe").addEventListener("click",()=>{if(state.league)window.CompetitionObserver.open("leagues",state.league.id);});
   $("league-view-matches").addEventListener("click",()=>{
     state.round=null;setTab("rounds");
   });

@@ -24,6 +24,7 @@
   <script src="/history_archive.js" defer></script>
   <script src="/my-games.js" defer></script>
   <script src="/league.js" defer></script>
+  <script src="/competition-observer.js" defer></script>
   <script src="/cup.js" defer></script>
 </head>
 <body>
@@ -452,6 +453,7 @@
             <p id="cup-bid-proof" class="cup-muted" hidden></p>
             <button type="button" id="cup-run" class="primary cup-full" disabled>▶ Executar próxima partida</button>
             <p id="cup-run-warning" class="cup-muted"></p>
+            <button type="button" id="cup-observe" class="cup-full">♟ Assistir / replay</button>
             <button type="button" id="cup-open-match" class="cup-full" disabled>▣ Abrir confronto / replay</button>
           </section>
           <section class="cup-mini-panel cup-player-summary" aria-label="Desempenho do jogador selecionado">
@@ -717,6 +719,7 @@
             <h3>▣ Próxima rodada</h3>
             <p id="league-next-round" class="league-small">Aguardando liga</p>
             <p id="league-next-match" class="league-next-match">—</p>
+            <button type="button" id="league-observe" class="league-wide">♟ Assistir / replay</button>
             <button type="button" id="league-view-matches" class="league-wide">Ver confrontos</button>
             <button type="button" id="league-run" class="primary league-wide" disabled>▶ Executar rodada</button>
             <p id="league-run-note" class="league-small"></p>

@@ -10,6 +10,7 @@ import chess.engine
 import chess.pgn
 
 from .catalog import find_player
+from .competition_observer import publish
 from .matches import _open_engine
 from .qualified_runtime import MODE, NODE_CAP, resolve, headers, verify_openings
 from .opening_books import select_book_move
@@ -85,6 +86,7 @@ def play_cup_game(root, spec: dict, config: dict, resources: dict,
         clocks = base.copy()
         elapsed = [0.0, 0.0]
         termination = None
+        publish(game, clocks)
         for _ply in range(max_plies):
             result = board.outcome(claim_draw=True)
             if result is not None:
@@ -140,6 +142,7 @@ def play_cup_game(root, spec: dict, config: dict, resources: dict,
                 # 40th move = ply 79 for white; 80 for black.
                 clocks[idx] += spec["extra_after_40"]
             node.set_clock(clocks[idx])
+            publish(game, clocks)
         outcome = board.outcome(claim_draw=True)
         if termination or outcome is None:
             score, status = "*", "INCOMPLETE"

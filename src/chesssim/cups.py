@@ -64,6 +64,8 @@ class CupManager:
         if self.folder.is_symlink():
             raise ValueError("Diretório de Copas redirecionado")
         self.folder.mkdir(exist_ok=True,parents=True)
+        from .competition_observer import Observer
+        self.observer = Observer()
         self.runner = runner or play_cup_game
         self._lock = RLock()
         self._worker: Thread | None = None
@@ -623,9 +625,12 @@ class CupManager:
                       "termination":"SyntheticProjection",
                       "clock_left":None}
             else:
-                game,meta=self.runner(
-                    self.root,spec,config,state["resources"],
-                    lambda:stop.is_set() or self._closed.is_set())
+                clock=spec["clock"]
+                initial=[clock[0],clock[1] if len(clock)==3 else clock[0]]
+                with self.observer.capture(ident,spec,initial):
+                    game,meta=self.runner(
+                        self.root,spec,config,state["resources"],
+                        lambda:stop.is_set() or self._closed.is_set())
             if stop.is_set() and meta["status"]!="COMPLETED":
                 with self._lock:
                     state=self._manifest(ident)
@@ -742,6 +747,38 @@ class CupManager:
                 content.append(p.read_text(encoding="utf-8"))
             return ("\n".join(content).encode("utf-8"),
                     "application/x-chess-pgn; charset=utf-8")
+
+    def observe(self, ident, game_id=None):
+        from .competition_observer import verified_playback
+        with self._lock:
+            state = self._manifest(ident)
+            summary = self._state(state)
+            rows = summary["game_receipts"]
+            if game_id is not None:
+                if not GAME_RX.fullmatch(game_id):
+                    raise CupInput("Partida inválida")
+                live = self.observer.get(ident, game_id)
+                if live is not None:
+                    return live
+                entry = rows.get(game_id)
+                if entry and entry["pgn"]:
+                    clock = entry["clock"]
+                    initial = [clock[0], clock[1] if len(clock)==3 else clock[0]]
+                    return verified_playback(self._dir(ident)/entry["pgn"], entry, initial)
+                return {"status": "UNAVAILABLE"}
+            games = [{"id": k, "white": v["white"], "black": v["black"],
+                      "status": "COMPLETED", "result": v["result"], "pgn": bool(v["pgn"])}
+                     for k,v in sorted(rows.items())]
+            pending = []
+            for rd in summary["rounds"]:
+                if "matches" in rd:
+                    pending.extend(m["next_game"] for m in rd["matches"] if m["next_game"])
+                else:
+                    pending.extend(g for g in rd.get("games", []) if g["id"] not in rows)
+            for spec in pending:
+                if spec["id"] not in rows:
+                    games.append({**spec, "status": "RUNNING" if self.observer.get(ident,spec["id"]) else "PENDING"})
+            return {"games": games, "live": self.observer.ids(ident)}
 
     def replay(self,ident:str,game_id:str) -> dict:
         with self._lock:
