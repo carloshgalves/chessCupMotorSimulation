@@ -180,16 +180,81 @@ def validate_release(slug, root, selection, final, out, seed):
                                                sort_keys=True), flush=True)
 
 
+def release_recipe(first, second):
+    """Produce an inactive registry proposal; publishing requires reviewed run IDs."""
+    if {first.get("seed"), second.get("seed")} != {2029, 2030}:
+        raise ValueError("Two independent seed pairs required")
+    for doc in (first, second):
+        if doc.get("status") != "FULL_PRODUCT_REVIEW_READY" or len(doc.get("games", [])) != 2:
+            raise ValueError("Complete book evidence required")
+    for key in ("slug", "calibration_report_sha256", "calibration", "alias", "profile_filename",
+                "anchor", "engine_sha256", "prior_run", "prior_artifact"):
+        if first[key] != second[key]:
+            raise ValueError("Release reports disagree: " + key)
+    c = first["calibration"]
+    slug = first["slug"]
+    if c["slug"] != slug or c["status"] not in READY:
+        raise ValueError("Calibration not accepted")
+    variant, depth = split_label(c["selected"])
+    for doc in (first, second):
+        games = doc["games"]
+        if [(g["white"], g["black"]) for g in games] != [(slug, "fischer"), ("fischer", slug)]:
+            raise ValueError("Expected paired colors")
+        for g in games:
+            if (g["result"] not in ("1-0", "0-1", "1/2-1/2")
+                    or g["plies"] <= 16 or not all(g["counts"].get(p + "_uci", 0)
+                                                   for p in (slug, "fischer"))):
+                raise ValueError("Missing complete search evidence")
+        if not all(sum(g["counts"].get(p + "_book", 0) for g in games) > 0
+                   for p in (slug, "fischer")):
+            raise ValueError("Missing complete book evidence")
+    return {"status": "REVIEW_PENDING_REGISTRY_COMMIT", "profile": first["alias"],
+            "alias": first["alias"], "wave_variant": variant, "depth": depth,
+            "uci_node_cap": NODE_CAP, "internal_opening_book": False,
+            "phase_adaptive_depth": False, "neural_override": False,
+            "time_control_benchmark": "10+2", "release_scope": "FULL_PRODUCT",
+            "partition_version": PARTITION_VERSION,
+            "hashes": {"rodent": first["engine_sha256"], "profile": c["profile_sha256"]},
+            "overrides": c["overrides"], "historical_source_sha256": c["source_sha256"],
+            "historical_book_digest": c["book_sha256"], "period": c["period"],
+            "calibration_report_sha256": first["calibration_report_sha256"],
+            "release_report_digests": {str(d["seed"]): digest(d) for d in (first, second)},
+            "limitations": ["No human Elo or exact identity equivalence",
+                            "Book validation is unclocked; competitive screen is 10+2",
+                            "Descriptive FIT/TUNE metrics; reserved TEST not scored"]}
+
+
+def aggregate(shards, out):
+    proposals, blocked = {}, {}
+    for slug in (*PRIOR, "alekhine"):
+        docs = [json.loads((shards / f"release-{slug}-{seed}" / "release.json").read_text())
+                for seed in (2029, 2030)]
+        if all(d.get("status") == "BLOCKED_BY_CALIBRATION" for d in docs):
+            blocked[slug] = docs[0]["calibration_status"]
+            continue
+        proposals[slug] = release_recipe(*docs)
+    atomic_json(out, {"players": proposals, "blocked": blocked,
+                      "promotion": "EXPLICIT_REGISTRY_COMMIT_REQUIRED"})
+    print("WAVE_RELEASE_PROPOSALS", json.dumps({"ready": sorted(proposals), "blocked": blocked}), flush=True)
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--player", required=True, choices=sorted(WAVE))
-    parser.add_argument("--rodent", type=Path, required=True)
-    parser.add_argument("--selection", type=Path, required=True)
-    parser.add_argument("--final", type=Path, required=True)
-    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--player", choices=sorted(WAVE))
+    parser.add_argument("--aggregate", type=Path)
+    parser.add_argument("--rodent", type=Path)
+    parser.add_argument("--selection", type=Path)
+    parser.add_argument("--final", type=Path)
+    parser.add_argument("--out", type=Path)
     parser.add_argument("--seed", type=int, default=2029)
     args = parser.parse_args()
-    validate_release(args.player, args.rodent, args.selection, args.final, args.out, args.seed)
+    if args.out is None:
+        parser.error("--out is required")
+    if args.aggregate:
+        aggregate(args.aggregate, args.out)
+    else:
+        if not all((args.player, args.rodent, args.selection, args.final)):
+            parser.error("validation requires --player, --rodent, --selection and --final")
+        validate_release(args.player, args.rodent, args.selection, args.final, args.out, args.seed)
 
 
 if __name__ == "__main__":
