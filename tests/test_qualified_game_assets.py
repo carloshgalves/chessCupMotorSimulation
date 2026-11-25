@@ -12,7 +12,8 @@ def test_explicitly_qualified_motor_bases_are_frozen():
     manifest=json.loads(files("chesssim.data").joinpath("qualified_game_assets.json").read_text())
     assert manifest["schema"]=="chesssim-qualified-game-assets-v1"
     assert set(manifest["players"])=={"fischer", "tal", "karpov", "kasparov",
-                                      "alekhine", "botvinnik", "smyslov", "petrosian"}
+                                      "alekhine", "botvinnik", "smyslov", "petrosian",
+                                      "spassky", "lasker", "rubinstein", "anand"}
     f=manifest["players"]["fischer"]
     assert f["status"]=="FROZEN_GAME_ASSET"
     assert f["depth"]==FOCAL_DEPTH==16
@@ -40,12 +41,32 @@ def test_frozen_manifest_is_explicitly_packaged_in_distribution():
 
 
 def test_wave_one_release_provenance_and_gates():
-    from chesssim.qualified_runtime import assets, LEGACY_SLUGS
-    for slug in set(assets()) - LEGACY_SLUGS:
+    from chesssim.qualified_runtime import assets
+    for slug in ("alekhine", "botvinnik", "smyslov", "petrosian"):
         a = assets()[slug]
         assert a["qualification_run_id"] == 45597119305
         assert a["qualification_artifact_id"] == 15023757504
         assert len(a["release_artifact_ids"]) == 2
+        assert all(a["gates"].values())
+        assert sum(a["evidence"]["screen_wdl"]) == 24
+        assert sum(a["evidence"]["full_book_duel_wdl"]) == 4
+        assert a["evidence"]["screen_score"] >= .40
+        assert a["evidence"]["repeat_matches"] == 10
+
+
+def test_wave_two_release_provenance_and_gates():
+    from chesssim.qualified_runtime import assets
+    from chesssim.product_wave_release import WAVE2_PRIOR
+    for slug, binding in WAVE2_PRIOR.items():
+        a = assets()[slug]
+        assert a["qualification_run_id"] == 45633448078
+        assert a["qualification_artifact_id"] == 15035146859
+        assert a["calibration_run_id"] == 45597119316
+        assert a["calibration_artifact_id"] == binding[0]
+        assert a["hashes"]["profile"] == binding[2]
+        assert a["historical_book_digest"] == binding[3]
+        assert a["depth"] == 20
+        assert len(set(a["release_artifact_ids"])) == 2
         assert all(a["gates"].values())
         assert sum(a["evidence"]["screen_wdl"]) == 24
         assert sum(a["evidence"]["full_book_duel_wdl"]) == 4
