@@ -451,6 +451,8 @@
             <p id="cup-selected-score" class="cup-score">—</p>
             <p id="cup-next-stage" class="cup-muted">Fase ainda não iniciada</p>
             <p id="cup-bid-proof" class="cup-muted" hidden></p>
+            <label>Executar <select id="cup-scope"><option value="game" selected>Uma partida</option><option value="round">Rodada inteira</option><option value="competition">Competição completa</option></select></label>
+            <label>Partidas simultâneas <select id="cup-workers"><option value="1">1 (serial)</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label>
             <button type="button" id="cup-run" class="primary cup-full" disabled>▶ Executar próxima partida</button>
             <p id="cup-run-warning" class="cup-muted"></p>
             <button type="button" id="cup-observe" class="cup-full">♟ Assistir / replay</button>
@@ -721,6 +723,8 @@
             <p id="league-next-match" class="league-next-match">—</p>
             <button type="button" id="league-observe" class="league-wide">♟ Assistir / replay</button>
             <button type="button" id="league-view-matches" class="league-wide">Ver confrontos</button>
+            <label>Executar <select id="league-scope"><option value="game">Uma partida</option><option value="round" selected>Rodada inteira</option><option value="competition">Competição completa</option></select></label>
+            <label>Partidas simultâneas <select id="league-workers"><option value="1">1 (serial)</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label>
             <button type="button" id="league-run" class="primary league-wide" disabled>▶ Executar rodada</button>
             <p id="league-run-note" class="league-small"></p>
           </section>

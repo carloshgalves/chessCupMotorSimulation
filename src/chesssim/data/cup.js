@@ -265,7 +265,7 @@
     $("cup-progress-matches").textContent=
       data.completed_matches+"/"+data.total_matches;
     $("cup-progress-games").textContent=String(data.completed_games);
-    $("cup-progress-running").textContent=String(data.status==="RUNNING"?1:0);
+    $("cup-progress-running").textContent=String(data.running_games??(data.status==="RUNNING"?1:0));
     $("cup-export-json").disabled=state.commandPending;
     $("cup-export-pgn").disabled=state.commandPending||data.available_pgn===0;
     const missingProfiles=data.execution_mode==="engine_full"&&data.config.personality_mode!=="qualified"?
@@ -274,6 +274,7 @@
       data.status!=="RUNNING"&&!state.busy&&Boolean(token)&&
       missingProfiles.length===0;
     $("cup-run").disabled=!mayRun;
+    $("cup-scope").disabled=$("cup-workers").disabled=data.status==="RUNNING";
     $("cup-run-warning").textContent=missingProfiles.length?
       missingProfiles.length+" perfil(is) Rodent IV ausente(s). "+
       "Instale e registre os motores antes de executar partidas reais.":"";
@@ -894,7 +895,7 @@
     if(!state.id)return;
     const id=state.id;
     const priorGames=state.detail?.completed_games||0;
-    const start=await post("/api/cups/"+id+"/run");
+    const start=await post("/api/cups/"+id+"/run",{scope:$("cup-scope").value,workers:Number($("cup-workers").value)});
     state.lastRun={id,games:priorGames};
     note("Executando "+start.game+" · "+(stageLabel[start.stage]||start.stage));
   }));

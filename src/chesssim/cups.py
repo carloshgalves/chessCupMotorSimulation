@@ -583,7 +583,9 @@ class CupManager:
             self._save(state)
         return computed
 
-    def run(self, ident:str,*, arena_busy=False) -> dict:
+    def run(self, ident:str,*, arena_busy=False, scope="game", workers=1) -> dict:
+        from .competition_execution import options
+        scope, workers = options({"scope": scope, "workers": workers}, "game")
         with self._lock:
             if self.busy or arena_busy or self._closed.is_set():
                 raise CupBusy("Já existe partida, liga ou Copa em execução")
@@ -605,66 +607,92 @@ class CupManager:
             self._save(state)
             self._stop=Event()
             self._active=ident
-            thread=Thread(target=self._play,args=(ident,spec,self._stop),
+            thread=Thread(target=self._play,args=(ident,spec,self._stop,scope,workers),
                           name="chesssim-cup-game",daemon=True)
             self._worker=thread
             thread.start()
             return {"id":ident,"status":"RUNNING","game":spec["id"],
                     "stage":spec["stage"]}
 
-    def _play(self,ident:str,spec:dict,stop:Event) -> None:
-        try:
-            with self._lock:
-                state=self._manifest(ident)
-                config=state["config"]
-            started=utc()
-            if config["execution_mode"]=="fast_statistical":
-                game=None
-                result=projected_game(config,spec)
-                meta={"result":result,"status":"COMPLETED",
-                      "termination":"SyntheticProjection",
-                      "clock_left":None}
-            else:
-                clock=spec["clock"]
-                initial=[clock[0],clock[1] if len(clock)==3 else clock[0]]
-                with self.observer.capture(ident,spec,initial):
-                    game,meta=self.runner(
-                        self.root,spec,config,state["resources"],
-                        lambda:stop.is_set() or self._closed.is_set())
-            if stop.is_set() and meta["status"]!="COMPLETED":
-                with self._lock:
-                    state=self._manifest(ident)
-                    state["status"]="PAUSED"
-                    state["message"]="Jogo incompleto não foi contabilizado"
-                    state["current_game"]=None
-                    state["updated_utc"]=utc()
-                    self._save(state)
+    @staticmethod
+    def _pending_round(computed):
+        for rd in computed.get("bracket", computed.get("rounds", [])):
+            games = ([m["next_game"] for m in rd["matches"] if m["next_game"]]
+                     if "matches" in rd else
+                     [g for g in rd["games"] if g["status"] == "PENDING"])
+            if games:
+                return games
+        return []
+
+    def _play(self, ident, spec, stop, scope="game", workers=1):
+        from .competition_execution import batch, execute
+        first_round = spec["round"]
+
+        def one(game_spec):
+            if stop.is_set() or self._closed.is_set():
                 return
             with self._lock:
-                state=self._manifest(ident)
-                self._persist_game(state,spec,game,meta,started_utc=started)
-                computed=self._state(state)
-                state["current_game"]=None
-                state["status"]="COMPLETED" if computed["champion"] else "PAUSED"
-                state["champion"]=computed["champion"]
-                state["message"]=("Campeão definido" if computed["champion"]
-                                  else "Partida concluída; avance quando desejar")
-                state["updated_utc"]=utc()
+                state = self._manifest(ident)
+                config = state["config"]
+            started = utc()
+            if config["execution_mode"] == "fast_statistical":
+                game = None
+                meta = {"result": projected_game(config, game_spec), "status": "COMPLETED",
+                        "termination": "SyntheticProjection", "clock_left": None}
+                with self._lock:
+                    self._persist_game(self._manifest(ident), game_spec, game, meta, started_utc=started)
+            else:
+                clock = game_spec["clock"]
+                initial = [clock[0], clock[1] if len(clock) == 3 else clock[0]]
+                with self.observer.capture(ident, game_spec, initial):
+                    game, meta = self.runner(self.root, game_spec, config, state["resources"],
+                                             lambda: stop.is_set() or self._closed.is_set())
+                    if (stop.is_set() or self._closed.is_set()) and meta["status"] != "COMPLETED":
+                        return
+                    with self._lock:
+                        self._persist_game(self._manifest(ident), game_spec, game, meta, started_utc=started)
+
+        try:
+            while not stop.is_set() and not self._closed.is_set():
+                with self._lock:
+                    state = self._manifest(ident)
+                    computed = self._state(state)
+                    pending = self._pending_round(computed)
+                    if not pending or computed["champion"]:
+                        break
+                    if scope == "round" and pending[0]["round"] != first_round:
+                        break
+                    selected = [spec] if scope == "game" else batch(pending, workers)
+                    state["current_game"] = selected[0]["id"]
+                    state["updated_utc"] = utc()
+                    self._save(state)
+                execute(selected, one)
+                if scope == "game":
+                    break
+            with self._lock:
+                state = self._manifest(ident)
+                computed = self._state(state)
+                state["current_game"] = None
+                state["status"] = "COMPLETED" if computed["champion"] else "PAUSED"
+                state["champion"] = computed["champion"]
+                state["message"] = ("Campeão definido" if computed["champion"] else
+                                    "Pausa solicitada; jogos incompletos não pontuam" if stop.is_set() else
+                                    "Partida ou rodada concluída; avance quando desejar")
+                state["updated_utc"] = utc()
                 self._save(state)
         except Exception as exc:
             with self._lock:
-                state=self._manifest(ident)
-                state["status"]="FAILED"
-                state["current_game"]=None
-                state["message"]="Falha; jogo não comprovado não foi pontuado"
-                state["updated_utc"]=utc()
+                state = self._manifest(ident)
+                state["status"] = "FAILED"
+                state["current_game"] = None
+                state["message"] = "Falha; jogo não comprovado não foi pontuado"
+                state["updated_utc"] = utc()
                 self._save(state)
-            print("Falha na Copa local: "+type(exc).__name__+": "+str(exc),
-                  flush=True)
+            print("Falha na Copa local: " + type(exc).__name__ + ": " + str(exc), flush=True)
         finally:
             with self._lock:
-                self._active=None
-                self._worker=None
+                self._active = None
+                self._worker = None
 
     def pause(self,ident:str) -> dict:
         with self._lock:
@@ -689,6 +717,7 @@ class CupManager:
                 "completed_matches":summary["completed_matches"],
                 "total_matches":total,"champion":summary["champion"],
                 "status":state["status"],"current_game":state["current_game"],
+                "running_games": len(self.observer.ids(ident)),
                 "message":state.get("message"),
                 "available_pgn":sum(bool(x["pgn"]) for x in summary["game_receipts"].values()),
             }
