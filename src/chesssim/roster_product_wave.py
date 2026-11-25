@@ -65,6 +65,18 @@ WAVE = {"alekhine": (1927, 1934), "botvinnik": (1948, 1958),
         "leko": (2000, 2009),
         "gaprindashvili": (1962, 1985),
         "chiburdanidze": (1978, 1991),
+        "philidor": (1749, 1795),
+        "staunton": (1840, 1851),
+        "morphy": (1857, 1863),
+        "zukertort": (1871, 1887),
+        "chigorin": (1889, 1904),
+        "pillsbury": (1895, 1904),
+        "reshevsky": (1935, 1960),
+        "korchnoi": (1974, 1981),
+        "taimanov": (1952, 1971),
+        "kamsky": (1990, 1996),
+        "svidler": (1997, 2017),
+        "karjakin": (2009, 2016),
 }
 WAVE2 = ("spassky", "lasker", "rubinstein", "anand")
 WAVE3 = ("steinitz", "anderssen", "tarrasch", "marshall",
@@ -145,6 +157,31 @@ INDIVIDUAL_SEEDS.update({
     "chiburdanidze": {"Material": 105, "OwnAttack": 115, "OwnMobility": 90, "OppMobility": 110,
                      "PawnStructure": 140, "PassedPawns": 140, "Outposts": 110, "PiecePressure": 120},
 })
+WAVE8 = ("philidor", "staunton", "morphy", "zukertort", "chigorin", "pillsbury",
+         "reshevsky", "korchnoi", "taimanov", "kamsky", "svidler", "karjakin")
+# Final batch: two existing Rodent profiles and ten individual hypotheses.
+INDIVIDUAL_SEEDS.update({
+    "philidor": {"Material": 105, "OwnAttack": 95, "OwnMobility": 80, "OppMobility": 100,
+                "PawnStructure": 160, "PassedPawns": 150, "Outposts": 90, "PiecePressure": 105},
+    "staunton": {"Material": 105, "OwnAttack": 105, "OwnMobility": 90, "OppMobility": 110,
+                "PawnStructure": 135, "PassedPawns": 125, "Outposts": 100, "PiecePressure": 115},
+    "zukertort": {"Material": 100, "OwnAttack": 150, "OwnMobility": 110, "OppMobility": 90,
+                 "PawnStructure": 115, "PassedPawns": 120, "Outposts": 100, "PiecePressure": 150},
+    "chigorin": {"Material": 100, "OwnAttack": 155, "OwnMobility": 115, "OppMobility": 95,
+                "PawnStructure": 115, "PassedPawns": 125, "Outposts": 85, "PiecePressure": 150},
+    "pillsbury": {"Material": 105, "OwnAttack": 145, "OwnMobility": 105, "OppMobility": 95,
+                 "PawnStructure": 125, "PassedPawns": 135, "Outposts": 110, "PiecePressure": 145},
+    "reshevsky": {"Material": 110, "OwnAttack": 105, "OwnMobility": 95, "OppMobility": 115,
+                 "PawnStructure": 145, "PassedPawns": 130, "Outposts": 110, "PiecePressure": 120},
+    "taimanov": {"Material": 105, "OwnAttack": 120, "OwnMobility": 105, "OppMobility": 105,
+                "PawnStructure": 130, "PassedPawns": 125, "Outposts": 110, "PiecePressure": 130},
+    "kamsky": {"Material": 110, "OwnAttack": 110, "OwnMobility": 95, "OppMobility": 110,
+              "PawnStructure": 150, "PassedPawns": 140, "Outposts": 110, "PiecePressure": 120},
+    "svidler": {"Material": 105, "OwnAttack": 135, "OwnMobility": 110, "OppMobility": 100,
+               "PawnStructure": 130, "PassedPawns": 130, "Outposts": 105, "PiecePressure": 145},
+    "karjakin": {"Material": 110, "OwnAttack": 105, "OwnMobility": 90, "OppMobility": 120,
+                "PawnStructure": 150, "PassedPawns": 140, "Outposts": 115, "PiecePressure": 120},
+})
 TOPALOV_REPAIR = {
     "moderate": {"Material": 100, "OwnAttack": 250, "OwnMobility": 145,
                  "OppAttack": 125, "PiecePressure": 155, "PawnShield": 175,
@@ -192,8 +229,11 @@ def remaining():
 def source(slug):
     cfg = _player_configuration([slug], None, None)[slug]
     _, pgn, origin = _source_bytes(cfg["source"], None)
-    rows, scan = _scan(pgn, slug, cfg["surname"])
-    return pgn, rows, scan, origin, cfg["surname"]
+    # Explicit transliteration alternatives only for this product cohort.
+    # Earlier scientific manifests and all other product cohorts are unchanged.
+    surname = "Korchnoi|Kortchnoi|Korchnoj|Kortschnoy|Kortschnoi|Kortschnoj" if slug == "korchnoi" else cfg["surname"]
+    rows, scan = _scan(pgn, slug, surname)
+    return pgn, rows, scan, origin, surname
 
 
 def in_period(row, period):
