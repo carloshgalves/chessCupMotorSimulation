@@ -7,7 +7,7 @@ from chesssim.product_wave_release import (
     PRIOR, WAVE2_PRIOR, WAVE2_RUN, WAVE3_PRIOR, WAVE3_RUN, prior_binding, read_candidate, replay,
 )
 from chesssim.roster_product_wave import (
-    repair_blank_search, WAVE2, WAVE3, WAVE4, WAVE5, WAVE6, WAVE7, WAVE, INDIVIDUAL_SEEDS,
+    repair_blank_search, WAVE2, WAVE3, WAVE4, WAVE5, WAVE6, WAVE7, WAVE8, WAVE, INDIVIDUAL_SEEDS,
     TOPALOV_REPAIR, candidate_parameters, identity_comparison, shortlist_for,
 )
 from chesssim.catalog import find_player
@@ -138,3 +138,42 @@ def test_parallel_waves_are_disjoint_and_have_unique_individual_recipes():
             assert signature not in signatures
             signatures.add(signature)
     assert len(signatures) == 96
+
+
+def test_final_wave_completes_exact_canonical_roster():
+    from chesssim.catalog import load_roster
+    from chesssim.roster_product_wave import FROZEN
+    groups = (FROZEN, (*PRIOR, "alekhine"), WAVE2, WAVE3, WAVE4, WAVE5, WAVE6, WAVE7, WAVE8)
+    flat = [slug for group in groups for slug in group]
+    assert len(flat) == len(set(flat)) == 64
+    assert set(flat) == {p.slug for p in load_roster()}
+    assert set(WAVE) == set(flat) - FROZEN
+    assert len(WAVE8) == 12
+    assert {slug for slug in WAVE8 if find_player(slug).rodent_alias} == {"morphy", "korchnoi"}
+    assert all(WAVE[slug][0] < WAVE[slug][1] for slug in WAVE8)
+    signatures = set()
+    for slug in INDIVIDUAL_SEEDS:
+        for label, recipe in candidate_parameters(slug, "").items():
+            if label == "original":
+                continue
+            signature = tuple(sorted(recipe.items()))
+            assert signature not in signatures
+            signatures.add(signature)
+    assert len(signatures) == 126
+
+
+def test_korchnoi_transliterations_are_explicit_and_ambiguous_games_rejected():
+    from chesssim.real_training_cohorts import _target_color
+    game = chess.pgn.Game()
+    aliases = "Korchnoi|Kortchnoi|Korchnoj|Kortschnoy|Kortschnoi|Kortschnoj"
+    for name in aliases.split("|"):
+        game.headers["White"] = name + ", Viktor"
+        game.headers["Black"] = "Karpov, Anatoly"
+        assert _target_color(game, aliases) is True
+        game.headers["Black"] = "Korchnoi, Viktor"
+        assert _target_color(game, aliases) is None
+    game.headers["White"] = "NotKorchnoi, Viktor"
+    game.headers["Black"] = "Karpov, Anatoly"
+    assert _target_color(game, aliases) is None
+    game.headers["White"] = "Kortchnoi, Viktor"
+    assert _target_color(game, "Korchnoi") is None

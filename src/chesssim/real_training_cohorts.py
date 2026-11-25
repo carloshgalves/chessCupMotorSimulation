@@ -60,7 +60,12 @@ def _norm(value: str) -> str:
 
 
 def _target_color(game: chess.pgn.Game, surname: str) -> bool | None:
-    pattern = re.compile(r"(?<![a-z])" + re.escape(_norm(surname)) + r"(?![a-z])")
+    # A declared pipe-separated set represents exact transliterations, never a regex.
+    tokens = surname.split("|")
+    if not all(token.strip() for token in tokens):
+        raise ValueError("Empty focal surname alias")
+    alternatives = "|".join(re.escape(_norm(token)) for token in tokens)
+    pattern = re.compile(r"(?<![a-z])(?:" + alternatives + r")(?![a-z])")
     white = bool(pattern.search(_norm(game.headers.get("White", ""))))
     black = bool(pattern.search(_norm(game.headers.get("Black", ""))))
     return white if white != black else None
