@@ -153,6 +153,320 @@
       ],
       "historical_source_sha256": "1efbbb6bc364b08647d42ad99c1493d8098f6971b388615a98ef9896f75e78c1",
       "historical_book_digest": "89903c23be426fa7e151117d026588273b9601e682f217b4955dc57e3584d191"
+    },
+    "alekhine": {
+      "status": "FROZEN_GAME_ASSET",
+      "profile": "AlekhineWaveRepaired",
+      "alias": "AlekhineWaveRepaired",
+      "wave_variant": "original",
+      "depth": 16,
+      "period": [
+        1927,
+        1934
+      ],
+      "uci_node_cap": 5000000,
+      "internal_opening_book": false,
+      "phase_adaptive_depth": false,
+      "neural_override": false,
+      "time_control_benchmark": "10+2",
+      "release_scope": "FULL_PRODUCT",
+      "partition_version": "product-development-v2",
+      "hashes": {
+        "rodent": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+        "profile": "b63e9f19d5f35279a557256a3a360361aa0bd7e739dc5ff6e07e83358d5ddac7",
+        "simple_control": "19f83fb05f96039a34e0e9a36bf66fc841693f70d73ee2a243df42e90caf1613"
+      },
+      "overrides": {},
+      "historical_source_sha256": "8d16884ca266f467146327131e59c35ac2847eb1be7086c12d39955073492b93",
+      "historical_book_digest": "bbc5d2106ac9627c202b40cedd97b083ee34deb0fa2e0c5306f6f515ae55748d",
+      "qualification_run_id": 45597119305,
+      "qualification_artifact_id": 15023757504,
+      "calibration_run_id": 45597119305,
+      "calibration_artifact_id": 15024320357,
+      "calibration_report_sha256": "be598034b84dd6680a9cc606890726423ca8cf5b1e1b53777922c5ad5904d1ab",
+      "release_artifact_ids": [
+        15022739267,
+        15023544022
+      ],
+      "gates": {
+        "historical_practical_strength": true,
+        "clock_play": true,
+        "style_preferences": true,
+        "reproducibility": true,
+        "full_book_games": true
+      },
+      "evidence": {
+        "screen_wdl": [
+          10,
+          12,
+          2
+        ],
+        "screen_score": 0.6666666666666666,
+        "full_book_duel_wdl": [
+          2,
+          2,
+          0
+        ],
+        "anchor": "fischer",
+        "seeds": [
+          2029,
+          2030
+        ],
+        "fit_positions": 60,
+        "tune_positions": 60,
+        "tune_exact_match": 0.4,
+        "tune_excess_cp": -6.593220338983051,
+        "tune_style_gap": 0.025,
+        "tune_depth_reached": 1,
+        "repeat_matches": 10
+      },
+      "decision": "Product release requested by maintainer; independent replay and review of successful run 45597119305; effective upon merge and installation.",
+      "limitations": [
+        "Small four-game unclocked anchor sample; no human Elo equivalence",
+        "Reserved TEST not scored; descriptive style evidence, not identity proof",
+        "Requested depth is subject to five million node cap",
+        "Ten unstable TUNE reference positions; high absolute endgame and tactics loss warrants further research"
+      ],
+      "restrictions": [
+        "Any profile, depth, binary or book change requires a new qualification"
+      ]
+    },
+    "botvinnik": {
+      "status": "FROZEN_GAME_ASSET",
+      "profile": "BotvinnikWaveRestriction",
+      "alias": "BotvinnikWaveRestriction",
+      "wave_variant": "restriction",
+      "depth": 20,
+      "period": [
+        1948,
+        1958
+      ],
+      "uci_node_cap": 5000000,
+      "internal_opening_book": false,
+      "phase_adaptive_depth": false,
+      "neural_override": false,
+      "time_control_benchmark": "10+2",
+      "release_scope": "FULL_PRODUCT",
+      "partition_version": "product-development-v2",
+      "hashes": {
+        "rodent": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+        "profile": "ace71d564530c2a887bc59db1083669fc3e9e43e79e81b417a182f01a621a2df",
+        "simple_control": "19f83fb05f96039a34e0e9a36bf66fc841693f70d73ee2a243df42e90caf1613"
+      },
+      "overrides": {
+        "OppMobility": 105,
+        "Outposts": 110,
+        "PawnStructure": 130
+      },
+      "historical_source_sha256": "508e8ee9e092b007cce9e1bd3b6b3f615e49f2c25a7784dddf5c19a7246b1197",
+      "historical_book_digest": "ac9115a0c764feb98264822ce2ba55b0bd9993574c1375318970c8356c902d6f",
+      "qualification_run_id": 45597119305,
+      "qualification_artifact_id": 15023757504,
+      "calibration_run_id": 45513328071,
+      "calibration_artifact_id": 14985841771,
+      "calibration_report_sha256": "1ac400c8701945d208281cb495a678498d3881c1efd26ed62f3e7229f5fa06ab",
+      "release_artifact_ids": [
+        15014072640,
+        15014396814
+      ],
+      "gates": {
+        "historical_practical_strength": true,
+        "clock_play": true,
+        "style_preferences": true,
+        "reproducibility": true,
+        "full_book_games": true
+      },
+      "evidence": {
+        "screen_wdl": [
+          12,
+          12,
+          0
+        ],
+        "screen_score": 0.75,
+        "full_book_duel_wdl": [
+          2,
+          2,
+          0
+        ],
+        "anchor": "fischer",
+        "seeds": [
+          2029,
+          2030
+        ],
+        "fit_positions": 60,
+        "tune_positions": 59,
+        "tune_exact_match": 0.5423728813559322,
+        "tune_excess_cp": -1.9482758620689655,
+        "tune_style_gap": 0.03389830508474578,
+        "tune_depth_reached": 0.5932203389830508,
+        "repeat_matches": 10
+      },
+      "decision": "Product release requested by maintainer; independent replay and review of successful run 45597119305; effective upon merge and installation.",
+      "limitations": [
+        "Small four-game unclocked anchor sample; no human Elo equivalence",
+        "Reserved TEST not scored; descriptive style evidence, not identity proof",
+        "Requested depth is subject to five million node cap"
+      ],
+      "restrictions": [
+        "Any profile, depth, binary or book change requires a new qualification"
+      ]
+    },
+    "smyslov": {
+      "status": "FROZEN_GAME_ASSET",
+      "profile": "SmyslovWaveInitiative",
+      "alias": "SmyslovWaveInitiative",
+      "wave_variant": "initiative",
+      "depth": 20,
+      "period": [
+        1953,
+        1958
+      ],
+      "uci_node_cap": 5000000,
+      "internal_opening_book": false,
+      "phase_adaptive_depth": false,
+      "neural_override": false,
+      "time_control_benchmark": "10+2",
+      "release_scope": "FULL_PRODUCT",
+      "partition_version": "product-development-v2",
+      "hashes": {
+        "rodent": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+        "profile": "01a8f730fab459a516e95f1651009c5265a714d1c0cd435453fe5cbb8227f429",
+        "simple_control": "19f83fb05f96039a34e0e9a36bf66fc841693f70d73ee2a243df42e90caf1613"
+      },
+      "overrides": {
+        "OwnAttack": 115,
+        "OwnMobility": 10,
+        "PiecePressure": 110
+      },
+      "historical_source_sha256": "a92c8d5867ee78b631985da709592fd3fa2dfc15af79aac7aab7360c126d9e5a",
+      "historical_book_digest": "f14214ab17f6c98a761d94373f815311d635b5542bd26a818bd267c107c6a2d9",
+      "qualification_run_id": 45597119305,
+      "qualification_artifact_id": 15023757504,
+      "calibration_run_id": 45513328071,
+      "calibration_artifact_id": 14986561263,
+      "calibration_report_sha256": "cb3efc133a26d085305da93ec14355cd4bb1671bc973970c4348a095cceb9dc9",
+      "release_artifact_ids": [
+        15013523694,
+        15014191847
+      ],
+      "gates": {
+        "historical_practical_strength": true,
+        "clock_play": true,
+        "style_preferences": true,
+        "reproducibility": true,
+        "full_book_games": true
+      },
+      "evidence": {
+        "screen_wdl": [
+          8,
+          16,
+          0
+        ],
+        "screen_score": 0.6666666666666666,
+        "full_book_duel_wdl": [
+          2,
+          2,
+          0
+        ],
+        "anchor": "fischer",
+        "seeds": [
+          2029,
+          2030
+        ],
+        "fit_positions": 60,
+        "tune_positions": 55,
+        "tune_exact_match": 0.5272727272727272,
+        "tune_excess_cp": 3.830188679245283,
+        "tune_style_gap": 0.04090909090909091,
+        "tune_depth_reached": 0.6181818181818182,
+        "repeat_matches": 10
+      },
+      "decision": "Product release requested by maintainer; independent replay and review of successful run 45597119305; effective upon merge and installation.",
+      "limitations": [
+        "Small four-game unclocked anchor sample; no human Elo equivalence",
+        "Reserved TEST not scored; descriptive style evidence, not identity proof",
+        "Requested depth is subject to five million node cap",
+        "Derived from Simple seed; no blind identity proof"
+      ],
+      "restrictions": [
+        "Any profile, depth, binary or book change requires a new qualification"
+      ]
+    },
+    "petrosian": {
+      "status": "FROZEN_GAME_ASSET",
+      "profile": "Petrosian",
+      "alias": "Petrosian",
+      "wave_variant": "original",
+      "depth": 16,
+      "period": [
+        1963,
+        1969
+      ],
+      "uci_node_cap": 5000000,
+      "internal_opening_book": false,
+      "phase_adaptive_depth": false,
+      "neural_override": false,
+      "time_control_benchmark": "10+2",
+      "release_scope": "FULL_PRODUCT",
+      "partition_version": "product-development-v2",
+      "hashes": {
+        "rodent": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+        "profile": "e4558a9035d0e21afa9bbd453f5ded76d22fb274ca39889cf2163d7472879ef4",
+        "simple_control": "19f83fb05f96039a34e0e9a36bf66fc841693f70d73ee2a243df42e90caf1613"
+      },
+      "overrides": {},
+      "historical_source_sha256": "918e0b04d5bf2e15ca6915877a3e0e90a2ccd8a138a3353f01775a9dcabc4773",
+      "historical_book_digest": "96d467f8919afa0130ecc151abc87df4620a1ef89a28bf6cd9f055f6eedd4e22",
+      "qualification_run_id": 45597119305,
+      "qualification_artifact_id": 15023757504,
+      "calibration_run_id": 45513328071,
+      "calibration_artifact_id": 14988291153,
+      "calibration_report_sha256": "e9326db9b2c3d442fc70e06df352b6e39b90d9e97d7b45dc75a64a73b8eae80a",
+      "release_artifact_ids": [
+        15013809202,
+        15014571874
+      ],
+      "gates": {
+        "historical_practical_strength": true,
+        "clock_play": true,
+        "style_preferences": true,
+        "reproducibility": true,
+        "full_book_games": true
+      },
+      "evidence": {
+        "screen_wdl": [
+          7,
+          11,
+          6
+        ],
+        "screen_score": 0.5208333333333334,
+        "full_book_duel_wdl": [
+          4,
+          0,
+          0
+        ],
+        "anchor": "fischer",
+        "seeds": [
+          2029,
+          2030
+        ],
+        "fit_positions": 60,
+        "tune_positions": 54,
+        "tune_exact_match": 0.4444444444444444,
+        "tune_excess_cp": 7.185185185185185,
+        "tune_style_gap": 0.018518518518518517,
+        "tune_depth_reached": 0.9814814814814815,
+        "repeat_matches": 10
+      },
+      "decision": "Product release requested by maintainer; independent replay and review of successful run 45597119305; effective upon merge and installation.",
+      "limitations": [
+        "Small four-game unclocked anchor sample; no human Elo equivalence",
+        "Reserved TEST not scored; descriptive style evidence, not identity proof",
+        "Requested depth is subject to five million node cap"
+      ],
+      "restrictions": [
+        "Any profile, depth, binary or book change requires a new qualification"
+      ]
     }
   }
 }
