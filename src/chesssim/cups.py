@@ -781,14 +781,15 @@ class CupManager:
         from .competition_observer import verified_playback
         with self._lock:
             state = self._manifest(ident)
-            summary = self._state(state)
-            rows = summary["game_receipts"]
             if game_id is not None:
                 if not GAME_RX.fullmatch(game_id):
                     raise CupInput("Partida inválida")
                 live = self.observer.get(ident, game_id)
                 if live is not None:
                     return live
+            summary = self._state(state)
+            rows = summary["game_receipts"]
+            if game_id is not None:
                 entry = rows.get(game_id)
                 if entry and entry["pgn"]:
                     clock = entry["clock"]

@@ -648,12 +648,13 @@ class LeagueManager:
         from .competition_observer import verified_playback
         with self._lock:
             state = self._load(ident)
-            entries = self._ledger(state)
             cfg = state["config"]
             if game_id is not None:
                 live = self.observer.get(ident, game_id)
                 if live is not None:
                     return live
+            entries = self._ledger(state)
+            if game_id is not None:
                 entry = entries.get(game_id)
                 if entry and entry["pgn"]:
                     return verified_playback(self._dir(ident)/entry["pgn"], entry,
