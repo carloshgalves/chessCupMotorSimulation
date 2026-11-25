@@ -7,7 +7,7 @@ from chesssim.product_wave_release import (
     PRIOR, WAVE2_PRIOR, WAVE2_RUN, WAVE3_PRIOR, WAVE3_RUN, prior_binding, read_candidate, replay,
 )
 from chesssim.roster_product_wave import (
-    repair_blank_search, WAVE2, WAVE3, WAVE4, WAVE, INDIVIDUAL_SEEDS,
+    repair_blank_search, WAVE2, WAVE3, WAVE4, WAVE5, WAVE6, WAVE7, WAVE, INDIVIDUAL_SEEDS,
     TOPALOV_REPAIR, candidate_parameters, identity_comparison, shortlist_for,
 )
 from chesssim.catalog import find_player
@@ -118,3 +118,23 @@ def test_individual_control_gate_requires_behavior_difference_and_quality(monkey
         "individual16": {"style_gap": .10, "excess_cp": 3},
         "original16": {"style_gap": .03, "excess_cp": 0}})
     assert not identity_comparison(records, "individual16")["passed"]
+
+
+def test_parallel_waves_are_disjoint_and_have_unique_individual_recipes():
+    from chesssim.qualified_runtime import LEGACY_SLUGS
+    groups = (WAVE5, WAVE6, WAVE7)
+    assert all(len(set(g)) == 8 for g in groups)
+    players = set().union(*map(set, groups))
+    assert len(players) == 24
+    assert not players & (LEGACY_SLUGS | set(WAVE2) | set(WAVE3) | set(WAVE4) | set(PRIOR) | {"alekhine"})
+    signatures = set()
+    for slug in (*WAVE4, *WAVE5, *WAVE6, *WAVE7):
+        assert find_player(slug).rodent_alias is None
+        assert WAVE[slug][0] < WAVE[slug][1]
+        params = candidate_parameters(slug, "")
+        assert params["original"] == {}
+        for label in ("individual", "initiative", "restriction"):
+            signature = tuple(sorted(params[label].items()))
+            assert signature not in signatures
+            signatures.add(signature)
+    assert len(signatures) == 96

@@ -18,7 +18,7 @@ from .product_peak_profiles import split_label, summarize
 from .qualified_runtime import NODE_CAP, prepare, resolve
 from .registry import add_to_first_set
 from .roster_product_wave import (
-    PARTITION_VERSION, WAVE, WAVE2, WAVE3, INDIVIDUAL_SEEDS, PHASES, MIN_PER_PHASE, MIN_SCORE, ROOTS,
+    PARTITION_VERSION, WAVE, WAVE2, WAVE3, WAVE5, WAVE6, WAVE7, INDIVIDUAL_SEEDS, PHASES, MIN_PER_PHASE, MIN_SCORE, ROOTS,
     bound_measure, eligible_quality, identity_comparison, overlay, product_book, sample, source,
 )
 from .product_repertoires import audit
@@ -273,7 +273,7 @@ def release_recipe(first, second):
 
 def aggregate(shards, out, wave=1):
     proposals, blocked = {}, {}
-    groups = {1: (*PRIOR, "alekhine"), 2: WAVE2, 3: tuple(s for s in WAVE3 if s != "topalov"), 4: ("topalov",)}
+    groups = {1: (*PRIOR, "alekhine"), 2: WAVE2, 3: tuple(s for s in WAVE3 if s != "topalov"), 4: ("topalov",), 5: WAVE5, 6: WAVE6, 7: WAVE7}
     for slug in groups[wave]:
         docs = [json.loads((shards / f"release-{slug}-{seed}" / "release.json").read_text())
                 for seed in (2029, 2030)]
@@ -289,7 +289,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--player", choices=sorted(WAVE))
     parser.add_argument("--aggregate", type=Path)
-    parser.add_argument("--wave", type=int, choices=(1, 2, 3, 4), default=1)
+    parser.add_argument("--wave", type=int, choices=(1, 2, 3, 4, 5, 6, 7), default=1)
     parser.add_argument("--rodent", type=Path)
     parser.add_argument("--selection", type=Path)
     parser.add_argument("--final", type=Path)
