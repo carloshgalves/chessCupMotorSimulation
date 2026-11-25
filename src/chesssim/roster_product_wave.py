@@ -30,7 +30,10 @@ from .registry import add_to_first_set
 
 FROZEN = frozenset(("fischer", "tal", "karpov", "kasparov"))
 WAVE = {"alekhine": (1927, 1934), "botvinnik": (1948, 1958),
-        "smyslov": (1953, 1958), "petrosian": (1963, 1969)}
+        "smyslov": (1953, 1958), "petrosian": (1963, 1969),
+        "spassky": (1965, 1972), "lasker": (1894, 1907),
+        "rubinstein": (1907, 1914), "anand": (2007, 2013)}
+WAVE2 = ("spassky", "lasker", "rubinstein", "anand")
 DEPTHS = (12, 16, 20)
 PHASES = ("opening", "middlegame", "endgame")
 ROOTS = 12
@@ -182,6 +185,22 @@ def parameters(raw):
                             (("OppMobility", 15), ("Outposts", 10), ("PawnStructure", 10))}}
 
 
+def repair_blank_search(raw, control):
+    """Fill only empty operational options with values from pinned Simple."""
+    keys = ("Contempt", "SlowMover", "Selectivity", "SearchSkill", "BookFilter")
+    for key in keys:
+        pattern = rf"(?m)^(setoption name {key} value)[ \t]*$"
+        if not re.search(pattern, raw):
+            continue
+        values = re.findall(rf"(?m)^setoption name {key} value (-?\d+)[ \t]*$", control)
+        if len(values) != 1:
+            raise ValueError("Missing pinned search control: " + key)
+        raw, count = re.subn(pattern, lambda m: m[1] + " " + values[0], raw)
+        if count != 1:
+            raise ValueError("Ambiguous blank search parameter: " + key)
+    return raw
+
+
 def overlay(root, dest, slug):
     if (file_hash(root / "rodent-iv-plain.exe") != RODENT_HASHES["rodent"]
             or file_hash(root / "personalities/simple.txt") != RODENT_HASHES["simple"]):
@@ -196,8 +215,16 @@ def overlay(root, dest, slug):
     shutil.copytree(root, dest)
     directory = dest / "personalities"
     raw = (directory / original.profile_filename).read_text(encoding="utf-8-sig")
-    params = parameters(raw)
+    repaired = repair_blank_search(raw, (directory / "simple.txt").read_text(encoding="utf-8-sig"))
+    params = parameters(repaired)
     candidates, additions = {"original": original}, {}
+    if repaired != raw:
+        alias = original.rodent_alias + "WaveRepaired"
+        filename = alias.lower() + ".txt"
+        (directory / filename).write_text(repaired, encoding="utf-8")
+        candidates["original"] = replace(original, rodent_alias=alias, rodent_file=filename)
+        additions[alias] = filename
+    raw = repaired
     for name in ("initiative", "restriction"):
         alias = ("Smyslov" if generic_seed else original.rodent_alias) + "Wave" + name.capitalize()
         filename = alias.lower() + ".txt"
@@ -273,7 +300,8 @@ def measure(slug, root, stockfish, out):
         # final screening never promotes an ineligible candidate.
         selectable = [n for n in players if n != "original" or find_player(slug).rodent_alias]
         shortlist = [min((f"{n}{d}" for n in selectable), key=lambda k: (
-            not eligible_quality(stats[k]), stats[k]["objective"], k)) for d in DEPTHS]
+            not eligible_quality(stats[k]), stats[k]["depth_reached"] == 0,
+            stats[k]["objective"], k)) for d in DEPTHS]
         hashes = {n: file_hash(location / "personalities" / p.profile_filename) for n, p in players.items()}
         doc = {"slug": slug, "period": WAVE[slug], "partition_version": PARTITION_VERSION,
                "base_source": "individual" if find_player(slug).rodent_alias else "generic_seed_not_qualified",
@@ -382,7 +410,8 @@ def finish(slug, root, stockfish, selection, shards, out):
     doc, roots = bound_measure(slug, selection, data)
     rows = scores(slug, doc, roots, shards)
     eligible = [k for k, r in rows.items() if not r["incomplete"] and not r["flags"]
-                and r["score"] >= MIN_SCORE and eligible_quality(doc["fit_stats"][k])]
+                and r["score"] >= MIN_SCORE and eligible_quality(doc["fit_stats"][k])
+                and doc["fit_stats"][k]["depth_reached"] > 0]
     selected = min(eligible, key=lambda k: (doc["fit_stats"][k]["objective"], -rows[k]["score"], k)) if eligible else None
     report = {"slug": slug, "period": WAVE[slug], "source_sha256": doc["source_sha256"],
               "partition_version": PARTITION_VERSION, "base_source": doc["base_source"],
@@ -424,6 +453,7 @@ def finish(slug, root, stockfish, selection, shards, out):
                            "profile_sha256": doc["hashes"][name], "overrides": params[name], "depth": depth,
                            "status": ("INDIVIDUAL_CANDIDATE_REVIEW_READY" if doc["base_source"] == "generic_seed_not_qualified"
                                       else "MOTOR_BASE_REVIEW_READY") if eligible_quality(stats) and repeats == 10
+                           and stats["depth_reached"] > 0
                            else "TUNE_OR_STABILITY_FAILED"})
     atomic_json(out / "report.json", report)
     print("WAVE_RESULT", json.dumps(report, sort_keys=True), flush=True)

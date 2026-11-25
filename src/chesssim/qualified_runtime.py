@@ -16,7 +16,7 @@ from .registry import add_to_first_set, registered_aliases
 MODE = "qualified"
 VERSION = "qualified-product-v1"
 NODE_CAP = 5_000_000
-SLUGS = frozenset(("fischer", "tal", "karpov", "kasparov"))
+LEGACY_SLUGS = frozenset(("fischer", "tal", "karpov", "kasparov"))
 BOOKS = {
     "fischer": ("f6ce8e2f451e7701e3f9ea37a66a6a5688e56fa089172087218e05173fb835af", "bytes"),
     "tal": ("175706169f66e2648dcb8cc79dff50516544eaf057b9b0cc705b3cf0c798f44d", "bytes"),
@@ -30,9 +30,36 @@ PROFILE_KEYS = {"fischer": "fischer_profile", "tal": "tal_balanced_profile",
 def assets():
     doc = json.loads(files("chesssim.data").joinpath("qualified_game_assets.json").read_text())
     result = doc["players"]
-    if set(result) != SLUGS or any(a["status"] != "FROZEN_GAME_ASSET" for a in result.values()):
+    if not LEGACY_SLUGS <= set(result) or any(a["status"] != "FROZEN_GAME_ASSET" for a in result.values()):
         raise ValueError("Qualified roster is not frozen")
+    for slug in set(result) - LEGACY_SLUGS:
+        a = result[slug]
+        if (a.get("partition_version") != "product-development-v2"
+                or a.get("release_scope") != "FULL_PRODUCT"
+                or not a.get("qualification_run_id")
+                or not a.get("release_artifact_ids")
+                or len(set(a["release_artifact_ids"])) != 2
+                or not a.get("wave_variant")
+                or not a.get("historical_book_digest")
+                or not a.get("historical_source_sha256")
+                or not a.get("hashes", {}).get("profile")
+                or not a.get("alias")):
+            raise ValueError("Incomplete reviewed release: " + slug)
     return result
+
+
+SLUGS = frozenset(assets())
+for _slug, _asset in assets().items():
+    if _slug not in LEGACY_SLUGS:
+        BOOKS[_slug] = (_asset["historical_book_digest"], "digest")
+        PROFILE_KEYS[_slug] = "profile"
+
+
+def bundle_name():
+    if SLUGS == LEGACY_SLUGS:
+        return VERSION
+    raw = json.dumps(assets(), sort_keys=True, separators=(",", ":")).encode()
+    return VERSION + "-" + sha256(raw).hexdigest()[:16]
 
 
 def validate_mode(raw, slugs, *, real=True):
@@ -71,7 +98,7 @@ def prepare(root):
     from .product_repertoires import PERIODS, build, audit
     from .tal_strength_doe import render_tal_variant
     root = Path(root).resolve(strict=True)
-    target = root / VERSION
+    target = root / bundle_name()
     if target.exists() or target.is_symlink():
         raise FileExistsError(target)
     registry = assets()
@@ -95,7 +122,29 @@ def prepare(root):
         for slug, asset in registry.items():
             original = find_player(slug)
             p = player_for(slug, asset)
-            if asset.get("overrides"):
+            if slug not in LEGACY_SLUGS:
+                from .roster_product_wave import overlay, source as wave_source, product_book
+                with TemporaryDirectory(prefix="wave-profile-") as wtmp:
+                    wave_dir = Path(wtmp) / "rodent"
+                    base = Path(wtmp) / "base"
+                    base.mkdir()
+                    shutil.copy2(root / "rodent-iv-plain.exe", base / "rodent-iv-plain.exe")
+                    shutil.copytree(root / "personalities", base / "personalities")
+                    if (root / "books").is_dir():
+                        shutil.copytree(root / "books", base / "books")
+                    variants, params = overlay(base, wave_dir, slug)
+                    selected = variants[asset["wave_variant"]]
+                    if selected.rodent_alias != p.rodent_alias or params[asset["wave_variant"]] != asset["overrides"]:
+                        raise ValueError("Reviewed candidate recipe mismatch: " + slug)
+                    shutil.copy2(wave_dir / "personalities" / selected.profile_filename,
+                                 directory / p.profile_filename)
+                data = wave_source(slug)
+                if sha256(data[0]).hexdigest() != asset["historical_source_sha256"]:
+                    raise ValueError("Reviewed source changed: " + slug)
+                book = product_book(slug, data)
+            else:
+                book = build(slug, sources[slug], period=(PERIODS | PEAKS)[slug])
+            if slug in LEGACY_SLUGS and asset.get("overrides"):
                 raw = (directory / original.profile_filename).read_text(encoding="utf-8-sig")
                 renderer = render_tal_variant if slug == "tal" else render
                 (directory / p.profile_filename).write_text(
@@ -105,7 +154,6 @@ def prepare(root):
                     raise ValueError("Alias conflitante")
             else:
                 additions[p.rodent_alias] = p.profile_filename
-            book = build(slug, sources[slug], period=(PERIODS | PEAKS)[slug])
             audit(book)
             book_digest(book, slug)
             (books / (slug + ".json")).write_text(json.dumps(book, sort_keys=True), encoding="utf-8")
@@ -146,7 +194,10 @@ def resolve_bundle(folder, slugs):
 
 
 def resolve(root, slugs):
-    folder = Path(root) / VERSION
+    slugs = list(slugs)
+    folder = Path(root) / bundle_name()
+    if set(slugs) <= LEGACY_SLUGS and not folder.exists():
+        folder = Path(root) / VERSION
     return (folder, *resolve_bundle(folder, slugs))
 
 

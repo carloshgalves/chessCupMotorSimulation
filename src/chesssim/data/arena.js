@@ -19,10 +19,11 @@ function setFeedback(message, bad=false) {
   el.className = "feedback " + (bad ? "error" : "good");
 }
 function player(slug) { return roster.find(p => p.slug === slug); }
+function isQualified(slug) { return player(slug)?.qualified === true; }
 function fillPlayer(select, preferred) {
   const prior = select.value || preferred;
   const qualified = $("duel-personality").value === "qualified";
-  const eligible = p => qualified ? ["fischer","tal","karpov","kasparov"].includes(p.slug) : p.installed;
+  const eligible = p => qualified ? isQualified(p.slug) : p.installed;
   select.replaceChildren();
   for (const p of roster) {
     const option = document.createElement("option");
@@ -196,11 +197,11 @@ function updateForm() {
     $("max-plies").disabled = false;
     $("clock-note").textContent = "Duelo homologado sem relógio; fora do Elo legado.";
     $("opening-note").textContent = "Repertórios homologados; seed 2029 e busca individual.";
-    $("search-note").textContent = "Fischer, Tal e Karpov d16; Kasparov d20; 5 milhões de nós.";
+    $("search-note").textContent = "Profundidade individual homologada; 5 milhões de nós.";
   }
   $("launch").disabled = qualified ? (busy || !token || $("white").value === $("black").value ||
-    !["fischer","tal","karpov","kasparov"].includes($("white").value) ||
-    !["fischer","tal","karpov","kasparov"].includes($("black").value)) : busy || !token || !player($("white").value)?.installed ||
+    !isQualified($("white").value) ||
+    !isQualified($("black").value)) : busy || !token || !player($("white").value)?.installed ||
     !player($("black").value)?.installed || $("white").value === $("black").value;
   $("stop").disabled = !duelBusy || !token;
 }
