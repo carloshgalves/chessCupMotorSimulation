@@ -51,7 +51,7 @@ def test_replay_rejects_incomplete_and_fake_terminal(tmp_path):
 
 
 def test_wave_two_exact_artifact_bindings_and_wave_three_disjoint():
-    from chesssim.qualified_runtime import LEGACY_SLUGS, assets
+    from chesssim.qualified_runtime import LEGACY_SLUGS
     assert set(WAVE2_PRIOR) == set(WAVE2)
     assert WAVE2_RUN == 45597119316
     assert len({row[0] for row in WAVE2_PRIOR.values()}) == 4
@@ -70,7 +70,7 @@ def test_wave_two_exact_artifact_bindings_and_wave_three_disjoint():
 
 
 def test_individual_recipes_are_distinct_and_do_not_allow_simple():
-    from chesssim.qualified_runtime import SLUGS
+    from chesssim.qualified_runtime import LEGACY_SLUGS
     assert len(WAVE4) == 8
     assert not set(WAVE4) & (LEGACY_SLUGS | set(WAVE2) | set(WAVE3) | set(PRIOR) | {"alekhine"})
     signatures = set()
