@@ -1,0 +1,70 @@
+# Peak human rating — reference inventory (not motor results)
+
+Reported FIDE peaks and retrospective five-year estimates are different statistics, not interchangeable. Values are working source transcriptions, pending primary-list validation. No motor rating is inferred. Philidor remains unresolved.
+
+| Player | Nominal human rating | Year | Reference type | Motor rating | Difference | 95% CI | Status |
+|---|---:|---:|---|---:|---:|---|---|
+| alekhine | 2690 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| anand | 2817 | 2011 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| anderssen | 2600 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| aronian | 2830 | 2014 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| botvinnik | 2720 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| bronstein | 2670 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| capablanca | 2725 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| carlsen | 2882 | 2014 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| caruana | 2844 | 2014 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| chiburdanidze | 2560 | 1988 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_female_chess_grandmasters) | — | — | — | UNMEASURED |
+| chigorin | 2600 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| ding-liren | 2816 | 2018 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| euwe | 2650 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| fischer | 2785 | 1972 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| gaprindashvili | 2495 | — | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_female_chess_grandmasters) | — | — | — | UNMEASURED |
+| gelfand | 2777 | 2013 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| geller | 2655 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| gligoric | 2620 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| grischuk | 2810 | 2014 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| hou-yifan | 2686 | 2015 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_female_chess_grandmasters) | — | — | — | UNMEASURED |
+| ivanchuk | 2787 | 2007 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| judit-polgar | 2735 | 2005 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_female_chess_grandmasters) | — | — | — | UNMEASURED |
+| kamsky | 2763 | 2013 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| karjakin | 2788 | 2011 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| karpov | 2780 | 1994 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| kasparov | 2851 | 1999 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| keres | 2670 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| korchnoi | 2695 | 1979 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| kosteniuk | 2561 | 2018 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_female_chess_grandmasters) | — | — | — | UNMEASURED |
+| kramnik | 2817 | 2016 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| larsen | 2660 | 1971 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| lasker | 2720 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| leko | 2763 | 2005 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| mamedyarov | 2820 | 2018 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| marshall | 2570 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| mequinho | 2635 | 1977 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| morphy | 2690 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| najdorf | 2635 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| nakamura | 2816 | 2015 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| nepomniachtchi | 2795 | 2023 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| nimzowitsch | 2615 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| petrosian | 2680 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| philidor | — | — | [insufficient_historical_reference](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| pillsbury | 2630 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| polugaevsky | 2645 | 1972 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| portisch | 2655 | 1980 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| reshevsky | 2680 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| reti | 2550 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| rubinstein | 2640 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| shirov | 2755 | 2008 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| short | 2712 | 2004 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| smyslov | 2690 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| spassky | 2690 | 1971 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| staunton | 2520 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| steinitz | 2650 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| svidler | 2769 | 2013 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| taimanov | 2600 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| tal | 2700 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| tarrasch | 2610 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
+| timman | 2680 | 1990 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| topalov | 2816 | 2015 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| vachier-lagrave | 2819 | 2016 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| wesley-so | 2822 | 2017 | [reported_fide_peak](https://en.wikipedia.org/wiki/List_of_chess_players_by_peak_FIDE_rating) | — | — | — | UNMEASURED |
+| zukertort | 2600 | — | [retrospective_five_year](https://www.olimpbase.org/Elo/Elo_hist2.html) | — | — | — | UNMEASURED |
