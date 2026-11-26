@@ -343,6 +343,8 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
         opening_moves = {'white': 0, 'black': 0}
         started = time.monotonic()
         interrupted = None
+        from .competition_observer import publish
+        publish(game, clocks)
         if on_progress is not None:
             on_progress(game)
         for ply in range(max_plies):
@@ -512,6 +514,7 @@ def _play_one(root: Path, exe: Path, white: Player, black: Player,
                 # Standard PGN [%clk] tag: replay and monitor show actual time
                 # remaining at this ply, not a guessed rating or engine claim.
                 node.set_clock(max(0.0, clocks[idx]))
+            publish(game, clocks)
             if on_progress is not None:
                 on_progress(game)
             if clocks is not None:

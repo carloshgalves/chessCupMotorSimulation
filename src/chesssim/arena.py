@@ -618,7 +618,17 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 self._reply(403, b"Forbidden", "text/plain; charset=utf-8")
                 return
             url = urlsplit(self.path)
-            if url.path == "/api/cups/presets" and not url.query:
+            observe = re.fullmatch(r"/api/(cups|leagues)/((?:cup|league)-[a-f0-9]{16})/observe(?:/([a-z0-9-]{1,40}))?", url.path)
+            if observe and not url.query:
+                try:
+                    kind, ident, game_id = observe.groups()
+                    target = manager.cups if kind == "cups" else manager.leagues
+                    self._json(200, target.observe(ident, game_id))
+                except (CupInput, LeagueInput) as exc:
+                    self._json(404, {"error": str(exc)})
+                except (OSError, ValueError, KeyError, TypeError):
+                    self._json(503, {"error": "Observação indisponível"})
+            elif url.path == "/api/cups/presets" and not url.query:
                 self._json(200, cup_presets())
             elif url.path == "/api/cups" and not url.query:
                 try:
@@ -943,7 +953,7 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 else:
                     stream_events(self, report, manager.state)
             elif url.path in ("/", "/arena.js", "/arena.css", "/history.js", "/history_replay.js", "/history_stats.js", "/competition_rating.js", "/history.css", "/chess-board.js", "/chess-board.css", "/board-preferences.js", "/human-play.js", "/league.js", "/league.css",
-                              "/cup.js", "/cup.css", "/representation.js", "/representation.css",
+                              "/cup.js", "/cup.css", "/competition-observer.js", "/representation.js", "/representation.css",
                               "/history_archive.js", "/history_archive.css", "/my-games.js", "/my-games.css", "/viewer"):
                 asset = {"/": "arena.html", "/arena.js": "arena.js",
                          "/arena.css": "arena.css", "/history.js": "history.js",
@@ -957,6 +967,7 @@ def make_arena_handler(manager: ArenaManager, token: str):
                          "/league.js": "league.js",
                          "/league.css": "league.css",
                          "/cup.js": "cup.js", "/cup.css": "cup.css",
+                         "/competition-observer.js": "competition_observer.js",
                          "/representation.js": "representation.js",
                          "/representation.css": "representation.css",
                          "/history_archive.js": "history_archive.js",

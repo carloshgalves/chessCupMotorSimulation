@@ -409,6 +409,10 @@
       (match.black_name||match.name_black||meaningfulName(match.black)));
     const result=el("strong",null,match.result||"Pendente");
     item.append(prefix,players,result);
+    if(match.source!=="fast_statistical" && (match.pgn || match.status==="RUNNING")){
+      const watch=el("button",null,"Assistir / replay");watch.type="button";
+      watch.addEventListener("click",()=>window.CompetitionObserver.open("leagues",state.league.id,match.id||match.match_id));item.append(watch);
+    }
     if(match.source==="fast_statistical")
       item.title="Resultado sintético: não há PGN nem jogo UCI";
     else if(match.finished_utc)
@@ -446,6 +450,7 @@
     state.round=Number($("league-round-selector").value);
     state.lastRoundKey=null;drawRounds();
   });
+  $("league-observe").addEventListener("click",()=>{if(state.league)window.CompetitionObserver.open("leagues",state.league.id);});
   $("league-view-matches").addEventListener("click",()=>{
     state.round=null;setTab("rounds");
   });

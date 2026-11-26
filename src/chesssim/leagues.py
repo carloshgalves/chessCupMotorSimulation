@@ -248,6 +248,8 @@ class LeagueManager:
         if self.folder.is_symlink():
             raise ValueError("Diretório de ligas não pode ser simbólico")
         self.folder.mkdir(parents=True, exist_ok=True)
+        from .competition_observer import Observer
+        self.observer = Observer()
         self.runner = runner or default_engine_runner
         self._lock = RLock()
         self._thread: Thread | None = None
@@ -642,6 +644,34 @@ class LeagueManager:
             return {"id": ident, "round": round_number,
                     "rounds_total": len(rounds), "games": games}
 
+    def observe(self, ident, game_id=None):
+        from .competition_observer import verified_playback
+        with self._lock:
+            state = self._load(ident)
+            entries = self._ledger(state)
+            cfg = state["config"]
+            if game_id is not None:
+                live = self.observer.get(ident, game_id)
+                if live is not None:
+                    return live
+                entry = entries.get(game_id)
+                if entry and entry["pgn"]:
+                    return verified_playback(self._dir(ident)/entry["pgn"], entry,
+                                             [cfg["clock"][0]] * 2)
+                return {"status": "UNAVAILABLE"}
+            live = self.observer.ids(ident)
+            games = []
+            for rd in schedule(cfg["participants"], cfg["format"]):
+                for m in rd:
+                    entry = entries.get(m["id"])
+                    games.append({**m, "status": "COMPLETED" if entry else
+                                  "RUNNING" if m["id"] in live else "PENDING",
+                                  "pgn": bool(entry and entry["pgn"]),
+                                  "result": entry["result"] if entry else None,
+                                  "white_name": find_player(m["white"]).name,
+                                  "black_name": find_player(m["black"]).name})
+            return {"games": games, "live": live}
+
     def history(self, ident: str, *, player: str | None = None,
                 offset: int = 0, limit: int = 50) -> dict:
         with self._lock:
@@ -747,8 +777,9 @@ class LeagueManager:
                     meta = None
                     termination = "StatisticalProjection"
                 else:
-                    game, meta = self.runner(self.root, m, config,
-                                             self._shutdown.is_set)
+                    with self.observer.capture(ident, m, [config["clock"][0]] * 2):
+                        game, meta = self.runner(self.root, m, config,
+                                                 self._shutdown.is_set)
                     if self._shutdown.is_set() and meta.get("status") == "INCOMPLETE":
                         break  # Graceful shutdown; leave unproven game pending.
                     if (meta.get("status") != "COMPLETED" or

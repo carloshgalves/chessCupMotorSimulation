@@ -355,3 +355,8 @@ body:has(#cup-create-view:not([hidden])) #tab-cups{background:#145743;
   .cup-calendar-game{grid-template-columns:1fr!important;gap:3px}
   .cup-participants{grid-template-columns:1fr}
 }
+
+.competition-observer-board{width:100%;max-width:480px;margin:auto}
+.competition-observer-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.competition-observer-bar select{min-width:0;max-width:100%;flex:1}
+.cup-replay-moves button[aria-pressed="true"]{outline:2px solid #75c5d6}
