@@ -27,10 +27,22 @@ def test_inverse_on_synthetic_data():
 def test_bilateral_gate_rejects_both_directions():
     model = {"status": "VALIDATED_PROXY"}
     target = {"rating": 2700, "verified_scale": True}
-    games = [{"game": {"status": "COMPLETE", "time_forfeit": None}}]
+    games = [{"game": {"status": "COMPLETE", "time_forfeit": None}}] * 24
     for ci in ([51, 90], [-90, -51], [-80, 10], [-10, 80]):
         row = {"n": 60, "difference_ci95": ci}
         assert qualification(model, target, row, row, games) == "BILATERAL_EQUIVALENCE_NOT_ESTABLISHED"
-    row = {"n": 60, "difference_ci95": [-40, 40]}
+    row = {"n": 60, "difference_ci95": [-40, 40], "in_support": True,
+           "coverage": 1, "ci95": [2660, 2740]}
     assert qualification(model, target, row, row, games) == "REVIEW_REQUIRED_NOT_FROZEN"
     assert qualification(model, TARGETS["carlsen"], row, row, games) == "HUMAN_REFERENCE_NOT_VERIFIED"
+
+
+def test_nominal_target_and_coverage_are_required():
+    model = {"status": "VALIDATED_PROXY"}
+    target = {"rating": 2700, "verified_scale": True}
+    games = [{"game": {"status": "COMPLETE", "time_forfeit": None}}] * 24
+    row = {"n": 60, "difference_ci95": [-10, 10], "in_support": True,
+           "coverage": 1, "ci95": [2770, 2810]}
+    assert qualification(model, target, row, row, games) == "NOMINAL_TARGET_EQUIVALENCE_NOT_ESTABLISHED"
+    assert qualification(model, target, row, {**row, "in_support": False}, games) == "OUTSIDE_MODEL_SUPPORT"
+    assert qualification(model, target, row, row, games[:2]) == "COMPETITIVE_VALIDATION_FAILED"

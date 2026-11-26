@@ -369,6 +369,7 @@ def evaluate(ref, engines, cases, rows):
 
 
 def estimate(rows, role, model):
+    total = len(rows)
     rows = [r for r in rows if not r["inconsistent"]]
     if len(rows) < 12 or model["beta"] is None:
         return None
@@ -385,6 +386,9 @@ def estimate(rows, role, model):
     rating = inferred(rows, role, beta)
     human = inferred(rows, "human", beta)
     return {"motor": rating, "human": human, "difference": rating-human, "n": len(rows),
+            "total": total, "coverage": len(rows) / total,
+            "in_support": bool(model["support"][0] <= rating <= model["support"][1]
+                               and model["support"][0] <= human <= model["support"][1]),
             "ci95": np.quantile(estimates, [.025, .975]).tolist() if estimates else None,
             "difference_ci95": np.quantile(differences, [.025, .975]).tolist() if differences else None}
 
@@ -410,11 +414,16 @@ def qualification(model, target, fit, test, matches):
         return "HUMAN_REFERENCE_NOT_VERIFIED"
     if not fit or not test or test["n"] < 40 or not test["difference_ci95"]:
         return "INSUFFICIENT_INDEPENDENT_EVIDENCE"
-    if not matches or any(r["game"]["status"] != "COMPLETE" or r["game"]["time_forfeit"] for r in matches):
+    if len(matches) != 24 or any(r["game"]["status"] != "COMPLETE" or r["game"]["time_forfeit"] for r in matches):
         return "COMPETITIVE_VALIDATION_FAILED"
     low, high = test["difference_ci95"]
     if low < -MARGIN or high > MARGIN:
         return "BILATERAL_EQUIVALENCE_NOT_ESTABLISHED"
+    if not test.get("in_support") or test.get("coverage", 0) < .9:
+        return "OUTSIDE_MODEL_SUPPORT"
+    nominal_ci = [x - target["rating"] for x in test["ci95"]]
+    if nominal_ci[0] < -MARGIN or nominal_ci[1] > MARGIN:
+        return "NOMINAL_TARGET_EQUIVALENCE_NOT_ESTABLISHED"
     return "REVIEW_REQUIRED_NOT_FROZEN"
 
 
@@ -449,7 +458,15 @@ def player(slug, panel, model, root, stockfish, out):
         fit_rows = evaluate(ref, engines, cases, own["fit"])
         fit = {label: estimate(fit_rows, label, model) for label in cases}
         valid = {k: v for k, v in fit.items() if v is not None}
-        selected = min(valid, key=lambda k: abs(valid[k]["difference"])) if valid and model["status"] == "VALIDATED_PROXY" else "baseline"
+        target = TARGETS[slug]["rating"]
+        # Paired human quality is the main loss; nominal target also constrains
+        # selection only when its scale has been independently validated.
+        def objective(label):
+            value = valid[label]
+            paired = abs(value["difference"])
+            nominal = abs(value["motor"] - target) if TARGETS[slug]["verified_scale"] and target is not None else 0
+            return (max(paired, nominal), label != "baseline", label)
+        selected = min(valid, key=objective) if valid and model["status"] == "VALIDATED_PROXY" else "baseline"
         recipe = cases[selected]
         # Selection is fixed before evaluating either reserved panel.
         reserved = {selected: recipe, "baseline": baseline}
@@ -472,6 +489,26 @@ def player(slug, panel, model, root, stockfish, out):
         print("PEAK_PLAYER", json.dumps({k: report[k] for k in ("slug", "selection", "recipe", "test", "common", "status")}), flush=True)
 
 
+def clock_summary(games):
+    result = {}
+    for row in games:
+        control = str(row["control"])
+        stats = result.setdefault(control, {"wins": 0, "draws": 0, "losses": 0,
+                                            "incomplete": 0, "flags": 0})
+        game = row["game"]
+        if game["time_forfeit"]:
+            stats["flags"] += 1
+        if game["status"] != "COMPLETE":
+            stats["incomplete"] += 1
+        elif game["result"] == "1/2-1/2":
+            stats["draws"] += 1
+        elif game["result"] == ("1-0" if row["case"]["color"] == "white" else "0-1"):
+            stats["wins"] += 1
+        else:
+            stats["losses"] += 1
+    return result
+
+
 def aggregate(shards, out):
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
@@ -487,10 +524,13 @@ def aggregate(shards, out):
         rows.append({"player": slug, "nominal_human": target["rating"], "reference_kind": target["kind"],
                      "human_proxy": test.get("human"), "motor_proxy": test.get("motor"),
                      "delta": test.get("difference"), "ci95": test.get("difference_ci95"),
+                     "motor_ci95": test.get("ci95"),
+                     "nominal_delta_unverified": (test["motor"] - target["rating"]
+                                                   if test.get("motor") is not None and target["rating"] is not None else None),
                      "common_motor_proxy": common.get("motor"),
                      "baseline_motor_proxy": (doc.get("baseline_test") or {}).get("motor"),
                      "baseline_delta": (doc.get("baseline_test") or {}).get("difference"),
-                     "games": len(games),
+                     "games": len(games), "clock_results": clock_summary(games),
                      "recipe": doc.get("recipe"), "status": doc.get("status", "MISSING_EXECUTION")})
     save(out / "table.json", {"schema": SCHEMA, "players": rows, "frozen": 0})
     with (out / "table.csv").open("w", newline="") as stream:
