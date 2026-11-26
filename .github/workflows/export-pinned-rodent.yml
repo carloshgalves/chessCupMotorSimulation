@@ -1,0 +1,42 @@
+name: Export pinned Rodent runtime
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/export-pinned-rodent.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - name: Build and verify exact qualification binary
+        shell: bash
+        run: |
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/export/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/export/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities rodent-source/books "$RUNNER_TEMP/export/rodent/"
+          cd "$RUNNER_TEMP/export/rodent"
+          printf '%s  %s\n' c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95 rodent-iv-plain.exe 19f83fb05f96039a34e0e9a36bf66fc841693f70d73ee2a243df42e90caf1613 personalities/simple.txt > SHA256SUMS
+          sha256sum --check SHA256SUMS
+          file rodent-iv-plain.exe
+          ldd rodent-iv-plain.exe
+      - name: Include corresponding source
+        shell: bash
+        run: |
+          git -C rodent-source archive --format=tar.gz --prefix=rodent-source/ HEAD > "$RUNNER_TEMP/export/rodent-source.tar.gz"
+          tar -C "$RUNNER_TEMP/export" -czf "$RUNNER_TEMP/rodent-qualified-linux.tar.gz" rodent rodent-source.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rodent-qualified-linux
+          path: ${{ runner.temp }}/rodent-qualified-linux.tar.gz
+          if-no-files-found: error
+          retention-days: 7
