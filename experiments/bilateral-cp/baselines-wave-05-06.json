@@ -1,0 +1,130 @@
+{
+  "geller": {
+    "job": 139711445999,
+    "label": "restriction20",
+    "profile_sha256": "a7ec6a7d941bf198312b77896038f67fb75c8ac610b7a70e2779c1c880facff7",
+    "book_sha256": "621a49294b0fa46522538016db9371de60c3c57f4cbaf3f4846a59ddf7bc186f",
+    "source_sha256": "f7b239b626fa1bc6e1d09a17f1ab1c592a27e18a77bed3c2791105ad84bcf137",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "keres": {
+    "job": 139711446000,
+    "label": "individual20",
+    "profile_sha256": "5d59372cce52ff55aac3f0e6742d93a8135a6cd18bd57af0bfa65ba9f5b41642",
+    "book_sha256": "b501cebfccfe131769f13ca9ff47f1747b5a04ee3d40fab348f90299abed0829",
+    "source_sha256": "51d7bb5fac094c6c998b04eedbb1c24a88d12864bf749fe03ea7d8c848b372d9",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "polugaevsky": {
+    "job": 139711446009,
+    "label": "restriction16",
+    "profile_sha256": "c0b36cb9730c512fcc946a2a2fc8c15f1a59afdd09254438326e81298bf3e4d7",
+    "book_sha256": "14073fbf472a2612aebdb1acdd5ecb192e76d00a91bb18f901e034c44b2c4fa0",
+    "source_sha256": "edc857ee3ab7a776b471b564d13f6ef3e8fea1bec37a5447e10979e824d36de1",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "najdorf": {
+    "job": 139711446042,
+    "label": "restriction16",
+    "profile_sha256": "b40ac0d28bcb440741c4d93ddc4f5badfe04c9886c7d81c98b208dffeed6684c",
+    "book_sha256": "8bf2afb4d89845c9cd00cc6a4d5903cfa54b695047b99e90de08dc0f522d311e",
+    "source_sha256": "91fe5c30f00ad101e672b0fc4b42c661a5542d6773cabfb88777cf641a5c3ea6",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "bronstein": {
+    "job": 139711446048,
+    "label": "individual16",
+    "profile_sha256": "48bef89dc5cc99ee2d94e0a242554bddb98c0b5698b5e178ae4105db994d1beb",
+    "book_sha256": "ff52e5652495b6f4e933172a8e5b03f1815384240fbd011b2785fcc5803ab219",
+    "source_sha256": "97093b128c740b58739cb806f98acbb9a99af3931e12c45620ac060c46427a2d",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "timman": {
+    "job": 139711446052,
+    "label": "initiative16",
+    "profile_sha256": "b21386dc8ac54f23c75c449373674f07904f3870978783a6adb6c77e8611a25e",
+    "book_sha256": "9adc26236a73afb22ca9bdd7b3ac414b41bb556fe6f6fb9dd48dec96d2d28ce1",
+    "source_sha256": "01e91f12004eb5711cb974d6ba172aec3180cc2cf94def1e79038a3d201963c8",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "portisch": {
+    "job": 139711446067,
+    "label": "individual20",
+    "profile_sha256": "6e6725de26a827ee98661b7e42e6235fec4b8821d8f32a3b5d793c4b106f630e",
+    "book_sha256": "56f7b2a3be3023c49f4ec9a614313cf1d5163ef12293029f06d3601dd6460f5b",
+    "source_sha256": "4655ce58ce8c28a799a317bbd5e3fc2cf3b6590576115f87623c728c7063a92e",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "gligoric": {
+    "job": 139711446134,
+    "label": "individual16",
+    "profile_sha256": "96f31ace09c14a7c93227b8307a7306dca329a939e03a878015ddcb561b8a686",
+    "book_sha256": "90d66110ba8d213d3acbe84aa03b65520e5c7012ee7efe9aaf51a9b63012732e",
+    "source_sha256": "bcd1d45e1495216f20ca7a92554830111826622ea630c7413ccf6adfb4cda346",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "nakamura": {
+    "job": 139701217567,
+    "label": "individual16",
+    "profile_sha256": "713324d1e079aa7d1252b08c13055d32d76039b00491ce19436c2ace043b937b",
+    "book_sha256": "815867e73a0d52949b185e394b8e009c8a8bf9894e20c3cfed0b5001c293cb0e",
+    "source_sha256": "fa5f06830381f1bae01b300883585abac659f77514e5ec663b02a2e43bdcef28",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "vachier-lagrave": {
+    "job": 139701217571,
+    "label": "individual16",
+    "profile_sha256": "81cee66145946599736501c9a2da005b50e561f8e1ddf9cf2515374c7ff607f0",
+    "book_sha256": "f53871953ef263767bcb7d78c52e659d9020fafc9c368b401b76834d23c745fb",
+    "source_sha256": "0535ad92a2b4e39d8dfcadb00d97106ab14776e1391b807a52e087364d9e0184",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "caruana": {
+    "job": 139701217585,
+    "label": "restriction16",
+    "profile_sha256": "50446d55be1459dc103afe76c156dcf0b61adc910e2f0c4e84af5e98f250261a",
+    "book_sha256": "cf2b755de50896a32190d7500200fd7cce49962e40dede9e1f8541140000bf42",
+    "source_sha256": "a44d5feeecb6fdbec9d47adff5cdfc10685cd414ff02d8177c192f352752be7d",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "wesley-so": {
+    "job": 139701217596,
+    "label": "individual16",
+    "profile_sha256": "4d9800039c4515bffee9f6848e6b252930d7113a4a7a657e928de86e8df5c27b",
+    "book_sha256": "3dfd6f0bbd3927f02c592c0c91ff4c3f9aaa1ac9dd1d54467364c507fd9cdcea",
+    "source_sha256": "4ad8ee5a93709c6066189201654b7688bebd261b0305d03a8fe6e09aaecc1fef",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "nepomniachtchi": {
+    "job": 139701217604,
+    "label": "individual20",
+    "profile_sha256": "68880c6fb455edebc81eea30691cfb8a2f91be50f0a85136189f9fca911d8f1f",
+    "book_sha256": "2bb9cd9314c7314eede25b18eb5c0b2c0a01aee03cf7cb094e16e9f87922bb44",
+    "source_sha256": "85b1efdac8574e6a8b69e35d96d9305c0fc9089d64873dcf0f8a707b7b1c9459",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "mamedyarov": {
+    "job": 139701217619,
+    "label": "initiative16",
+    "profile_sha256": "03186867a60496b78062352ae2966e56c3ef8b96e857ba7fd2021a871c13f04e",
+    "book_sha256": "22b8923b0698ead88fc9f0832850d6dedb31d917b0360fcbd833bd7049a23558",
+    "source_sha256": "1e39ec051ee3ec870be181719eb883e88e6ac27f3b28534477b4ed1677d613fc",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "aronian": {
+    "job": 139701217684,
+    "label": "restriction20",
+    "profile_sha256": "bd519c98db73292cdd34d2925de73e60541b395201c0b71f085d6531c8135aa5",
+    "book_sha256": "04254fe42dbcfb608a5cc5be4fc8b098094aadc9f0e2a21cf03c93fa76e25763",
+    "source_sha256": "3649e10b5a96bacdc6388a1b38521e07ed899429577ad3cd39715470992971b5",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "grischuk": {
+    "job": 139701217694,
+    "label": "initiative20",
+    "profile_sha256": "2c513a19a4e17d71a090446674a34432b4a4c075712ec3d910e6b356f06f5281",
+    "book_sha256": "4345028a5881854e541482eeb0dfac17868a709e69598a7ccfed67bd252a986d",
+    "source_sha256": "0ae605ccce571c734ce32e3c83ea28ba260aa009168ff55b4c751c77ab34be1c",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  }
+}
