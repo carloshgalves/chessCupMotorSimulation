@@ -1,0 +1,134 @@
+name: Bilateral peak human Elo calibration
+on:
+  pull_request:
+    paths:
+      - 'src/chesssim/peak_elo_*.py'
+      - 'tests/test_peak_elo_calibration.py'
+      - '.github/workflows/peak-human-elo.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: peak-human-elo-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: pip install -e . numpy
+      - run: pip install pytest && pytest -q tests/test_peak_elo_calibration.py
+      - run: python -m chesssim.peak_elo_calibration corpus --out evidence/panel.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: peak-human-corpus
+          path: evidence/panel.json
+  calibration:
+    needs: corpus
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        index: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: pip install -e . numpy
+      - run: sudo apt-get update && sudo apt-get install -y stockfish
+      - uses: actions/download-artifact@v4
+        with:
+          name: peak-human-corpus
+          path: evidence
+      - run: python -m chesssim.peak_elo_calibration shard --panel evidence/panel.json --stockfish /usr/games/stockfish --index ${{ matrix.index }} --out calibration/rows.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: calibration-${{ matrix.index }}
+          path: calibration/rows.json
+  model:
+    needs: calibration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: pip install -e . numpy
+      - uses: actions/download-artifact@v4
+        with:
+          name: peak-human-corpus
+          path: evidence
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: calibration-*
+          path: shards
+      - run: python -m chesssim.peak_elo_calibration calibrate --panel evidence/panel.json --shards shards --out model/model.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: peak-elo-model
+          path: model/model.json
+  players:
+    needs: model
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        player: [steinitz, lasker, capablanca, alekhine, euwe, botvinnik, smyslov, tal, petrosian, spassky, fischer, karpov, kasparov, kramnik, anand, carlsen, ding-liren, mequinho, mamedyarov, vachier-lagrave, grischuk, topalov, philidor, staunton, anderssen, morphy, zukertort, chigorin, pillsbury, tarrasch, marshall, rubinstein, nimzowitsch, reti, keres, bronstein, reshevsky, najdorf, geller, korchnoi, larsen, portisch, taimanov, polugaevsky, gligoric, ivanchuk, timman, short, kamsky, shirov, gelfand, leko, svidler, aronian, caruana, nakamura, karjakin, nepomniachtchi, wesley-so, kosteniuk, gaprindashvili, chiburdanidze, judit-polgar, hou-yifan]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: pip install -e . numpy
+      - run: sudo apt-get update && sudo apt-get install -y stockfish
+      - uses: actions/download-artifact@v4
+        with:
+          name: peak-human-corpus
+          path: evidence
+      - uses: actions/download-artifact@v4
+        with:
+          name: peak-elo-model
+          path: evidence
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - run: |
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities rodent-source/books "$RUNNER_TEMP/rodent/"
+      - run: python -m chesssim.peak_elo_calibration player --player ${{ matrix.player }} --panel evidence/panel.json --model evidence/model.json --stockfish /usr/games/stockfish --rodent "$RUNNER_TEMP/rodent" --out result/report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: peak-${{ matrix.player }}
+          path: result/report.json
+  table:
+    if: always()
+    needs: [corpus, calibration, model, players]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: pip install -e . numpy
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: peak-*
+          path: shards
+      - run: python -m chesssim.peak_elo_calibration aggregate --shards shards --out table
+      - uses: actions/upload-artifact@v4
+        with:
+          name: peak-elo-table
+          path: table/

@@ -7,7 +7,6 @@ import argparse
 import csv
 import io
 import json
-import math
 import shutil
 import tempfile
 from urllib.request import Request, urlopen
