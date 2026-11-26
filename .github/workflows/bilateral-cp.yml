@@ -1,11 +1,5 @@
 name: Bilateral CP qualification of all 64 historical players
 on:
-  pull_request:
-    paths:
-      - 'src/chesssim/bilateral_cp.py'
-      - 'tests/test_bilateral_cp.py'
-      - 'experiments/bilateral-cp/**'
-      - '.github/workflows/bilateral-cp.yml'
   workflow_dispatch:
 permissions:
   contents: read

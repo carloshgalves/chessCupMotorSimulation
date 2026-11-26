@@ -188,6 +188,14 @@ def profile_bytes(location, player):
     return (location / "personalities" / player.profile_filename).read_bytes()
 
 
+def variant_alias(base, label):
+    """Rodent PERSALIAS_ALEN=32 includes the C string terminator."""
+    name = base + "Cp" + label.title()
+    if len(name.encode("utf-8")) <= 31:
+        return name
+    return "Cp" + sha256(name.encode("utf-8")).hexdigest()[:24]
+
+
 def prepare(root, dest, slug, prior):
     for name, path in (("rodent", root / "rodent-iv-plain.exe"), ("simple", root / "personalities/simple.txt")):
         if file_hash(path) != RODENT_HASHES[name]:
@@ -238,8 +246,10 @@ def prepare(root, dest, slug, prior):
                 if new >= 0 and new != old:
                     params[key] = new
         if params:
-            alias = p.rodent_alias + "Cp" + label.title()
+            alias = variant_alias(p.rodent_alias, label)
             filename = alias.lower() + ".txt"
+            if alias in registered_aliases(directory / "basic.ini") or alias in additions or (directory / filename).exists():
+                raise ValueError("CP alias or filename collision")
             (directory / filename).write_text(render(raw, params), encoding="utf-8", newline="\n")
             players[label] = replace(p, rodent_alias=alias, rodent_file=filename)
             additions[alias] = filename

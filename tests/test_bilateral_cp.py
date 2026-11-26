@@ -1,5 +1,5 @@
 from chesssim.bilateral_cp import (
-    PHASES, MARGIN, PREFERRED, gate, stats, select, fit_eligible, baseline_inventory, recipes, partition,
+    PHASES, MARGIN, PREFERRED, gate, stats, select, fit_eligible, baseline_inventory, recipes, partition, variant_alias,
 )
 from chesssim.catalog import load_roster
 from chesssim.qualified_runtime import assets
@@ -88,3 +88,11 @@ def test_fit_requires_bilateral_phase_and_severe_support():
     assert not fit_eligible({**base, "delta_cp": 6})
     assert not fit_eligible({**base, "phase_delta": {"opening": 12, "middlegame": -12, "endgame": 0}})
     assert not fit_eligible({**base, "coverage": .4})
+
+
+def test_rodent_alias_limit_and_stable_existing_names():
+    assert variant_alias("TalBalanced", "toward") == "TalBalancedCpToward"
+    names = [variant_alias(base, label) for base in ("CapablancaWaveIndividual", "BotvinnikWaveRestriction", "DingLirenWaveRestriction") for label in ("toward", "away")]
+    assert len(set(names)) == 6
+    assert all(len(n.encode("utf-8")) <= 31 for n in names)
+    assert variant_alias("CapablancaWaveIndividual", "toward") == names[0]
