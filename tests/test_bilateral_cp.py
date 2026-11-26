@@ -1,5 +1,5 @@
 from chesssim.bilateral_cp import (
-    PHASES, MARGIN, PREFERRED, gate, stats, select, baseline_inventory, recipes, partition,
+    PHASES, MARGIN, PREFERRED, gate, stats, select, fit_eligible, baseline_inventory, recipes, partition,
 )
 from chesssim.catalog import load_roster
 from chesssim.qualified_runtime import assets
@@ -63,9 +63,8 @@ def test_selection_minimizes_signed_absolute_error():
 def test_baseline_inventory_and_recipes():
     old = set(assets())
     pending = set(baseline_inventory())
-    assert len(old) == 20 and len(pending) == 44
+    assert len(pending) == 44
     assert old | pending == {p.slug for p in load_roster()}
-    assert not old & pending
     cases = recipes({"frozen": None, "toward": None, "away": None}, ("frozen", 16, 5_000_000))
     assert cases["baseline"] == ("frozen", 16, 5_000_000)
     assert len(set(cases.values())) == len(cases)
@@ -80,3 +79,12 @@ def test_global_test_preserved_for_every_player():
         gid = f"{i:064x}"
         arms = {partition(p.slug, gid) == "excluded_test" for p in load_roster()}
         assert len(arms) == 1
+
+
+def test_fit_requires_bilateral_phase_and_severe_support():
+    base = stats(sample(0), "motor")
+    assert fit_eligible(base)
+    assert not fit_eligible({**base, "delta_cp": -6})
+    assert not fit_eligible({**base, "delta_cp": 6})
+    assert not fit_eligible({**base, "phase_delta": {"opening": 12, "middlegame": -12, "endgame": 0}})
+    assert not fit_eligible({**base, "coverage": .4})

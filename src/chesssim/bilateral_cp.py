@@ -16,7 +16,7 @@ import shutil
 import chess
 import chess.engine
 
-from .adaptive_quality_parity import STOCKFISH_SHA, adaptive_reference, _policy_metric
+from .adaptive_quality_parity import STOCKFISH_SHA, adaptive_reference, _policy_metric, _disagree, DEPTHS as REF_DEPTHS
 from .catalog import find_player, load_roster, Player
 from .fischer_baseline import phase
 from .fischer_final_gate import RODENT_HASHES, play_clock, validate_clock
@@ -77,8 +77,9 @@ def baseline_inventory(folder=BASELINE_DIR):
         if set(rows) & set(data):
             raise ValueError("Duplicate baseline")
         data.update(rows)
-    if set(data) != {p.slug for p in load_roster()} - set(assets()):
-        raise ValueError("Baseline inventory must cover exactly the nonfrozen roster")
+    roster = {p.slug for p in load_roster()}
+    if set(data) - roster or set(data) | set(assets()) != roster:
+        raise ValueError("Baseline inventory must cover the roster")
     return data
 
 
@@ -90,6 +91,8 @@ def historical(slug, prior):
     if slug in PIONEERS:
         source_hash, merged_hash, count = PIONEERS[slug]
         extra = fetch(slug)
+        if prior.get("source_sha256") != sha256(data[0]).hexdigest():
+            raise ValueError("Original pioneer archive changed")
         if sha256(extra).hexdigest() != source_hash:
             raise ValueError("Supplemental archive changed")
         merged, provenance = merge_standard(slug, [(data[3], data[0]), (SOURCES[slug], extra)])
@@ -365,13 +368,21 @@ def gate(s):
     return "EXCELLENT" if abs(s["delta_cp"]) <= PREFERRED else "COMPATIBLE"
 
 
+def fit_eligible(s):
+    return (s["delta_cp"] is not None and abs(s["delta_cp"]) <= MARGIN
+            and s["coverage"] >= MIN_COVERAGE and min(s["phase_support"].values()) >= 12
+            and max(abs(v) for v in s["phase_delta"].values()) <= PHASE_MARGIN
+            and abs(s["severe_gap"]) <= MAX_SEVERE_GAP and abs(s["mate_gap"]) <= MAX_MATE_GAP)
+
+
 def select(results):
     def order(key):
         s = results[key]
         if s["delta_cp"] is None:
-            return (True, float("inf"), float("inf"), key)
+            return (True, True, True, float("inf"), float("inf"), key != "baseline", key)
         phase_gap = max(abs(v) for v in s["phase_delta"].values())
         invalid = (s["coverage"] < MIN_COVERAGE or min(s["phase_support"].values()) < 12
+                   or phase_gap > PHASE_MARGIN
                    or abs(s["severe_gap"]) > MAX_SEVERE_GAP or abs(s["mate_gap"]) > MAX_MATE_GAP)
         # Optimize absolute gap, not the direction of strength.
         return (invalid, abs(s["delta_cp"]) > MARGIN, abs(s["delta_cp"]) > PREFERRED,
@@ -430,7 +441,16 @@ def verify_rows(rows, expected, labels):
             raise ValueError("Measurement policies mismatch")
         if any(m not in {v.uci() for v in board.legal_moves} for m in r["moves"].values()):
             raise ValueError("Illegal recorded choice")
-        final = r["reference"][-1]
+        history = r["reference"]
+        if not history or [step["depth"] for step in history] != list(REF_DEPTHS[:len(history)]):
+            raise ValueError("Invalid reference-depth sequence")
+        for step in history:
+            ranked = step["ranked"]
+            if len(ranked) != 2 or step["inconsistent"] != _disagree(ranked, step["evals"]):
+                raise ValueError("Reference stability mismatch")
+        if any(not step["inconsistent"] for step in history[:-1]) or (history[-1]["inconsistent"] and len(history) != len(REF_DEPTHS)):
+            raise ValueError("Invalid adaptive reference termination")
+        final = history[-1]
         best = final["evals"][final["ranked"][0]["move"]]
         scores = {k: _policy_metric(best, final["evals"][move]) for k, move in r["moves"].items()}
         if scores != r["scores"] or r["stable"] != (not final["inconsistent"]):
@@ -472,6 +492,8 @@ def reserved(slug, root, stockfish, selection, out):
         result = stats(rows, "candidate", bootstrap=True)
         base_result = stats(rows, "baseline", bootstrap=True)
         status = gate(result)
+        if status in ("EXCELLENT", "COMPATIBLE") and not fit_eligible(doc["fit"][selected]):
+            status = "FIT_COMPATIBILITY_NOT_ESTABLISHED"
         recipe = locked["candidate"]
         profile = profile_bytes(dest, players[recipe[0]])
         repeats = []
@@ -535,9 +557,38 @@ def aggregate(shards, out):
         if computed != r["candidate_test"] or stats(rows, "baseline", bootstrap=True) != r["baseline_test"]:
             raise ValueError("Reserved statistics mismatch")
         status = r["status"]
+        fit_path = Path(shards) / f"cp-fit-{slug}" / "selection.json"
+        if not fit_path.exists() or file_hash(fit_path) != r["selection_sha256"]:
+            raise ValueError("Missing or mismatched selection artifact")
+        selection = load(fit_path)
+        prior = baseline_inventory().get(slug, {})
+        data, _ = historical(slug, prior)
+        panels, roots = panel(slug, data)
+        if (selection["slug"] != slug or selection["source_sha256"] != r["source_sha256"]
+                or sha256(data[0]).hexdigest() != r["source_sha256"]
+                or digest(panels["fit"]) != selection["fit_panel_sha256"]
+                or digest(panels["excluded_test"]) != r["test_panel_sha256"]):
+            raise ValueError("Aggregate source/panel mismatch")
+        verify_rows(selection["rows"], panels["fit"], selection["cases"])
+        verify_rows(rows, panels["excluded_test"], ("baseline", "candidate"))
+        summary = {k: stats(selection["rows"], k) for k in selection["cases"]}
+        if (summary != selection["fit"] or r["fit"] != summary
+                or select(summary) != r["selected"] or r["selected"] != selection["selected"]
+                or selection["cases"][r["selected"]] != r["recipe"]
+                or selection["profiles"][r["selected"]] != r["profile_sha256"]
+                or selection["book"] != r["book"] or selection["book_info"] != r["book_info"]):
+            raise ValueError("Aggregate locked recipe mismatch")
+        expected_book, expected_info = historical_book(slug, data, prior)
+        if expected_book != r["book"] or expected_info != r["book_info"]:
+            raise ValueError("Aggregate repertoire mismatch")
         if status in ("EXCELLENT", "COMPATIBLE"):
+            if not fit_eligible(summary[r["selected"]]):
+                raise ValueError("FIT compatibility absent")
             if gate(computed) != status or len(r["repeats"]) != 10 or not all(r["repeats"]) or len(r["games"]) != 4:
                 raise ValueError("Invalid positive gate")
+            expected_cases = {(root["id"], color) for root in roots[:2] for color in ("white", "black")}
+            if {(g["root"]["id"], g["case"]["color"]) for g in r["games"]} != expected_cases:
+                raise ValueError("Missing paired game roots/colors")
             for g in r["games"]:
                 validate_clock(g["game"], g["case"], g["root"])
                 if g["game"]["status"] != "COMPLETE" or g["game"]["time_forfeit"]:

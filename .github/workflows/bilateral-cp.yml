@@ -111,6 +111,11 @@ jobs:
         with:
           pattern: cp-reserved-*
           path: shards
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: cp-fit-*
+          path: shards
       - run: python -m chesssim.bilateral_cp aggregate --shards shards --out table
       - uses: actions/upload-artifact@v4
         with:
