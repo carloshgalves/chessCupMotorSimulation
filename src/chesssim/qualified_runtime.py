@@ -123,21 +123,36 @@ def prepare(root):
             original = find_player(slug)
             p = player_for(slug, asset)
             if slug not in LEGACY_SLUGS:
-                from .roster_product_wave import overlay, source as wave_source, product_book
-                with TemporaryDirectory(prefix="wave-profile-") as wtmp:
-                    wave_dir = Path(wtmp) / "rodent"
-                    base = Path(wtmp) / "base"
-                    base.mkdir()
-                    shutil.copy2(root / "rodent-iv-plain.exe", base / "rodent-iv-plain.exe")
-                    shutil.copytree(root / "personalities", base / "personalities")
-                    if (root / "books").is_dir():
-                        shutil.copytree(root / "books", base / "books")
-                    variants, params = overlay(base, wave_dir, slug)
-                    selected = variants[asset["wave_variant"]]
-                    if selected.rodent_alias != p.rodent_alias or params[asset["wave_variant"]] != asset["overrides"]:
-                        raise ValueError("Reviewed candidate recipe mismatch: " + slug)
-                    shutil.copy2(wave_dir / "personalities" / selected.profile_filename,
-                                 directory / p.profile_filename)
+                from .roster_product_wave import overlay, source as wave_source, product_book, repair_blank_search
+                if slug == "topalov" and asset["wave_variant"] == "balanced":
+                    # Freeze the recovered recipe independently of experimental
+                    # shortlist changes. This is the same repair/render sequence
+                    # used by the successful Topalov calibration and release.
+                    control = root / "personalities/simple.txt"
+                    if file_hash(control) != asset["hashes"]["simple_control"]:
+                        raise ValueError("Reviewed Simple control changed")
+                    validate(root, original, original)
+                    raw = (root / "personalities" / original.profile_filename).read_text(encoding="utf-8-sig")
+                    repaired = repair_blank_search(raw, control.read_text(encoding="utf-8-sig"))
+                    if p.rodent_alias != original.rodent_alias + "WaveBalanced":
+                        raise ValueError("Reviewed Topalov alias mismatch")
+                    (directory / p.profile_filename).write_text(
+                        render(repaired, asset["overrides"]), encoding="utf-8")
+                else:
+                    with TemporaryDirectory(prefix="wave-profile-") as wtmp:
+                        wave_dir = Path(wtmp) / "rodent"
+                        base = Path(wtmp) / "base"
+                        base.mkdir()
+                        shutil.copy2(root / "rodent-iv-plain.exe", base / "rodent-iv-plain.exe")
+                        shutil.copytree(root / "personalities", base / "personalities")
+                        if (root / "books").is_dir():
+                            shutil.copytree(root / "books", base / "books")
+                        variants, params = overlay(base, wave_dir, slug)
+                        selected = variants[asset["wave_variant"]]
+                        if selected.rodent_alias != p.rodent_alias or params[asset["wave_variant"]] != asset["overrides"]:
+                            raise ValueError("Reviewed candidate recipe mismatch: " + slug)
+                        shutil.copy2(wave_dir / "personalities" / selected.profile_filename,
+                                     directory / p.profile_filename)
                 data = wave_source(slug)
                 if sha256(data[0]).hexdigest() != asset["historical_source_sha256"]:
                     raise ValueError("Reviewed source changed: " + slug)

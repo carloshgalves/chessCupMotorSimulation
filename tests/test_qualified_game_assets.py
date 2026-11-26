@@ -13,7 +13,9 @@ def test_explicitly_qualified_motor_bases_are_frozen():
     assert manifest["schema"]=="chesssim-qualified-game-assets-v1"
     assert set(manifest["players"])=={"fischer", "tal", "karpov", "kasparov",
                                       "alekhine", "botvinnik", "smyslov", "petrosian",
-                                      "spassky", "lasker", "rubinstein", "anand"}
+                                      "spassky", "lasker", "rubinstein", "anand",
+                                      "steinitz", "anderssen", "tarrasch", "marshall",
+                                      "nimzowitsch", "reti", "larsen", "topalov"}
     f=manifest["players"]["fischer"]
     assert f["status"]=="FROZEN_GAME_ASSET"
     assert f["depth"]==FOCAL_DEPTH==16
@@ -72,3 +74,32 @@ def test_wave_two_release_provenance_and_gates():
         assert sum(a["evidence"]["full_book_duel_wdl"]) == 4
         assert a["evidence"]["screen_score"] >= .40
         assert a["evidence"]["repeat_matches"] == 10
+
+
+def test_wave_three_release_provenance_and_gates():
+    from chesssim.qualified_runtime import assets
+    evidence = json.loads((Path(__file__).resolve().parents[1] /
+                           "docs/evidence/wave-03-release-results.json").read_text())
+    expected = {"steinitz", "anderssen", "tarrasch", "marshall",
+                "nimzowitsch", "reti", "larsen", "topalov"}
+    reports = evidence["reports"]
+    assert len(reports) == 16
+    assert {r["slug"] for r in reports} == expected
+    for slug in expected:
+        a = assets()[slug]
+        rs = sorted((r for r in reports if r["slug"] == slug), key=lambda r: r["seed"])
+        assert [r["seed"] for r in rs] == [2029, 2030]
+        assert a["release_artifact_ids"] == [r["artifact_id"] for r in rs]
+        assert a["qualification_run_id"] == rs[0]["run_id"] == rs[1]["run_id"]
+        assert a["qualification_artifact_id"] == evidence["aggregate_artifacts"][str(rs[0]["run_id"])]
+        assert all(r["calibration_report_sha256"] == a["calibration_report_sha256"] for r in rs)
+        assert all(r["alias"] == a["alias"] for r in rs)
+        assert all(a["gates"].values())
+        assert a["evidence"]["screen_score"] >= .40
+        assert sum(a["evidence"]["screen_wdl"]) == 24
+        assert sum(a["evidence"]["full_book_duel_wdl"]) == 4
+        assert a["evidence"]["repeat_matches"] == 10
+        assert all(r["status"] == "FULL_PRODUCT_REVIEW_READY" for r in rs)
+        assert all(len(r["games"]) == 2 for r in rs)
+    assert assets()["topalov"]["wave_variant"] == "balanced"
+    assert assets()["topalov"]["depth"] == 20

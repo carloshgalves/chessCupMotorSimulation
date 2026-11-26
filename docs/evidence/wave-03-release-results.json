@@ -1,0 +1,681 @@
+{
+  "schema": "wave-03-release-log-evidence-v1",
+  "aggregate_artifacts": {
+    "45694933683": 15065387366,
+    "45694933667": 15079127703
+  },
+  "reports": [
+    {
+      "job_id": 139489739196,
+      "artifact_id": 15059899433,
+      "run_id": 45694933683,
+      "alias": "Anderssen",
+      "anchor": "fischer",
+      "calibration_report_sha256": "829e1755d9feea5a24a8662dfe9727722095d88b725b913ca1007cbb3786a65a",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "games": [
+        {
+          "black": "fischer",
+          "counts": {
+            "anderssen_book": 2,
+            "anderssen_uci": 71,
+            "fischer_book": 1,
+            "fischer_uci": 72
+          },
+          "plies": 146,
+          "result": "0-1",
+          "white": "anderssen"
+        },
+        {
+          "black": "anderssen",
+          "counts": {
+            "anderssen_book": 8,
+            "anderssen_uci": 113,
+            "fischer_book": 5,
+            "fischer_uci": 117
+          },
+          "plies": 243,
+          "result": "1/2-1/2",
+          "white": "fischer"
+        }
+      ],
+      "prior_artifact": 15049399796,
+      "prior_run": 45633448337,
+      "profile_filename": "anderssen.txt",
+      "promotion": "REQUIRES_EXPLICIT_REGISTRY_COMMIT",
+      "seed": 2029,
+      "slug": "anderssen",
+      "status": "FULL_PRODUCT_REVIEW_READY"
+    },
+    {
+      "job_id": 139489739034,
+      "artifact_id": 15061127226,
+      "run_id": 45694933683,
+      "alias": "Anderssen",
+      "anchor": "fischer",
+      "calibration_report_sha256": "829e1755d9feea5a24a8662dfe9727722095d88b725b913ca1007cbb3786a65a",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "games": [
+        {
+          "black": "fischer",
+          "counts": {
+            "anderssen_book": 2,
+            "anderssen_uci": 99,
+            "fischer_book": 4,
+            "fischer_uci": 96
+          },
+          "plies": 201,
+          "result": "1-0",
+          "white": "anderssen"
+        },
+        {
+          "black": "anderssen",
+          "counts": {
+            "anderssen_book": 4,
+            "anderssen_uci": 76,
+            "fischer_book": 5,
+            "fischer_uci": 76
+          },
+          "plies": 161,
+          "result": "1-0",
+          "white": "fischer"
+        }
+      ],
+      "prior_artifact": 15049399796,
+      "prior_run": 45633448337,
+      "profile_filename": "anderssen.txt",
+      "promotion": "REQUIRES_EXPLICIT_REGISTRY_COMMIT",
+      "seed": 2030,
+      "slug": "anderssen",
+      "status": "FULL_PRODUCT_REVIEW_READY"
+    },
+    {
+      "job_id": 139489739282,
+      "artifact_id": 15062546720,
+      "run_id": 45694933683,
+      "alias": "LarsenWaveInitiative",
+      "anchor": "fischer",
+      "calibration_report_sha256": "f0b63f9b8aad844f006219d50bdc256113b52c5599b17b772195b4912e74aceb",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "games": [
+        {
+          "black": "fischer",
+          "counts": {
+            "fischer_book": 2,
+            "fischer_uci": 69,
+            "larsen_book": 3,
+            "larsen_uci": 69
+          },
+          "plies": 143,
+          "result": "1-0",
+          "white": "larsen"
+        },
+        {
+          "black": "larsen",
+          "counts": {
+            "fischer_book": 1,
+            "fischer_uci": 135,
+            "larsen_book": 3,
+            "larsen_uci": 133
+          },
+          "plies": 272,
+          "result": "1/2-1/2",
+          "white": "fischer"
+        }
+      ],
+      "prior_artifact": 15050556789,
+      "prior_run": 45633448337,
+      "profile_filename": "larsenwaveinitiative.txt",
+      "promotion": "REQUIRES_EXPLICIT_REGISTRY_COMMIT",
+      "seed": 2029,
+      "slug": "larsen",
+      "status": "FULL_PRODUCT_REVIEW_READY"
+    },
+    {
+      "job_id": 139489738932,
+      "artifact_id": 15062651536,
+      "run_id": 45694933683,
+      "alias": "LarsenWaveInitiative",
+      "anchor": "fischer",
+      "calibration_report_sha256": "f0b63f9b8aad844f006219d50bdc256113b52c5599b17b772195b4912e74aceb",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "games": [
+        {
+          "black": "fischer",
+          "counts": {
+            "fischer_book": 4,
+            "fischer_uci": 90,
+            "larsen_book": 6,
+            "larsen_uci": 88
+          },
+          "plies": 188,
+          "result": "0-1",
+          "white": "larsen"
+        },
+        {
+          "black": "larsen",
+          "counts": {
+            "fischer_book": 8,
+            "fischer_uci": 64,
+            "larsen_book": 8,
+            "larsen_uci": 63
+          },
+          "plies": 143,
+          "result": "1-0",
+          "white": "fischer"
+        }
+      ],
+      "prior_artifact": 15050556789,
+      "prior_run": 45633448337,
+      "profile_filename": "larsenwaveinitiative.txt",
+      "promotion": "REQUIRES_EXPLICIT_REGISTRY_COMMIT",
+      "seed": 2030,
+      "slug": "larsen",
+      "status": "FULL_PRODUCT_REVIEW_READY"
+    },
+    {
+      "job_id": 139489738824,
+      "artifact_id": 15060462441,
+      "run_id": 45694933683,
+      "alias": "Marshall",
+      "anchor": "fischer",
+      "calibration_report_sha256": "f8dd7b92d4cc2a67c222a44ab95423e31e3f76eedf001c9da2ac5fb899bdf994",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "games": [
+        {
+          "black": "fischer",
+          "counts": {
+            "fischer_book": 2,
+            "fischer_uci": 108,
+            "marshall_book": 2,
+            "marshall_uci": 108
+          },
+          "plies": 220,
+          "result": "0-1",
+          "white": "marshall"
+        },
+        {
+          "black": "marshall",
+          "counts": {
+            "fischer_book": 5,
+            "fischer_uci": 93,
+            "marshall_book": 8,
+            "marshall_uci": 90
+          },
+          "plies": 196,
+          "result": "0-1",
+          "white": "fischer"
+        }
+      ],
+      "prior_artifact": 15049839584,
+      "prior_run": 45633448337,
+      "profile_filename": "marshall.txt",
+      "promotion": "REQUIRES_EXPLICIT_REGISTRY_COMMIT",
+      "seed": 2029,
+      "slug": "marshall",
+      "status": "FULL_PRODUCT_REVIEW_READY"
+    },
+    {
+      "job_id": 139489739302,
+      "artifact_id": 15062045719,
+      "run_id": 45694933683,
+      "alias": "Marshall",
+      "anchor": "fischer",
+      "calibration_report_sha256": "f8dd7b92d4cc2a67c222a44ab95423e31e3f76eedf001c9da2ac5fb899bdf994",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "games": [
+        {
+          "black": "fischer",
+          "counts": {
+            "fischer_book": 8,
+            "fischer_uci": 122,
+            "marshall_book": 2,
+            "marshall_uci": 129
+          },
+          "plies": 261,
+          "result": "1-0",
+          "white": "marshall"
+        },
+        {
+          "black": "marshall",
+          "counts": {
+            "fischer_book": 7,
+            "fischer_uci": 79,
+            "marshall_book": 8,
+            "marshall_uci": 77
+          },
+          "plies": 171,
+          "result": "1-0",
+          "white": "fischer"
+        }
+      ],
+      "prior_artifact": 15049839584,
+      "prior_run": 45633448337,
+      "profile_filename": "marshall.txt",
+      "promotion": "REQUIRES_EXPLICIT_REGISTRY_COMMIT",
+      "seed": 2030,
+      "slug": "marshall",
+      "status": "FULL_PRODUCT_REVIEW_READY"
+    },
+    {
+      "job_id": 139489739190,
+      "artifact_id": 15061832858,
+      "run_id": 45694933683,
+      "alias": "Nimzowitsch",
+      "anchor": "fischer",
+      "calibration_report_sha256": "87e8149002f51718a93f4e409bfc60fc690d487c3448e75ece83b039fba7abf7",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "games": [
+        {
+          "black": "fischer",
+          "counts": {
+            "fischer_book": 6,
+            "fischer_uci": 83,
+            "nimzowitsch_book": 4,
+            "nimzowitsch_uci": 86
+          },
+          "plies": 179,
+          "result": "1-0",
+          "white": "nimzowitsch"
+        },
+        {
+          "black": "nimzowitsch",
+          "counts": {
+            "fischer_book": 1,
+            "fischer_uci": 66,
+            "nimzowitsch_book": 2,
+            "nimzowitsch_uci": 65
+          },
+          "plies": 134,
+          "result": "0-1",
+          "white": "fischer"
+        }
+      ],
+      "prior_artifact": 15049319826,
+      "prior_run": 45633448337,
+      "profile_filename": "nimzowitsch.txt",
+      "promotion": "REQUIRES_EXPLICIT_REGISTRY_COMMIT",
+      "seed": 2029,
+      "slug": "nimzowitsch",
+      "status": "FULL_PRODUCT_REVIEW_READY"
+    },
+    {
+      "job_id": 139489739148,
+      "artifact_id": 15062271368,
+      "run_id": 45694933683,
+      "alias": "Nimzowitsch",
+      "anchor": "fischer",
+      "calibration_report_sha256": "87e8149002f51718a93f4e409bfc60fc690d487c3448e75ece83b039fba7abf7",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "games": [
+        {
+          "black": "fischer",
+          "counts": {
+            "fischer_book": 4,
+            "fischer_uci": 82,
+            "nimzowitsch_book": 5,
+            "nimzowitsch_uci": 82
+          },
+          "plies": 173,
+          "result": "1-0",
+          "white": "nimzowitsch"
+        },
+        {
+          "black": "nimzowitsch",
+          "counts": {
+            "fischer_book": 1,
+            "fischer_uci": 66,
+            "nimzowitsch_book": 2,
+            "nimzowitsch_uci": 65
+          },
+          "plies": 134,
+          "result": "0-1",
+          "white": "fischer"
+        }
+      ],
+      "prior_artifact": 15049319826,
+      "prior_run": 45633448337,
+      "profile_filename": "nimzowitsch.txt",
+      "promotion": "REQUIRES_EXPLICIT_REGISTRY_COMMIT",
+      "seed": 2030,
+      "slug": "nimzowitsch",
+      "status": "FULL_PRODUCT_REVIEW_READY"
+    },
+    {
+      "job_id": 139489739103,
+      "artifact_id": 15061339609,
+      "run_id": 45694933683,
+      "alias": "Reti",
+      "anchor": "fischer",
+      "calibration_report_sha256": "b5cce8e0c09a724e9c35e8e8f5d87a7119a779fe0391fb77e003d0045869a462",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "games": [
+        {
+          "black": "fischer",
+          "counts": {
+            "fischer_book": 3,
+            "fischer_uci": 67,
+            "reti_book": 4,
+            "reti_uci": 67
+          },
+          "plies": 141,
+          "result": "1-0",
+          "white": "reti"
+        },
+        {
+          "black": "reti",
+          "counts": {
+            "fischer_book": 8,
+            "fischer_uci": 68,
+            "reti_book": 3,
+            "reti_uci": 73
+          },
+          "plies": 152,
+          "result": "0-1",
+          "white": "fischer"
+        }
+      ],
+      "prior_artifact": 15051882168,
+      "prior_run": 45633448337,
+      "profile_filename": "reti.txt",
+      "promotion": "REQUIRES_EXPLICIT_REGISTRY_COMMIT",
+      "seed": 2029,
+      "slug": "reti",
+      "status": "FULL_PRODUCT_REVIEW_READY"
+    },
+    {
+      "job_id": 139489738938,
+      "artifact_id": 15061784615,
+      "run_id": 45694933683,
+      "alias": "Reti",
+      "anchor": "fischer",
+      "calibration_report_sha256": "b5cce8e0c09a724e9c35e8e8f5d87a7119a779fe0391fb77e003d0045869a462",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "games": [
+        {
+          "black": "fischer",
+          "counts": {
+            "fischer_book": 4,
+            "fischer_uci": 62,
+            "reti_book": 4,
+            "reti_uci": 63
+          },
+          "plies": 133,
+          "result": "1-0",
+          "white": "reti"
+        },
+        {
+          "black": "reti",
+          "counts": {
+            "fischer_book": 7,
+            "fischer_uci": 17,
+            "reti_book": 3,
+            "reti_uci": 21
+          },
+          "plies": 48,
+          "result": "1/2-1/2",
+          "white": "fischer"
+        }
+      ],
+      "prior_artifact": 15051882168,
+      "prior_run": 45633448337,
+      "profile_filename": "reti.txt",
+      "promotion": "REQUIRES_EXPLICIT_REGISTRY_COMMIT",
+      "seed": 2030,
+      "slug": "reti",
+      "status": "FULL_PRODUCT_REVIEW_READY"
+    },
+    {
+      "job_id": 139489739132,
+      "artifact_id": 15060791931,
+      "run_id": 45694933683,
+      "alias": "Steinitz",
+      "anchor": "fischer",
+      "calibration_report_sha256": "da88f060f4b11329deab845df64a8daa0d3c95ce7c5a8f1fd959419a3e0d6a9a",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "games": [
+        {
+          "black": "fischer",
+          "counts": {
+            "fischer_book": 2,
+            "fischer_uci": 70,
+            "steinitz_book": 3,
+            "steinitz_uci": 69
+          },
+          "plies": 144,
+          "result": "0-1",
+          "white": "steinitz"
+        },
+        {
+          "black": "steinitz",
+          "counts": {
+            "fischer_book": 5,
+            "fischer_uci": 60,
+            "steinitz_book": 4,
+            "steinitz_uci": 60
+          },
+          "plies": 129,
+          "result": "1-0",
+          "white": "fischer"
+        }
+      ],
+      "prior_artifact": 15054926890,
+      "prior_run": 45633448337,
+      "profile_filename": "steinitz.txt",
+      "promotion": "REQUIRES_EXPLICIT_REGISTRY_COMMIT",
+      "seed": 2029,
+      "slug": "steinitz",
+      "status": "FULL_PRODUCT_REVIEW_READY"
+    },
+    {
+      "job_id": 139489739158,
+      "artifact_id": 15060377057,
+      "run_id": 45694933683,
+      "alias": "Steinitz",
+      "anchor": "fischer",
+      "calibration_report_sha256": "da88f060f4b11329deab845df64a8daa0d3c95ce7c5a8f1fd959419a3e0d6a9a",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "games": [
+        {
+          "black": "fischer",
+          "counts": {
+            "fischer_book": 1,
+            "fischer_uci": 78,
+            "steinitz_book": 2,
+            "steinitz_uci": 78
+          },
+          "plies": 159,
+          "result": "1-0",
+          "white": "steinitz"
+        },
+        {
+          "black": "steinitz",
+          "counts": {
+            "fischer_book": 8,
+            "fischer_uci": 148,
+            "steinitz_book": 3,
+            "steinitz_uci": 152
+          },
+          "plies": 311,
+          "result": "1/2-1/2",
+          "white": "fischer"
+        }
+      ],
+      "prior_artifact": 15054926890,
+      "prior_run": 45633448337,
+      "profile_filename": "steinitz.txt",
+      "promotion": "REQUIRES_EXPLICIT_REGISTRY_COMMIT",
+      "seed": 2030,
+      "slug": "steinitz",
+      "status": "FULL_PRODUCT_REVIEW_READY"
+    },
+    {
+      "job_id": 139489739235,
+      "artifact_id": 15061990507,
+      "run_id": 45694933683,
+      "alias": "TarraschWaveInitiative",
+      "anchor": "fischer",
+      "calibration_report_sha256": "36134f84cc68fcbd5c22e27a79181c909b07a0faf8e566b101acc89de65fe70b",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "games": [
+        {
+          "black": "fischer",
+          "counts": {
+            "fischer_book": 2,
+            "fischer_uci": 88,
+            "tarrasch_book": 2,
+            "tarrasch_uci": 89
+          },
+          "plies": 181,
+          "result": "1-0",
+          "white": "tarrasch"
+        },
+        {
+          "black": "tarrasch",
+          "counts": {
+            "fischer_book": 7,
+            "fischer_uci": 93,
+            "tarrasch_book": 5,
+            "tarrasch_uci": 95
+          },
+          "plies": 200,
+          "result": "0-1",
+          "white": "fischer"
+        }
+      ],
+      "prior_artifact": 15052430360,
+      "prior_run": 45633448337,
+      "profile_filename": "tarraschwaveinitiative.txt",
+      "promotion": "REQUIRES_EXPLICIT_REGISTRY_COMMIT",
+      "seed": 2029,
+      "slug": "tarrasch",
+      "status": "FULL_PRODUCT_REVIEW_READY"
+    },
+    {
+      "job_id": 139489738657,
+      "artifact_id": 15060953708,
+      "run_id": 45694933683,
+      "alias": "TarraschWaveInitiative",
+      "anchor": "fischer",
+      "calibration_report_sha256": "36134f84cc68fcbd5c22e27a79181c909b07a0faf8e566b101acc89de65fe70b",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "games": [
+        {
+          "black": "fischer",
+          "counts": {
+            "fischer_book": 2,
+            "fischer_uci": 88,
+            "tarrasch_book": 2,
+            "tarrasch_uci": 89
+          },
+          "plies": 181,
+          "result": "1-0",
+          "white": "tarrasch"
+        },
+        {
+          "black": "tarrasch",
+          "counts": {
+            "fischer_book": 5,
+            "fischer_uci": 153,
+            "tarrasch_book": 5,
+            "tarrasch_uci": 152
+          },
+          "plies": 315,
+          "result": "1/2-1/2",
+          "white": "fischer"
+        }
+      ],
+      "prior_artifact": 15052430360,
+      "prior_run": 45633448337,
+      "profile_filename": "tarraschwaveinitiative.txt",
+      "promotion": "REQUIRES_EXPLICIT_REGISTRY_COMMIT",
+      "seed": 2030,
+      "slug": "tarrasch",
+      "status": "FULL_PRODUCT_REVIEW_READY"
+    },
+    {
+      "job_id": 139625087606,
+      "artifact_id": 15079171094,
+      "run_id": 45694933667,
+      "alias": "TopalovWaveBalanced",
+      "anchor": "fischer",
+      "calibration_report_sha256": "cbcf24f4802d12cbe4d14c7352ab0e02820cb388c26175fadc116211f79cc840",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "games": [
+        {
+          "black": "fischer",
+          "counts": {
+            "fischer_book": 7,
+            "fischer_uci": 66,
+            "topalov_book": 8,
+            "topalov_uci": 66
+          },
+          "plies": 147,
+          "result": "1-0",
+          "white": "topalov"
+        },
+        {
+          "black": "topalov",
+          "counts": {
+            "fischer_book": 7,
+            "fischer_uci": 72,
+            "topalov_book": 5,
+            "topalov_uci": 73
+          },
+          "plies": 157,
+          "result": "1-0",
+          "white": "fischer"
+        }
+      ],
+      "prior_artifact": null,
+      "prior_run": null,
+      "profile_filename": "topalovwavebalanced.txt",
+      "promotion": "REQUIRES_EXPLICIT_REGISTRY_COMMIT",
+      "seed": 2029,
+      "slug": "topalov",
+      "status": "FULL_PRODUCT_REVIEW_READY"
+    },
+    {
+      "job_id": 139625087527,
+      "artifact_id": 15078743995,
+      "run_id": 45694933667,
+      "alias": "TopalovWaveBalanced",
+      "anchor": "fischer",
+      "calibration_report_sha256": "cbcf24f4802d12cbe4d14c7352ab0e02820cb388c26175fadc116211f79cc840",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "games": [
+        {
+          "black": "fischer",
+          "counts": {
+            "fischer_book": 8,
+            "fischer_uci": 160,
+            "topalov_book": 8,
+            "topalov_uci": 161
+          },
+          "plies": 337,
+          "result": "1/2-1/2",
+          "white": "topalov"
+        },
+        {
+          "black": "topalov",
+          "counts": {
+            "fischer_book": 6,
+            "fischer_uci": 72,
+            "topalov_book": 5,
+            "topalov_uci": 72
+          },
+          "plies": 155,
+          "result": "1-0",
+          "white": "fischer"
+        }
+      ],
+      "prior_artifact": null,
+      "prior_run": null,
+      "profile_filename": "topalovwavebalanced.txt",
+      "promotion": "REQUIRES_EXPLICIT_REGISTRY_COMMIT",
+      "seed": 2030,
+      "slug": "topalov",
+      "status": "FULL_PRODUCT_REVIEW_READY"
+    }
+  ]
+}

@@ -69,8 +69,10 @@ def test_real_qualified_three_execution_paths(tmp_path, monkeypatch):
     folder, players, books, depths, resources = resolve(root, sorted(SLUGS))
     assert depths == {"fischer": 16, "tal": 16, "karpov": 16, "kasparov": 20,
                       "alekhine": 16, "botvinnik": 20, "smyslov": 20, "petrosian": 16,
-                      "spassky": 20, "lasker": 20, "rubinstein": 20, "anand": 20}
-    pair = ("spassky", "anand")
+                      "spassky": 20, "lasker": 20, "rubinstein": 20, "anand": 20,
+                      "steinitz": 20, "anderssen": 16, "tarrasch": 20, "marshall": 16,
+                      "nimzowitsch": 20, "reti": 20, "larsen": 16, "topalov": 20}
+    pair = ("topalov", "steinitz")
     _, p, b, d, res = resolve(root, pair)
     output = play_duel(folder, tmp_path, p[pair[0]], p[pair[1]], depth=20,
                        reverse=False, max_plies=24, use_books=False,
@@ -105,7 +107,7 @@ def test_real_qualified_three_execution_paths(tmp_path, monkeypatch):
 
     cfg = normalize({"name": "Copa homologada", "preset": "custom",
                      "participants": sorted(SLUGS), "personality_mode": MODE})
-    spec = stage_game({"id": "r01-m01", "round": 1, "players": ["lasker", "rubinstein"]}, cfg, 0, 0)
+    spec = stage_game({"id": "r01-m01", "round": 1, "players": ["anderssen", "larsen"]}, cfg, 0, 0)
     game, meta = play_cup_game(root, spec, cfg, resources, lambda: False, max_plies=24)
     verify_headers(game, spec["white"], spec["black"], resources, cfg["seed"], spec["round"])
     verify_openings(game, spec["white"], spec["black"], books, cfg["seed"], spec["round"])
@@ -123,9 +125,9 @@ def test_real_qualified_three_execution_paths(tmp_path, monkeypatch):
     monkeypatch.setattr(leagues, "_play_one", bounded)
     cfg = league_config({"name": "Liga homologada", "participants": sorted(SLUGS),
                          "personality_mode": MODE})
-    match = {"white": "rubinstein", "black": "lasker", "round": 1}
+    match = {"white": "marshall", "black": "nimzowitsch", "round": 1}
     game, meta = default_engine_runner(root, match, cfg, lambda: False)
-    verify_headers(game, "rubinstein", "lasker", resources, cfg["seed"], 1)
-    verify_openings(game, "rubinstein", "lasker", books, cfg["seed"], 1)
+    verify_headers(game, "marshall", "nimzowitsch", resources, cfg["seed"], 1)
+    verify_openings(game, "marshall", "nimzowitsch", books, cfg["seed"], 1)
     assert meta["plies"] > 16
     assert game.headers["TimeControl"] == "+".join(map(str, cfg["clock"]))
