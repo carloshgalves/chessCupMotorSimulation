@@ -63,6 +63,7 @@ const defaults={
   "cup-quick-name":"Copa teste","cup-quick-edition":"Edição 1",
   "cup-count":"8","cup-name":"Copa teste","cup-edition":"Edição 1",
   "cup-seed":"7","cup-depth":"6","cup-execution":"fast_statistical",
+  "cup-scope":"game","cup-workers":"1",
   "cup-seed-method":"deterministic_draw",
   "cup-white-seconds":"240","cup-increment":"2",
   "cup-bid-min":"60","cup-bid-max":"240",
@@ -165,7 +166,7 @@ const fetch=async(path,options={})=>{
       return reply({id:cid,status:"READY"});
     }
     if(path==="/api/cups/"+cid+"/run"){
-      assert.deepEqual(data,{});
+      assert.deepEqual(data,{scope:"game",workers:1});
       completed=true;sequence++;
       cup.status="PAUSED";
       return reply({id:cid,status:"RUNNING",game:gId,stage:"classical"});

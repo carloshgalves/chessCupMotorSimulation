@@ -358,6 +358,10 @@ def test_verified_uci_cup_round_trip_pgn_replay_and_tamper_detection(manager,mon
     assert len(details["moves"])==4
     assert details["moves"][-1]["san"].endswith("#")
     assert details["game"]["result"]=="0-1"
+    observed=manager.observe(ident,game_id)
+    assert observed["status"]=="COMPLETED"
+    assert len(observed["states"])==5
+    assert observed["moves"][-1]["san"].endswith("#")
     pgn,kind=manager.export(ident,"pgn")
     assert "chess-pgn" in kind and b'[Termination "CHECKMATE"]' in pgn
     json_export,kind=manager.export(ident,"json")
@@ -442,3 +446,29 @@ def test_cup_game_directory_symlink_is_rejected_before_write(manager,tmp_path):
         },started_utc=cups.utc())
     assert list(outside.iterdir())==[]
     assert not (manager._dir(ident)/"receipts").exists()
+
+
+def test_continuous_parallel_cup_finishes_without_duplicate_receipts(manager):
+    players = ("fischer", "tal", "karpov", "kasparov")
+    ident = manager.create(settings(players=players))["id"]
+    assert len(manager.observe(ident)["games"]) == 2
+    manager.run(ident, scope="competition", workers=2)
+    final = await_game(manager, ident)
+    assert final["status"] == "COMPLETED"
+    assert final["completed_matches"] == 3
+    assert final["champion"] in players
+    games = manager.observe(ident)["games"]
+    assert len(games) == final["completed_games"]
+    assert len({g["id"] for g in games}) == len(games)
+    assert all(g["status"] == "COMPLETED" for g in games)
+    assert manager.observe(ident, games[0]["id"])["status"] == "UNAVAILABLE"
+
+
+def test_parallel_women_cup_keeps_schedule(manager):
+    from chesssim.cup_rules import FEMALE_ROSTER
+    ident = manager.create(settings("women", FEMALE_ROSTER))["id"]
+    manager.run(ident, scope="competition", workers=4)
+    final = await_game(manager, ident)
+    assert final["status"] == "COMPLETED"
+    assert final["completed_games"] == 20
+    assert len(manager.observe(ident)["games"]) == 20

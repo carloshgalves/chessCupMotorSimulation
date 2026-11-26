@@ -332,13 +332,14 @@
       missingProfiles.length>0;
     $("league-run").textContent=g.status==="PAUSED"||g.status==="FAILED"?
       "▶ Retomar rodada":"▶ Executar rodada";
+    $("league-scope").disabled=$("league-workers").disabled=g.status==="RUNNING";
     $("league-pause").disabled=state.pending||g.status!=="RUNNING"||!token;
     $("league-export-json").disabled=state.pending;
     $("league-export-pgn").disabled=state.pending||g.available_pgn===0;
     $("league-run-note").textContent=missingProfiles.length?
       missingProfiles.length+" perfil(is) Rodent IV indisponível(is). Instale os motores para executar.":
       g.message||(g.execution_mode==="fast_statistical"?
-       "Projeção, sem lances UCI nem PGN.":"Execução real: 1 partida por vez");
+       "Projeção, sem lances UCI nem PGN.":"Execução real: selecione escopo e simultaneidade");
     updateTabs();
     if(state.tab==="standings")drawTable();
     if(state.tab==="rounds")drawRounds();
@@ -531,8 +532,8 @@
   $("league-run").addEventListener("click",()=>{
     const g=state.league;if(!g)return;
     execute(async()=>{
-      const data=await send("/api/leagues/"+g.id+"/run");
-      notify("Rodada "+(data.round||"")+" iniciada. Execução serial no servidor.");
+      const data=await send("/api/leagues/"+g.id+"/run",{scope:$("league-scope").value,workers:Number($("league-workers").value)});
+      notify("Execução iniciada na rodada "+(data.round||"")+".");
     });
   });
   $("league-pause").addEventListener("click",()=>{

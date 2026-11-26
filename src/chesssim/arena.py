@@ -533,16 +533,26 @@ class ArenaManager:
                 raw, duel_busy=self._active or self.leagues.busy or
                 self.cups.busy or self.representation.busy)
 
-    def league_run(self, ident: str) -> dict:
+    def league_run(self, ident: str, raw=None) -> dict:
+        from .competition_execution import options
+        try:
+            scope, workers = options({} if raw is None else raw, "round")
+        except ValueError as exc:
+            raise LeagueInput(str(exc)) from exc
         with self._lock:
             return self.leagues.run(ident, arena_busy=self._active or self.human.busy or
-                self.cups.busy or self.representation.busy)
+                self.cups.busy or self.representation.busy, scope=scope, workers=workers)
 
-    def cup_run(self, ident: str) -> dict:
+    def cup_run(self, ident: str, raw=None) -> dict:
+        from .competition_execution import options
+        try:
+            scope, workers = options({} if raw is None else raw, "game")
+        except ValueError as exc:
+            raise CupInput(str(exc)) from exc
         with self._lock:
             return self.cups.run(
                 ident, arena_busy=self._active or self.human.busy or
-                self.leagues.busy or self.representation.busy)
+                self.leagues.busy or self.representation.busy, scope=scope, workers=workers)
 
     def representation_start(self, slug: str, raw: object) -> dict:
         # Serialize the reservation of the shared UCI resource with every
@@ -1063,20 +1073,20 @@ def make_arena_handler(manager: ArenaManager, token: str):
                 elif route.path == "/api/cups/create":
                     self._json(201, manager.cups.create(data))
                 elif cup_action:
-                    if data:
-                        raise CupInput("Ação da Copa não recebe parâmetros")
                     if cup_action.group(2)=="run":
-                        self._json(202,manager.cup_run(cup_action.group(1)))
+                        self._json(202,manager.cup_run(cup_action.group(1), data))
                     else:
+                        if data:
+                            raise CupInput("Pausa não recebe parâmetros")
                         self._json(202,manager.cups.pause(cup_action.group(1)))
                 elif route.path == "/api/leagues/create":
                     self._json(201, manager.leagues.create(data))
                 elif league_action:
-                    if data:
-                        raise LeagueInput("Ação da liga não aceita parâmetros")
                     if league_action.group(2) == "run":
-                        self._json(202, manager.league_run(league_action.group(1)))
+                        self._json(202, manager.league_run(league_action.group(1), data))
                     else:
+                        if data:
+                            raise LeagueInput("Pausa não aceita parâmetros")
                         self._json(202, manager.leagues.pause(league_action.group(1)))
                 elif route.path == "/api/arena/launch":
                     self._json(202, manager.launch(data))

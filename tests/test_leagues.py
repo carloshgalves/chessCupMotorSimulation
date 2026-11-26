@@ -253,6 +253,10 @@ def test_engine_provenance_true_pgn_and_cannot_change_profiles(manager,monkeypat
     assert payload.count(b'[Result "0-1"]')==2
     items=manager.history(ident)["games"]
     assert all(x["pgn_sha256"] and x["engine"] for x in items)
+    observed=manager.observe(ident,items[0]["match_id"])
+    assert observed["status"]=="COMPLETED"
+    assert len(observed["states"])==5
+    assert observed["moves"][-1]["san"].endswith("#")
     # A dashboard poll reuses verified PGNs; JSON export performs a full audit.
     original_read=chess.pgn.read_game
     reads=[]
@@ -533,3 +537,26 @@ def test_games_directory_symlink_is_never_written(manager, tmp_path):
         manager._record(state, match, "1/2-1/2",
                         leagues.utc(), pgn=game, termination="TEST")
     assert not any(outside.iterdir())
+
+
+def test_automatic_parallel_league_preserves_calendar(manager):
+    ident = manager.create(config(n=4, fmt="double"))["id"]
+    assert len(manager.observe(ident)["games"]) == 12
+    manager.run(ident, scope="competition", workers=2)
+    final = wait(manager, ident)
+    assert final["status"] == "COMPLETED"
+    assert final["completed_games"] == 12
+    games = manager.observe(ident)["games"]
+    assert len({g["id"] for g in games}) == 12
+    assert all(g["status"] == "COMPLETED" for g in games)
+    assert manager.observe(ident, games[0]["id"])["status"] == "UNAVAILABLE"
+
+
+def test_league_single_game_then_automatic_round(manager):
+    ident = manager.create(config(n=4, fmt="single"))["id"]
+    manager.run(ident, scope="game", workers=4)
+    assert wait(manager, ident)["completed_games"] == 1
+    manager.run(ident, scope="round", workers=2)
+    assert wait(manager, ident)["completed_games"] == 2
+    manager.run(ident, scope="competition", workers=2)
+    assert wait(manager, ident)["completed_games"] == 6

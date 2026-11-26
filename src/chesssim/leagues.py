@@ -570,8 +570,8 @@ class LeagueManager:
                 "total_games": total, "completed_games": complete,
                 "pending_games": total-complete,
                 "rounds_total": len(rounds), "round_current": min(current_idx+1,len(rounds)),
-                "running_games": 1 if self._active == ident and
-                            state["current_match"] is not None else 0,
+                "running_games": max(len(self.observer.ids(ident)), int(self._active == ident and
+                            state["current_match"] is not None)),
                 "message": state.get("message"),
             }
             if compact:
@@ -594,7 +594,7 @@ class LeagueManager:
                 **m,
                 "status": "COMPLETED" if m["id"] in entries else
                           "RUNNING" if self._active == ident and
-                          state["current_match"] == m["id"] else "PENDING",
+                          (state["current_match"] == m["id"] or m["id"] in self.observer.ids(ident)) else "PENDING",
                 "result": entries[m["id"]]["result"] if m["id"] in entries else None,
                 "source": entries[m["id"]]["source"] if m["id"] in entries else None,
                 "name_white": find_player(m["white"]).name,
@@ -635,7 +635,7 @@ class LeagueManager:
                     "black_name": find_player(match["black"]).name,
                     "status": ("COMPLETED" if entry else "RUNNING"
                                if self._active == ident and
-                               state["current_match"] == match["id"] else "PENDING"),
+                               (state["current_match"] == match["id"] or match["id"] in self.observer.ids(ident)) else "PENDING"),
                     "result": entry["result"] if entry else None,
                     "source": entry["source"] if entry else None,
                     "pgn": bool(entry and entry["pgn"]),
@@ -648,12 +648,13 @@ class LeagueManager:
         from .competition_observer import verified_playback
         with self._lock:
             state = self._load(ident)
-            entries = self._ledger(state)
             cfg = state["config"]
             if game_id is not None:
                 live = self.observer.get(ident, game_id)
                 if live is not None:
                     return live
+            entries = self._ledger(state)
+            if game_id is not None:
                 entry = entries.get(game_id)
                 if entry and entry["pgn"]:
                     return verified_playback(self._dir(ident)/entry["pgn"], entry,
@@ -711,7 +712,9 @@ class LeagueManager:
         return {"engine_sha256": file_hash(executable),
                 "profile_sha256": profiles}
 
-    def run(self, ident: str, *, arena_busy: bool = False) -> dict:
+    def run(self, ident: str, *, arena_busy: bool = False, scope="round", workers=1) -> dict:
+        from .competition_execution import options
+        scope, workers = options({"scope": scope, "workers": workers}, "round")
         with self._lock:
             if self._active is not None or arena_busy or self._shutdown.is_set():
                 raise LeagueBusy("Já existe duelo, partida ou liga em execução")
@@ -749,49 +752,59 @@ class LeagueManager:
             self._stop = Event()
             self._active = ident
             thread = Thread(target=self._execute_round,
-                            args=(ident, next_round, self._stop),
+                            args=(ident, next_round, self._stop, scope, workers),
                             daemon=False, name="chesssim-league-round")
             self._thread = thread
             thread.start()
             return {"id": ident, "status": "RUNNING",
                     "round": next_round[0]["round"]}
 
-    def _execute_round(self, ident: str, matches: list[dict], stop: Event) -> None:
-        try:
-            for m in matches:
-                if stop.is_set() or self._shutdown.is_set():
-                    break
+    def _execute_round(self, ident, matches, stop, scope="round", workers=1):
+        from .competition_execution import batch, execute
+        first_round = matches[0]["round"]
+
+        def one(m):
+            if stop.is_set() or self._shutdown.is_set():
+                return
+            with self._lock:
+                state = self._load(ident)
+                config = state["config"]
+            began = utc()
+            if config["execution_mode"] == "fast_statistical":
+                result = projected_result(config, m)
                 with self._lock:
-                    state = self._load(ident)
-                    completed = self._ledger(state, reconcile=True)
-                    if m["id"] in completed:
-                        continue
-                    state["current_match"] = m["id"]
-                    state["updated_utc"] = utc()
-                    self._save(state)
-                    config = state["config"]
-                began = utc()
-                if config["execution_mode"] == "fast_statistical":
-                    result = projected_result(config, m)
-                    game = None
-                    meta = None
-                    termination = "StatisticalProjection"
-                else:
-                    with self.observer.capture(ident, m, [config["clock"][0]] * 2):
-                        game, meta = self.runner(self.root, m, config,
-                                                 self._shutdown.is_set)
-                    if self._shutdown.is_set() and meta.get("status") == "INCOMPLETE":
-                        break  # Graceful shutdown; leave unproven game pending.
-                    if (meta.get("status") != "COMPLETED" or
-                            meta.get("result") not in RESULTS):
-                        raise RuntimeError("Partida não foi concluída; nenhuma pontuação aplicada")
-                    result = meta["result"]
-                    termination = meta.get("termination", "Unknown")
+                    self._record(self._load(ident), m, result, began,
+                                 termination="StatisticalProjection")
+                return
+            with self.observer.capture(ident, m, [config["clock"][0]] * 2):
+                game, meta = self.runner(self.root, m, config, self._shutdown.is_set)
+                if self._shutdown.is_set() and meta.get("status") == "INCOMPLETE":
+                    return
+                if meta.get("status") != "COMPLETED" or meta.get("result") not in RESULTS:
+                    raise RuntimeError("Partida não foi concluída; nenhuma pontuação aplicada")
                 with self._lock:
                     state = self._load(ident)
                     self._ledger(state)
-                    self._record(state, m, result, began, pgn=game, meta=meta,
-                                 termination=termination)
+                    self._record(state, m, meta["result"], began, pgn=game, meta=meta,
+                                 termination=meta.get("termination", "Unknown"))
+
+        try:
+            while not stop.is_set() and not self._shutdown.is_set():
+                with self._lock:
+                    state = self._load(ident)
+                    completed = self._ledger(state, reconcile=True)
+                    rounds = schedule(state["config"]["participants"], state["config"]["format"])
+                    pending = next(([m for m in rd if m["id"] not in completed] for rd in rounds
+                                    if any(m["id"] not in completed for m in rd)), [])
+                    if not pending or (scope == "round" and pending[0]["round"] != first_round):
+                        break
+                    selected = batch(pending, 1 if scope == "game" else workers)
+                    state["current_match"] = selected[0]["id"]
+                    state["updated_utc"] = utc()
+                    self._save(state)
+                execute(selected, one)
+                if scope == "game":
+                    break
             with self._lock:
                 state = self._load(ident)
                 entries = self._ledger(state)
@@ -801,8 +814,8 @@ class LeagueManager:
                     state["message"] = "Temporada concluída"
                 else:
                     state["status"] = "PAUSED"
-                    state["message"] = ("Rodada concluída; avance quando desejar"
-                                        if not stop.is_set() else "Pausa solicitada")
+                    state["message"] = ("Pausa solicitada" if stop.is_set() else
+                                        "Partida ou rodada concluída; avance quando desejar")
                 state["current_match"] = None
                 state["updated_utc"] = utc()
                 self._save(state)
@@ -815,8 +828,7 @@ class LeagueManager:
                 state["message"] = ("A rodada foi interrompida. Partidas comprovadas "
                                     "permanecem; verifique os logs locais.")
                 self._save(state)
-            print("Falha da liga local: " + type(exc).__name__ + ": " +
-                  str(exc), flush=True)
+            print("Falha da liga local: " + type(exc).__name__ + ": " + str(exc), flush=True)
         finally:
             with self._lock:
                 self._active = None
