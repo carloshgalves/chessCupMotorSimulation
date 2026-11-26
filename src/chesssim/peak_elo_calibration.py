@@ -31,6 +31,10 @@ SCHEMA = "peak-elo-v1"
 SOURCES = {
     "open24": "https://theweekinchess.com/assets/files/pgn/olym24.pgn",
     "women24": "https://theweekinchess.com/assets/files/pgn/olymw24.pgn",
+    "open22": "https://theweekinchess.com/assets/files/pgn/olym22.pgn",
+    "women22": "https://theweekinchess.com/assets/files/pgn/olymw22.pgn",
+    "elite14": "https://theweekinchess.com/assets/files/pgn/sinqcup14.pgn",
+    "elite15": "https://theweekinchess.com/assets/files/pgn/norway15.pgn",
 }
 BANDS = (1800, 2000, 2200, 2400, 2600, 2800)
 MARGIN = 50
@@ -86,7 +90,7 @@ def corpus(out):
             h = game.headers
             if (game.errors or game.board().fen() != chess.STARTING_FEN
                     or h.get("Result") not in ("1-0", "0-1", "1/2-1/2")
-                    or not h.get("Date", "").startswith("2024")):
+                    or not h.get("Date", "").startswith("20" + name[-2:])):
                 continue
             try:
                 ratings = [int(h["WhiteElo"]), int(h["BlackElo"])]
@@ -99,7 +103,7 @@ def corpus(out):
             if gid in seen:
                 continue
             seen.add(gid)
-            arm = partition(gid)
+            arm = "test" if name.endswith(("22", "15")) else "fit"
             prefix = moves[:12]
             roots[arm][tuple(prefix)] = {"id": digest(prefix), "prefix": prefix}
             board = chess.Board()
@@ -192,6 +196,8 @@ def design(rows):
 
 
 def fit_model(rows):
+    if len(rows) < 12:
+        raise ValueError("Insufficient human calibration observations")
     x = design(rows)
     y = np.array([r["losses"]["human"] for r in rows])
     beta = np.linalg.lstsq(x, y, rcond=None)[0]
@@ -446,8 +452,9 @@ def player(slug, panel, model, root, stockfish, out):
         selected = min(valid, key=lambda k: abs(valid[k]["difference"])) if valid and model["status"] == "VALIDATED_PROXY" else "baseline"
         recipe = cases[selected]
         # Selection is fixed before evaluating either reserved panel.
-        test_rows = evaluate(ref, engines, {selected: recipe}, own["test"])
-        common_rows = evaluate(ref, engines, {selected: recipe}, panel["positions"]["test"])
+        reserved = {selected: recipe, "baseline": baseline}
+        test_rows = evaluate(ref, engines, reserved, own["test"])
+        common_rows = evaluate(ref, engines, reserved, panel["positions"]["test"])
         test = estimate(test_rows, selected, model)
         common = estimate(common_rows, selected, model)
         games = clock_matches(slug, engines[recipe[0]], simple, recipe, panel["roots"]["test"], "test")
@@ -457,7 +464,8 @@ def player(slug, panel, model, root, stockfish, out):
                   "pgn_sha256": pgn_sha, "baseline": baseline, "baseline_experimental": slug in EXPERIMENTAL_BASELINES,
                   "selection": selected, "recipe": recipe, "profile_sha256": file_hash(profile),
                   "profile_text": profile.read_text(encoding="utf-8-sig"), "fit": fit,
-                  "test": test, "common": common, "games": games, "status": status,
+                  "test": test, "common": common, "baseline_test": estimate(test_rows, "baseline", model),
+                  "baseline_common": estimate(common_rows, "baseline", model), "games": games, "status": status,
                   "fit_rows": fit_rows, "test_rows": test_rows, "common_rows": common_rows,
                   "panel": digest(panel), "model": digest(model)}
         save(out, report)
@@ -479,7 +487,10 @@ def aggregate(shards, out):
         rows.append({"player": slug, "nominal_human": target["rating"], "reference_kind": target["kind"],
                      "human_proxy": test.get("human"), "motor_proxy": test.get("motor"),
                      "delta": test.get("difference"), "ci95": test.get("difference_ci95"),
-                     "common_motor_proxy": common.get("motor"), "games": len(games),
+                     "common_motor_proxy": common.get("motor"),
+                     "baseline_motor_proxy": (doc.get("baseline_test") or {}).get("motor"),
+                     "baseline_delta": (doc.get("baseline_test") or {}).get("difference"),
+                     "games": len(games),
                      "recipe": doc.get("recipe"), "status": doc.get("status", "MISSING_EXECUTION")})
     save(out / "table.json", {"schema": SCHEMA, "players": rows, "frozen": 0})
     with (out / "table.csv").open("w", newline="") as stream:

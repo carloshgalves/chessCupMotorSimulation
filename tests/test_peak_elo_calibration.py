@@ -1,4 +1,6 @@
-import numpy as np
+import pytest
+
+np = pytest.importorskip("numpy")
 from chesssim.peak_elo_calibration import band, partition, fit_model, inferred, qualification
 from chesssim.peak_elo_targets import TARGETS
 
