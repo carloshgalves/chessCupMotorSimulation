@@ -1,8 +1,5 @@
 name: Morphy and Philidor supplemental corpus audit
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/pioneer-corpus-audit.yml'
   workflow_dispatch:
 permissions:
   contents: read

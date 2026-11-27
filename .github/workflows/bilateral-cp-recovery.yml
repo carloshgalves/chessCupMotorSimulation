@@ -1,11 +1,5 @@
 name: Robust CP recovery for 59 non-retained players
 on:
-  pull_request:
-    paths:
-      - 'src/chesssim/bilateral_cp_recovery.py'
-      - 'tests/test_bilateral_cp_recovery.py'
-      - 'experiments/bilateral-cp/retained-active-baselines.json'
-      - '.github/workflows/bilateral-cp-recovery.yml'
   workflow_dispatch:
 permissions:
   contents: read

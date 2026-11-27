@@ -1,8 +1,5 @@
 name: Wave 04 paired full-game qualification
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/wave-04-strength-release.yml'
   workflow_dispatch:
 permissions:
   contents: read

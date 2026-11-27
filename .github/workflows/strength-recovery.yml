@@ -1,8 +1,5 @@
 name: Ding and Gelfand strength recovery
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/strength-recovery.yml'
   workflow_dispatch:
 permissions:
   contents: read

@@ -1,10 +1,5 @@
 name: Strict one-centipawn qualification of all 64 historical players
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/bilateral-cp-one.yml'
-      - 'src/chesssim/bilateral_cp.py'
-      - 'tests/test_bilateral_cp.py'
   workflow_dispatch:
 permissions:
   contents: read

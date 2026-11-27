@@ -1,8 +1,5 @@
 name: Review 33 practical-strength candidates and integrate proposed roster
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/review-33-strength.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -106,12 +103,25 @@ jobs:
           path: ${{ runner.temp }}/audit/proposals
           run-id: ${{ matrix.run }}
           github-token: ${{ github.token }}
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: screen-${{ matrix.player }}-*
-          path: ${{ runner.temp }}/audit/screen
-          run-id: ${{ matrix.run }}
-          github-token: ${{ github.token }}
+      - name: Download all screen shards by exact ID
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN: ${{ matrix.run }}
+          PLAYER: ${{ matrix.player }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/audit/screen"
+          gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$RUN/artifacts?per_page=100" \
+            --jq '.artifacts[] | select(.expired == false) | [.id,.name] | @tsv' |
+          while IFS=$'\t' read -r id name; do
+            case "$name" in
+              screen-"$PLAYER"-*)
+                mkdir -p "$RUNNER_TEMP/audit/screen/$name"
+                gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/screen.zip"
+                unzip -q "$RUNNER_TEMP/screen.zip" -d "$RUNNER_TEMP/audit/screen/$name"
+                ;;
+            esac
+          done
       - run: |
           mkdir "$RUNNER_TEMP/review"
           python -m chesssim.roster_strength_review --player ${{ matrix.player }} --folder "$RUNNER_TEMP/audit" --out "$RUNNER_TEMP/review/review.json"
