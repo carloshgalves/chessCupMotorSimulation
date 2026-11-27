@@ -189,12 +189,44 @@ def profile_bytes(location, player):
     return (location / "personalities" / player.profile_filename).read_bytes()
 
 
+def safe_alias(name):
+    """Rodent's C alias buffer has space for 31 bytes plus NUL."""
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
+        raise ValueError("Nonportable Rodent alias")
+    return name if len(name.encode("ascii")) <= 31 else "Cp" + sha256(name.encode("ascii")).hexdigest()[:24]
+
+
 def variant_alias(base, label):
-    """Rodent PERSALIAS_ALEN=32 includes the C string terminator."""
-    name = base + "Cp" + label.title()
-    if len(name.encode("utf-8")) <= 31:
-        return name
-    return "Cp" + sha256(name.encode("utf-8")).hexdigest()[:24]
+    return safe_alias(base + "Cp" + label.title())
+
+
+def normalize_aliases(dest, players):
+    """Keep existing profile bytes/filenames; shorten generated registry keys only."""
+    directory = dest / "personalities"
+    ini = directory / "basic.ini"
+    registered = registered_aliases(ini)
+    changes = {}
+    result = {}
+    for key, p in players.items():
+        alias = safe_alias(p.rodent_alias)
+        if alias != p.rodent_alias:
+            if alias in registered or alias in changes.values():
+                raise ValueError("Rodent alias collision")
+            changes[p.rodent_alias] = alias
+        result[key] = replace(p, rodent_alias=alias)
+    if changes:
+        lines = ini.read_text(encoding="utf-8-sig").splitlines(keepends=True)
+        for old, new in changes.items():
+            # Generated entries are exact aliases, never change unrelated keys.
+            matches = [i for i, line in enumerate(lines) if line.startswith(old + "=")]
+            if len(matches) != 1:
+                raise ValueError("Cannot uniquely normalize generated alias")
+            i = matches[0]
+            lines[i] = new + lines[i][len(old):]
+        ini.write_text("".join(lines), encoding="utf-8")
+    for p in result.values():
+        validate(dest, p, p)
+    return result
 
 
 def prepare(root, dest, slug, prior):
@@ -257,9 +289,7 @@ def prepare(root, dest, slug, prior):
     if additions:
         ini = directory / "basic.ini"
         ini.write_text(add_to_first_set(ini.read_text(), additions))
-    for p in players.values():
-        validate(dest, p, p)
-    return players, baseline
+    return normalize_aliases(dest, players), baseline
 
 
 def recipes(players, baseline):
@@ -279,7 +309,51 @@ def recipes(players, baseline):
     return unique
 
 
-def refine_cases(coarse, anchor):
+def intermediate_profiles(dest, players, baseline, anchor_name):
+    """Generate bounded, integer midpoints of real personality parameters."""
+    directory = dest / "personalities"
+    ini = directory / "basic.ini"
+    registered = registered_aliases(ini)
+    additions, new = {}, {}
+    left = players[anchor_name]
+    raw = profile_bytes(dest, left).decode("utf-8-sig")
+    sources = sorted({baseline[0], "toward", "away"} & set(players) - {anchor_name})
+    seen = {sha256(profile_bytes(dest, p)).hexdigest() for p in players.values()}
+    for other in sources:
+        target = profile_bytes(dest, players[other]).decode("utf-8-sig")
+        for fraction in (.25, .5, .75):
+            params = {}
+            for key in EVAL_KEYS:
+                rx = rf"(?m)^setoption name {key} value (-?\d+)[ \t]*$"
+                a, b = re.findall(rx, raw), re.findall(rx, target)
+                if len(a) == len(b) == 1:
+                    x, y = int(a[0]), int(b[0])
+                    z = round(x + fraction * (y - x))
+                    if z != x:
+                        params[key] = z
+            if not params:
+                continue
+            content = render(raw, params).encode("utf-8")
+            h = sha256(content).hexdigest()
+            if h in seen:
+                continue
+            seen.add(h)
+            label = "mid-" + other + "-" + str(round(fraction * 100))
+            alias = safe_alias(left.rodent_alias + "Cp" + label.title())
+            filename = alias.lower() + ".txt"
+            if alias in registered or alias in additions or (directory / filename).exists():
+                raise ValueError("Fine profile alias collision")
+            (directory / filename).write_bytes(content)
+            new[label] = replace(left, rodent_alias=alias, rodent_file=filename)
+            additions[alias] = filename
+    if additions:
+        ini.write_text(add_to_first_set(ini.read_text(), additions))
+    for p in new.values():
+        validate(dest, p, p)
+    return new
+
+
+def refine_cases(coarse, anchor, extra_profiles=()):
     """Deterministic local search using FIT only, with no reserved feedback."""
     name, depth, cap = coarse[anchor]
     cases = dict(coarse)
@@ -302,14 +376,16 @@ def refine_cases(coarse, anchor):
     for d in (max(6, depth - 1), min(24, depth + 1)):
         for n in (nodes[0], nodes[-1]):
             add(name, d, n)
-    for k in sorted({v[0] for v in coarse.values()} - {name}):
+    for k in sorted(({v[0] for v in coarse.values()} - {name}) | set(extra_profiles)):
         add(k, depth, cap)
+    for k in sorted(extra_profiles):
+        add(k, depth, nodes[0])
     # Explore more finely even when the coarse candidate already matches but
     # the baseline had a different budget, without using reserved results.
     return cases
 
 
-def recipe_inventory(selection, coarse, panels):
+def recipe_inventory(selection, coarse, panels, extra_profiles=()):
     stage = selection.get("refinement")
     if stage is None:
         return coarse
@@ -319,7 +395,9 @@ def recipe_inventory(selection, coarse, panels):
         raise ValueError("Fine-grid anchor does not replay")
     if fit_eligible(summary[stage["anchor"]], strict=True):
         raise ValueError("Unnecessary refinement of already compatible candidate")
-    return refine_cases(coarse, stage["anchor"])
+    if sorted(extra_profiles) != stage.get("extra_profiles", []):
+        raise ValueError("Fine profile inventory changed")
+    return refine_cases(coarse, stage["anchor"], extra_profiles)
 
 
 def reference_engine(stack, stockfish):
@@ -485,12 +563,17 @@ def fit(slug, root, stockfish, out, *, strict=False, prior_selection=None):
         chosen = select(summaries, strict=strict)
         refinement = None
         if strict and not fit_eligible(summaries[chosen], strict=True):
-            refinement = {"anchor": chosen, "fit": summaries, "rows": rows}
-            cases = refine_cases(coarse, chosen)
+            extra = intermediate_profiles(dest, players, baseline, coarse[chosen][0])
+            refinement = {"anchor": chosen, "fit": summaries, "rows": rows, "extra_profiles": sorted(extra)}
+            players.update(extra)
+            cases = refine_cases(coarse, chosen, extra)
             if prior_selection:
                 engines = {k: stack.enter_context(_open_engine(dest, dest / "rodent-iv-plain.exe", p, book=False))
                            for k, p in players.items()}
                 ref = reference_engine(stack, stockfish)
+            else:
+                engines.update({k: stack.enter_context(_open_engine(dest, dest / "rodent-iv-plain.exe", p, book=False))
+                                for k, p in extra.items()})
             # Re-evaluate all candidates with the same adaptive reference per
             # board; do not combine losses from different reference depths.
             rows = measure(ref, engines, cases, fit_rows)
@@ -565,7 +648,12 @@ def reserved(slug, root, stockfish, selection, out, *, strict=False):
     with TemporaryDirectory() as tmp, ExitStack() as stack:
         dest = Path(tmp) / "rodent"
         players, baseline = prepare(root, dest, slug, prior)
-        cases = recipe_inventory(doc, recipes(players, baseline), panels)
+        coarse = recipes(players, baseline)
+        extra = {}
+        if doc.get("refinement"):
+            extra = intermediate_profiles(dest, players, baseline, coarse[doc["refinement"]["anchor"]][0])
+            players.update(extra)
+        cases = recipe_inventory(doc, coarse, panels, extra)
         if json.loads(json.dumps(cases)) != doc["cases"]:
             raise ValueError("Recipe inventory mismatch")
         selected = doc["selected"]
@@ -730,9 +818,35 @@ def aggregate(shards, out, *, strict=False):
                                   "frozen_experimental": sorted(candidates)}, sort_keys=True))
 
 
+def alias_smoke(slug, root, out):
+    """Exercise actual UCI Personality advertisement and legal searches."""
+    prior = baseline_inventory().get(slug, {})
+    with TemporaryDirectory() as tmp:
+        dest = Path(tmp) / "rodent"
+        players, baseline = prepare(root, dest, slug, prior)
+        coarse = dict(players)
+        extra = intermediate_profiles(dest, players, baseline, baseline[0])
+        players.update(extra)
+        rows = []
+        for key, p in players.items():
+            if len(p.rodent_alias.encode("ascii")) > 31:
+                raise ValueError("Oversized UCI alias")
+            with _open_engine(dest, dest / "rodent-iv-plain.exe", p, book=False) as engine:
+                board = chess.Board()
+                board.push_san("e4")
+                board.push_san("e5")
+                move, _ = engine_move(engine, board, (key, 4, 10_000))
+                rows.append({"recipe": key, "alias": p.rodent_alias, "move": move,
+                             "profile_sha256": sha256(profile_bytes(dest, p)).hexdigest()})
+        if not coarse or len(rows) != len(players):
+            raise ValueError("Incomplete alias smoke")
+        save(out, {"slug": slug, "status": "UCI_ALIAS_PASS", "profiles": rows})
+        print("CP_ALIAS_PASS", slug, len(rows), flush=True)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("action", choices=("fit", "reserved", "aggregate"))
+    p.add_argument("action", choices=("fit", "reserved", "aggregate", "alias-smoke"))
     p.add_argument("--player", choices=[p.slug for p in load_roster()])
     p.add_argument("--rodent", type=Path)
     p.add_argument("--stockfish", type=Path)
@@ -742,7 +856,9 @@ def main():
     p.add_argument("--strict", action="store_true", help="Require ±1 cp, including reserved confidence interval")
     p.add_argument("--prior-selection", type=Path)
     a = p.parse_args()
-    if a.action == "fit":
+    if a.action == "alias-smoke":
+        alias_smoke(a.player, a.rodent, a.out)
+    elif a.action == "fit":
         fit(a.player, a.rodent, a.stockfish, a.out, strict=a.strict, prior_selection=a.prior_selection)
     elif a.action == "reserved":
         reserved(a.player, a.rodent, a.stockfish, a.selection, a.out, strict=a.strict)

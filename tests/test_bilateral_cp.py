@@ -1,5 +1,5 @@
 from chesssim.bilateral_cp import (
-    PHASES, MARGIN, PREFERRED, gate, stats, select, fit_eligible, baseline_inventory, recipes, partition, variant_alias, refine_cases, STRICT_MARGIN,
+    PHASES, MARGIN, PREFERRED, gate, stats, select, fit_eligible, baseline_inventory, recipes, partition, variant_alias, refine_cases, STRICT_MARGIN, safe_alias,
 )
 from chesssim.catalog import load_roster
 from chesssim.qualified_runtime import assets
@@ -122,3 +122,19 @@ def test_fine_grid_is_deterministic_and_preserves_original_recipes():
     assert ("frozen", 15, 750_000) in fine.values()
     assert ("toward", 16, 750_000) in fine.values()
     assert all(6 <= v[1] <= 24 and 10_000 <= v[2] <= 5_000_000 for v in fine.values())
+
+
+def test_alias_normalization_and_fine_profile_recipes():
+    import pytest
+    name = "VachierLagraveWaveIndividualCpToward"
+    alias = safe_alias(name)
+    assert len(alias.encode("ascii")) <= 31
+    assert alias == safe_alias(name)
+    assert safe_alias("Simple") == "Simple"
+    assert safe_alias(name + "2") != alias
+    with pytest.raises(ValueError):
+        safe_alias("invalid alias")
+    coarse = recipes({"frozen": None, "toward": None}, ("frozen", 16, 5_000_000))
+    fine = refine_cases(coarse, "baseline", ("mid-toward-50",))
+    assert ("mid-toward-50", 16, 5_000_000) in fine.values()
+    assert all(fine[k] == v for k, v in coarse.items())
