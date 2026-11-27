@@ -1,0 +1,76 @@
+name: Wave 04 paired full-game qualification
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/wave-04-strength-release.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  validate-candidates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        player: [capablanca, euwe, kramnik, carlsen, judit-polgar, hou-yifan, kosteniuk]
+        seed: [2029, 2030]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - run: |
+          python -m pip install -e .
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities rodent-source/books "$RUNNER_TEMP/rodent/"
+      - uses: actions/download-artifact@v4
+        with:
+          name: wave-measure-${{ matrix.player }}
+          path: ${{ runner.temp }}/measure
+          run-id: 45694933708
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: wave-final-${{ matrix.player }}
+          path: ${{ runner.temp }}/final
+          run-id: 45694933708
+          github-token: ${{ github.token }}
+      - run: |
+          python -m chesssim.product_wave_release --player ${{ matrix.player }} --rodent "$RUNNER_TEMP/rodent" --selection "$RUNNER_TEMP/measure" --final "$RUNNER_TEMP/final" --seed ${{ matrix.seed }} --out "$RUNNER_TEMP/release"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.player }}-${{ matrix.seed }}
+          path: ${{ runner.temp }}/release/
+          if-no-files-found: error
+  release-proposals:
+    needs: validate-candidates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: ${{ runner.temp }}/release-shards
+      - run: |
+          python -m pip install -e .
+          python -m chesssim.product_wave_release --wave 9 --aggregate "$RUNNER_TEMP/release-shards" --out "$RUNNER_TEMP/release-proposals.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-proposals
+          path: ${{ runner.temp }}/release-proposals.json
+          if-no-files-found: error
