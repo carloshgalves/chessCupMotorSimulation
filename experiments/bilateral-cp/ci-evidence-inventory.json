@@ -1,0 +1,1332 @@
+{
+  "schema": "cp-ci-evidence-inventory-v1",
+  "snapshot": "2026-11-27",
+  "runs": [
+    {
+      "run_id": 45888949887,
+      "artifacts": [
+        {
+          "id": 15154704927,
+          "name": "cp-fit-smyslov",
+          "digest": "sha256:d4fe9441b31b58b27af4d778d265d17fc92c94a10179c301fd43f3a427eeff7b",
+          "expired": false,
+          "size_in_bytes": 59381,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15155807452,
+          "name": "cp-fit-spassky",
+          "digest": "sha256:2b01ec4279468256b9355a9c321dc794d043f847c71222a96048f18e4db3bddb",
+          "expired": false,
+          "size_in_bytes": 63074,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15156387827,
+          "name": "cp-fit-karpov",
+          "digest": "sha256:50a9daca78f3006d75cee014975d1800fa80771c94269afb55e25a2c4aeff901",
+          "expired": false,
+          "size_in_bytes": 64854,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15157025578,
+          "name": "cp-fit-petrosian",
+          "digest": "sha256:45e05f87c3b0acf5f0a146ccfe3a80c82efd8bd8657e895bca1d57a7df24ec68",
+          "expired": false,
+          "size_in_bytes": 64749,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15157958523,
+          "name": "cp-fit-kasparov",
+          "digest": "sha256:4ae0e05217bac9b69d12ecdd165afbb1eb4afc17b1810cff5a869dabf041e507",
+          "expired": false,
+          "size_in_bytes": 70923,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15158421032,
+          "name": "cp-fit-kramnik",
+          "digest": "sha256:9267a502997dbff0f8e62a60dcbf7d37de45d7b46829dad6ac6a484e29c7d209",
+          "expired": false,
+          "size_in_bytes": 69431,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15158540622,
+          "name": "cp-fit-lasker",
+          "digest": "sha256:6cd5ea4a2fbeace4eef14576404d7f7c67c15f0289c84d2b7541bc94314eb0c4",
+          "expired": false,
+          "size_in_bytes": 61614,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15158642582,
+          "name": "cp-fit-steinitz",
+          "digest": "sha256:a02f7a3575e44635b2f51c47ff8ab2d03008bbc536cff95cf1e83bf05af8cbc6",
+          "expired": false,
+          "size_in_bytes": 64226,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15158694751,
+          "name": "cp-fit-anand",
+          "digest": "sha256:ef2d6eb37df773fa7c6e2e0b4337cea0f8b5ed2f8e2689e4a127fc51f3ed9db5",
+          "expired": false,
+          "size_in_bytes": 65935,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15158821952,
+          "name": "cp-fit-fischer",
+          "digest": "sha256:23b635d9cd85cf105a3627812bb3ea516f9270f53d1d8d6c3effe6390532453c",
+          "expired": false,
+          "size_in_bytes": 67373,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15159031937,
+          "name": "cp-fit-alekhine",
+          "digest": "sha256:ff671d38de40b468122e4a75f020f8706395f5b49f7c60e55e0960b92fb55823",
+          "expired": false,
+          "size_in_bytes": 67545,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15159375843,
+          "name": "cp-fit-tal",
+          "digest": "sha256:c4063b19c91a86414bca89eb16070d2b80b3d39e1c8c925d6820534468863bcc",
+          "expired": false,
+          "size_in_bytes": 60584,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15160120490,
+          "name": "cp-fit-euwe",
+          "digest": "sha256:263fcca37cd0b8b5ae80bde8800588eae3e569f4050c1f9a1e3ff681c2e33813",
+          "expired": false,
+          "size_in_bytes": 57929,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15162503402,
+          "name": "cp-fit-carlsen",
+          "digest": "sha256:7516be77bacc2748099717ae5abf0f3087b478b6421f5e7a8dfa240595d7967d",
+          "expired": false,
+          "size_in_bytes": 89072,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15164849421,
+          "name": "cp-fit-grischuk",
+          "digest": "sha256:620013b3cfe64b7ba1ad76dbbb83319aa6b150cd7641c0f93d5021e4212e13e8",
+          "expired": false,
+          "size_in_bytes": 100827,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15166740507,
+          "name": "cp-fit-philidor",
+          "digest": "sha256:0ea5ccf14b0d3bd151e347130629cf8acf351f79c1098f56fc6ee67d5ee37427",
+          "expired": false,
+          "size_in_bytes": 12410,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15167752965,
+          "name": "cp-fit-mequinho",
+          "digest": "sha256:b106292f21ce7d5ad5c49a3f544a9b67036273e3a5255f464d9c9a2902b752c7",
+          "expired": false,
+          "size_in_bytes": 59354,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15168211855,
+          "name": "cp-fit-topalov",
+          "digest": "sha256:a70a621597ade8f3e376aa279bdeb0e5048c14f5ca23562637d1361a53dc41d6",
+          "expired": false,
+          "size_in_bytes": 71002,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15169617123,
+          "name": "cp-fit-staunton",
+          "digest": "sha256:1bd7efb990be3cc1aba7b90fad083b3cc0b61df37a5cbf9ee2351b6f2827cf2c",
+          "expired": false,
+          "size_in_bytes": 62894,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15169674590,
+          "name": "cp-fit-morphy",
+          "digest": "sha256:316fc181cf1cdea9e0f135ae3b6f4c9167423db28b9912330c2cf835760ed542",
+          "expired": false,
+          "size_in_bytes": 58816,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15170896539,
+          "name": "cp-fit-chigorin",
+          "digest": "sha256:41d60fa8f69abe5978974d96433c9de77edde29d64043a7669afb47660896375",
+          "expired": false,
+          "size_in_bytes": 67600,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15171041491,
+          "name": "cp-fit-marshall",
+          "digest": "sha256:e66f320a55679b18edda7b40224344639e2bb6f3c3da002b5e55d5ba2da432ab",
+          "expired": false,
+          "size_in_bytes": 65980,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15171334427,
+          "name": "cp-fit-tarrasch",
+          "digest": "sha256:652d9a7ade75195b68a63c0d880989dd98046bee682efd50725d3c793bdb1721",
+          "expired": false,
+          "size_in_bytes": 61690,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15173569420,
+          "name": "cp-fit-anderssen",
+          "digest": "sha256:05bf1a401261e0c296d6f79174044f6fe622e058032de0699f7744fa871e06ed",
+          "expired": false,
+          "size_in_bytes": 64231,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15182522713,
+          "name": "cp-fit-nimzowitsch",
+          "digest": "sha256:ad94bb523893692ea50d4ebb40ce68aea94e48599a3b38b797b718f57066c632",
+          "expired": false,
+          "size_in_bytes": 64073,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15185484539,
+          "name": "cp-fit-bronstein",
+          "digest": "sha256:bb162ce7db6e24d309ea508c186d213e5a97cb4f277e3c9f0d6bf1b567069ef6",
+          "expired": false,
+          "size_in_bytes": 70046,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15185956983,
+          "name": "cp-fit-reti",
+          "digest": "sha256:7c29ae8d69e5d9600edba5481b73b046cf918e252dd779f3c1a259d9f0c6baed",
+          "expired": false,
+          "size_in_bytes": 71033,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15187824269,
+          "name": "cp-fit-keres",
+          "digest": "sha256:8337684e17a4235cb4e9509df02d268c581b4fc7170d73c170bbf53a79b2c8df",
+          "expired": false,
+          "size_in_bytes": 79366,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15187931598,
+          "name": "cp-fit-najdorf",
+          "digest": "sha256:486d9cb96e1a7ea37546f70c0d8d24a566677cbfb89231acd543c509a6d30f3d",
+          "expired": false,
+          "size_in_bytes": 65786,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15188177840,
+          "name": "cp-fit-geller",
+          "digest": "sha256:d409aa7593566ae03a4b9443b84288742ba59ba41d75df9ececf371f651fea91",
+          "expired": false,
+          "size_in_bytes": 73009,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15190136176,
+          "name": "cp-fit-reshevsky",
+          "digest": "sha256:9addc6a76aeabb8388f8fe21f48545860ae9dc2c6da022e725045f9a296041c1",
+          "expired": false,
+          "size_in_bytes": 67382,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15190619876,
+          "name": "cp-fit-larsen",
+          "digest": "sha256:e34a9d9d43a0f5742f1d76cd5697fb0c4ff4d5eacf9b6b66792e4c04b398055c",
+          "expired": false,
+          "size_in_bytes": 70166,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15192498091,
+          "name": "cp-fit-taimanov",
+          "digest": "sha256:eae1a8960565e7cf5973f5de5756a31a8a0fdffec032125f6282c5625790aa49",
+          "expired": false,
+          "size_in_bytes": 74157,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15194775139,
+          "name": "cp-fit-korchnoi",
+          "digest": "sha256:7205c0c66b55bfff4bf259e5abe10fae994e199dfd006a69bf47a15fce0e83a7",
+          "expired": false,
+          "size_in_bytes": 66407,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15197197012,
+          "name": "cp-fit-portisch",
+          "digest": "sha256:c73b051c6e229749127e772d6be3474b778fd71c9477e65a49b64435386d1980",
+          "expired": false,
+          "size_in_bytes": 78980,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15197409945,
+          "name": "cp-fit-gligoric",
+          "digest": "sha256:d454fd142fcf0363c39d562b91ce0ec8198208392a0cf88ebb118345955e156f",
+          "expired": false,
+          "size_in_bytes": 75471,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15197888683,
+          "name": "cp-fit-ivanchuk",
+          "digest": "sha256:e84a71a5e988af7f107cf89bf1c7f177779bf2431f3acbc6dc4f21f15d6e6780",
+          "expired": false,
+          "size_in_bytes": 115685,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15198697170,
+          "name": "cp-fit-timman",
+          "digest": "sha256:203efd648aaf4258af49cadd0de5072f134d480007b7e8e7dbe51ff388a8a0cd",
+          "expired": false,
+          "size_in_bytes": 79267,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15204296593,
+          "name": "cp-fit-short",
+          "digest": "sha256:37692483ab5edaa889eda061701eb4b5f969e8b6b9f5fb395f5f81ef5ef0f403",
+          "expired": false,
+          "size_in_bytes": 71213,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        },
+        {
+          "id": 15204987499,
+          "name": "cp-fit-kamsky",
+          "digest": "sha256:e6c0e15b5f131b7ea3e88eab9430e7bb351bab5bb8badbc5026bad250bc9ccd6",
+          "expired": false,
+          "size_in_bytes": 68788,
+          "expires_at": "2027-02-24T20:09:28Z",
+          "head_sha": "2194d2849d4edfa04bb4d6ffe3eab799e02afdee"
+        }
+      ]
+    },
+    {
+      "run_id": 45913126242,
+      "artifacts": [
+        {
+          "id": 15162901665,
+          "name": "cp-fit-steinitz",
+          "digest": "sha256:2355c7f0e742370aefda410877106e933dbe684bbde8a0fa00dce764dd64a878",
+          "expired": false,
+          "size_in_bytes": 64226,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15163483914,
+          "name": "cp-fit-kramnik",
+          "digest": "sha256:fcc1785cb71e3a17a80cb51ea76e2a563342cde9363524723ce513b961d226f5",
+          "expired": false,
+          "size_in_bytes": 69431,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15165557121,
+          "name": "cp-fit-kasparov",
+          "digest": "sha256:86560f7f31806935d7e647986bdf5d954c0a044a2325b430ddeca0e1e2a84765",
+          "expired": false,
+          "size_in_bytes": 70923,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15165724337,
+          "name": "cp-fit-lasker",
+          "digest": "sha256:7e31246bbae43b49def3ddee3219e0ca2161e6c9608ab0284280877585c8dc1b",
+          "expired": false,
+          "size_in_bytes": 61614,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15166251369,
+          "name": "cp-reserved-steinitz",
+          "digest": "sha256:da8eae7934e76003689419d357269ab774b964b25c483dd32253382b16c6e53b",
+          "expired": false,
+          "size_in_bytes": 48608,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15166539996,
+          "name": "cp-reserved-kramnik",
+          "digest": "sha256:777654bd543c7e23ff8067a5bd5f99deb71a8d56869eaca1dc9e3652f0ff2b37",
+          "expired": false,
+          "size_in_bytes": 75346,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15167837976,
+          "name": "cp-fit-anand",
+          "digest": "sha256:97c7d0c911e1b42ced1c3d48255d8f38d037dce85d9495ee0f4ead8c40eb2836",
+          "expired": false,
+          "size_in_bytes": 65935,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15168469841,
+          "name": "cp-reserved-lasker",
+          "digest": "sha256:fd6206cd430d506a7602355341d30445582e3ecef5b79a3df0167e990e2281c7",
+          "expired": false,
+          "size_in_bytes": 46287,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15168878489,
+          "name": "cp-fit-spassky",
+          "digest": "sha256:75d5bd6960a1c2f5c278c4acd9a0d5543553478c31e32854945ff77b8976fd62",
+          "expired": false,
+          "size_in_bytes": 63074,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15168942968,
+          "name": "cp-fit-karpov",
+          "digest": "sha256:ea91b726f04126b63732fa1862c9718574300131681e71eb9c049980fda5d15d",
+          "expired": false,
+          "size_in_bytes": 64854,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15169741706,
+          "name": "cp-reserved-kasparov",
+          "digest": "sha256:8141c56428aed8802b5d17cbb574d359995c178ba2980985c7e77235f0a22da3",
+          "expired": false,
+          "size_in_bytes": 92563,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15170155524,
+          "name": "cp-fit-alekhine",
+          "digest": "sha256:1681117e4bea0d12c4a3ca331171dea690be2b8679aa0ec6fa4f2bd8b23f37eb",
+          "expired": false,
+          "size_in_bytes": 67545,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15170983855,
+          "name": "cp-fit-petrosian",
+          "digest": "sha256:98b06e54dbb66a466e05701513659f4b26735ef8832bde1b284fbb07f26aeafc",
+          "expired": false,
+          "size_in_bytes": 64749,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15172428538,
+          "name": "cp-reserved-anand",
+          "digest": "sha256:b0555cfe8afd6ead8ab7df031add5af1a265fd7ec67656a138a1d18d766a9e4c",
+          "expired": false,
+          "size_in_bytes": 92282,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15172573635,
+          "name": "cp-reserved-petrosian",
+          "digest": "sha256:6c9c0dd092e90b9dd6915ef84cf517e1f85a1035c6c1703566bff8e2a5b26224",
+          "expired": false,
+          "size_in_bytes": 49675,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15172784122,
+          "name": "cp-fit-tal",
+          "digest": "sha256:179c804c6310b057e9846ac7de3f13be9ec7f998c4180b0acfae241a0edb7f76",
+          "expired": false,
+          "size_in_bytes": 60584,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15173340273,
+          "name": "cp-reserved-spassky",
+          "digest": "sha256:758b5a0b955c0512d91b5b6a105e5300094ee224dd2b1cba64e206c7f28fc6d2",
+          "expired": false,
+          "size_in_bytes": 54306,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15173660970,
+          "name": "cp-reserved-karpov",
+          "digest": "sha256:5c7bb7edad184213b9d4edbdfe41a4b16c288b98c4a8d96dae89108375149aa2",
+          "expired": false,
+          "size_in_bytes": 76258,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15175658455,
+          "name": "cp-fit-smyslov",
+          "digest": "sha256:e4dcb39bfb722ab6898f4eb20ca16c7bd5ad9002755746cc0dfa00d6a26dc0d6",
+          "expired": false,
+          "size_in_bytes": 59381,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15175678312,
+          "name": "cp-fit-fischer",
+          "digest": "sha256:7ebfc11db42b192ef27d2f4b0cead66b2f6fb1330e964402fdffbaf1cebeb059",
+          "expired": false,
+          "size_in_bytes": 67373,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15175690396,
+          "name": "cp-fit-euwe",
+          "digest": "sha256:643c13ecaa77b8873221c929659baf07eaa51a681c988f010fa7cbc95f7e1fea",
+          "expired": false,
+          "size_in_bytes": 57929,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15175733776,
+          "name": "cp-reserved-tal",
+          "digest": "sha256:9270cc150c51b3582945d5efbe293b92307fd5d3a865652148667499e072ddf0",
+          "expired": false,
+          "size_in_bytes": 43829,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15175750305,
+          "name": "cp-reserved-alekhine",
+          "digest": "sha256:5f099d3cec10f0154a5083434953286f8dcbf6e2fc18ad39b837446fb864cb01",
+          "expired": false,
+          "size_in_bytes": 85070,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15176939220,
+          "name": "cp-reserved-fischer",
+          "digest": "sha256:e26105a0e2b1af730adb6573826dc30d04c7f64ed6f4ba3968cfd6e59e6c1e14",
+          "expired": false,
+          "size_in_bytes": 44251,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15179080633,
+          "name": "cp-reserved-euwe",
+          "digest": "sha256:8f3b0074a307e58f19eb721bfe2f8445d464e2e864cad256cc9e466404e51982",
+          "expired": false,
+          "size_in_bytes": 45189,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15180140708,
+          "name": "cp-reserved-smyslov",
+          "digest": "sha256:46ef304814a2080cee2479919ac147bef45b9da6d99dd0d5cf19a20c42521891",
+          "expired": false,
+          "size_in_bytes": 36024,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15181478049,
+          "name": "cp-fit-capablanca",
+          "digest": "sha256:ad5103b300856809de51133a16718529ad47f19d703275f252b12416413c3016",
+          "expired": false,
+          "size_in_bytes": 59320,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15182304070,
+          "name": "cp-fit-ding-liren",
+          "digest": "sha256:0dfde9c78d114b336d41707ce9cd008bcf1b4bd95c196846823fdc32d57e7f32",
+          "expired": false,
+          "size_in_bytes": 72517,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15183247395,
+          "name": "cp-reserved-capablanca",
+          "digest": "sha256:a8b1d70492bbd6eb408f5c27847bd75b02e40971093806dcad08bea36a29156b",
+          "expired": false,
+          "size_in_bytes": 31771,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15184115199,
+          "name": "cp-fit-botvinnik",
+          "digest": "sha256:9807d15cb239481f9e40bf90ddab0b9861274382b473a8cf354e81935403120e",
+          "expired": false,
+          "size_in_bytes": 60786,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15188113548,
+          "name": "cp-reserved-ding-liren",
+          "digest": "sha256:c80f86e0623af972efca8941ab90dd8ee89e205966d8f0fca1355be6a58373f9",
+          "expired": false,
+          "size_in_bytes": 98123,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15188121213,
+          "name": "cp-reserved-botvinnik",
+          "digest": "sha256:e504a6172b95fa8d9823368c7234f16fd10d71b9ea00deb481dbaab154e79271",
+          "expired": false,
+          "size_in_bytes": 48420,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        },
+        {
+          "id": 15190002538,
+          "name": "cp-priority-qualified-candidates",
+          "digest": "sha256:a12b1a88d0a654cae36863336dc88ee3f4510cf4614e29704dfe7e5f98c50d1e",
+          "expired": false,
+          "size_in_bytes": 6031,
+          "expires_at": "2027-02-24T23:48:57Z",
+          "head_sha": "ee7e99950ba01980740f726d703556a7fc1a7e20"
+        }
+      ]
+    },
+    {
+      "run_id": 45918461269,
+      "artifacts": [
+        {
+          "id": 15169462525,
+          "name": "cp-alias-euwe",
+          "digest": "sha256:614d77f2834f5a10609c1e65515d3a329de9a5a70a5d45ec8f8985d512123c3e",
+          "expired": false,
+          "size_in_bytes": 911,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15170187801,
+          "name": "cp-alias-anand",
+          "digest": "sha256:1021595b0054e310b09e91ab6ccab9805e12e26e4d2c2615ca3ab2e334127c0e",
+          "expired": false,
+          "size_in_bytes": 881,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15170985831,
+          "name": "cp-alias-spassky",
+          "digest": "sha256:92ea37726b2b00dbda54b70bf0046ca4038626c92643571ba6c79d5099c36590",
+          "expired": false,
+          "size_in_bytes": 816,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15171499313,
+          "name": "cp-alias-kasparov",
+          "digest": "sha256:e6caebfd34513792f9294b6b789361b1dcf2bc3b58d251e835143b0c4d8c75be",
+          "expired": false,
+          "size_in_bytes": 754,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15173860344,
+          "name": "cp-fit-anand",
+          "digest": "sha256:476545c7c5c9d659b1f45d9d80698be281b45dc134f7ed6ee2acd6d9d6f69f71",
+          "expired": false,
+          "size_in_bytes": 159396,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15174732921,
+          "name": "cp-fit-kasparov",
+          "digest": "sha256:a3d518f841e4d44336efc0d562c8022f0a8370c52cc05ee3feb0387259512e7b",
+          "expired": false,
+          "size_in_bytes": 161044,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15175431612,
+          "name": "cp-fit-euwe",
+          "digest": "sha256:21bc7368fb85064524d50ddf5a787a84dbb4e49156eb79ffb39bc1a3a30e7d6a",
+          "expired": false,
+          "size_in_bytes": 152905,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15175488018,
+          "name": "cp-alias-kramnik",
+          "digest": "sha256:bcc733f7d6a9b6f600c3cd5853f6e58e77e4979e0ccf7524d05d95693b734800",
+          "expired": false,
+          "size_in_bytes": 938,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15176961852,
+          "name": "cp-reserved-anand",
+          "digest": "sha256:ac7656342d35b3c99ab2517adde889ff476fa2ebc07d9cf90e8b4f2dd7723fb6",
+          "expired": false,
+          "size_in_bytes": 93520,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15177013496,
+          "name": "cp-alias-petrosian",
+          "digest": "sha256:9c95885d4e43a3e9c3dcc118814b23b31c2ea3825e6b80d36754570edb6f4403",
+          "expired": false,
+          "size_in_bytes": 833,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15177277912,
+          "name": "cp-fit-petrosian",
+          "digest": "sha256:3c9fa7d189531d958654d021329abe9f920bcbc9ae4bffe5000bf582556df5a2",
+          "expired": false,
+          "size_in_bytes": 64809,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15178304666,
+          "name": "cp-reserved-kasparov",
+          "digest": "sha256:0f6a0b6c422e370e3b782b762185efd502bc3e129a21d38d600318bc5f74703e",
+          "expired": false,
+          "size_in_bytes": 93600,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15178864622,
+          "name": "cp-alias-tal",
+          "digest": "sha256:bad72050b29b6bbfaef1bdad5da23930928aa3a1b6046c313307dc82efc05cb1",
+          "expired": false,
+          "size_in_bytes": 710,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15178881635,
+          "name": "cp-alias-alekhine",
+          "digest": "sha256:d39156d37994d36383387a683e046fe8e2ed4c21af6d9c64f23a585ac236d560",
+          "expired": false,
+          "size_in_bytes": 891,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15179158623,
+          "name": "cp-reserved-euwe",
+          "digest": "sha256:1c6bf75d38e0df77a355a2229ad06b969c6cbe4b20d4fbb3ea74417ae43c8b2d",
+          "expired": false,
+          "size_in_bytes": 46150,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15179493255,
+          "name": "cp-reserved-petrosian",
+          "digest": "sha256:a988e5615bd74f3b22a0c931a2e3ce0bc9072917a7ea981660f8a09277f374d2",
+          "expired": false,
+          "size_in_bytes": 49685,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15180025177,
+          "name": "cp-fit-tal",
+          "digest": "sha256:94dd252daaa89e95bf92f72457eec687acb201981b4230f1974b5ad614029cb3",
+          "expired": false,
+          "size_in_bytes": 60649,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15180054297,
+          "name": "cp-fit-spassky",
+          "digest": "sha256:b276ebb57e815bdcc2f8c16a64bce4ce77c324aa2c9339ce72923df8238bd40a",
+          "expired": false,
+          "size_in_bytes": 149322,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15180149680,
+          "name": "cp-alias-fischer",
+          "digest": "sha256:c576a857192820deb416f7231758d5cff398e825e1e985d91d0ec6dd9ade497e",
+          "expired": false,
+          "size_in_bytes": 704,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15181326922,
+          "name": "cp-fit-smyslov",
+          "digest": "sha256:20e0c288ed6875af3d3ad27d93088ffb9b44135dce2fe9ef562c052b123dc3c1",
+          "expired": false,
+          "size_in_bytes": 59447,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15182120040,
+          "name": "cp-alias-smyslov",
+          "digest": "sha256:9934d025ac3305e410ce89a6a413dbe676e75039a3bc8ddf130d93da24868d28",
+          "expired": false,
+          "size_in_bytes": 888,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15183106135,
+          "name": "cp-reserved-tal",
+          "digest": "sha256:7f5a46389d3186e80cc759278a21f3150082a9ba548416f71aadc27f221145c0",
+          "expired": false,
+          "size_in_bytes": 43839,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15184203598,
+          "name": "cp-alias-lasker",
+          "digest": "sha256:1a3c72a72e11547c198d5f4e055bbd2453a0da1cc69c84523e613a874e172f82",
+          "expired": false,
+          "size_in_bytes": 884,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15184680620,
+          "name": "cp-fit-alekhine",
+          "digest": "sha256:f24a6aba6dabb5183cb807c6eefe8cde6d32f54991207b98a2197f1dfa8c8b16",
+          "expired": false,
+          "size_in_bytes": 150997,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15185872722,
+          "name": "cp-reserved-smyslov",
+          "digest": "sha256:b6ab33701fbc0b779061f977eeb22741f322eec0ff5ef65091a68b3d7a2a7d37",
+          "expired": false,
+          "size_in_bytes": 36033,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15186073147,
+          "name": "cp-reserved-spassky",
+          "digest": "sha256:90cad4b99be8faa636c04a04ad1ac561a628451dff1d58bb234315bfe0400079",
+          "expired": false,
+          "size_in_bytes": 55194,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15186423131,
+          "name": "cp-fit-karpov",
+          "digest": "sha256:16bd344fe123c01032b2899c1b66f0135efede9c1df766a1a3b489aec3b6fbec",
+          "expired": false,
+          "size_in_bytes": 64920,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15186476938,
+          "name": "cp-fit-kramnik",
+          "digest": "sha256:cb064f9cc7c746eec51c9aa9b9f74579677428243ea6714f1cbcd2d3705dd274",
+          "expired": false,
+          "size_in_bytes": 153379,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15186911522,
+          "name": "cp-alias-karpov",
+          "digest": "sha256:6eebb72dbfeebd1173050bdae21b5366c0850a26c728a11245cc8e7541b8a706",
+          "expired": false,
+          "size_in_bytes": 762,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15190866044,
+          "name": "cp-fit-fischer",
+          "digest": "sha256:8e44ae7762d6cb1c5ca01ef9170ce6cbe2a8f1d54e11b9a434494012e6db16ef",
+          "expired": false,
+          "size_in_bytes": 139430,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15191158234,
+          "name": "cp-reserved-alekhine",
+          "digest": "sha256:a959a88c15e4e2bff2d1d3731b1e73383034a49d42953af79ea8f1b1747fbeac",
+          "expired": false,
+          "size_in_bytes": 85719,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15191359316,
+          "name": "cp-fit-lasker",
+          "digest": "sha256:d50f4ce974a97b4938b38752fff9cb61e79db6165364f1650e3f92690c48f2fb",
+          "expired": false,
+          "size_in_bytes": 154486,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15192163719,
+          "name": "cp-reserved-karpov",
+          "digest": "sha256:5e42e7dbf1ffcdb85ab1b53b0a71d64fba56ecdc7ad328329f30f6e432e6a06a",
+          "expired": false,
+          "size_in_bytes": 76270,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15192452526,
+          "name": "cp-reserved-fischer",
+          "digest": "sha256:a4a64794796a0f789502c8812b66d0dff10650d0e66cdd7cb4c350de072d6c80",
+          "expired": false,
+          "size_in_bytes": 44864,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15192529522,
+          "name": "cp-reserved-kramnik",
+          "digest": "sha256:968db79daff2a61a3d8c2024236c8f9a385e09ff335ac3dd0b964e0adeee3de8",
+          "expired": false,
+          "size_in_bytes": 76147,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15193071044,
+          "name": "cp-alias-steinitz",
+          "digest": "sha256:b3ecee04c4b5caac726b05c89e11019a2750e19f5b0882f2262e7eca67556a71",
+          "expired": false,
+          "size_in_bytes": 821,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15193610889,
+          "name": "cp-alias-capablanca",
+          "digest": "sha256:7ff806bcd2601ad0573ab67c0da8ac9dcf420f8474567a99b3a67c21b48af8d6",
+          "expired": false,
+          "size_in_bytes": 947,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15194341185,
+          "name": "cp-alias-botvinnik",
+          "digest": "sha256:e2cd87c6d6a89efefe53e0ce89ae29b586cd081a5d769f436fb65507817fa44f",
+          "expired": false,
+          "size_in_bytes": 894,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15196792809,
+          "name": "cp-alias-ding-liren",
+          "digest": "sha256:d36b803121680641212893ae00e97ca14cb531df441c7c44afb4b138332089dd",
+          "expired": false,
+          "size_in_bytes": 1108,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15199355567,
+          "name": "cp-reserved-lasker",
+          "digest": "sha256:b90d3880e90fcbbd60ad7c7b0de9252fa68a6a195ce306559b687d8926f2a812",
+          "expired": false,
+          "size_in_bytes": 47372,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15200725651,
+          "name": "cp-fit-capablanca",
+          "digest": "sha256:75a6f97eade0b34a1a663a5b1a3ae9281092be3f672979581fe017e7003c9193",
+          "expired": false,
+          "size_in_bytes": 59341,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15201184301,
+          "name": "cp-alias-carlsen",
+          "digest": "sha256:a4210af27321deb77046ba5da27617ce86cbff1f9a32bdd4df919ae70a10b8de",
+          "expired": false,
+          "size_in_bytes": 939,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15201641137,
+          "name": "cp-fit-steinitz",
+          "digest": "sha256:d8700cebcdd97c270cba704d97f864e2aabf013d61dee60819b27c1511d70f65",
+          "expired": false,
+          "size_in_bytes": 150889,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15202548817,
+          "name": "cp-fit-ding-liren",
+          "digest": "sha256:c783e3f003dd6aa0200b3dcbc8ba8c6f2e81f238f4202d14dfbcd3c91749df21",
+          "expired": false,
+          "size_in_bytes": 72542,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15202607315,
+          "name": "cp-reserved-capablanca",
+          "digest": "sha256:61022ccfafa1e62495b6bdf239c92a28ab9e86fdd436ee09bcabb7601b8c423a",
+          "expired": false,
+          "size_in_bytes": 31783,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15202983124,
+          "name": "cp-alias-mequinho",
+          "digest": "sha256:d061b9332b155d0399de8f7fca6247494f0fc9da9a81aa96059f5d19731e527c",
+          "expired": false,
+          "size_in_bytes": 940,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        },
+        {
+          "id": 15207091557,
+          "name": "cp-reserved-steinitz",
+          "digest": "sha256:0d1cfcad831650a7d54ac4b86dd81bf2c9d559219f7cd86ece0d9e6d681dc45c",
+          "expired": false,
+          "size_in_bytes": 49446,
+          "expires_at": "2027-02-25T00:44:11Z",
+          "head_sha": "09e9c94b5cc7e6d5d536dd5f45a976e4cae91272"
+        }
+      ]
+    },
+    {
+      "run_id": 45985663890,
+      "artifacts": [
+        {
+          "id": 15192020977,
+          "name": "retained-active-baselines",
+          "digest": "sha256:bc3ba2690293bc2e03d5b5419eca7d222f449c9802d269c68e066e86abcc7bbc",
+          "expired": false,
+          "size_in_bytes": 1221,
+          "expires_at": "2027-02-25T10:51:52Z",
+          "head_sha": "6c8c0bd673aa492e5711c7888494db300f88ca00"
+        }
+      ]
+    },
+    {
+      "run_id": 45884539347,
+      "artifacts": [
+        {
+          "id": 15148684734,
+          "name": "review-portisch",
+          "digest": "sha256:7175239bc55d2f4f170bfb8eaecf75d408508c9a028d66c9446dfad54eaa7b33",
+          "expired": false,
+          "size_in_bytes": 1592,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15149572849,
+          "name": "review-gligoric",
+          "digest": "sha256:84069b6d509ef55280853280e80d90a00127d86635c9ddf721177fb5c1065a3b",
+          "expired": false,
+          "size_in_bytes": 1581,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15149895646,
+          "name": "review-geller",
+          "digest": "sha256:9505072e065d1c3d13242f18a16b53b9d5c577c9769273a808d5db53d6e6d3e9",
+          "expired": false,
+          "size_in_bytes": 1581,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15150427543,
+          "name": "review-timman",
+          "digest": "sha256:d996f390cefe523389d01da461d9da9ef15b8a194e8e118f56123f50853a1dd9",
+          "expired": false,
+          "size_in_bytes": 1579,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15150834044,
+          "name": "review-najdorf",
+          "digest": "sha256:8de24ee8eecc770514dd7d364b6dd86160812712f2a13931087749234085f61e",
+          "expired": false,
+          "size_in_bytes": 1601,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15152162552,
+          "name": "review-aronian",
+          "digest": "sha256:eea73f8b160df5f445fcba97a9410591ce828baa7308ed96fa821e2d22da3a1e",
+          "expired": false,
+          "size_in_bytes": 1602,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15152321960,
+          "name": "review-polugaevsky",
+          "digest": "sha256:2cdd633f76e867e34824f96189fd8613ad226318c1a835de3fb26456883de755",
+          "expired": false,
+          "size_in_bytes": 1575,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15152354763,
+          "name": "review-vachier-lagrave",
+          "digest": "sha256:46d38962a4c54f72c9c4bf95c44cdf3d06bc24403c7b05b61f8e54a3895b7fcb",
+          "expired": false,
+          "size_in_bytes": 1596,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15152926629,
+          "name": "review-grischuk",
+          "digest": "sha256:cd2a94598fcac9bcf2a340fd366148888a385b4907287b411964c023febe2f36",
+          "expired": false,
+          "size_in_bytes": 1587,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15153197339,
+          "name": "review-nepomniachtchi",
+          "digest": "sha256:53446cdd36a3ab481c16679e2ddccd3fda79a7d15759865d35ad53e786b2885b",
+          "expired": false,
+          "size_in_bytes": 1603,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15153415938,
+          "name": "review-mamedyarov",
+          "digest": "sha256:ef005495ebae826ad7b1996aa54a64bb7afd2caa3a1181eb48427f98954d1e3b",
+          "expired": false,
+          "size_in_bytes": 1586,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15154065114,
+          "name": "review-wesley-so",
+          "digest": "sha256:41108f1b9d5b9a5134715d58632b5d336441dafe6aad5d8d604dec6a6e58aec4",
+          "expired": false,
+          "size_in_bytes": 1586,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15154654317,
+          "name": "review-gaprindashvili",
+          "digest": "sha256:b9357c2b2b7ae922eab19e48e6c0bfb728fa101389b5515add357aca1f8657d3",
+          "expired": false,
+          "size_in_bytes": 1592,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15154771224,
+          "name": "review-chiburdanidze",
+          "digest": "sha256:fe2b8257a08bc2d1372ff134a9e000e8adfde07d22b9c494546c066e0c2c7e21",
+          "expired": false,
+          "size_in_bytes": 1617,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15154804231,
+          "name": "review-ivanchuk",
+          "digest": "sha256:ec8ca431296210d77ef17ab66c4f22a5b966418c2dfd2ec3e76cc77c475d15e2",
+          "expired": false,
+          "size_in_bytes": 1592,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15154914523,
+          "name": "review-leko",
+          "digest": "sha256:6e6205541fe4fb9eac8eb59430d206d4cb5118dca74b0382f2a466d350be6a25",
+          "expired": false,
+          "size_in_bytes": 1586,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15158398269,
+          "name": "review-shirov",
+          "digest": "sha256:242ebdd549602df1731e0a2b0bac07fbf8974ee80f4da3566ef276e0660fca4f",
+          "expired": false,
+          "size_in_bytes": 1578,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15158999223,
+          "name": "review-kamsky",
+          "digest": "sha256:d969421a6cea6b84827ae4a8c79f0251045407d90177145fdfe01deb15fae3fc",
+          "expired": false,
+          "size_in_bytes": 1583,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15159409261,
+          "name": "review-karjakin",
+          "digest": "sha256:e7bdae90603c4370989faebbe6c402d60217e51f3bb0aa2618640a8bdfc40688",
+          "expired": false,
+          "size_in_bytes": 1599,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15160013965,
+          "name": "review-svidler",
+          "digest": "sha256:835e5c996acc131656ad5193c4defad86ab53231852bd0122f8125981e5893d7",
+          "expired": false,
+          "size_in_bytes": 1583,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15162245394,
+          "name": "review-taimanov",
+          "digest": "sha256:81aa48e4e0d9be01508b572d643a36316bce868b73d836c45af7a19767ef724a",
+          "expired": false,
+          "size_in_bytes": 1591,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        }
+      ]
+    },
+    {
+      "run_id": 45884539314,
+      "artifacts": [
+        {
+          "id": 15149615169,
+          "name": "corpus-morphy",
+          "digest": "sha256:149d67112addbb030725ae6f09984480cfaef12f83cbdc74f297b3aadf776d8b",
+          "expired": false,
+          "size_in_bytes": 717,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        },
+        {
+          "id": 15149675097,
+          "name": "corpus-philidor",
+          "digest": "sha256:daedc9a9ac1ccfe4065312e09aa7ca54e974d77f51ae5ac1ee541e47fba7a75a",
+          "expired": false,
+          "size_in_bytes": 703,
+          "expires_at": "2027-02-24T19:33:37Z",
+          "head_sha": "fc624483932e5c7ad533a80a0de5bf1b2e298137"
+        }
+      ]
+    }
+  ]
+}
