@@ -18,8 +18,8 @@ from .product_peak_profiles import split_label, summarize
 from .qualified_runtime import NODE_CAP, prepare, resolve
 from .registry import add_to_first_set
 from .roster_product_wave import (
-    PARTITION_VERSION, WAVE, WAVE2, PHASES, MIN_PER_PHASE, MIN_SCORE, ROOTS,
-    bound_measure, eligible_quality, overlay, product_book, sample, source,
+    PARTITION_VERSION, WAVE, WAVE2, WAVE3, INDIVIDUAL_SEEDS, PHASES, MIN_PER_PHASE, MIN_SCORE, ROOTS,
+    bound_measure, eligible_quality, identity_comparison, overlay, product_book, sample, source,
 )
 from .product_repertoires import audit
 
@@ -44,6 +44,23 @@ WAVE2_PRIOR = {
     "anand": (15028321226, "restriction20", "7a8ccf830762f23adb2486bf633ba992b487b8d1dc23744d675cc7281a08a456",
               "db483b709ddd45363c84f57e83f7e33c26bfbb77efab8bca0b5b0f79203c8198"),
 }
+WAVE3_RUN = 45633448337
+WAVE3_PRIOR = {
+    "steinitz": (15054926890, "original20", "f7ab0efd23c94f96f025104dc82eab993163d7a7523cab8b612add1d85d1b338",
+                 "59ef19579b6e02c62e35943bbe01b4f6fd1a86c14bf1d38c66214a19aacfddc9"),
+    "tarrasch": (15052430360, "initiative20", "5df46b5f2e280fc5075be67edeb946d8c922d0f25f8210b2416268a8199947a6",
+                 "874f85c21af1ad63d0fb12b53cc8da56787459292a2c6686e82f007919900064"),
+    "reti": (15051882168, "original20", "8d15e479e118903309afe215cd070faaa2e4337b2b62809a26476113a9469d20",
+             "3ac0222104ed99797d741f83c2d666289bc3f75526f8c48d2e4d099978ed40cc"),
+    "larsen": (15050556789, "initiative16", "0c68296c0070a21db5d53e76653b27d3497f1c00ea6e6a7e9274cd9d7e5a7188",
+               "ae0372dc16659137718ddbe5e3ee71eca949d40c07fc4d4623b77f49b4dae4cc"),
+    "marshall": (15049839584, "original16", "38dfc223a8067f5a041e011c25c914e56bebbfd78e0dc10648c6a73a228f5711",
+                 "dd0e9d5ef78a22c190a5fe65b511c6a943078e9c9e56d45e667246ce432d04b2"),
+    "anderssen": (15049399796, "original16", "5d4235febae596783c0d68c2567900440addfebf6697c48ad5d0ada2eb94cceb",
+                  "961bf0303b3571da768d6e20452d17cd2439cc1086dee8a42c1e1b5e0101e113"),
+    "nimzowitsch": (15049319826, "original20", "53b1825b4dd6ea709b5fcfc401ce9ab920ffcd03b9e54936e8fa3c36812ceae1",
+                    "d1da8e7e21648958e863899230e4957e85fa2e8524d01b3bb89e4018558e7e54"),
+}
 READY = {"MOTOR_BASE_REVIEW_READY", "INDIVIDUAL_CANDIDATE_REVIEW_READY"}
 
 
@@ -52,6 +69,8 @@ def prior_binding(slug):
         return PRIOR_RUN, PRIOR[slug]
     if slug in WAVE2_PRIOR:
         return WAVE2_RUN, WAVE2_PRIOR[slug]
+    if slug in WAVE3_PRIOR:
+        return WAVE3_RUN, WAVE3_PRIOR[slug]
     return None, None
 
 
@@ -98,6 +117,13 @@ def read_candidate(slug, selection, final):
             or summarize(tune)[report["selected"]] != report["tune"]
             or not eligible_quality(report["tune"])):
         raise ValueError("TUNE acceptance failed")
+    if slug in INDIVIDUAL_SEEDS:
+        if name == "original":
+            raise ValueError("Generic control cannot be released")
+        for key, records in (("fit_individual_control", doc["fit_records"]), ("individual_control", tune)):
+            comparison = identity_comparison(records, report["selected"])
+            if comparison != report.get(key) or not comparison["passed"]:
+                raise ValueError("Individual control evidence failed: " + key)
     return report, book, name
 
 
@@ -247,7 +273,8 @@ def release_recipe(first, second):
 
 def aggregate(shards, out, wave=1):
     proposals, blocked = {}, {}
-    for slug in ((*PRIOR, "alekhine") if wave == 1 else WAVE2):
+    groups = {1: (*PRIOR, "alekhine"), 2: WAVE2, 3: tuple(s for s in WAVE3 if s != "topalov"), 4: ("topalov",)}
+    for slug in groups[wave]:
         docs = [json.loads((shards / f"release-{slug}-{seed}" / "release.json").read_text())
                 for seed in (2029, 2030)]
         if all(d.get("status") == "BLOCKED_BY_CALIBRATION" for d in docs):
@@ -262,7 +289,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--player", choices=sorted(WAVE))
     parser.add_argument("--aggregate", type=Path)
-    parser.add_argument("--wave", type=int, choices=(1, 2), default=1)
+    parser.add_argument("--wave", type=int, choices=(1, 2, 3, 4), default=1)
     parser.add_argument("--rodent", type=Path)
     parser.add_argument("--selection", type=Path)
     parser.add_argument("--final", type=Path)

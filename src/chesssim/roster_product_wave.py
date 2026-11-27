@@ -36,10 +36,51 @@ WAVE = {"alekhine": (1927, 1934), "botvinnik": (1948, 1958),
         "steinitz": (1866, 1894), "anderssen": (1851, 1870),
         "tarrasch": (1890, 1908), "marshall": (1904, 1915),
         "nimzowitsch": (1925, 1931), "reti": (1919, 1929),
-        "larsen": (1964, 1971), "topalov": (2005, 2010)}
+        "larsen": (1964, 1971), "topalov": (2005, 2010),
+        "capablanca": (1914, 1927), "euwe": (1934, 1939),
+        "kramnik": (2000, 2007), "carlsen": (2013, 2019),
+        "ding-liren": (2017, 2019), "judit-polgar": (2000, 2005),
+        "hou-yifan": (2010, 2017), "kosteniuk": (2008, 2010)}
 WAVE2 = ("spassky", "lasker", "rubinstein", "anand")
 WAVE3 = ("steinitz", "anderssen", "tarrasch", "marshall",
          "nimzowitsch", "reti", "larsen", "topalov")
+# Explicit modeling hypotheses, not empirical claims of human personality.
+# All three selectable recipes retain an individual signature; Simple is a
+# same-depth negative control only. Never modify previously frozen recipes.
+INDIVIDUAL_SEEDS = {
+    "capablanca": {"Material": 105, "OwnAttack": 95, "OwnMobility": 70, "OppMobility": 90,
+                   "PawnStructure": 145, "PassedPawns": 145, "Outposts": 75, "PiecePressure": 105},
+    "euwe": {"Material": 105, "OwnAttack": 115, "OwnMobility": 85, "OppMobility": 85,
+             "PawnStructure": 125, "PassedPawns": 115, "Outposts": 85, "PiecePressure": 125},
+    "kramnik": {"Material": 105, "OwnAttack": 95, "OwnMobility": 90, "OppMobility": 110,
+                "PawnStructure": 150, "PassedPawns": 125, "Outposts": 115, "PiecePressure": 115},
+    "carlsen": {"Material": 105, "OwnAttack": 110, "OwnMobility": 95, "OppMobility": 100,
+                "PawnStructure": 135, "PassedPawns": 150, "Outposts": 100, "PiecePressure": 120},
+    "ding-liren": {"Material": 105, "OwnAttack": 125, "OwnMobility": 105, "OppMobility": 95,
+                   "PawnStructure": 130, "PassedPawns": 130, "Outposts": 95, "PiecePressure": 135},
+    "judit-polgar": {"Material": 100, "OwnAttack": 155, "OwnMobility": 115, "OppMobility": 90,
+                     "PawnStructure": 110, "PassedPawns": 115, "Outposts": 90, "PiecePressure": 150},
+    "hou-yifan": {"Material": 105, "OwnAttack": 120, "OwnMobility": 100, "OppMobility": 100,
+                  "PawnStructure": 135, "PassedPawns": 120, "Outposts": 105, "PiecePressure": 130},
+    "kosteniuk": {"Material": 100, "OwnAttack": 140, "OwnMobility": 105, "OppMobility": 90,
+                  "PawnStructure": 120, "PassedPawns": 120, "Outposts": 90, "PiecePressure": 140},
+}
+WAVE4 = tuple(INDIVIDUAL_SEEDS)
+TOPALOV_REPAIR = {
+    "moderate": {"Material": 100, "OwnAttack": 250, "OwnMobility": 145,
+                 "OppAttack": 125, "PiecePressure": 155, "PawnShield": 175,
+                 "PawnStorm": 145, "KingTropism": 60, "KeepQueen": 15},
+    "balanced": {"Material": 105, "OwnAttack": 190, "OwnMobility": 110,
+                 "OppAttack": 140, "PiecePressure": 135, "PawnShield": 150,
+                 "PawnStorm": 130, "KingTropism": 45, "KeepQueen": 0, "PassedPawns": 135},
+    "safety": {"Material": 100, "OwnAttack": 220, "OwnMobility": 130,
+               "OppAttack": 160, "PiecePressure": 150, "PawnShield": 175,
+               "PawnStorm": 140, "KingTropism": 55, "KeepQueen": 0, "OppMobility": 115},
+    "material": {"Material": 110, "OwnAttack": 220, "OwnMobility": 125,
+                 "OppAttack": 130, "PiecePressure": 140, "PawnShield": 160,
+                 "PawnStorm": 140, "KingTropism": 50, "KeepQueen": 0,
+                 "PawnValueMg": 100, "PawnValueEg": 100, "RookValueMg": 500, "RookValueEg": 510},
+}
 DEPTHS = (12, 16, 20)
 PHASES = ("opening", "middlegame", "endgame")
 ROOTS = 12
@@ -207,6 +248,47 @@ def repair_blank_search(raw, control):
     return raw
 
 
+def candidate_parameters(slug, raw):
+    if slug in INDIVIDUAL_SEEDS:
+        base = dict(INDIVIDUAL_SEEDS[slug])
+        initiative = {**base, "OwnAttack": base["OwnAttack"] + 15,
+                      "OwnMobility": base["OwnMobility"] + 10, "PiecePressure": base["PiecePressure"] + 10}
+        restriction = {**base, "OppMobility": base["OppMobility"] + 15,
+                       "Outposts": base["Outposts"] + 10, "PawnStructure": base["PawnStructure"] + 10}
+        return {"original": {}, "individual": base, "initiative": initiative, "restriction": restriction}
+    result = parameters(raw)
+    if slug == "topalov":
+        result.update(TOPALOV_REPAIR)
+    return result
+
+
+def identity_comparison(records, label):
+    """Compare candidate to Simple on the same positions at the same depth."""
+    _, depth = split_label(label)
+    control = f"original{depth}"
+    stats = summarize(records)
+    differences = sum(r["values"][label]["move"] != r["values"][control]["move"] for r in records)
+    candidate, baseline = stats[label], stats[control]
+    return {"different_moves": differences, "positions": len(records),
+            "control": baseline, "candidate": candidate,
+            "passed": (differences * 10 >= len(records)
+                       and candidate["style_gap"] <= baseline["style_gap"] + .025
+                       and candidate["excess_cp"] <= baseline["excess_cp"] + 15)}
+
+
+def shortlist_for(slug, players, records, stats):
+    selectable = [n for n in players if n != "original" or find_player(slug).rodent_alias]
+    def rank(k):
+        return (not eligible_quality(stats[k]), stats[k]["depth_reached"] == 0,
+                slug in INDIVIDUAL_SEEDS and not identity_comparison(records, k)["passed"],
+                stats[k]["objective"], k)
+    # Retest more than one candidate per strong depth for the failed Topalov.
+    if slug == "topalov":
+        return [k for d in (16, 20)
+                for k in sorted((f"{n}{d}" for n in selectable), key=rank)[:3]]
+    return [min((f"{n}{d}" for n in selectable), key=rank) for d in DEPTHS]
+
+
 def overlay(root, dest, slug):
     if (file_hash(root / "rodent-iv-plain.exe") != RODENT_HASHES["rodent"]
             or file_hash(root / "personalities/simple.txt") != RODENT_HASHES["simple"]):
@@ -214,7 +296,7 @@ def overlay(root, dest, slug):
     original = find_player(slug)
     generic_seed = original.rodent_alias is None
     if generic_seed:
-        if slug != "smyslov":
+        if slug != "smyslov" and slug not in INDIVIDUAL_SEEDS:
             raise ValueError("Individual base not authorized for this wave")
         original = replace(original, rodent_alias="Simple", rodent_file="simple.txt")
     validate(root, original, original)
@@ -222,7 +304,7 @@ def overlay(root, dest, slug):
     directory = dest / "personalities"
     raw = (directory / original.profile_filename).read_text(encoding="utf-8-sig")
     repaired = repair_blank_search(raw, (directory / "simple.txt").read_text(encoding="utf-8-sig"))
-    params = parameters(repaired)
+    params = candidate_parameters(slug, repaired)
     candidates, additions = {"original": original}, {}
     if repaired != raw:
         alias = original.rodent_alias + "WaveRepaired"
@@ -231,8 +313,11 @@ def overlay(root, dest, slug):
         candidates["original"] = replace(original, rodent_alias=alias, rodent_file=filename)
         additions[alias] = filename
     raw = repaired
-    for name in ("initiative", "restriction"):
-        alias = ("Smyslov" if generic_seed else original.rodent_alias) + "Wave" + name.capitalize()
+    for name in params:
+        if name == "original":
+            continue
+        prefix = slug.title().replace("-", "") if generic_seed else original.rodent_alias
+        alias = prefix + "Wave" + name.capitalize()
         filename = alias.lower() + ".txt"
         (directory / filename).write_text(render(raw, params[name]), encoding="utf-8")
         candidates[name] = replace(original, rodent_alias=alias, rodent_file=filename)
@@ -304,10 +389,7 @@ def measure(slug, root, stockfish, out):
         stats = summarize(records)
         # Advance the best FIT candidate at each depth, even if it fails quality;
         # final screening never promotes an ineligible candidate.
-        selectable = [n for n in players if n != "original" or find_player(slug).rodent_alias]
-        shortlist = [min((f"{n}{d}" for n in selectable), key=lambda k: (
-            not eligible_quality(stats[k]), stats[k]["depth_reached"] == 0,
-            stats[k]["objective"], k)) for d in DEPTHS]
+        shortlist = shortlist_for(slug, players, records, stats)
         hashes = {n: file_hash(location / "personalities" / p.profile_filename) for n, p in players.items()}
         doc = {"slug": slug, "period": WAVE[slug], "partition_version": PARTITION_VERSION,
                "base_source": "individual" if find_player(slug).rodent_alias else "generic_seed_not_qualified",
@@ -333,11 +415,16 @@ def bound_measure(slug, selection, data):
             or doc.get("partition_version") != PARTITION_VERSION
             or doc["source_sha256"] != sha256(data[0]).hexdigest()
             or doc["book_sha256"] != digest(product_book(slug, data))
-            or doc["roots"] != roots or len(doc["shortlist"]) != 3
-            or {split_label(k)[1] for k in doc["shortlist"]} != set(DEPTHS)):
+            or doc["roots"] != roots
+            or len(doc["shortlist"]) != (6 if slug == "topalov" else 3)
+            or len(set(doc["shortlist"])) != len(doc["shortlist"])
+            or {split_label(k)[1] for k in doc["shortlist"]} != ({16, 20} if slug == "topalov" else set(DEPTHS))):
         raise ValueError("Measurement binding mismatch")
     if doc["fit_stats"] != summarize(doc["fit_records"]):
         raise ValueError("FIT summary mismatch")
+    if slug == "topalov" or slug in INDIVIDUAL_SEEDS:
+        if doc["shortlist"] != shortlist_for(slug, doc["params"], doc["fit_records"], doc["fit_stats"]):
+            raise ValueError("FIT shortlist mismatch")
     return doc, roots
 
 
@@ -417,7 +504,8 @@ def finish(slug, root, stockfish, selection, shards, out):
     rows = scores(slug, doc, roots, shards)
     eligible = [k for k, r in rows.items() if not r["incomplete"] and not r["flags"]
                 and r["score"] >= MIN_SCORE and eligible_quality(doc["fit_stats"][k])
-                and doc["fit_stats"][k]["depth_reached"] > 0]
+                and doc["fit_stats"][k]["depth_reached"] > 0
+                and (slug not in INDIVIDUAL_SEEDS or identity_comparison(doc["fit_records"], k)["passed"])]
     selected = min(eligible, key=lambda k: (doc["fit_stats"][k]["objective"], -rows[k]["score"], k)) if eligible else None
     report = {"slug": slug, "period": WAVE[slug], "source_sha256": doc["source_sha256"],
               "partition_version": PARTITION_VERSION, "base_source": doc["base_source"],
@@ -444,7 +532,12 @@ def finish(slug, root, stockfish, selection, shards, out):
             engine = stack.enter_context(_open_engine(location, exe, players[name], book=False))
             ref = stack.enter_context(chess.engine.SimpleEngine.popen_uci(str(stockfish)))
             ref.configure({"Threads": 1, "Hash": 64})
-            tune = evaluate(probes, {name: engine}, [selected], ref)
+            engines = {name: engine}
+            labels = [selected]
+            if slug in INDIVIDUAL_SEEDS:
+                engines["original"] = stack.enter_context(_open_engine(location, exe, players["original"], book=False))
+                labels.append(f"original{depth}")
+            tune = evaluate(probes, engines, labels, ref)
             indices = []
             for stage, count in zip(PHASES, (4, 3, 3)):
                 group = [i for i, row in enumerate(tune) if row["phase"] == stage]
@@ -452,6 +545,10 @@ def finish(slug, root, stockfish, selection, shards, out):
             repeats = sum(choose(engine, probes[i][1], depth)[0].uci() == tune[i]["values"][selected]["move"]
                           for i in indices)
             stats = summarize(tune)[selected]
+            comparison = identity_comparison(tune, selected) if slug in INDIVIDUAL_SEEDS else None
+            if comparison is not None:
+                report["individual_control"] = comparison
+                report["fit_individual_control"] = identity_comparison(doc["fit_records"], selected)
             shutil.copyfile(candidate, out / "candidate.txt")
             atomic_json(out / "tune.json", tune)
             report.update({"tune": stats, "tune_phase_support": dict(Counter(r["phase"] for r in tune)),
@@ -460,6 +557,7 @@ def finish(slug, root, stockfish, selection, shards, out):
                            "status": ("INDIVIDUAL_CANDIDATE_REVIEW_READY" if doc["base_source"] == "generic_seed_not_qualified"
                                       else "MOTOR_BASE_REVIEW_READY") if eligible_quality(stats) and repeats == 10
                            and stats["depth_reached"] > 0
+                           and (comparison is None or comparison["passed"])
                            else "TUNE_OR_STABILITY_FAILED"})
     atomic_json(out / "report.json", report)
     print("WAVE_RESULT", json.dumps(report, sort_keys=True), flush=True)

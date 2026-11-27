@@ -3,8 +3,13 @@ import chess.pgn
 import pytest
 
 from chesssim.fischer_full_games import atomic_json
-from chesssim.product_wave_release import PRIOR, WAVE2_PRIOR, WAVE2_RUN, prior_binding, read_candidate, replay
-from chesssim.roster_product_wave import repair_blank_search, WAVE2, WAVE3, WAVE
+from chesssim.product_wave_release import (
+    PRIOR, WAVE2_PRIOR, WAVE2_RUN, WAVE3_PRIOR, WAVE3_RUN, prior_binding, read_candidate, replay,
+)
+from chesssim.roster_product_wave import (
+    repair_blank_search, WAVE2, WAVE3, WAVE4, WAVE, INDIVIDUAL_SEEDS,
+    TOPALOV_REPAIR, candidate_parameters, identity_comparison, shortlist_for,
+)
 from chesssim.catalog import find_player
 
 
@@ -57,4 +62,59 @@ def test_wave_two_exact_artifact_bindings_and_wave_three_disjoint():
     assert len(set(WAVE3)) == 8
     assert not set(WAVE3) & (SLUGS | set(WAVE2))
     assert all(find_player(slug).rodent_alias and WAVE[slug][0] < WAVE[slug][1] for slug in WAVE3)
-    assert all(prior_binding(slug) == (None, None) for slug in WAVE3)
+    assert set(WAVE3_PRIOR) == set(WAVE3) - {"topalov"}
+    assert WAVE3_RUN == 45633448337
+    assert len({v[0] for v in WAVE3_PRIOR.values()}) == 7
+    assert all(prior_binding(slug) == (WAVE3_RUN, v) for slug, v in WAVE3_PRIOR.items())
+    assert prior_binding("topalov") == (None, None)
+
+
+def test_individual_recipes_are_distinct_and_do_not_allow_simple():
+    from chesssim.qualified_runtime import SLUGS
+    assert len(WAVE4) == 8
+    assert not set(WAVE4) & (SLUGS | set(WAVE2) | set(WAVE3))
+    signatures = set()
+    for slug in WAVE4:
+        assert find_player(slug).rodent_alias is None
+        params = candidate_parameters(slug, "")
+        assert params["original"] == {}
+        assert params["individual"] == INDIVIDUAL_SEEDS[slug]
+        for label in ("individual", "initiative", "restriction"):
+            signature = tuple(sorted(params[label].items()))
+            assert signature not in signatures
+            signatures.add(signature)
+    assert len(signatures) == 24
+
+
+def test_topalov_screens_six_strong_depth_candidates():
+    keys = ("OwnAttack", "PiecePressure", "OwnMobility", "OppMobility", "Outposts", "PawnStructure")
+    raw = "\n".join(f"setoption name {k} value 100" for k in keys)
+    params = candidate_parameters("topalov", raw)
+    assert set(TOPALOV_REPAIR) <= set(params)
+    stats = {f"{label}{depth}": {"numeric": 60, "excess_cp": 0, "severe_excess": 0,
+                                "depth_reached": 1, "objective": i}
+             for i, label in enumerate(params) for depth in (12, 16, 20)}
+    selected = shortlist_for("topalov", params, [], stats)
+    assert len(set(selected)) == 6
+    assert sum(label.endswith("16") for label in selected) == 3
+    assert sum(label.endswith("20") for label in selected) == 3
+
+
+def test_individual_control_gate_requires_behavior_difference_and_quality(monkeypatch):
+    from chesssim import roster_product_wave as wave
+    records = [{"values": {"individual16": {"move": "e2e4"}, "original16": {"move": "d2d4"}}}
+               for _ in range(60)]
+    def summary(rows):
+        return {"individual16": {"style_gap": .04, "excess_cp": 3},
+                "original16": {"style_gap": .03, "excess_cp": 0}}
+    monkeypatch.setattr(wave, "summarize", summary)
+    assert identity_comparison(records, "individual16")["passed"]
+    for row in records:
+        row["values"]["original16"]["move"] = "e2e4"
+    assert not identity_comparison(records, "individual16")["passed"]
+    for row in records:
+        row["values"]["original16"]["move"] = "d2d4"
+    monkeypatch.setattr(wave, "summarize", lambda rows: {
+        "individual16": {"style_gap": .10, "excess_cp": 3},
+        "original16": {"style_gap": .03, "excess_cp": 0}})
+    assert not identity_comparison(records, "individual16")["passed"]
