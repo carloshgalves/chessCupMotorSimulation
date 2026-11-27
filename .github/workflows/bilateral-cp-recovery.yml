@@ -1,0 +1,119 @@
+name: Robust CP recovery for 59 non-retained players
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cp-recovery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m ruff check src/chesssim/bilateral_cp_recovery.py tests/test_bilateral_cp_recovery.py
+      - run: python -m pytest -q tests/test_bilateral_cp_recovery.py tests/test_bilateral_cp.py
+      - run: python -m chesssim.bilateral_cp_recovery --out retained/report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: retained-active-baselines
+          path: retained/report.json
+          if-no-files-found: error
+  recovery:
+    needs: protocol
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        player:
+          - karpov
+          - fischer
+          - lasker
+          - kasparov
+          - kramnik
+          - anand
+          - euwe
+          - steinitz
+          - capablanca
+          - botvinnik
+          - ding-liren
+          - carlsen
+          - mequinho
+          - mamedyarov
+          - vachier-lagrave
+          - grischuk
+          - topalov
+          - philidor
+          - staunton
+          - anderssen
+          - morphy
+          - zukertort
+          - chigorin
+          - pillsbury
+          - tarrasch
+          - marshall
+          - rubinstein
+          - nimzowitsch
+          - reti
+          - keres
+          - bronstein
+          - reshevsky
+          - najdorf
+          - geller
+          - korchnoi
+          - larsen
+          - portisch
+          - taimanov
+          - polugaevsky
+          - gligoric
+          - ivanchuk
+          - timman
+          - short
+          - kamsky
+          - shirov
+          - gelfand
+          - leko
+          - svidler
+          - aronian
+          - caruana
+          - nakamura
+          - karjakin
+          - nepomniachtchi
+          - wesley-so
+          - kosteniuk
+          - gaprindashvili
+          - chiburdanidze
+          - judit-polgar
+          - hou-yifan
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[dev]'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - run: |
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities rodent-source/books "$RUNNER_TEMP/rodent/"
+          sudo apt-get update
+          sudo apt-get install -y stockfish
+      - run: python -m chesssim.bilateral_cp alias-smoke --player ${{ matrix.player }} --rodent "$RUNNER_TEMP/rodent" --out smoke/aliases.json
+      - run: python -m chesssim.bilateral_cp_recovery --player ${{ matrix.player }} --rodent "$RUNNER_TEMP/rodent" --stockfish /usr/games/stockfish --out recovery/report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cp-recovery-${{ matrix.player }}
+          path: recovery/report.json
+          if-no-files-found: error

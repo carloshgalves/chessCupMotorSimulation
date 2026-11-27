@@ -1,12 +1,5 @@
 name: Product historical repertoires and strength ladder
 on:
-  pull_request:
-    paths:
-      - 'src/chesssim/product_*.py'
-      - 'src/chesssim/matches.py'
-      - 'tests/test_product_*.py'
-      - '.github/workflows/product-repertoires.yml'
-      - 'docs/PRODUCT_PERSONALITY_PROTOCOL.md'
   workflow_dispatch:
 permissions:
   contents: read

@@ -1,0 +1,98 @@
+{
+  "zukertort": {
+    "job": 139741638401,
+    "label": "restriction20",
+    "profile_sha256": "6460f5f41be3edcfc33069f18b00f054deb118fbc777cfccdd47c93fee81fec5",
+    "book_sha256": "2e7e7e6f75ff286310375e94ca6585ec7123f8042e506a15e7cbeece0689120d",
+    "source_sha256": "6796f0e31a682a04c7b7bada3a972f0e00db330e2f20f57b3ac43e0128d3459d",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "chigorin": {
+    "job": 139741638416,
+    "label": "individual16",
+    "profile_sha256": "b3cd28671470b19d60d20df3af1c6bcf939f0e4994a701c759902e2fb14b9737",
+    "book_sha256": "994ba31c2a30bf4a61dd5ecf0543c43905d1b097c676f5e5ffc0be37efd4ed36",
+    "source_sha256": "d9102a5d6b437440e820fb0684a04e59e5521b3125b690455b9ac41cd697437d",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "taimanov": {
+    "job": 139741638421,
+    "label": "individual16",
+    "profile_sha256": "b15ec503cc3f4ae1c21208e9ffc674d24f6fe3a7120b71df6352f758181eefc2",
+    "book_sha256": "ccc43e87770637f5ccb97a053e012cfe48c75f100b399ec070e41b9c8a998990",
+    "source_sha256": "61390391c00f895654ca500c6dd4b1b24bdb679feb3829ef221c15b3290c1edb",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "kamsky": {
+    "job": 139741638423,
+    "label": "individual20",
+    "profile_sha256": "5dc3abf2e08a5b6996166ff59aeecef3e65add2eaf0ff5bb3ed8de77684f1136",
+    "book_sha256": "75f8ab4c3d9c050c870476faf5bd383ec091fa837fa9913ad09ed1ba3bb9bc9d",
+    "source_sha256": "70f54b5eb63ebfcce7e9201928392b5e3ca53a5b8416bb8159879ae636098efd",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "philidor": {
+    "job": 139741638430,
+    "label": null,
+    "profile_sha256": null,
+    "book_sha256": null,
+    "source_sha256": "875941c093891502abe06134168a412a85fdb9bb75cf62e00f91dda27e1f9947",
+    "status": "INSUFFICIENT_PEAK_SUPPORT"
+  },
+  "svidler": {
+    "job": 139741638441,
+    "label": "individual20",
+    "profile_sha256": "d1c57f92207519d0d5866daac5c00ca0ac008b6df218eedc0aaa63eafa02e7e3",
+    "book_sha256": "1b5b869b7ef7de10530acef01db026313a917a6431fca80c2eca920cf33cbbb4",
+    "source_sha256": "35fd576133fecf5e988818c2f58452da715de8e74b3e4d278eb64239af5b949a",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "staunton": {
+    "job": 139741638448,
+    "label": "restriction16",
+    "profile_sha256": "2d89d04d7201c1d899cd0bbf81c3d4012e805bacc040da3b38ef41bc6abde014",
+    "book_sha256": "4fde8aea5f85a879658cf9f3b30f1c5077bdfe7f880ecb0c773d275a0fee898e",
+    "source_sha256": "a26420ea5003227bcbbbc5210d30f32d49a50b37c0f2735b21e376878fafc2da",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "korchnoi": {
+    "job": 139741638451,
+    "label": "original16",
+    "profile_sha256": "36fa917d841447df9aa2168f4f736c80d1506afe270c015ceba6a013c80802ad",
+    "book_sha256": "06c09d4bd4d3b70c784ee832fe24d362ff6afa3df59bad4ab66a8afc03298169",
+    "source_sha256": "5aeee505d935f86ffb70601f7fd501127dc71ba6ffc3d9945fd27649e9883f34",
+    "status": "MOTOR_BASE_REVIEW_READY"
+  },
+  "pillsbury": {
+    "job": 139741638474,
+    "label": "restriction20",
+    "profile_sha256": "f681fd553b5fdc9c63bd5029937a7cc773da08a0e992e0d00bbe766ed226ce1f",
+    "book_sha256": "44700e7de46a1021cd0628ec189c06a6a20f99ef7022f68a4f8a42929e21f42c",
+    "source_sha256": "fc76aa49146051682a79c7a8b2f4f226f0b031054564c486d5fff337b0c86135",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "karjakin": {
+    "job": 139741638483,
+    "label": "restriction16",
+    "profile_sha256": "1528d56fd186ee8de0b341e5731bb7b9f0d550fb7bd2310541705ee2e021ab96",
+    "book_sha256": "4592b8deb995fe8060de2da7d471c0ef360dda67056eef0bb2552f8b4a9fe485",
+    "source_sha256": "542e3bb22e1c8d06a7f1b616c52478b558375429a07f280f3290303ba1580d2b",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "morphy": {
+    "job": 139741638509,
+    "label": null,
+    "profile_sha256": null,
+    "book_sha256": null,
+    "source_sha256": "78509cff0dc745c2144c8c631e956112722a4d0527a2b0dee149b8bfc5654ab8",
+    "status": "INSUFFICIENT_PEAK_SUPPORT"
+  },
+  "reshevsky": {
+    "job": 139741638591,
+    "label": "individual16",
+    "profile_sha256": "cdc8cae5b6f6883ce2e83d82ae6de043a98d934839636892de83d0ea54c68d17",
+    "book_sha256": "045a08b6acae497eb4847f775780191f3ac87570a4e81308a55021e866ec13b0",
+    "source_sha256": "7d261fe0360f24eec9f0e60846b651c133b8d4ecb4cb52f5c04112a94b71b008",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  }
+}

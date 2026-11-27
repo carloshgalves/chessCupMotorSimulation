@@ -1,0 +1,167 @@
+name: Review 33 practical-strength candidates and integrate proposed roster
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: review-33-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        include:
+          - {player: bronstein, run: 45698384748, aggregate: 15095085101, final: 15092875518, first: 15093770553, second: 15093876280}
+          - {player: geller, run: 45698384748, aggregate: 15095085101, final: 15093305435, first: 15093444212, second: 15092899312}
+          - {player: gligoric, run: 45698384748, aggregate: 15095085101, final: 15092375888, first: 15093926825, second: 15093628162}
+          - {player: keres, run: 45698384748, aggregate: 15095085101, final: 15092236526, first: 15093442618, second: 15092783715}
+          - {player: najdorf, run: 45698384748, aggregate: 15095085101, final: 15092647289, first: 15093433790, second: 15093223618}
+          - {player: polugaevsky, run: 45698384748, aggregate: 15095085101, final: 15092076176, first: 15093942684, second: 15093254557}
+          - {player: portisch, run: 45698384748, aggregate: 15095085101, final: 15093431389, first: 15094441168, second: 15094655832}
+          - {player: timman, run: 45698384748, aggregate: 15095085101, final: 15092430029, first: 15094626849, second: 15093874196}
+          - {player: aronian, run: 45698384585, aggregate: 15092413601, final: 15091326531, first: 15092016063, second: 15091368406}
+          - {player: caruana, run: 45698384585, aggregate: 15092413601, final: 15089452338, first: 15091327521, second: 15091278856}
+          - {player: grischuk, run: 45698384585, aggregate: 15092413601, final: 15090157499, first: 15092820745, second: 15092742403}
+          - {player: mamedyarov, run: 45698384585, aggregate: 15092413601, final: 15090501106, first: 15092667143, second: 15093160267}
+          - {player: nakamura, run: 45698384585, aggregate: 15092413601, final: 15089679954, first: 15091237904, second: 15092020124}
+          - {player: nepomniachtchi, run: 45698384585, aggregate: 15092413601, final: 15091075475, first: 15091254852, second: 15091728934}
+          - {player: vachier-lagrave, run: 45698384585, aggregate: 15092413601, final: 15089594665, first: 15092197766, second: 15092053479}
+          - {player: wesley-so, run: 45698384585, aggregate: 15092413601, final: 15089214581, first: 15092092195, second: 15092470690}
+          - {player: chiburdanidze, run: 45698384602, aggregate: 15092704334, final: 15090750415, first: 15093258013, second: 15093178052}
+          - {player: gaprindashvili, run: 45698384602, aggregate: 15092704334, final: 15090148072, first: 15092433641, second: 15093371776}
+          - {player: ivanchuk, run: 45698384602, aggregate: 15092704334, final: 15091068718, first: 15091624651, second: 15092886522}
+          - {player: leko, run: 45698384602, aggregate: 15092704334, final: 15091328865, first: 15092717950, second: 15092916855}
+          - {player: mequinho, run: 45698384602, aggregate: 15092704334, final: 15089484200, first: 15091369773, second: 15092745029}
+          - {player: shirov, run: 45698384602, aggregate: 15092704334, final: 15092075405, first: 15092931592, second: 15092264240}
+          - {player: short, run: 45698384602, aggregate: 15092704334, final: 15091575231, first: 15092765461, second: 15092197146}
+          - {player: chigorin, run: 45699740879, aggregate: 15099326502, final: 15096164666, first: 15097123494, second: 15097257028}
+          - {player: kamsky, run: 45699740879, aggregate: 15099326502, final: 15095204683, first: 15098393328, second: 15098158711}
+          - {player: karjakin, run: 45699740879, aggregate: 15099326502, final: 15096002489, first: 15098514234, second: 15099735969}
+          - {player: korchnoi, run: 45699740879, aggregate: 15099326502, final: 15095976072, first: 15098620784, second: 15098566538}
+          - {player: pillsbury, run: 45699740879, aggregate: 15099326502, final: 15095936526, first: 15098106133, second: 15097593172}
+          - {player: reshevsky, run: 45699740879, aggregate: 15099326502, final: 15095398173, first: 15097009343, second: 15097956947}
+          - {player: staunton, run: 45699740879, aggregate: 15099326502, final: 15097395106, first: 15096319824, second: 15097316103}
+          - {player: svidler, run: 45699740879, aggregate: 15099326502, final: 15096732734, first: 15098687606, second: 15099217016}
+          - {player: taimanov, run: 45699740879, aggregate: 15099326502, final: 15095358325, first: 15098093606, second: 15098386886}
+          - {player: zukertort, run: 45699740879, aggregate: 15099326502, final: 15096449250, first: 15096639137, second: 15097672579}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e .
+      - name: Bind immutable artifact identities
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN: ${{ matrix.run }}
+          PLAYER: ${{ matrix.player }}
+          AGGREGATE: ${{ matrix.aggregate }}
+          FINAL: ${{ matrix.final }}
+          FIRST: ${{ matrix.first }}
+          SECOND: ${{ matrix.second }}
+        run: |
+          set -euo pipefail
+          check() {
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$1" | jq -e --arg n "$2" --argjson r "$RUN" '.name == $n and .workflow_run.id == $r and .expired == false'
+          }
+          check "$AGGREGATE" release-proposals
+          check "$FINAL" "wave-final-$PLAYER"
+          check "$FIRST" "release-$PLAYER-2029"
+          check "$SECOND" "release-$PLAYER-2030"
+      - uses: actions/download-artifact@v4
+        with:
+          name: wave-measure-${{ matrix.player }}
+          path: ${{ runner.temp }}/audit/measure
+          run-id: ${{ matrix.run }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: wave-final-${{ matrix.player }}
+          path: ${{ runner.temp }}/audit/final
+          run-id: ${{ matrix.run }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-${{ matrix.player }}-2029
+          path: ${{ runner.temp }}/audit/release-2029
+          run-id: ${{ matrix.run }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-${{ matrix.player }}-2030
+          path: ${{ runner.temp }}/audit/release-2030
+          run-id: ${{ matrix.run }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-proposals
+          path: ${{ runner.temp }}/audit/proposals
+          run-id: ${{ matrix.run }}
+          github-token: ${{ github.token }}
+      - name: Download all screen shards by exact ID
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN: ${{ matrix.run }}
+          PLAYER: ${{ matrix.player }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/audit/screen"
+          gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$RUN/artifacts?per_page=100" \
+            --jq '.artifacts[] | select(.expired == false) | [.id,.name] | @tsv' |
+          while IFS=$'\t' read -r id name; do
+            case "$name" in
+              screen-"$PLAYER"-*)
+                mkdir -p "$RUNNER_TEMP/audit/screen/$name"
+                gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/screen.zip"
+                unzip -q "$RUNNER_TEMP/screen.zip" -d "$RUNNER_TEMP/audit/screen/$name"
+                ;;
+            esac
+          done
+      - run: |
+          mkdir "$RUNNER_TEMP/review"
+          python -m chesssim.roster_strength_review --player ${{ matrix.player }} --folder "$RUNNER_TEMP/audit" --out "$RUNNER_TEMP/review/review.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: review-${{ matrix.player }}
+          path: ${{ runner.temp }}/review/
+          if-no-files-found: error
+  integration:
+    needs: review
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: review-*
+          path: ${{ runner.temp }}/reviews
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - run: |
+          python -m pip install -e .
+          python -m chesssim.roster_strength_review --folder "$RUNNER_TEMP/reviews" --out "$RUNNER_TEMP/qualified_game_assets.json"
+          cp "$RUNNER_TEMP/qualified_game_assets.json" src/chesssim/data/qualified_game_assets.json
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities rodent-source/books "$RUNNER_TEMP/rodent/"
+          python -m chesssim.qualified_runtime prepare --rodent "$RUNNER_TEMP/rodent"
+          python -m chesssim.qualified_runtime check --rodent "$RUNNER_TEMP/rodent"
+          python -c 'from chesssim.qualified_runtime import SLUGS; assert len(SLUGS) == 53'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reviewed-53-player-registry
+          path: ${{ runner.temp }}/qualified_game_assets.json
+          if-no-files-found: error

@@ -1,0 +1,135 @@
+name: Prioritized CP reserved validation and alias recovery
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: bilateral-cp-priority-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m ruff check src/chesssim/bilateral_cp.py tests/test_bilateral_cp.py
+      - run: python -m pytest -q tests/test_bilateral_cp.py
+  validate:
+    needs: protocol
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        include:
+          - player: euwe
+            artifact: '15160120490'
+          - player: tal
+            artifact: '15159375843'
+          - player: alekhine
+            artifact: '15159031937'
+          - player: fischer
+            artifact: '15158821952'
+          - player: anand
+            artifact: '15158694751'
+          - player: steinitz
+            artifact: '15158642582'
+          - player: lasker
+            artifact: '15158540622'
+          - player: kramnik
+            artifact: '15158421032'
+          - player: kasparov
+            artifact: '15157958523'
+          - player: petrosian
+            artifact: '15157025578'
+          - player: karpov
+            artifact: '15156387827'
+          - player: spassky
+            artifact: '15155807452'
+          - player: smyslov
+            artifact: '15154704927'
+          - player: capablanca
+            artifact: '0'
+          - player: botvinnik
+            artifact: '0'
+          - player: ding-liren
+            artifact: '0'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[dev]'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - run: |
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities rodent-source/books "$RUNNER_TEMP/rodent/"
+          sudo apt-get update
+          sudo apt-get install -y stockfish
+      - name: Verify exact prior artifact identity
+        if: matrix.artifact != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT: ${{ matrix.artifact }}
+          PLAYER: ${{ matrix.player }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT" | jq -e --arg n "cp-fit-$PLAYER" '.name == $n and .workflow_run.id == 45888949887 and .expired == false'
+      - uses: actions/download-artifact@v4
+        if: matrix.artifact != '0'
+        with:
+          name: cp-fit-${{ matrix.player }}
+          path: input
+          run-id: 45888949887
+          github-token: ${{ github.token }}
+      - name: Recompute only failed alias cases
+        if: matrix.artifact == '0'
+        run: python -m chesssim.bilateral_cp fit --player ${{ matrix.player }} --rodent "$RUNNER_TEMP/rodent" --stockfish /usr/games/stockfish --out input/selection.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cp-fit-${{ matrix.player }}
+          path: input/selection.json
+          if-no-files-found: error
+      - run: python -m chesssim.bilateral_cp reserved --player ${{ matrix.player }} --rodent "$RUNNER_TEMP/rodent" --stockfish /usr/games/stockfish --selection input/selection.json --out result/report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cp-reserved-${{ matrix.player }}
+          path: result/report.json
+          if-no-files-found: error
+  table:
+    needs: [protocol, validate]
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[dev]'
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: cp-reserved-*
+          path: shards
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: cp-fit-*
+          path: shards
+      - run: python -m chesssim.bilateral_cp aggregate --shards shards --out table
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cp-priority-qualified-candidates
+          path: table/
+          if-no-files-found: error

@@ -1,0 +1,130 @@
+{
+  "ivanchuk": {
+    "job": 139702580971,
+    "label": "individual20",
+    "profile_sha256": "46eb909c4c87ed572e7140345135c3565da7cd97475df7eb13d9f0ce6e88082e",
+    "book_sha256": "d03ce8440be9af7430e7f69ee14fa840d5bb4808e16f9f5bfb18c64c9853bc94",
+    "source_sha256": "013ded0549fdc3a9aa28673e8d196e1e5319f003db334a61a1bd4d9a0bfdef5e",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "mequinho": {
+    "job": 139702580975,
+    "label": "initiative16",
+    "profile_sha256": "4197f02317471dccce2295b69a3cfae54349a39c0e1847563a0d6ec428f8f4b9",
+    "book_sha256": "af51ba4ee31761063c8a1432754e7bdf2843fb43ed42b7710e372b96316f41cb",
+    "source_sha256": "8d668a791707c1ec17a21c776c76e07ab306c2445222c3ed9cef0184b13315f0",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "gelfand": {
+    "job": 139702580989,
+    "label": null,
+    "profile_sha256": null,
+    "book_sha256": "0f4cb1913d16f30974155ee7f537267bfccfd9d89e455ee4637dae0b709567a0",
+    "source_sha256": "eeb901580e44515496f5ae9fc1d2a53c7dcf75c2815ac12e308442bd3df086b5",
+    "status": "NO_ELIGIBLE_CANDIDATE"
+  },
+  "chiburdanidze": {
+    "job": 139702580992,
+    "label": "individual20",
+    "profile_sha256": "7151b919dae94c2b805af026fe03e5a3672166f28ae1ef6c090ef0df2a9e4d9f",
+    "book_sha256": "fb809f2a229b1e63d6220c3f072322d71a1734789f751b7b8e516d9392f2cf26",
+    "source_sha256": "370596d66cca5d354a594ae77f846625f95f7676bf3aa2363c9c3b118644a2c4",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "short": {
+    "job": 139702581000,
+    "label": "initiative20",
+    "profile_sha256": "48210277628a40a48e1943020757e13df1fc0033fd4f9f3fb19bebf3fdb2b601",
+    "book_sha256": "db3205578e746c1e5a590580bf52c0f0d477a1b33e72371c10b13c6473986113",
+    "source_sha256": "3545710b3d96aaf02054464746d53b2d9da4d8862ae1a44003b00fd264fa2888",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "leko": {
+    "job": 139702581005,
+    "label": "individual20",
+    "profile_sha256": "a21ed5b187584c9b9a4635d271bac53a413cc2be2da703e08a2063fff987fef7",
+    "book_sha256": "7a91ff59e461ea0f2177ddac655aaf57ad16739692e2c8b43df91efa97bb1ac9",
+    "source_sha256": "18f9df9d1de793f2df164205761b463df89ca14f76e6edf0fd37a973fa0bc44e",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "gaprindashvili": {
+    "job": 139702581045,
+    "label": "restriction20",
+    "profile_sha256": "e4b28ae57aba59336773b0d5ca528b8504247c240bdc48abe41fafbd4da5aff1",
+    "book_sha256": "f10e8badf21dbaf6f00095f39bfe6898bacccfe5edb6967e66e7e2b546dfe008",
+    "source_sha256": "c4da1a779fcc34dd1e9e9c65700aa67c7345fbf875a49a5badfcc08ac573f98f",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "shirov": {
+    "job": 139702581091,
+    "label": "initiative16",
+    "profile_sha256": "d4ebd9f072b6f611cfbd246c83463ad1be2639791cff720a3b5a7cb585a3ba57",
+    "book_sha256": "ee6ecf9514a170d52f824608f82b8120892a94125da508fbd1f2a3d9d59b1928",
+    "source_sha256": "48059dbc77f42288990a1f551b880f8a85dca6e09c3c657e93b0be78a267769a",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "judit-polgar": {
+    "job": 139650704718,
+    "label": "initiative20",
+    "profile_sha256": "7274acd64c78a4642589d3b7541b71df6301efcf0b9411bea3f0836d7cbea369",
+    "book_sha256": "9ab69bba01905804224713f860462a7e6cad0479f18ccf218fe0cf633aafa2c2",
+    "source_sha256": "1ad8a4f31ba28bba3fdb69124b15ddb2e5070e5059fc8f13e72eefec499522be",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "capablanca": {
+    "job": 139650704727,
+    "label": "individual20",
+    "profile_sha256": "28392a6bdc4593ef8d27577fb234647c1876daaf691b967c2314d20898550533",
+    "book_sha256": "ef8861e7f16a63abb6fb5c55fe2b80943ea6a2f44242ebc392763cbb5c355dd4",
+    "source_sha256": "a7c987df80d2ce6aa9cfc70c3bd47e8cf1b21bf5fe07de6d87fe7179600a609d",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "ding-liren": {
+    "job": 139650704740,
+    "label": "restriction16",
+    "profile_sha256": "455ea8e44fbb29d5d892221def91f4a9c8239d10e25d5b9007f4b3cd8b853aad",
+    "book_sha256": "9a59ecbd3fe6719ccea5914c5df9417a9db6aa8b6e669a59979cd2ff832ed69d",
+    "source_sha256": "03d18a3297800326bd0c3a155cd901945f5e17fc330a3ef9be5c6c319586e642",
+    "status": "TUNE_OR_STABILITY_FAILED"
+  },
+  "kramnik": {
+    "job": 139650704769,
+    "label": "restriction20",
+    "profile_sha256": "a023bf5ca89f0df12f28941584b250844cefe1bbfaa5e6180cf629cd2fdf1ae7",
+    "book_sha256": "3e58b3bd7ab6ad5375d702cf86473d7a3271a4b703303599f790503b741484c3",
+    "source_sha256": "189b922119919d18786b2990e7326dc323d128b583a387b3d9f7071a90bc4899",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "hou-yifan": {
+    "job": 139650704772,
+    "label": "restriction16",
+    "profile_sha256": "cbc25dccf246091ce7f63ce349e2596e3a2b3aa44c1b44d6cdd9d30aed08e477",
+    "book_sha256": "75c019abef13c8314df680c6ac071cd195f8caff45439fc1d7f82bbc52c10c6e",
+    "source_sha256": "14e6f5eebe8d65847ccebec2dfd4c963fd7f80111a6a3efcedf1d32ae5d6f533",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "carlsen": {
+    "job": 139650704774,
+    "label": "individual16",
+    "profile_sha256": "75b79aef11ab945366bf5331999021c3de20360a4747fe7a0dca2e2399289267",
+    "book_sha256": "101c8b835cf2392e3a057a00c9145b5f8404b79c37671b54971feb7fef2694dc",
+    "source_sha256": "d8a7c9fd15187101add4b04ae09789e3fe3474bdec9ddd7596aabd2f2cf32c78",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "kosteniuk": {
+    "job": 139650704808,
+    "label": "individual20",
+    "profile_sha256": "3721047ef7ca440c2b744f2f9f0b3ad028c55a110f6fcd138bb8e475c921e32d",
+    "book_sha256": "a7ddbf0c525b499939898adc37f33df4b9e967332079043108405ff70d556799",
+    "source_sha256": "bbac8dc393c6270ce7e5b0d7edd6688db2c752ebecc969c3fd124de773961b2d",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  },
+  "euwe": {
+    "job": 139650704815,
+    "label": "individual20",
+    "profile_sha256": "291e40524b107a47006baab1c3d8876064d7259ff4dd94be5f06a342f3c03c84",
+    "book_sha256": "b0ba165fa0dc7ec1cd465408fef66cbfbe2eba3a9c924fed23a3e770d9013fe9",
+    "source_sha256": "85b0ed0d279cd6a1c09179ed55ee28d9824b9cf2f088d74559f7a49f1bfd0ad8",
+    "status": "INDIVIDUAL_CANDIDATE_REVIEW_READY"
+  }
+}

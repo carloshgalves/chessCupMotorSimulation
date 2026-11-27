@@ -1,0 +1,100 @@
+{
+  "schema": "cp-baseline-retention-v1",
+  "players": {
+    "alekhine": {
+      "alias": "AlekhineWaveRepaired",
+      "depth": 16,
+      "uci_node_cap": 5000000,
+      "profile_sha256": "b63e9f19d5f35279a557256a3a360361aa0bd7e739dc5ff6e07e83358d5ddac7",
+      "delta_cp": -0.050372974423607296,
+      "ci95": [
+        -7.410989010989011,
+        6.40169450496248
+      ],
+      "games": 92,
+      "endgame_positions": 33,
+      "run_id": 45913126242,
+      "job_id": 140236224173,
+      "status": "RETAIN_ACTIVE_BASELINE_OBSERVED_WITHIN_ONE_CP_NOT_STRICTLY_QUALIFIED",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "historical_book_sha256": "bbc5d2106ac9627c202b40cedd97b083ee34deb0fa2e0c5306f6f515ae55748d",
+      "book_hash_kind": "digest"
+    },
+    "smyslov": {
+      "alias": "SmyslovWaveInitiative",
+      "depth": 20,
+      "uci_node_cap": 5000000,
+      "profile_sha256": "01a8f730fab459a516e95f1651009c5265a714d1c0cd435453fe5cbb8227f429",
+      "delta_cp": 0.1253285543608126,
+      "ci95": [
+        -4.690972222222222,
+        5.168936678614099
+      ],
+      "games": 36,
+      "endgame_positions": 10,
+      "run_id": 45913126242,
+      "job_id": 140236224183,
+      "status": "RETAIN_ACTIVE_BASELINE_OBSERVED_WITHIN_ONE_CP_NOT_STRICTLY_QUALIFIED",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "historical_book_sha256": "f14214ab17f6c98a761d94373f815311d635b5542bd26a818bd267c107c6a2d9",
+      "book_hash_kind": "digest"
+    },
+    "tal": {
+      "alias": "TalBalanced",
+      "depth": 16,
+      "uci_node_cap": 5000000,
+      "profile_sha256": "c0f291047023a6f936fd337f11530e6fe886ca0f4f157a5d2f838086857c0897",
+      "delta_cp": -0.2686102147546454,
+      "ci95": [
+        -18.187086405747777,
+        18.321297429620564
+      ],
+      "games": 43,
+      "endgame_positions": 11,
+      "run_id": 45913126242,
+      "job_id": 140236224187,
+      "status": "RETAIN_ACTIVE_BASELINE_OBSERVED_WITHIN_ONE_CP_NOT_STRICTLY_QUALIFIED",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "historical_book_sha256": "175706169f66e2648dcb8cc79dff50516544eaf057b9b0cc705b3cf0c798f44d",
+      "book_hash_kind": "bytes"
+    },
+    "petrosian": {
+      "alias": "Petrosian",
+      "depth": 16,
+      "uci_node_cap": 5000000,
+      "profile_sha256": "e4558a9035d0e21afa9bbd453f5ded76d22fb274ca39889cf2163d7472879ef4",
+      "delta_cp": -0.6358216309435821,
+      "ci95": [
+        -9.243393234672304,
+        8.55151515151515
+      ],
+      "games": 55,
+      "endgame_positions": 15,
+      "run_id": 45913126242,
+      "job_id": 140236224098,
+      "status": "RETAIN_ACTIVE_BASELINE_OBSERVED_WITHIN_ONE_CP_NOT_STRICTLY_QUALIFIED",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "historical_book_sha256": "96d467f8919afa0130ecc151abc87df4620a1ef89a28bf6cd9f055f6eedd4e22",
+      "book_hash_kind": "digest"
+    },
+    "spassky": {
+      "alias": "Spassky",
+      "depth": 20,
+      "uci_node_cap": 5000000,
+      "profile_sha256": "000da9c591c8e63fe5e4b11c812c42d3e700032e034f75934d67faba089b4bbd",
+      "delta_cp": -0.895057881909826,
+      "ci95": [
+        -4.600414078674948,
+        2.823640661938534
+      ],
+      "games": 60,
+      "endgame_positions": 17,
+      "run_id": 45913126242,
+      "job_id": 140236224085,
+      "status": "RETAIN_ACTIVE_BASELINE_OBSERVED_WITHIN_ONE_CP_NOT_STRICTLY_QUALIFIED",
+      "engine_sha256": "c2ccc7a99b442dcaa2aa2dc06e020f0182fe7a198c6f080f45f555c126cdcd95",
+      "historical_book_sha256": "4927d40a8fa8e9062152ecba3bcac937ccc813c606de7164d91f6ab1391b549d",
+      "book_hash_kind": "digest"
+    }
+  }
+}
