@@ -50,9 +50,11 @@ def tune_panel(slug, data, original):
     start, end = cp.PERIOD[slug]
     eligible = [r for r in rows if str(r["date"]).isdigit() and start <= int(r["date"]) <= end]
     grouped = defaultdict(list)
+    used_games = {r["game"] for r in original["fit"] + original["excluded_test"]}
     for game, row in cp._iter_verified_games(pgn, eligible, surname):
         gid = row["mainline_sha256"]
-        if cp.partition(slug, gid) != "tune":
+        arm = cp.partition(slug, gid)
+        if gid in used_games or arm not in ("fit", "tune"):
             continue
         board = game.board()
         if board.fen() != chess.STARTING_FEN or game.headers.get("Result") not in ("1-0", "0-1", "1/2-1/2"):
@@ -61,9 +63,9 @@ def tune_panel(slug, data, original):
         for move in game.mainline_moves():
             if board.turn == (row["color"] == "white") and board.ply() >= 16 and board.legal_moves.count() > 1:
                 stage = cp.phase(board)
-                key = cp.digest([SCHEMA, gid, stage, board.ply()])
+                key = ("0" if arm == "tune" else "1") + cp.digest([SCHEMA, gid, stage, board.ply()])
                 if stage not in choices or key < choices[stage]["id"]:
-                    choices[stage] = {"id": key, "game": gid, "phase": stage, "arm": "tune",
+                    choices[stage] = {"id": key, "game": gid, "phase": stage, "arm": arm,
                                       "prefix": prefix.copy(), "fen": board.fen(), "move": move.uci()}
             board.push(move)
             prefix.append(move.uci())
@@ -104,6 +106,14 @@ def run(slug, root, stockfish, out, checkpoint_dir, stop_file, prior_fit=None):
     original, _ = cp.panel(slug, data)
     tune = tune_panel(slug, data, original)
     source_sha = sha256(data[0]).hexdigest()
+    counts = {name: {phase: sum(r["phase"] == phase for r in panel) for phase in cp.PHASES}
+              for name, panel in (("fit", original["fit"]), ("tune", tune))}
+    if any(n < 12 for cells in counts.values() for n in cells.values()):
+        cp.save(out, {"schema": SCHEMA, "slug": slug, "source_sha256": source_sha,
+                      "status": "INSUFFICIENT_DEVELOPMENT_EVIDENCE", "support": counts,
+                      "attempts": 0, "activation": False})
+        print("CP_LOCAL", slug, "INSUFFICIENT_DEVELOPMENT_EVIDENCE", counts, flush=True)
+        return
     identity = [SCHEMA, slug, source_sha, cp.RODENT_HASHES, cp.STOCKFISH_SHA,
                 cp.file_hash(Path(__file__)), cp.file_hash(Path(cp.__file__)),
                 cp.file_hash(Path(recovery.__file__)),

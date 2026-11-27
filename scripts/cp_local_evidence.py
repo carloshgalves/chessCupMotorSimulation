@@ -48,8 +48,6 @@ def live(run):
 
 
 def archive(root, run, record):
-    if record.get("expired"):
-        raise ValueError(f"Expired artifact {record['id']}")
     expected = record.get("digest")
     if not expected or not expected.startswith("sha256:"):
         raise ValueError(f"Missing SHA-256 for artifact {record['id']}")
@@ -60,6 +58,8 @@ def archive(root, run, record):
         if digest(target) != expected:
             raise ValueError(f"Archive digest mismatch: {target}")
         return target
+    if record.get("expired"):
+        raise ValueError(f"Expired artifact {record['id']}")
     fd, tmp = tempfile.mkstemp(dir=folder)
     try:
         with os.fdopen(fd, "wb") as stream:
@@ -138,7 +138,7 @@ def prepare(root):
     for (run, name), path in files.items():
         if run in CP_RUNS and (name.startswith("cp-fit-") or name.startswith("cp-reserved-")
                                or name.startswith("cp-recovery-")):
-            extract(path, root / "imported" / str(run) / name)
+            extract(path, root / "imported" / str(run) / name / path.stem)
         elif run == REVIEW_RUN and name.startswith("review-"):
             extract(path, root / "reviews" / name)
     # Old FIT artifacts are candidates, not automatically qualified profiles.

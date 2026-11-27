@@ -9,7 +9,7 @@ run_one() {
     [[ ! -e "/results/exclude/$slug" ]] || return 0
     [[ ! -s "$dir/report.json" ]] || return 0
     # A completed cloud recovery is preserved, not repeated automatically.
-    if [[ -s "/results/imported/45985663890/cp-recovery-$slug/report.json" ]]; then
+    if compgen -G "/results/imported/45985663890/cp-recovery-$slug/*/report.json" >/dev/null; then
         echo "[CLOUD COMPLETED] $slug"
         return 0
     fi
@@ -17,8 +17,11 @@ run_one() {
     if [[ ! -f "$dir/prior-choice" ]]; then
         local source="-"
         for run in 45888949887 45913126242 45918461269; do
-            local file="/results/imported/$run/cp-fit-$slug/selection.json"
-            if [[ -s "$file" ]]; then source="$file"; break; fi
+            local file
+            for file in "/results/imported/$run/cp-fit-$slug/"*/selection.json; do
+                if [[ -s "$file" ]]; then source="$file"; break; fi
+            done
+            [[ "$source" == "-" ]] || break
         done
         printf '%s\n' "$source" > "$dir/prior-choice.tmp"
         mv "$dir/prior-choice.tmp" "$dir/prior-choice"
