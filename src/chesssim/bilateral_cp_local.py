@@ -87,6 +87,10 @@ def bounded_fine(coarse, anchor, extra):
     return result
 
 
+def needs_refinement(prior_refined, fit, tune, key):
+    return not prior_refined and not in_band(fit, tune, key)
+
+
 def in_band(fit, tune, key):
     return cp.fit_eligible(fit[key], strict=True) and cp.fit_eligible(tune[key], strict=True)
 
@@ -109,7 +113,7 @@ def run(slug, root, stockfish, out, checkpoint_dir, stop_file, prior_fit=None):
         return
     identity = [SCHEMA, slug, source_sha, cp.RODENT_HASHES, cp.STOCKFISH_SHA,
                 cp.file_hash(Path(__file__)), cp.file_hash(Path(cp.__file__)),
-                cp.file_hash(Path(recovery.__file__)), "checkpoint-v1",
+                cp.file_hash(Path(recovery.__file__)), cp.file_hash(Path(__file__).with_name("cp_checkpoints.py")),
                 cp.file_hash(prior_fit) if prior_fit else None]
     chk = Checkpoints(checkpoint_dir, stop_file, identity)
     chk.install_signals()
@@ -150,7 +154,7 @@ def run(slug, root, stockfish, out, checkpoint_dir, stop_file, prior_fit=None):
         selected = recovery.robust_select(fit_stats, tune_stats)
         passes = [{"cases": finalists, "fit": fit_stats, "tune": tune_stats,
                    "tune_rows": tune_rows, "selected": selected}]
-        if not prior_refined and not in_band(fit_stats, tune_stats, selected):
+        if needs_refinement(prior_refined, fit_stats, tune_stats, selected):
             extra = cp.intermediate_profiles(dest, players, baseline, finalists[selected][0])
             players.update(extra)
             fine = {**finalists, **bounded_fine(coarse, selected, extra)}

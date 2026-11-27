@@ -54,8 +54,12 @@ def test_fine_budget():
 
 def test_cloud_refined_fit_is_not_a_third_search():
     # The budget explicitly treats existing refinement as the second pass.
-    from chesssim.bilateral_cp_local import in_band
+    from chesssim.bilateral_cp_local import in_band, needs_refinement
     good = {"delta_cp": .5, "coverage": 1, "phase_support": {p: 20 for p in ("opening", "middlegame", "endgame")},
             "phase_delta": {p: 0 for p in ("opening", "middlegame", "endgame")}, "severe_gap": 0, "mate_gap": 0}
     assert in_band({"a": good}, {"a": good}, "a")
-    assert not in_band({"a": good}, {"a": {**good, "delta_cp": 1.01}}, "a")
+    bad = {"a": {**good, "delta_cp": 1.01}}
+    assert not in_band({"a": good}, bad, "a")
+    assert needs_refinement(False, {"a": good}, bad, "a")
+    assert not needs_refinement(True, {"a": good}, bad, "a")
+    assert not needs_refinement(False, {"a": good}, {"a": good}, "a")

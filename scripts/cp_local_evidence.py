@@ -169,6 +169,7 @@ def plan(root):
     folder.mkdir(parents=True, exist_ok=True)
     running = []
     queued = []
+    completed = []
     page = 1
     while True:
         data = json.loads(gh(f"repos/{REPO}/actions/runs/{CP_RUNS[0]}/jobs?per_page=100&page={page}"))
@@ -180,15 +181,17 @@ def plan(root):
                 running.append(m[1])
             elif job["status"] in ("queued", "waiting", "pending"):
                 queued.append(m[1])
+            elif job["status"] == "completed" and job["conclusion"] == "success":
+                completed.append(m[1])
         if len(data["jobs"]) < 100:
             break
         page += 1
     for path in folder.iterdir():
         if path.is_file():
             path.unlink()
-    for slug in running:
+    for slug in running + completed:
         (folder / slug).touch()
-    report = {"run_id": CP_RUNS[0], "running": sorted(running), "queued": sorted(queued)}
+    report = {"run_id": CP_RUNS[0], "running": sorted(running), "queued": sorted(queued), "completed": sorted(completed)}
     (root / "cloud-plan.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report, indent=2))
     if queued:
