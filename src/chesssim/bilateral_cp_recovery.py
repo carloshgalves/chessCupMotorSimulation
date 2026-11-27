@@ -13,7 +13,7 @@ from tempfile import TemporaryDirectory
 import chess
 
 from . import bilateral_cp as cp
-from .qualified_runtime import assets, PROFILE_KEYS
+from .qualified_runtime import assets, PROFILE_KEYS, BOOKS
 from .matches import _open_engine
 
 LOCKS = Path("experiments/bilateral-cp/retained-active-baselines.json")
@@ -23,7 +23,7 @@ DEV_LIMIT = 40
 
 def locks():
     doc = cp.load(LOCKS)
-    if doc["schema"] != "cp-baseline-retention-v1" or len(doc["players"]) != 5:
+    if doc["schema"] != "cp-baseline-retention-v1" or set(doc["players"]) != {"alekhine", "smyslov", "tal", "petrosian", "spassky"}:
         raise ValueError("Invalid maintainer retention policy")
     return doc["players"]
 
@@ -33,9 +33,9 @@ def verify_locks():
     for slug, record in locks().items():
         a = current[slug]
         actual = (a["alias"], a["depth"], a["uci_node_cap"], a["hashes"][PROFILE_KEYS[slug]],
-                  a.get("historical_book_digest"))
+                  a["hashes"]["rodent"], *BOOKS[slug])
         expected = tuple(record[k] for k in ("alias", "depth", "uci_node_cap", "profile_sha256",
-                                              "historical_book_digest"))
+                                              "engine_sha256", "historical_book_sha256", "book_hash_kind"))
         if actual != expected or abs(record["delta_cp"]) > 1:
             raise ValueError("Retained baseline drift: " + slug)
     return locks()

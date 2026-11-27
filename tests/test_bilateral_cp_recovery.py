@@ -12,6 +12,8 @@ def test_retention_binds_five_existing_product_profiles():
     records = verify_locks()
     assert set(records) == {"alekhine", "tal", "smyslov", "petrosian", "spassky"}
     assert records["spassky"]["depth"] == 20
+    assert records["tal"]["book_hash_kind"] == "bytes"
+    assert all(len(r["historical_book_sha256"]) == 64 for r in records.values())
     assert all(abs(r["delta_cp"]) <= 1 for r in records.values())
 
 
