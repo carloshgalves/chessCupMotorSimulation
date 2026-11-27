@@ -7,6 +7,7 @@ run_one() {
     mkdir -p "$dir"
     [[ ! -e /results/STOP ]] || return 0
     [[ ! -e "/results/exclude/$slug" ]] || return 0
+    [[ ! -e "/results/cloud-defer/$slug" ]] || { echo "[CLOUD ACTIVE] $slug"; return 0; }
     [[ ! -s "$dir/report.json" ]] || return 0
     # A completed cloud recovery is preserved, not repeated automatically.
     if compgen -G "/results/imported/45985663890/cp-recovery-$slug/*/report.json" >/dev/null; then
@@ -16,7 +17,7 @@ run_one() {
     # Pin artifact input on first execution so checkpoint bindings survive future syncs.
     if [[ ! -f "$dir/prior-choice" ]]; then
         local source="-"
-        for run in 45888949887 45913126242 45918461269; do
+        for run in 45918461269 45913126242 45888949887; do
             local file
             for file in "/results/imported/$run/cp-fit-$slug/"*/selection.json; do
                 if [[ -s "$file" ]]; then source="$file"; break; fi

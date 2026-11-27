@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -162,9 +163,42 @@ def review_inputs(root, slug, run):
     print(f"{slug}: extracted {len(screens)} screen shards.")
 
 
+def plan(root):
+    """Keep the current in-flight recovery jobs off the local queue."""
+    folder = root / "cloud-defer"
+    folder.mkdir(parents=True, exist_ok=True)
+    running = []
+    queued = []
+    page = 1
+    while True:
+        data = json.loads(gh(f"repos/{REPO}/actions/runs/{CP_RUNS[0]}/jobs?per_page=100&page={page}"))
+        for job in data["jobs"]:
+            m = re.fullmatch(r"recovery \(([a-z-]+)\)", job["name"])
+            if not m:
+                continue
+            if job["status"] == "in_progress":
+                running.append(m[1])
+            elif job["status"] in ("queued", "waiting", "pending"):
+                queued.append(m[1])
+        if len(data["jobs"]) < 100:
+            break
+        page += 1
+    for path in folder.iterdir():
+        if path.is_file():
+            path.unlink()
+    for slug in running:
+        (folder / slug).touch()
+    report = {"run_id": CP_RUNS[0], "running": sorted(running), "queued": sorted(queued)}
+    (root / "cloud-plan.json").write_text(json.dumps(report, indent=2) + "\n")
+    print(json.dumps(report, indent=2))
+    if queued:
+        print("WARNING: cloud queue can start new jobs. Archive and coordinate cutover before local execution.")
+    return report
+
+
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("action", choices=("sync", "prepare", "review"))
+    p.add_argument("action", choices=("sync", "prepare", "review", "plan"))
     p.add_argument("--root", type=Path, required=True)
     p.add_argument("--player")
     p.add_argument("--run", type=int)
@@ -174,6 +208,8 @@ def main():
         raise SystemExit(0 if sync(root) else 1)
     if a.action == "prepare":
         prepare(root)
+    elif a.action == "plan":
+        plan(root)
     else:
         review_inputs(root, a.player, a.run)
 

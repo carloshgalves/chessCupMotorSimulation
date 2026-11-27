@@ -10,7 +10,9 @@ case "${1:-status}" in
     sync)
         python3 scripts/cp_local_evidence.py sync --root "$OUT"
         python3 scripts/cp_local_evidence.py prepare --root "$OUT"
+        python3 scripts/cp_local_evidence.py plan --root "$OUT"
         ;;
+    plan) python3 scripts/cp_local_evidence.py plan --root "$OUT" ;;
     build)
         docker build -t "$IMAGE" -f scripts/cp-local.Dockerfile .
         docker run --rm "$IMAGE" bash -c 'sha256sum -c /opt/engine-hashes && python -m pytest -q tests/test_bilateral_cp.py tests/test_bilateral_cp_recovery.py tests/test_cp_local.py'
@@ -24,6 +26,10 @@ case "${1:-status}" in
         fi
         [[ -s "$OUT/archive-manifest.json" ]] || { echo "Run sync first"; exit 1; }
         docker run --rm "$IMAGE" sha256sum -c /opt/engine-hashes
+        python3 scripts/cp_local_evidence.py plan --root "$OUT"
+        if ! python3 -c 'import json,sys; sys.exit(bool(json.load(open(sys.argv[1]))["queued"]))' "$OUT/cloud-plan.json"; then
+            [[ "${CP_ALLOW_CLOUD_OVERLAP:-0}" == 1 ]] || { echo "Cloud still has queued recovery jobs. Coordinate cutover or explicitly opt in to overlap."; exit 1; }
+        fi
         rm -f "$OUT/STOP"
         docker run -d --init --name "$NAME" --cpus="$cpus" --memory="${CP_MEMORY:-8g}" \
             --user "$(id -u):$(id -g)" -e HOME=/tmp -e WORKERS="$workers" \
@@ -52,5 +58,5 @@ case "${1:-status}" in
             python -m chesssim.roster_strength_review --player "$slug" \
             --folder "/results/review-inputs/$slug" --out "/results/reviews/review-$slug/review.json"
         ;;
-    *) echo "Usage: $0 sync|build|start [workers] [cpus]|stop|pause|resume|cpu N|status|review PLAYER RUN"; exit 2 ;;
+    *) echo "Usage: $0 sync|plan|build|start [workers] [cpus]|stop|pause|resume|cpu N|status|review PLAYER RUN"; exit 2 ;;
 esac

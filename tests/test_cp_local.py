@@ -50,3 +50,12 @@ def test_fine_budget():
     assert len(fine) <= MAX_NEW_RECIPES
     assert not set(fine) & set(coarse)
     assert len(set(fine.values())) == len(fine)
+
+
+def test_cloud_refined_fit_is_not_a_third_search():
+    # The budget explicitly treats existing refinement as the second pass.
+    from chesssim.bilateral_cp_local import in_band
+    good = {"delta_cp": .5, "coverage": 1, "phase_support": {p: 20 for p in ("opening", "middlegame", "endgame")},
+            "phase_delta": {p: 0 for p in ("opening", "middlegame", "endgame")}, "severe_gap": 0, "mate_gap": 0}
+    assert in_band({"a": good}, {"a": good}, "a")
+    assert not in_band({"a": good}, {"a": {**good, "delta_cp": 1.01}}, "a")

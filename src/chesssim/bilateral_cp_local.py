@@ -19,7 +19,7 @@ SCHEMA = "cp-local-recovery-v2"
 MAX_NEW_RECIPES = 12
 
 
-def fit_from_artifact(path, slug, data, panels, coarse, hashes, book, book_info):
+def fit_from_artifact(path, slug, data, panels, cases, hashes, book, book_info):
     old = cp.load(path)
     if (old["schema"] != cp.SCHEMA or old["slug"] != slug
             or old["source_sha256"] != sha256(data[0]).hexdigest()
@@ -28,20 +28,13 @@ def fit_from_artifact(path, slug, data, panels, coarse, hashes, book, book_info)
             or old["stockfish_sha256"] != cp.STOCKFISH_SHA
             or old["book"] != book or old["book_info"] != book_info):
         raise ValueError("Prior FIT artifact source, engine or book mismatch")
-    refinement = old.get("refinement")
-    if refinement:
-        rows, summary = refinement["rows"], refinement["fit"]
-        if not all(old["cases"].get(k) == list(v) and old["profiles"].get(k) == hashes[k]
-                   for k, v in coarse.items()):
-            raise ValueError("Prior coarse recipes changed")
-    else:
-        rows, summary = old["rows"], old["fit"]
-        if old["cases"] != json.loads(json.dumps(coarse)) or old["profiles"] != hashes:
-            raise ValueError("Prior FIT recipe/profile mismatch")
-    cp.verify_rows(rows, panels["fit"], coarse)
-    recomputed = {k: cp.stats(rows, k) for k in coarse}
-    if recomputed != summary:
-        raise ValueError("Prior FIT statistics mismatch")
+    if old["cases"] != json.loads(json.dumps(cases)) or old["profiles"] != hashes:
+        raise ValueError("Prior FIT recipe/profile mismatch")
+    rows, summary = old["rows"], old["fit"]
+    cp.verify_rows(rows, panels["fit"], cases)
+    recomputed = {k: cp.stats(rows, k) for k in cases}
+    if recomputed != summary or cp.select(recomputed, strict=old.get("strict", False)) != old["selected"]:
+        raise ValueError("Prior FIT statistics or selection mismatch")
     return rows, recomputed
 
 
@@ -116,7 +109,7 @@ def run(slug, root, stockfish, out, checkpoint_dir, stop_file, prior_fit=None):
         return
     identity = [SCHEMA, slug, source_sha, cp.RODENT_HASHES, cp.STOCKFISH_SHA,
                 cp.file_hash(Path(__file__)), cp.file_hash(Path(cp.__file__)),
-                cp.file_hash(Path(recovery.__file__)),
+                cp.file_hash(Path(recovery.__file__)), "checkpoint-v1",
                 cp.file_hash(prior_fit) if prior_fit else None]
     chk = Checkpoints(checkpoint_dir, stop_file, identity)
     chk.install_signals()
@@ -135,20 +128,29 @@ def run(slug, root, stockfish, out, checkpoint_dir, stop_file, prior_fit=None):
                     dest, dest / "rodent-iv-plain.exe", players[name], book=False))
             return chk.measure(stage, ref, engines, cases, panel, profiles(cases))
 
+        prior_refined = False
+        initial_cases = coarse
         if prior_fit:
+            old = cp.load(prior_fit)
+            if old.get("refinement"):
+                stage = old["refinement"]
+                extra = cp.intermediate_profiles(dest, players, baseline, coarse[stage["anchor"]][0])
+                players.update(extra)
+                initial_cases = cp.recipe_inventory(old, coarse, original, extra)
+                prior_refined = True
             coarse_rows, coarse_stats = fit_from_artifact(
-                prior_fit, slug, data, original, coarse, profiles(coarse), book, book_info)
+                prior_fit, slug, data, original, initial_cases, profiles(initial_cases), book, book_info)
         else:
             coarse_rows = measure("coarse-fit", coarse, original["fit"])
             coarse_stats = {k: cp.stats(coarse_rows, k) for k in coarse}
-        finalists = recovery.shortlist(coarse_stats, coarse)
+        finalists = recovery.shortlist(coarse_stats, initial_cases)
         fit_stats = {k: coarse_stats[k] for k in finalists}
         tune_rows = measure("pass1-tune", finalists, tune)
         tune_stats = {k: cp.stats(tune_rows, k) for k in finalists}
         selected = recovery.robust_select(fit_stats, tune_stats)
         passes = [{"cases": finalists, "fit": fit_stats, "tune": tune_stats,
                    "tune_rows": tune_rows, "selected": selected}]
-        if not in_band(fit_stats, tune_stats, selected):
+        if not prior_refined and not in_band(fit_stats, tune_stats, selected):
             extra = cp.intermediate_profiles(dest, players, baseline, finalists[selected][0])
             players.update(extra)
             fine = {**finalists, **bounded_fine(coarse, selected, extra)}
@@ -164,25 +166,31 @@ def run(slug, root, stockfish, out, checkpoint_dir, stop_file, prior_fit=None):
                            "tune_rows": tune_rows, "selected": selected})
         recipe = finalists[selected]
         dev_ok = in_band(fit_stats, tune_stats, selected)
-        test_rows = measure("reserved", {"baseline": baseline, "candidate": recipe}, original["excluded_test"])
-        test = cp.stats(test_rows, "candidate", bootstrap=True)
-        test_base = cp.stats(test_rows, "baseline", bootstrap=True)
+        # Do not spend reserved CPU on development failures. Prior TEST evidence
+        # stays archived; it must never be used for tuning.
+        test_rows = []
+        test = test_base = None
+        if dev_ok:
+            test_rows = measure("reserved", {"baseline": baseline, "candidate": recipe}, original["excluded_test"])
+            test = cp.stats(test_rows, "candidate", bootstrap=True)
+            test_base = cp.stats(test_rows, "baseline", bootstrap=True)
         profile = cp.profile_bytes(dest, players[recipe[0]])
         report = {"schema": SCHEMA, "slug": slug, "selected": selected, "recipe": recipe,
                   "baseline_recipe": baseline, "source_sha256": source_sha,
                   "engine_sha256": cp.RODENT_HASHES["rodent"], "stockfish_sha256": cp.STOCKFISH_SHA,
-                  "coarse_cases": coarse, "coarse_rows": coarse_rows, "passes": passes,
+                  "coarse_cases": initial_cases, "coarse_rows": coarse_rows, "passes": passes,
+                  "reused_refined_fit": prior_refined,
                   "prior_fit_sha256": cp.file_hash(prior_fit) if prior_fit else None,
                   "fit": fit_stats, "tune": tune_stats, "test": test, "test_baseline": test_base,
-                  "test_rows": test_rows, "test_gate": cp.gate(test, strict=True),
+                  "test_rows": test_rows, "test_gate": cp.gate(test, strict=True) if test else "NOT_RUN_DEVELOPMENT_FAILED",
                   "profile_sha256": sha256(profile).hexdigest(),
                   "profile_base64": base64.b64encode(profile).decode(),
                   "alias": players[recipe[0]].rodent_alias, "book": book, "book_info": book_info,
-                  "attempts": len(passes), "activation": False,
+                  "attempts": 2 if prior_refined else len(passes), "activation": False,
                   "status": "FRESH_VALIDATION_REQUIRED" if dev_ok else "DEVELOPMENT_TARGET_NOT_ESTABLISHED"}
         cp.save(out, report)
-        print("CP_LOCAL", slug, "attempts", len(passes), "FIT", fit_stats[selected]["delta_cp"],
-              "TUNE", tune_stats[selected]["delta_cp"], "TEST", test["delta_cp"],
+        print("CP_LOCAL", slug, "attempts", report["attempts"], "FIT", fit_stats[selected]["delta_cp"],
+              "TUNE", tune_stats[selected]["delta_cp"], "TEST", test["delta_cp"] if test else None,
               report["status"], report["test_gate"], flush=True)
 
 
