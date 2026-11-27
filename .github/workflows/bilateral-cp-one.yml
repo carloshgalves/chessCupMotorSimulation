@@ -1,0 +1,238 @@
+name: Strict one-centipawn qualification of all 64 historical players
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/bilateral-cp-one.yml'
+      - 'src/chesssim/bilateral_cp.py'
+      - 'tests/test_bilateral_cp.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: bilateral-cp-one-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m ruff check src/chesssim/bilateral_cp.py tests/test_bilateral_cp.py
+      - run: python -m pytest -q tests/test_bilateral_cp.py
+  validate:
+    needs: protocol
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        include:
+          - player: tal
+            artifact: '15159375843'
+          - player: petrosian
+            artifact: '15157025578'
+          - player: karpov
+            artifact: '15156387827'
+          - player: smyslov
+            artifact: '15154704927'
+          - player: fischer
+            artifact: '15158821952'
+          - player: lasker
+            artifact: '15158540622'
+          - player: alekhine
+            artifact: '15159031937'
+          - player: spassky
+            artifact: '15155807452'
+          - player: kasparov
+            artifact: '15157958523'
+          - player: kramnik
+            artifact: '15158421032'
+          - player: anand
+            artifact: '15158694751'
+          - player: euwe
+            artifact: '15160120490'
+          - player: steinitz
+            artifact: '15158642582'
+          - player: capablanca
+            artifact: '0'
+          - player: botvinnik
+            artifact: '0'
+          - player: ding-liren
+            artifact: '0'
+          - player: carlsen
+            artifact: '0'
+          - player: mequinho
+            artifact: '0'
+          - player: mamedyarov
+            artifact: '0'
+          - player: vachier-lagrave
+            artifact: '0'
+          - player: grischuk
+            artifact: '0'
+          - player: topalov
+            artifact: '0'
+          - player: philidor
+            artifact: '0'
+          - player: staunton
+            artifact: '0'
+          - player: anderssen
+            artifact: '0'
+          - player: morphy
+            artifact: '0'
+          - player: zukertort
+            artifact: '0'
+          - player: chigorin
+            artifact: '0'
+          - player: pillsbury
+            artifact: '0'
+          - player: tarrasch
+            artifact: '0'
+          - player: marshall
+            artifact: '0'
+          - player: rubinstein
+            artifact: '0'
+          - player: nimzowitsch
+            artifact: '0'
+          - player: reti
+            artifact: '0'
+          - player: keres
+            artifact: '0'
+          - player: bronstein
+            artifact: '0'
+          - player: reshevsky
+            artifact: '0'
+          - player: najdorf
+            artifact: '0'
+          - player: geller
+            artifact: '0'
+          - player: korchnoi
+            artifact: '0'
+          - player: larsen
+            artifact: '0'
+          - player: portisch
+            artifact: '0'
+          - player: taimanov
+            artifact: '0'
+          - player: polugaevsky
+            artifact: '0'
+          - player: gligoric
+            artifact: '0'
+          - player: ivanchuk
+            artifact: '0'
+          - player: timman
+            artifact: '0'
+          - player: short
+            artifact: '0'
+          - player: kamsky
+            artifact: '0'
+          - player: shirov
+            artifact: '0'
+          - player: gelfand
+            artifact: '0'
+          - player: leko
+            artifact: '0'
+          - player: svidler
+            artifact: '0'
+          - player: aronian
+            artifact: '0'
+          - player: caruana
+            artifact: '0'
+          - player: nakamura
+            artifact: '0'
+          - player: karjakin
+            artifact: '0'
+          - player: nepomniachtchi
+            artifact: '0'
+          - player: wesley-so
+            artifact: '0'
+          - player: kosteniuk
+            artifact: '0'
+          - player: gaprindashvili
+            artifact: '0'
+          - player: chiburdanidze
+            artifact: '0'
+          - player: judit-polgar
+            artifact: '0'
+          - player: hou-yifan
+            artifact: '0'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[dev]'
+      - uses: actions/checkout@v5
+        with:
+          repository: nescitus/rodent-iv
+          ref: e8d84c8c8c189a1cf4eb27c578fc573af3b916d2
+          path: rodent-source
+          persist-credentials: false
+      - run: |
+          mkdir -p rodent-source/mac "$RUNNER_TEMP/rodent"
+          make -C rodent-source/sources build
+          cp rodent-source/mac/rodentIV "$RUNNER_TEMP/rodent/rodent-iv-plain.exe"
+          cp -R rodent-source/personalities rodent-source/books "$RUNNER_TEMP/rodent/"
+          sudo apt-get update
+          sudo apt-get install -y stockfish
+      - name: Verify exact prior artifact identity
+        if: matrix.artifact != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT: ${{ matrix.artifact }}
+          PLAYER: ${{ matrix.player }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT" | jq -e --arg n "cp-fit-$PLAYER" '.name == $n and .workflow_run.id == 45888949887 and .expired == false'
+      - uses: actions/download-artifact@v4
+        if: matrix.artifact != '0'
+        with:
+          name: cp-fit-${{ matrix.player }}
+          path: prior
+          run-id: 45888949887
+          github-token: ${{ github.token }}
+      - name: Calibrate or refine on FIT only
+        run: |
+          args=()
+          if [ -f prior/selection.json ]; then args+=(--prior-selection prior/selection.json); fi
+          python -m chesssim.bilateral_cp fit --strict --player ${{ matrix.player }} --rodent "$RUNNER_TEMP/rodent" --stockfish /usr/games/stockfish --out input/selection.json "${args[@]}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cp-fit-${{ matrix.player }}
+          path: input/selection.json
+          if-no-files-found: error
+      - run: python -m chesssim.bilateral_cp reserved --strict --player ${{ matrix.player }} --rodent "$RUNNER_TEMP/rodent" --stockfish /usr/games/stockfish --selection input/selection.json --out result/report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cp-reserved-${{ matrix.player }}
+          path: result/report.json
+          if-no-files-found: error
+  table:
+    needs: [protocol, validate]
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[dev]'
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: cp-reserved-*
+          path: shards
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: cp-fit-*
+          path: shards
+      - run: python -m chesssim.bilateral_cp aggregate --strict --shards shards --out table
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cp-one-qualified-candidates
+          path: table/
+          if-no-files-found: error

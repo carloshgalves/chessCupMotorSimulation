@@ -1,10 +1,5 @@
 name: Prioritized CP reserved validation and alias recovery
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/bilateral-cp-priority.yml'
-      - 'src/chesssim/bilateral_cp.py'
-      - 'tests/test_bilateral_cp.py'
   workflow_dispatch:
 permissions:
   contents: read

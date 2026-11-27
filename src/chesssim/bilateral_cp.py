@@ -38,6 +38,7 @@ PHASES = ("opening", "middlegame", "endgame")
 CAP = 5_000_000
 MARGIN = 5
 PREFERRED = 3
+STRICT_MARGIN = 1
 PHASE_MARGIN = 10
 MIN_PHASE = 20
 MIN_GAMES = 40
@@ -278,6 +279,49 @@ def recipes(players, baseline):
     return unique
 
 
+def refine_cases(coarse, anchor):
+    """Deterministic local search using FIT only, with no reserved feedback."""
+    name, depth, cap = coarse[anchor]
+    cases = dict(coarse)
+    existing = {tuple(v) for v in cases.values()}
+
+    def add(k, d, n):
+        value = (k, d, n)
+        if value not in existing:
+            cases[f"fine-{k}-{d}-{n}"] = value
+            existing.add(value)
+
+    # Depth increments of one, finer node caps (including near-cap bounds),
+    # and interactions with evaluation variants; preserve every coarse recipe.
+    for d in range(max(6, depth - 3), min(24, depth + 3) + 1):
+        add(name, d, cap)
+    nodes = sorted({max(10_000, min(CAP, round(cap * fraction / 5_000) * 5_000))
+                    for fraction in (.5, .65, .8, .9, 1.1, 1.25, 1.5, 2.0)})
+    for n in nodes:
+        add(name, depth, n)
+    for d in (max(6, depth - 1), min(24, depth + 1)):
+        for n in (nodes[0], nodes[-1]):
+            add(name, d, n)
+    for k in sorted({v[0] for v in coarse.values()} - {name}):
+        add(k, depth, cap)
+    # Explore more finely even when the coarse candidate already matches but
+    # the baseline had a different budget, without using reserved results.
+    return cases
+
+
+def recipe_inventory(selection, coarse, panels):
+    stage = selection.get("refinement")
+    if stage is None:
+        return coarse
+    verify_rows(stage["rows"], panels["fit"], coarse)
+    summary = {k: stats(stage["rows"], k) for k in coarse}
+    if stage["fit"] != summary or stage["anchor"] != select(summary, strict=True):
+        raise ValueError("Fine-grid anchor does not replay")
+    if fit_eligible(summary[stage["anchor"]], strict=True):
+        raise ValueError("Unnecessary refinement of already compatible candidate")
+    return refine_cases(coarse, stage["anchor"])
+
+
 def reference_engine(stack, stockfish):
     if file_hash(stockfish) != STOCKFISH_SHA:
         raise ValueError("Unpinned Stockfish")
@@ -363,29 +407,34 @@ def stats(rows, role, bootstrap=False):
     return result
 
 
-def gate(s):
+def gate(s, *, strict=False):
+    margin = STRICT_MARGIN if strict else MARGIN
     if (s["games"] < MIN_GAMES or s["coverage"] < MIN_COVERAGE
             or min(s["phase_support"].values()) < MIN_PHASE or s["ci95"] is None):
         return "INSUFFICIENT_RESERVED_EVIDENCE"
-    if abs(s["delta_cp"]) > MARGIN:
+    if abs(s["delta_cp"]) > margin:
         return "MOTOR_TOO_STRONG" if s["delta_cp"] > 0 else "MOTOR_TOO_WEAK"
     if any(abs(v) > PHASE_MARGIN for v in s["phase_delta"].values()):
         return "PHASE_IMBALANCE"
     if abs(s["severe_gap"]) > MAX_SEVERE_GAP or abs(s["mate_gap"]) > MAX_MATE_GAP:
         return "SEVERE_OR_MATE_IMBALANCE"
-    if s["ci95"][0] < -MARGIN or s["ci95"][1] > MARGIN:
+    if s["ci95"][0] < -margin or s["ci95"][1] > margin:
         return "UNCERTAIN_EQUIVALENCE"
-    return "EXCELLENT" if abs(s["delta_cp"]) <= PREFERRED else "COMPATIBLE"
+    return "EXCELLENT" if abs(s["delta_cp"]) <= (STRICT_MARGIN if strict else PREFERRED) else "COMPATIBLE"
 
 
-def fit_eligible(s):
-    return (s["delta_cp"] is not None and abs(s["delta_cp"]) <= MARGIN
+def fit_eligible(s, *, strict=False):
+    margin = STRICT_MARGIN if strict else MARGIN
+    return (s["delta_cp"] is not None and abs(s["delta_cp"]) <= margin
             and s["coverage"] >= MIN_COVERAGE and min(s["phase_support"].values()) >= 12
             and max(abs(v) for v in s["phase_delta"].values()) <= PHASE_MARGIN
             and abs(s["severe_gap"]) <= MAX_SEVERE_GAP and abs(s["mate_gap"]) <= MAX_MATE_GAP)
 
 
-def select(results):
+def select(results, *, strict=False):
+    margin = STRICT_MARGIN if strict else MARGIN
+    preferred = STRICT_MARGIN if strict else PREFERRED
+
     def order(key):
         s = results[key]
         if s["delta_cp"] is None:
@@ -395,12 +444,12 @@ def select(results):
                    or phase_gap > PHASE_MARGIN
                    or abs(s["severe_gap"]) > MAX_SEVERE_GAP or abs(s["mate_gap"]) > MAX_MATE_GAP)
         # Optimize absolute gap, not the direction of strength.
-        return (invalid, abs(s["delta_cp"]) > MARGIN, abs(s["delta_cp"]) > PREFERRED,
+        return (invalid, abs(s["delta_cp"]) > margin, abs(s["delta_cp"]) > preferred,
                 max(0, phase_gap - PHASE_MARGIN), abs(s["delta_cp"]), key != "baseline", key)
     return min(results, key=order)
 
 
-def fit(slug, root, stockfish, out):
+def fit(slug, root, stockfish, out, *, strict=False, prior_selection=None):
     prior = baseline_inventory().get(slug, {})
     data, supplement = historical(slug, prior)
     panels, _ = panel(slug, data)
@@ -408,20 +457,53 @@ def fit(slug, root, stockfish, out):
     with TemporaryDirectory() as tmp, ExitStack() as stack:
         dest = Path(tmp) / "rodent"
         players, baseline = prepare(root, dest, slug, prior)
-        cases = recipes(players, baseline)
-        engines = {k: stack.enter_context(_open_engine(dest, dest / "rodent-iv-plain.exe", p, book=False))
-                   for k, p in players.items()}
-        ref = reference_engine(stack, stockfish)
-        rows = measure(ref, engines, cases, fit_rows)
-        summaries = {label: stats(rows, label) for label in cases}
-        chosen = select(summaries)
+        coarse = recipes(players, baseline)
+        cases = coarse
         book, book_info = historical_book(slug, data, prior)
+        hashes = {k: sha256(profile_bytes(dest, players[v[0]])).hexdigest() for k, v in coarse.items()}
+        if prior_selection:
+            old = load(prior_selection)
+            if (not strict or old["schema"] != SCHEMA or old["slug"] != slug
+                    or old["source_sha256"] != sha256(data[0]).hexdigest()
+                    or old["fit_panel_sha256"] != digest(fit_rows)
+                    or old["engine_sha256"] != RODENT_HASHES["rodent"]
+                    or old["stockfish_sha256"] != STOCKFISH_SHA
+                    or old["cases"] != json.loads(json.dumps(coarse))
+                    or old["profiles"] != hashes or old["book"] != book or old["book_info"] != book_info):
+                raise ValueError("Prior FIT artifact binding mismatch")
+            verify_rows(old["rows"], fit_rows, coarse)
+            rows = old["rows"]
+            summaries = {label: stats(rows, label) for label in coarse}
+            if summaries != old["fit"] or select(summaries) != old["selected"]:
+                raise ValueError("Prior coarse selection mismatch")
+        else:
+            engines = {k: stack.enter_context(_open_engine(dest, dest / "rodent-iv-plain.exe", p, book=False))
+                       for k, p in players.items()}
+            ref = reference_engine(stack, stockfish)
+            rows = measure(ref, engines, cases, fit_rows)
+            summaries = {label: stats(rows, label) for label in cases}
+        chosen = select(summaries, strict=strict)
+        refinement = None
+        if strict and not fit_eligible(summaries[chosen], strict=True):
+            refinement = {"anchor": chosen, "fit": summaries, "rows": rows}
+            cases = refine_cases(coarse, chosen)
+            if prior_selection:
+                engines = {k: stack.enter_context(_open_engine(dest, dest / "rodent-iv-plain.exe", p, book=False))
+                           for k, p in players.items()}
+                ref = reference_engine(stack, stockfish)
+            # Re-evaluate all candidates with the same adaptive reference per
+            # board; do not combine losses from different reference depths.
+            rows = measure(ref, engines, cases, fit_rows)
+            summaries = {label: stats(rows, label) for label in cases}
+            chosen = select(summaries, strict=True)
         hashes = {k: sha256(profile_bytes(dest, players[v[0]])).hexdigest() for k, v in cases.items()}
         doc = {"schema": SCHEMA, "slug": slug, "period": PERIOD[slug], "prior": prior,
                "source_sha256": sha256(data[0]).hexdigest(), "supplement": supplement,
                "engine_sha256": RODENT_HASHES["rodent"], "stockfish_sha256": STOCKFISH_SHA,
                "fit_panel_sha256": digest(fit_rows), "cases": cases, "profiles": hashes,
                "baseline": baseline, "selected": chosen, "fit": summaries, "rows": rows,
+               "strict": strict, "refinement": refinement,
+               "prior_selection_sha256": file_hash(prior_selection) if prior_selection else None,
                "book": book, "book_info": book_info}
         save(out, doc)
         print("CP_FIT", slug, json.dumps({"selected": chosen, "stats": summaries[chosen],
@@ -467,9 +549,9 @@ def verify_rows(rows, expected, labels):
             raise ValueError("Score replay mismatch")
 
 
-def reserved(slug, root, stockfish, selection, out):
+def reserved(slug, root, stockfish, selection, out, *, strict=False):
     doc = load(selection)
-    if doc["slug"] != slug or doc["schema"] != SCHEMA:
+    if doc["slug"] != slug or doc["schema"] != SCHEMA or doc.get("strict", False) != strict:
         raise ValueError("Wrong selection shard")
     prior = baseline_inventory().get(slug, {})
     data, _ = historical(slug, prior)
@@ -478,12 +560,12 @@ def reserved(slug, root, stockfish, selection, out):
         raise ValueError("Selection source mismatch")
     verify_rows(doc["rows"], panels["fit"], doc["cases"])
     recomputed = {k: stats(doc["rows"], k) for k in doc["cases"]}
-    if recomputed != doc["fit"] or select(recomputed) != doc["selected"]:
+    if recomputed != doc["fit"] or select(recomputed, strict=strict) != doc["selected"]:
         raise ValueError("Selection not reproducible")
     with TemporaryDirectory() as tmp, ExitStack() as stack:
         dest = Path(tmp) / "rodent"
         players, baseline = prepare(root, dest, slug, prior)
-        cases = recipes(players, baseline)
+        cases = recipe_inventory(doc, recipes(players, baseline), panels)
         if json.loads(json.dumps(cases)) != doc["cases"]:
             raise ValueError("Recipe inventory mismatch")
         selected = doc["selected"]
@@ -501,8 +583,8 @@ def reserved(slug, root, stockfish, selection, out):
         verify_rows(rows, panels["excluded_test"], locked)
         result = stats(rows, "candidate", bootstrap=True)
         base_result = stats(rows, "baseline", bootstrap=True)
-        status = gate(result)
-        if status in ("EXCELLENT", "COMPATIBLE") and not fit_eligible(doc["fit"][selected]):
+        status = gate(result, strict=strict)
+        if status in ("EXCELLENT", "COMPATIBLE") and not fit_eligible(doc["fit"][selected], strict=strict):
             status = "FIT_COMPATIBILITY_NOT_ESTABLISHED"
         recipe = locked["candidate"]
         profile = profile_bytes(dest, players[recipe[0]])
@@ -537,6 +619,7 @@ def reserved(slug, root, stockfish, selection, out):
                   "fit": doc["fit"], "baseline_recipe": baseline, "selected": selected, "recipe": recipe,
                   "test_panel_sha256": digest(panels["excluded_test"]), "test_rows": rows,
                   "baseline_test": base_result, "candidate_test": result, "status": status,
+                  "strict": strict,
                   "profile_sha256": sha256(profile).hexdigest(), "alias": players[recipe[0]].rodent_alias,
                   "profile_filename": players[recipe[0]].profile_filename,
                   "profile_base64": base64.b64encode(profile).decode(),
@@ -548,16 +631,24 @@ def reserved(slug, root, stockfish, selection, out):
                                          "baseline": base_result, "candidate": result}, sort_keys=True), flush=True)
 
 
-def aggregate(shards, out):
+def aggregate(shards, out, *, strict=False):
     table, candidates = [], {}
     for p in load_roster():
         slug = p.slug
         path = Path(shards) / f"cp-reserved-{slug}" / "report.json"
         if not path.exists():
-            table.append({"slug": slug, "status": "MISSING_EXECUTION"})
+            fit_path = Path(shards) / f"cp-fit-{slug}" / "selection.json"
+            row = {"slug": slug, "status": "MISSING_EXECUTION"}
+            if fit_path.exists():
+                fit_doc = load(fit_path)
+                if fit_doc["slug"] != slug or fit_doc.get("strict", False) != strict:
+                    raise ValueError("Wrong partial FIT artifact")
+                row.update(status="FIT_ONLY", fit_candidate=fit_doc["fit"][fit_doc["selected"]],
+                           fit_baseline=fit_doc["fit"]["baseline"], recipe=fit_doc["cases"][fit_doc["selected"]])
+            table.append(row)
             continue
         r = load(path)
-        if r["slug"] != slug or r["schema"] != SCHEMA:
+        if r["slug"] != slug or r["schema"] != SCHEMA or r.get("strict", False) != strict:
             raise ValueError("Wrong reserved result")
         rows = r["test_rows"]
         for row in rows:
@@ -574,7 +665,8 @@ def aggregate(shards, out):
         prior = baseline_inventory().get(slug, {})
         data, _ = historical(slug, prior)
         panels, roots = panel(slug, data)
-        if (selection["slug"] != slug or selection["source_sha256"] != r["source_sha256"]
+        if (selection["slug"] != slug or selection.get("strict", False) != strict
+                or selection["source_sha256"] != r["source_sha256"]
                 or sha256(data[0]).hexdigest() != r["source_sha256"]
                 or digest(panels["fit"]) != selection["fit_panel_sha256"]
                 or digest(panels["excluded_test"]) != r["test_panel_sha256"]):
@@ -583,7 +675,7 @@ def aggregate(shards, out):
         verify_rows(rows, panels["excluded_test"], ("baseline", "candidate"))
         summary = {k: stats(selection["rows"], k) for k in selection["cases"]}
         if (summary != selection["fit"] or r["fit"] != summary
-                or select(summary) != r["selected"] or r["selected"] != selection["selected"]
+                or select(summary, strict=strict) != r["selected"] or r["selected"] != selection["selected"]
                 or selection["cases"][r["selected"]] != r["recipe"]
                 or selection["profiles"][r["selected"]] != r["profile_sha256"]
                 or selection["book"] != r["book"] or selection["book_info"] != r["book_info"]):
@@ -592,9 +684,9 @@ def aggregate(shards, out):
         if expected_book != r["book"] or expected_info != r["book_info"]:
             raise ValueError("Aggregate repertoire mismatch")
         if status in ("EXCELLENT", "COMPATIBLE"):
-            if not fit_eligible(summary[r["selected"]]):
+            if not fit_eligible(summary[r["selected"]], strict=strict):
                 raise ValueError("FIT compatibility absent")
-            if gate(computed) != status or len(r["repeats"]) != 10 or not all(r["repeats"]) or len(r["games"]) != 4:
+            if gate(computed, strict=strict) != status or len(r["repeats"]) != 10 or not all(r["repeats"]) or len(r["games"]) != 4:
                 raise ValueError("Invalid positive gate")
             expected_cases = {(root["id"], color) for root in roots[:2] for color in ("white", "black")}
             if {(g["root"]["id"], g["case"]["color"]) for g in r["games"]} != expected_cases:
@@ -615,23 +707,24 @@ def aggregate(shards, out):
                          "alias", "profile_filename", "engine_sha256", "stockfish_sha256",
                          "source_sha256", "book", "book_info", "selection_sha256",
                          "test_panel_sha256", "candidate_test")}
-            candidate.update(status="FROZEN_EXPERIMENTAL_CANDIDATE", report_sha256=file_hash(path),
+            candidate.update(status="FROZEN_EXPERIMENTAL_CANDIDATE", strict=strict, report_sha256=file_hash(path),
                              activation="DENIED_PENDING_INDEPENDENT_REVIEW_AND_RUNTIME_INTEGRATION")
             candidates[slug] = candidate
         table.append({"slug": slug, "status": status, "recipe": r["recipe"],
                       "baseline": r["baseline_test"], "candidate": computed,
+                      "fit_baseline": summary["baseline"], "fit_candidate": summary[r["selected"]],
                       "book_sha256": r["book_info"]["sha256"]})
-    save(Path(out) / "table.json", {"schema": SCHEMA, "players": table, "counts": dict(Counter(r["status"] for r in table))})
-    save(Path(out) / "frozen-candidates.json", {"schema": SCHEMA, "players": candidates})
-    lines = ["| Player | Baseline delta cp | Candidate delta cp | 95% CI | Status |",
-             "|---|---:|---:|---|---|"]
+    save(Path(out) / "table.json", {"schema": SCHEMA, "strict": strict, "players": table, "counts": dict(Counter(r["status"] for r in table))})
+    save(Path(out) / "frozen-candidates.json", {"schema": SCHEMA, "strict": strict, "players": candidates})
+    lines = ["| Player | FIT baseline cp | FIT candidate cp | TEST baseline cp | TEST candidate cp | 95% CI | Status |",
+             "|---|---:|---:|---:|---:|---|---|"]
     for row in table:
         b, c = row.get("baseline", {}), row.get("candidate", {})
         def fmt(x):
             return "—" if x is None else f"{x:+.2f}"
         ci = c.get("ci95")
         interval = "—" if ci is None else f"[{ci[0]:+.2f}, {ci[1]:+.2f}]"
-        lines.append(f"| {row['slug']} | {fmt(b.get('delta_cp'))} | {fmt(c.get('delta_cp'))} | {interval} | {row['status']} |")
+        lines.append(f"| {row['slug']} | {fmt(row.get('fit_baseline', {}).get('delta_cp'))} | {fmt(row.get('fit_candidate', {}).get('delta_cp'))} | {fmt(b.get('delta_cp'))} | {fmt(c.get('delta_cp'))} | {interval} | {row['status']} |")
     (Path(out) / "table.md").write_text("\n".join(lines) + "\n")
     print("CP_TABLE", json.dumps({"counts": dict(Counter(r["status"] for r in table)),
                                   "frozen_experimental": sorted(candidates)}, sort_keys=True))
@@ -646,13 +739,15 @@ def main():
     p.add_argument("--selection", type=Path)
     p.add_argument("--shards", type=Path)
     p.add_argument("--out", type=Path, required=True)
+    p.add_argument("--strict", action="store_true", help="Require ±1 cp, including reserved confidence interval")
+    p.add_argument("--prior-selection", type=Path)
     a = p.parse_args()
     if a.action == "fit":
-        fit(a.player, a.rodent, a.stockfish, a.out)
+        fit(a.player, a.rodent, a.stockfish, a.out, strict=a.strict, prior_selection=a.prior_selection)
     elif a.action == "reserved":
-        reserved(a.player, a.rodent, a.stockfish, a.selection, a.out)
+        reserved(a.player, a.rodent, a.stockfish, a.selection, a.out, strict=a.strict)
     else:
-        aggregate(a.shards, a.out)
+        aggregate(a.shards, a.out, strict=a.strict)
 
 
 if __name__ == "__main__":

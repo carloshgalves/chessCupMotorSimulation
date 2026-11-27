@@ -1,5 +1,5 @@
 from chesssim.bilateral_cp import (
-    PHASES, MARGIN, PREFERRED, gate, stats, select, fit_eligible, baseline_inventory, recipes, partition, variant_alias,
+    PHASES, MARGIN, PREFERRED, gate, stats, select, fit_eligible, baseline_inventory, recipes, partition, variant_alias, refine_cases, STRICT_MARGIN,
 )
 from chesssim.catalog import load_roster
 from chesssim.qualified_runtime import assets
@@ -96,3 +96,29 @@ def test_rodent_alias_limit_and_stable_existing_names():
     assert len(set(names)) == 6
     assert all(len(n.encode("utf-8")) <= 31 for n in names)
     assert variant_alias("CapablancaWaveIndividual", "toward") == names[0]
+
+
+def test_strict_one_cp_boundary_and_uncertainty():
+    assert STRICT_MARGIN == 1
+    for delta in (-1, 0, 1):
+        rows = [observation(i, p, 30, 30-delta) for i in range(50) for p in PHASES]
+        s = stats(rows, "motor", bootstrap=True)
+        assert fit_eligible(s, strict=True)
+        assert gate(s, strict=True) == "EXCELLENT"
+        assert gate({**s, "ci95": [-1.01, 1]}, strict=True) == "UNCERTAIN_EQUIVALENCE"
+    for delta in (-2, 2):
+        s = stats([observation(i, p, 30, 30-delta) for i in range(50) for p in PHASES], "motor", bootstrap=True)
+        assert not fit_eligible(s, strict=True)
+        assert gate(s, strict=True) in ("MOTOR_TOO_WEAK", "MOTOR_TOO_STRONG")
+        assert gate(s) == "EXCELLENT"
+
+
+def test_fine_grid_is_deterministic_and_preserves_original_recipes():
+    coarse = recipes({"frozen": None, "toward": None, "away": None}, ("frozen", 16, 5_000_000))
+    fine = refine_cases(coarse, "nodes-750000")
+    assert fine == refine_cases(coarse, "nodes-750000")
+    assert all(fine[k] == v for k, v in coarse.items())
+    assert len(set(fine.values())) == len(fine)
+    assert ("frozen", 15, 750_000) in fine.values()
+    assert ("toward", 16, 750_000) in fine.values()
+    assert all(6 <= v[1] <= 24 and 10_000 <= v[2] <= 5_000_000 for v in fine.values())
