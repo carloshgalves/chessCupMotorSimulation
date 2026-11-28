@@ -9,17 +9,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: chesssim-ci-${{ github.workflow }}-${{ github.ref }}
+  group: chesssim-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  git-hygiene:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - name: Reject sensitive tracked artifacts and recognizable credentials
-        run: python3 scripts/audit_git_artifacts.py --scope tracked
-
   history-hygiene:
     # One-off actual retrospective evidence on this implementation PR.
     # Future PRs run the cheap preventive gate; full history remains opt-in.
@@ -44,7 +37,7 @@ jobs:
           retention-days: 7
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.python-version == '3.12' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -56,6 +49,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Reject sensitive tracked artifacts and recognizable credentials
+        if: matrix.python-version == '3.13'
+        run: python scripts/audit_git_artifacts.py --scope tracked
       - name: Install project and development tools
         run: |
           python -m pip install --upgrade pip
